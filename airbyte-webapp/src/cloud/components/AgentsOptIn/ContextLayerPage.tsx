@@ -244,7 +244,7 @@ const WorkspaceConnectorAccess: React.FC<{
 }> = ({ workspacesQuery, canManageOrganizationPermissions }) => {
   const [enabledConnectors, setEnabledConnectors] = useState<Record<string, boolean>>({});
   const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = workspacesQuery;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, isError } = workspacesQuery;
 
   const allWorkspaces = useMemo<WorkspaceConnectorData[]>(() => {
     const apiWorkspaces = workspacesQuery.data?.pages.flatMap((page) => page.workspaces ?? []) ?? [];
@@ -297,7 +297,7 @@ const WorkspaceConnectorAccess: React.FC<{
               }
             />
           ))}
-          {hasMoreWorkspaces && !isFetchingNextPage && (
+          {hasMoreWorkspaces && !isFetchingNextPage && !isError && (
             <Button type="button" variant="secondary" onClick={() => void loadMoreWorkspaces()}>
               <FormattedMessage id="cloud.contextLayer.workspace.loadMore" />
             </Button>
@@ -306,6 +306,16 @@ const WorkspaceConnectorAccess: React.FC<{
             <Text color="grey">
               <FormattedMessage id="cloud.contextLayer.workspace.loadingMore" />
             </Text>
+          )}
+          {isError && hasNextPage && !isFetchingNextPage && (
+            <FlexContainer alignItems="center">
+              <Text color="grey">
+                <FormattedMessage id="cloud.contextLayer.workspace.loadMoreError" />
+              </Text>
+              <Button type="button" variant="secondary" onClick={() => void fetchNextPage()}>
+                <FormattedMessage id="form.tryAgain" />
+              </Button>
+            </FlexContainer>
           )}
         </>
       )}
@@ -460,6 +470,9 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
 
             while (hasNextPage) {
               const nextPage = await workspacesQuery.fetchNextPage();
+              if (nextPage.isError) {
+                throw nextPage.error;
+              }
               workspaceData = nextPage.data;
               hasNextPage = nextPage.hasNextPage;
             }

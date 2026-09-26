@@ -2725,6 +2725,7 @@
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
+  "cloud.contextLayer.workspace.loadMoreError": "Some workspaces could not be loaded.",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
   "cloud.contextLayer.workspace.noConnectors": "No connectors found in this workspace.",

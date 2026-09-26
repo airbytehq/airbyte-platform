@@ -136,6 +136,7 @@ const messages = {
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
+  "cloud.contextLayer.workspace.loadMoreError": "Some workspaces could not be loaded.",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
   "cloud.contextLayer.workspace.noConnectors": "No connectors found in this workspace.",
@@ -816,6 +817,72 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
   });
 
+  it("shows an error with a retry instead of the load more button after a workspace page fails", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const workspacePages = [
+      {
+        workspaces: Array.from({ length: 25 }, (_, index) => ({
+          workspaceId: `workspace-${index + 1}`,
+          name: `Workspace ${index + 1}`,
+        })),
+      },
+    ];
+    let isError = false;
+    // The page request fails (e.g. HTTP 429): the fetch settles while hasNextPage stays true.
+    const fetchNextPage = jest.fn().mockImplementation(async () => {
+      isError = true;
+      return { data: { pages: workspacePages }, hasNextPage: true, isError: true };
+    });
+    mockUseListWorkspacesInOrganization.mockImplementation(
+      () =>
+        ({
+          data: { pages: workspacePages },
+          hasNextPage: true,
+          fetchNextPage,
+          isFetchingNextPage: false,
+          get isError() {
+            return isError;
+          },
+          isLoading: false,
+        }) as never
+    );
+    const page = () => (
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerPage />
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+
+    const view = renderWithIntl();
+    expect(fetchNextPage).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: messages["cloud.contextLayer.workspace.loadMore"] }));
+    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
+    view.rerender(page());
+
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: messages["cloud.contextLayer.workspace.loadMore"] })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.workspace.loadMoreError"])).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: messages["form.tryAgain"] }));
+    expect(fetchNextPage).toHaveBeenCalledTimes(2);
+  });
+
   it("disables all connector switches and does not mutate for read-only viewers", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
@@ -1159,6 +1226,62 @@ describe("ContextLayerPage", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeInTheDocument();
     expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("stops paging workspaces and keeps the terms modal open when a workspace page fails during enrollment", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      is_instance_admin: false,
+      provisioning_state: "not_provisioned",
+      organization_id: "test-org-123",
+      organization_kind: null,
+      external_cloud_eligible: true,
+      eligible_external_organization_id: "test-org-123",
+    });
+    const fetchNextPage = jest.fn().mockResolvedValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: true,
+      isError: true,
+      error: new Error("Too many requests"),
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: true,
+      fetchNextPage,
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+    const onComplete = jest.fn();
+    mockUseModalService.mockReturnValue({
+      openModal: jest.fn().mockImplementation(({ content }) => {
+        const Content = content;
+        return Promise.resolve(
+          render(
+            <IntlProvider locale="en" messages={messages}>
+              <Content onCancel={jest.fn()} onComplete={onComplete} />
+            </IntlProvider>
+          )
+        );
+      }),
+    } as never);
+
+    renderWithIntl();
+    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
+    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+
+    await waitFor(() => {
+      expect(registerNotification).toHaveBeenCalledWith({
+        id: "context-layer-enrollment-error",
+        text: messages["cloud.contextLayer.terms.enrollError"],
+        type: "error",
+      });
+    });
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it("shows the admin-only message instead of the enable button", () => {
