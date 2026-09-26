@@ -31,7 +31,6 @@ import { DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
-import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -53,7 +52,6 @@ export const CreateDestinationPage: React.FC = () => {
   const { mutateAsync: createDestination } = useCreateDestination();
   const { mutateAsync: updateDestination } = useUpdateDestination();
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
-  const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
@@ -106,13 +104,7 @@ export const CreateDestinationPage: React.FC = () => {
         actorKind: "destination",
         workspaceId: result.workspaceId,
         enabled: contextLayerAgentAccess,
-      }).catch(() => {
-        registerNotification({
-          id: "cloud.contextLayer.destinationOptIn.syncFailed",
-          text: formatMessage({ id: "cloud.contextLayer.destinationOptIn.syncFailed" }),
-          type: "error",
-        });
-      });
+      }).catch(() => undefined);
     }
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
@@ -159,13 +151,7 @@ export const CreateDestinationPage: React.FC = () => {
         actorKind: "destination",
         workspaceId: destination.workspaceId,
         enabled: contextLayerAgentAccess,
-      }).catch(() => {
-        registerNotification({
-          id: "cloud.contextLayer.destinationOptIn.syncFailed",
-          text: formatMessage({ id: "cloud.contextLayer.destinationOptIn.syncFailed" }),
-          type: "error",
-        });
-      });
+      }).catch(() => undefined);
     }
     clearAllFormChanges();
     navigate(`../${destination.destinationId}/${DestinationPaths.Connections}`);
