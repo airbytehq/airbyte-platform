@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -243,21 +243,25 @@ const WorkspaceConnectorAccess: React.FC<{
   canManageOrganizationPermissions: boolean;
 }> = ({ workspacesQuery, canManageOrganizationPermissions }) => {
   const [enabledConnectors, setEnabledConnectors] = useState<Record<string, boolean>>({});
+  const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = workspacesQuery;
 
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
-    }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
-
-  const workspaces = useMemo<WorkspaceConnectorData[]>(() => {
+  const allWorkspaces = useMemo<WorkspaceConnectorData[]>(() => {
     const apiWorkspaces = workspacesQuery.data?.pages.flatMap((page) => page.workspaces ?? []) ?? [];
     return apiWorkspaces.map((workspace) => ({
       workspaceId: workspace.workspaceId,
       workspaceName: workspace.name,
     }));
   }, [workspacesQuery.data?.pages]);
+  const workspaces = allWorkspaces.slice(0, visibleWorkspaceCount);
+  const hasMoreWorkspaces = allWorkspaces.length > visibleWorkspaceCount || hasNextPage;
+
+  const loadMoreWorkspaces = async () => {
+    if (allWorkspaces.length <= visibleWorkspaceCount && hasNextPage) {
+      await fetchNextPage();
+    }
+    setVisibleWorkspaceCount((count) => count + 25);
+  };
 
   return (
     <div className={styles.workspaceSection}>
@@ -293,6 +297,11 @@ const WorkspaceConnectorAccess: React.FC<{
               }
             />
           ))}
+          {hasMoreWorkspaces && !isFetchingNextPage && (
+            <Button type="button" variant="secondary" onClick={() => void loadMoreWorkspaces()}>
+              <FormattedMessage id="cloud.contextLayer.workspace.loadMore" />
+            </Button>
+          )}
           {isFetchingNextPage && (
             <Text color="grey">
               <FormattedMessage id="cloud.contextLayer.workspace.loadingMore" />
@@ -576,6 +585,7 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
         </Card>
         {status.is_enrolled && (
           <WorkspaceConnectorAccess
+            key={organizationId}
             workspacesQuery={workspacesQuery}
             canManageOrganizationPermissions={canManageOrganizationPermissions}
           />

@@ -2723,6 +2723,7 @@
   "cloud.contextLayer.workspace.title": "Workspace connector access",
   "cloud.contextLayer.workspace.description": "Control which connectors AI agents can access within each workspace. Sources are enabled by default. Destinations must be explicitly enabled.",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
+  "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",

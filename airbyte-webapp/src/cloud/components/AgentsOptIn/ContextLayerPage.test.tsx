@@ -134,6 +134,7 @@ const messages = {
   "cloud.contextLayer.workspace.description":
     "Control which connectors AI agents can access within each workspace. Sources are enabled by default. Destinations must be explicitly enabled.",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
+  "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
@@ -653,7 +654,7 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
 
-  it("loads all workspace pages before rendering connector access", async () => {
+  it("loads another workspace page only when requested", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
       is_instance_admin: false,
@@ -663,10 +664,17 @@ describe("ContextLayerPage", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: null,
     });
-    let workspacePages = [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }];
+    let workspacePages = [
+      {
+        workspaces: Array.from({ length: 25 }, (_, index) => ({
+          workspaceId: `workspace-${index + 1}`,
+          name: `Workspace ${index + 1}`,
+        })),
+      },
+    ];
     let hasNextPage = true;
     const fetchNextPage = jest.fn().mockImplementation(async () => {
-      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-2", name: "Workspace 2" }] }];
+      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
       hasNextPage = false;
       return { data: { pages: workspacePages }, hasNextPage: false };
     });
@@ -694,6 +702,16 @@ describe("ContextLayerPage", () => {
 
     const view = renderWithIntl();
 
+    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({ pagination: { pageSize: 25, rowOffset: 0 } })
+    );
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(screen.getByText("Workspace 1")).toBeInTheDocument();
+    expect(screen.getByText("Workspace 25")).toBeInTheDocument();
+    expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
+
+    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
     await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
     view.rerender(
       <MemoryRouter>
@@ -707,7 +725,95 @@ describe("ContextLayerPage", () => {
       </MemoryRouter>
     );
     expect(screen.getByText("Workspace 1")).toBeInTheDocument();
-    expect(screen.getByText("Workspace 2")).toBeInTheDocument();
+    expect(screen.getByText("Workspace 26")).toBeInTheDocument();
+  });
+
+  it("shows only 25 cached workspaces until more are requested", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const fetchNextPage = jest.fn();
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: Array.from({ length: 25 }, (_, index) => ({
+              workspaceId: `workspace-${index + 1}`,
+              name: `Workspace ${index + 1}`,
+            })),
+          },
+          { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] },
+        ],
+      },
+      hasNextPage: false,
+      fetchNextPage,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+
+    renderWithIntl();
+
+    expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
+    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
+    expect(screen.getByText("Workspace 26")).toBeInTheDocument();
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
+  it("resets the visible workspace count when the organization changes", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    let organizationId = "organization-1";
+    mockUseCurrentOrganizationId.mockImplementation(() => organizationId);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: Array.from({ length: 26 }, (_, index) => ({
+              workspaceId: `workspace-${index + 1}`,
+              name: `Workspace ${index + 1}`,
+            })),
+          },
+        ],
+      },
+      hasNextPage: false,
+      fetchNextPage: jest.fn(),
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+
+    const view = renderWithIntl();
+
+    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
+    expect(screen.getByText("Workspace 26")).toBeInTheDocument();
+
+    organizationId = "organization-2";
+    view.rerender(
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerPage />
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
   });
 
   it("disables all connector switches and does not mutate for read-only viewers", () => {
