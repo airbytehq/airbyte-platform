@@ -3,6 +3,7 @@
 
 .settingsNavigation {
   width: 200px;
+  flex-shrink: 0;
   padding: variables.$spacing-xl;
 
   &__blockTitle {

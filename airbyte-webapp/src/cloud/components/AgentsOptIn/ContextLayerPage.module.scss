@@ -30,23 +30,6 @@ $emptyStateButtonWidth: 360px;
   gap: 16px;
 }
 
-.toggleText {
-  flex: 1;
-}
-
-.toggleControl {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.infoBox {
-  padding: 16px;
-  border: 1px solid colors.$grey-200;
-  border-radius: 4px;
-  background: colors.$grey-50;
-}
-
 .workspaceSection {
   display: flex;
   flex-direction: column;

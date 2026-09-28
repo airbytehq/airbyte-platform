@@ -212,31 +212,16 @@ it.each([true, false])("destination opt-in enables indexing with displayed state
   );
 });
 
-it("enrollment enables access and indexing for a disabled supported destination", async () => {
+it("enrollment leaves supported destinations disabled for individual opt-in", async () => {
   jest.mocked(listSourcesForWorkspace).mockResolvedValue({ sources: [] });
   const inventory = { destinations: [{ destinationId: "destination", destinationDefinitionId: "supported" }] };
   jest.mocked(listDestinationsForWorkspace).mockResolvedValue(inventory as never);
-  const expected = { ...destinationFlags, ...disabled, enable_backfill: false };
-  jest.mocked(getFusionDestinationEnablement).mockResolvedValue({
-    ...state,
-    actorId: "destination",
-    actorType: "destination",
-    ...expected,
-  } as never);
   const { result } = renderHook(() => useEnableFusionWorkspaceActors(), { wrapper });
   await act(async () => {
     expect(await result.current.mutateAsync({ workspaceIds: ["workspace"] })).toEqual([]);
   });
-  expect(updateFusionDestinationEnablement).toHaveBeenLastCalledWith(
-    "destination",
-    {
-      ...expected,
-      enable_agent_access: true,
-      enable_indexing: true,
-      expectedState: expected,
-    },
-    expect.anything()
-  );
+  expect(listDestinationsForWorkspace).not.toHaveBeenCalled();
+  expect(updateFusionDestinationEnablement).not.toHaveBeenCalled();
 });
 
 it.each(["source", "destination"] as const)(

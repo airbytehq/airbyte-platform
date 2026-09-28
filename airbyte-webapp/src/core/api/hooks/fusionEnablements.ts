@@ -269,34 +269,23 @@ export const useFusionWorkspaceConnectors = (
 export const useEnableFusionWorkspaceActors = () => {
   const options = useRequestOptions();
   const supportedSources = useAgentsSupportedSourceDefinitionIds();
-  const supportedDestinations = useAgentsSupportedDestinationDefinitionIds();
   const mutation = useSetFusionActorEnablement();
   return useMutation(async ({ workspaceIds, retryActors }: { workspaceIds: string[]; retryActors?: FusionActor[] }) => {
     const actors = retryActors ? [...retryActors] : [];
     if (!retryActors) {
       for (const workspaceId of workspaceIds) {
-        for (const actorKind of ["source", "destination"] as const) {
-          let cursor: string | undefined;
-          while (true) {
-            const page =
-              actorKind === "source"
-                ? (await listSourcesForWorkspace({ workspaceId, pageSize: 100, cursor }, options)).sources.map(
-                    (actor) => ({ id: actor.sourceId, supported: supportedSources.has(actor.sourceDefinitionId) })
-                  )
-                : (
-                    await listDestinationsForWorkspace({ workspaceId, pageSize: 100, cursor }, options)
-                  ).destinations.map((actor) => ({
-                    id: actor.destinationId,
-                    supported: supportedDestinations.has(actor.destinationDefinitionId),
-                  }));
-            actors.push(
-              ...page.filter((actor) => actor.supported).map((actor) => ({ workspaceId, actorKind, actorId: actor.id }))
-            );
-            if (page.length < 100) {
-              break;
-            }
-            cursor = page.at(-1)?.id;
+        let cursor: string | undefined;
+        while (true) {
+          const page = (await listSourcesForWorkspace({ workspaceId, pageSize: 100, cursor }, options)).sources;
+          actors.push(
+            ...page
+              .filter((actor) => supportedSources.has(actor.sourceDefinitionId))
+              .map((actor) => ({ workspaceId, actorKind: "source" as const, actorId: actor.sourceId }))
+          );
+          if (page.length < 100) {
+            break;
           }
+          cursor = page.at(-1)?.sourceId;
         }
       }
     }

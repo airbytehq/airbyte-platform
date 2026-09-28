@@ -2,9 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "typescript": true,
   "vite": true,
-  "project": [
-    "src/**/*.{js,ts,tsx}!"
-  ],
+  "project": ["src/**/*.{js,ts,tsx}!"],
   "ignore": [
     // Ignore all generated files
     "src/core/api/generated/**",
@@ -31,7 +29,10 @@
 
     // Ignore unused connection change review components as they will be integrated in a later PR
     "src/pages/connections/ConnectionReplicationPage/ChangeWarningCard.tsx",
-    "src/pages/connections/ConnectionReplicationPage/ChangesReviewModal.tsx"
+    "src/pages/connections/ConnectionReplicationPage/ChangesReviewModal.tsx",
+
+    // Retain the terms modal for the planned global Semantic search opt-in
+    "src/cloud/components/AgentsOptIn/ContextLayerTosModal.tsx"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file

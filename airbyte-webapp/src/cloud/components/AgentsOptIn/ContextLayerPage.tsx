@@ -8,12 +8,13 @@ import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { LoadingPage } from "components/ui/LoadingPage";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import {
   useAgentsProvisioningStatusQuery,
   useUnenrollOrganizationFromAgents,
@@ -25,7 +26,6 @@ import {
   FusionEnablementState,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
-import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
@@ -34,7 +34,6 @@ import { useLocalStorage } from "core/utils/useLocalStorage";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 
 import styles from "./ContextLayerPage.module.scss";
-import { ContextLayerTosModal } from "./ContextLayerTosModal";
 import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
@@ -420,31 +419,25 @@ const WorkspaceConnectorAccess: React.FC<{
   );
 };
 
-const ContextLayerToggle: React.FC<{ enabled: boolean; onClick?: () => void }> = ({ enabled, onClick }) => {
+const ContextLayerToggle: React.FC<{ enabled: boolean; disabled: boolean; onClick?: () => void }> = ({
+  enabled,
+  disabled,
+  onClick,
+}) => {
   const { formatMessage } = useIntl();
 
   return (
     <div className={styles.toggleRow}>
-      <div className={styles.toggleText}>
-        <Text size="sm" bold>
-          <FormattedMessage id="cloud.contextLayer.toggle.label" />
-        </Text>
-        <Text size="sm" color="grey">
-          <FormattedMessage id="cloud.contextLayer.toggle.description" />
-        </Text>
-      </div>
-      <div className={styles.toggleControl}>
-        <Text size="sm" color="grey">
-          <FormattedMessage id={enabled ? "cloud.contextLayer.toggle.enabled" : "cloud.contextLayer.toggle.disabled"} />
-        </Text>
-        <Switch
-          size="sm"
-          checked={enabled}
-          disabled={!onClick}
-          onChange={onClick ? () => onClick() : undefined}
-          aria-label={formatMessage({ id: "cloud.contextLayer.toggle.label" })}
-        />
-      </div>
+      <Heading as="h2" size="sm">
+        <FormattedMessage id="cloud.contextLayer.organizationAgentAccess.title" />
+      </Heading>
+      <Switch
+        size="sm"
+        checked={enabled}
+        disabled={disabled || !onClick}
+        onChange={onClick}
+        aria-label={formatMessage({ id: "cloud.contextLayer.organizationAgentAccess.title" })}
+      />
     </div>
   );
 };
@@ -522,17 +515,18 @@ const ContextLayerPageContent: React.FC = () => {
   const enrollOrganization = useEnrollOrganizationInAgents();
   const enableWorkspaceActors = useEnableFusionWorkspaceActors();
   const unenrollOrganization = useUnenrollOrganizationFromAgents();
-  const { openModal } = useModalService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const canManageOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions, { organizationId });
+  const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const workspacesQuery = useListWorkspacesInOrganization({
     organizationId,
     pagination: { pageSize: 25, rowOffset: 0 },
     enabled: isEligible,
   });
-  const [isOpeningModal, setIsOpeningModal] = useState(false);
+  const [isEnabling, setIsEnabling] = useState(false);
 
   if (isCloudApp && statusQuery.isInitialLoading) {
     return <LoadingPage />;
@@ -544,61 +538,55 @@ const ContextLayerPageContent: React.FC = () => {
     return <ContextLayerUnavailable />;
   }
 
-  const openTermsModal = () => {
+  const enableAgentAccess = async () => {
     let enrolled = false;
-    let retryActors: Parameters<typeof enableWorkspaceActors.mutateAsync>[0]["retryActors"];
-    setIsOpeningModal(true);
-    void openModal({
-      title: formatMessage({ id: "cloud.contextLayer.terms.title" }),
-      size: "xl",
-      testId: "context-layer-tos-modal",
-      content: ({ onCancel, onComplete }) => (
-        <ContextLayerTosModal
-          onCancel={onCancel}
-          onComplete={() => onComplete(undefined)}
-          onAccept={async () => {
-            let workspaceData = workspacesQuery.data;
-            let hasNextPage = workspacesQuery.hasNextPage;
+    setIsEnabling(true);
+    try {
+      let workspaceData = workspacesQuery.data;
+      let hasNextPage = workspacesQuery.hasNextPage;
 
-            if (!workspaceData) {
-              const refreshed = await workspacesQuery.refetch();
-              workspaceData = refreshed.data ?? workspaceData;
-              hasNextPage = (refreshed as { hasNextPage?: boolean }).hasNextPage ?? hasNextPage;
-            }
+      if (!workspaceData) {
+        const refreshed = await workspacesQuery.refetch();
+        if (refreshed.isError) {
+          throw refreshed.error;
+        }
+        workspaceData = refreshed.data;
+        hasNextPage = (refreshed as { hasNextPage?: boolean }).hasNextPage ?? hasNextPage;
+      }
 
-            while (hasNextPage) {
-              const nextPage = await workspacesQuery.fetchNextPage();
-              if (nextPage.isError) {
-                throw nextPage.error;
-              }
-              workspaceData = nextPage.data;
-              hasNextPage = nextPage.hasNextPage;
-            }
+      while (hasNextPage) {
+        const nextPage = await workspacesQuery.fetchNextPage();
+        if (nextPage.isError) {
+          throw nextPage.error;
+        }
+        workspaceData = nextPage.data;
+        hasNextPage = nextPage.hasNextPage;
+      }
 
-            const workspaceIds =
-              workspaceData?.pages.flatMap((page) => page.workspaces ?? []).map((workspace) => workspace.workspaceId) ??
-              [];
+      const workspaceIds =
+        workspaceData?.pages.flatMap((page) => page.workspaces ?? []).map((workspace) => workspace.workspaceId) ?? [];
 
-            if (workspaceIds.length === 0) {
-              throw new Error("No workspaces available for enrollment");
-            }
-            if (!enrolled) {
-              await enrollOrganization.mutateAsync({ workspaceIds, addAllSupportedActors: false });
-              enrolled = true;
-            }
-            try {
-              retryActors = await enableWorkspaceActors.mutateAsync({ workspaceIds, retryActors });
-            } catch (error) {
-              retryActors = undefined;
-              throw error;
-            }
-            if (retryActors.length > 0) {
-              throw new Error("Connector enablement failed");
-            }
-          }}
-        />
-      ),
-    }).finally(() => setIsOpeningModal(false));
+      if (workspaceIds.length === 0) {
+        throw new Error("No workspaces available for enrollment");
+      }
+
+      await enrollOrganization.mutateAsync({ workspaceIds, addAllSupportedActors: false });
+      enrolled = true;
+      const failedActors = await enableWorkspaceActors.mutateAsync({ workspaceIds });
+      if (failedActors.length > 0) {
+        throw new Error("Connector enablement failed");
+      }
+    } catch {
+      registerNotification({
+        id: "context-layer-enrollment-error",
+        text: formatMessage({
+          id: enrolled ? "cloud.contextLayer.enable.sourcesError" : "cloud.contextLayer.enable.error",
+        }),
+        type: "error",
+      });
+    } finally {
+      setIsEnabling(false);
+    }
   };
 
   const openDisableConfirmation = () => {
@@ -631,66 +619,50 @@ const ContextLayerPageContent: React.FC = () => {
             <FormattedMessage id="cloud.contextLayer.title" />
           </Heading>
           <Text className={styles.subtitle}>
-            <FormattedMessage id="cloud.contextLayer.subtitle" />
+            {status.is_enrolled ? (
+              <>
+                <FormattedMessage id="cloud.contextLayer.subtitle.enabled" />
+                {canViewOrganizationSettings && canViewOrganizationUsage && (
+                  <>
+                    {" "}
+                    <Link
+                      to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.OrganizationUsage}`}
+                    >
+                      <FormattedMessage id="cloud.contextLayer.subtitle.viewUsage" />
+                    </Link>
+                  </>
+                )}
+              </>
+            ) : (
+              <FormattedMessage id="cloud.contextLayer.subtitle" />
+            )}
           </Text>
         </div>
-        <Card
-          title={formatMessage({
-            id: status.is_enrolled ? "cloud.contextLayer.status.title" : "cloud.contextLayer.enable.title",
-          })}
-          dataTestId="context-layer-card"
-        >
+        <Card dataTestId="context-layer-card">
           <div className={styles.cardContent}>
-            <Text>
-              <FormattedMessage
-                id={
-                  status.is_enrolled ? "cloud.contextLayer.status.description" : "cloud.contextLayer.enable.description"
-                }
-              />
-            </Text>
             <ContextLayerToggle
               enabled={status.is_enrolled}
+              disabled={isEnabling}
               onClick={
                 canManageOrganizationPermissions
                   ? status.is_enrolled
                     ? openDisableConfirmation
-                    : openTermsModal
+                    : () => void enableAgentAccess()
                   : undefined
               }
             />
-            {!status.is_enrolled && (
-              <>
-                <div className={styles.infoBox}>
-                  <Text size="sm">
-                    <FormattedMessage id="cloud.contextLayer.enable.info" />
-                  </Text>
-                </div>
-                {canManageOrganizationPermissions ? (
-                  <Button
-                    type="button"
-                    variant="primaryDark"
-                    isLoading={isOpeningModal}
-                    onClick={openTermsModal}
-                    data-testid="context-layer-enable-button"
-                  >
-                    <FormattedMessage id="cloud.contextLayer.enable.button" />
-                  </Button>
-                ) : (
-                  <div data-testid="context-layer-admin-required">
-                    <Text color="grey">
-                      <FormattedMessage id="cloud.contextLayer.enable.adminRequired" />
-                    </Text>
-                    <Text color="grey" size="sm">
-                      <FormattedMessage id="cloud.contextLayer.enable.adminRequired.description" />
-                    </Text>
-                  </div>
-                )}
-              </>
-            )}
-            {status.is_enrolled && (
-              <ExternalLink href={links.agentsDocs} opensInNewTab>
-                <FormattedMessage id="cloud.contextLayer.docs" />
-              </ExternalLink>
+            <Text>
+              <FormattedMessage id="cloud.contextLayer.organizationAgentAccess.description" />
+            </Text>
+            {!status.is_enrolled && !canManageOrganizationPermissions && (
+              <div data-testid="context-layer-admin-required">
+                <Text color="grey">
+                  <FormattedMessage id="cloud.contextLayer.enable.adminRequired" />
+                </Text>
+                <Text color="grey" size="sm">
+                  <FormattedMessage id="cloud.contextLayer.enable.adminRequired.description" />
+                </Text>
+              </div>
             )}
           </div>
         </Card>

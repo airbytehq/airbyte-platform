@@ -14,7 +14,6 @@ import {
   useSetFusionActorEnablement,
 } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
-import { useModalService } from "core/services/Modal";
 import { NotificationService, useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -34,10 +33,6 @@ jest.mock("core/api", () => ({
   useListWorkspacesInOrganization: jest.fn(),
   useSetFusionActorEnablement: jest.fn(),
   useEnableFusionWorkspaceActors: jest.fn(() => ({ mutateAsync: jest.fn().mockResolvedValue([]) })),
-}));
-
-jest.mock("core/services/Modal", () => ({
-  useModalService: jest.fn(),
 }));
 
 jest.mock("core/services/Notification", () => ({
@@ -84,29 +79,32 @@ const mockUseFusionWorkspaceConnectors = useFusionWorkspaceConnectors as jest.Mo
 const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.MockedFunction<
   typeof useSetFusionActorEnablement
 >;
-const mockUseModalService = useModalService as jest.MockedFunction<typeof useModalService>;
 const mockUseNotificationService = useNotificationService as jest.MockedFunction<typeof useNotificationService>;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
 const messages = {
-  "cloud.contextLayer.title": "Context layer",
-  "cloud.contextLayer.subtitle": "Configure metadata access and intelligence options for your organization.",
+  "cloud.contextLayer.title": "Context layer settings",
+  "cloud.contextLayer.subtitle":
+    "AI agents can use the Airbyte MCP to access and reason about your organization's data. Only organization admins can enable or disable context layer features.",
+  "cloud.contextLayer.subtitle.enabled":
+    "The context layer is how AI agents access and reason about your organization's data. Only organization admins can enable or disable this feature. The context layer is currently free to use. Limits apply.",
+  "cloud.contextLayer.subtitle.viewUsage": "View usage →",
   "cloud.contextLayer.unavailable.title": "Context layer not available",
   "cloud.contextLayer.unavailable.description":
     "The context layer is not available for this organization yet. Contact Airbyte support if you'd like to learn more.",
   "cloud.contextLayer.loadError.title": "Couldn't load context layer status",
   "cloud.contextLayer.loadError.description":
     "We couldn't check whether the context layer is available for this organization. Please try again.",
-  "cloud.contextLayer.enable.title": "Enable context layer",
-  "cloud.contextLayer.enable.description":
-    "The context layer allows AI agents to access and reason about your organization's data. Only organization admins can enable or disable this feature.",
-  "cloud.contextLayer.enable.info":
-    "When enabled, Airbyte constructs a semantic layer from your data. AI agents can read from and write to supported sources and destinations, search your data, and reason about it.",
-  "cloud.contextLayer.enable.button": "Enable Context Layer",
+  "cloud.contextLayer.enable.error": "Agent access could not be enabled. Please try again.",
+  "cloud.contextLayer.enable.sourcesError":
+    "Agent access is on, but some sources could not be enabled. Enable them individually under Context layer sources.",
   "cloud.contextLayer.enable.adminRequired": "Enabling the context layer requires an organization admin.",
   "cloud.contextLayer.enable.adminRequired.description":
     "Ask an organization admin of your Airbyte organization to enable this feature for your team.",
+  "cloud.contextLayer.organizationAgentAccess.title": "Agent access",
+  "cloud.contextLayer.organizationAgentAccess.description":
+    "Agents can use the Airbyte MCP to query and write to supported sources, and query supported destinations. Agent access is controlled by the credentials used to authenticate the connector in that workspace. All supported sources are enabled when you turn this on. Destinations must be enabled individually.",
   "cloud.contextLayer.status.title": "Context layer status",
   "cloud.contextLayer.status.description":
     "AI agents can access and reason about your organization's data. Only organization admins can enable or disable this feature.",
@@ -233,13 +231,15 @@ describe("ContextLayerPage", () => {
     });
     mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync: jest.fn() } as never);
     mockUseGeneratedIntent.mockReturnValue(true);
-    mockUseModalService.mockReturnValue({ openModal: jest.fn() } as never);
     mockUseNotificationService.mockReturnValue({ registerNotification: jest.fn() } as never);
     mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    jest
+      .mocked(useEnableFusionWorkspaceActors)
+      .mockReturnValue({ mutateAsync: jest.fn().mockResolvedValue([]) } as never);
     mockUseUnenrollOrganizationFromAgents.mockReturnValue({ mutateAsync: jest.fn() } as never);
   });
 
-  it("renders the disabled state and opens the terms modal", () => {
+  it("renders the agent access copy with only a switch", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       is_instance_admin: false,
@@ -249,27 +249,27 @@ describe("ContextLayerPage", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: "test-org-123",
     });
-    const openModal = jest.fn();
-    openModal.mockResolvedValue(undefined);
-    mockUseModalService.mockReturnValue({ openModal } as never);
-
     renderWithIntl();
 
-    expect(screen.getByRole("button", { name: "Enable Context Layer" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-    expect(openModal).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Context layer settings" })).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.subtitle"])).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).not.toBeChecked();
+    expect(screen.getByText(messages["cloud.contextLayer.organizationAgentAccess.description"])).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /enable context layer/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/terms of service/i)).not.toBeInTheDocument();
   });
 
-  it("accepts enrollment only after both terms checkboxes are checked", async () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: false,
+  it("enables agent access from the switch across all workspace pages", async () => {
+    let isEnrolled = false;
+    mockUseAgentsProvisioningStatus.mockImplementation(() => ({
+      is_enrolled: isEnrolled,
       is_instance_admin: false,
-      provisioning_state: "not_provisioned",
+      provisioning_state: isEnrolled ? "provisioned" : "not_provisioned",
       organization_id: "test-org-123",
       organization_kind: null,
       external_cloud_eligible: true,
       eligible_external_organization_id: "test-org-123",
-    });
+    }));
     mockUseListWorkspacesInOrganization.mockReturnValue({
       data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
       hasNextPage: true,
@@ -283,79 +283,28 @@ describe("ContextLayerPage", () => {
         hasNextPage: false,
       }),
     } as never);
-    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    const mutateAsync = jest.fn().mockImplementation(async () => {
+      isEnrolled = true;
+    });
     mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync } as never);
-    mockUseModalService.mockReturnValue({
-      openModal: jest.fn().mockImplementation(({ content }) => {
-        const Content = content;
-        return Promise.resolve(
-          render(
-            <IntlProvider locale="en" messages={messages}>
-              <Content onCancel={jest.fn()} onComplete={jest.fn()} />
-            </IntlProvider>
-          )
-        );
-      }),
-    } as never);
+    const enableActors = jest.fn().mockResolvedValue([]);
+    jest.mocked(useEnableFusionWorkspaceActors).mockReturnValue({ mutateAsync: enableActors } as never);
 
     renderWithIntl();
-    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeDisabled());
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+    const toggle = screen.getByRole("checkbox", { name: "Agent access" });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
         workspaceIds: ["workspace-1", "workspace-2"],
         addAllSupportedActors: false,
       })
     );
+    await waitFor(() => expect(enableActors).toHaveBeenCalledWith({ workspaceIds: ["workspace-1", "workspace-2"] }));
+    await waitFor(() => expect(toggle).toBeChecked());
   });
 
-  it("stops enrollment when a workspace page fails", async () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
-    const fetchNextPage = jest
-      .fn()
-      .mockResolvedValue({ isError: true, error: new Error("rate limited"), hasNextPage: true });
-    mockUseListWorkspacesInOrganization.mockReturnValue({
-      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
-      hasNextPage: true,
-      fetchNextPage,
-    } as never);
-    const enroll = jest.fn();
-    mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync: enroll } as never);
-    const registerNotification = jest.fn();
-    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
-    mockUseModalService.mockReturnValue({
-      openModal: jest.fn().mockImplementation(({ content }) => {
-        const Content = content;
-        return Promise.resolve(
-          render(
-            <IntlProvider locale="en" messages={messages}>
-              <Content onCancel={jest.fn()} onComplete={jest.fn()} />
-            </IntlProvider>
-          )
-        );
-      }),
-    } as never);
-
-    renderWithIntl();
-    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
-
-    await waitFor(() =>
-      expect(registerNotification).toHaveBeenCalledWith({
-        id: "context-layer-enrollment-error",
-        text: messages["cloud.contextLayer.terms.enrollError"],
-        type: "error",
-      })
-    );
-    expect(fetchNextPage).toHaveBeenCalledTimes(1);
-    expect(enroll).not.toHaveBeenCalled();
-  });
-
-  it.each(["inventory", "actor"])("retries %s failures in the existing enrollment modal", async (failure) => {
+  it.each(["inventory", "actor"])("shows an error when %s enablement fails", async (failure) => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       external_cloud_eligible: true,
@@ -363,47 +312,27 @@ describe("ContextLayerPage", () => {
     mockUseListWorkspacesInOrganization.mockReturnValue({
       data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
     } as never);
-    const failedActors = [{ actorId: "source-1", actorKind: "source", workspaceId: "workspace-1" }];
     const enableActors = jest
       .fn()
-      .mockResolvedValueOnce([])
-      .mockImplementationOnce(() =>
-        failure === "inventory" ? Promise.reject(new Error("Inventory unavailable")) : Promise.resolve(failedActors)
-      )
-      .mockResolvedValueOnce([]);
+      .mockImplementation(() =>
+        failure === "inventory"
+          ? Promise.reject(new Error("Inventory unavailable"))
+          : Promise.resolve([{ actorId: "source-1", actorKind: "source", workspaceId: "workspace-1" }])
+      );
     jest.mocked(useEnableFusionWorkspaceActors).mockReturnValue({ mutateAsync: enableActors } as never);
-    mockUseModalService.mockReturnValue({
-      openModal: jest.fn().mockImplementation(({ content }) => {
-        const Content = content;
-        const modal = render(
-          <IntlProvider locale="en" messages={messages}>
-            <Content onCancel={jest.fn()} onComplete={() => modal.unmount()} />
-          </IntlProvider>
-        );
-        return Promise.resolve();
-      }),
-    } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
 
     renderWithIntl();
-    const acceptEnrollment = () => {
-      fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-      fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-      fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
-    };
-    acceptEnrollment();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent access" }));
     await waitFor(() => expect(enableActors).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Accept and Enable" })).not.toBeInTheDocument());
-    acceptEnrollment();
-    await waitFor(() => expect(enableActors).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
     await waitFor(() =>
-      expect(enableActors).toHaveBeenNthCalledWith(3, {
-        workspaceIds: ["workspace-1"],
-        retryActors: failure === "inventory" ? undefined : failedActors,
+      expect(registerNotification).toHaveBeenCalledWith({
+        id: "context-layer-enrollment-error",
+        text: messages["cloud.contextLayer.enable.sourcesError"],
+        type: "error",
       })
     );
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Accept and Enable" })).not.toBeInTheDocument());
   });
 
   it("keeps connector access off Settings for an enrolled organization", () => {
@@ -419,15 +348,25 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.queryByText("No workspaces found in this organization.")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Context layer settings" })).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.subtitle.enabled"])).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View usage →" })).toHaveAttribute(
       "href",
-      "https://docs.airbyte.com/ai-agents/get-started"
+      "/organization/test-org-123/settings/organization-usage"
     );
-    expect(screen.getByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).toHaveAttribute(
-      "target",
-      "_blank"
-    );
+    expect(screen.queryByText("Context layer sources")).not.toBeInTheDocument();
+    expect(screen.queryByText("Context layer destinations")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).not.toBeInTheDocument();
+  });
+
+  it("omits the usage link when organization usage is not available", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true, external_cloud_eligible: true } as never);
+    mockUseGeneratedIntent.mockImplementation((intent) => intent !== Intent.ViewOrganizationUsage);
+
+    renderWithIntl();
+
+    expect(screen.getByText(messages["cloud.contextLayer.subtitle.enabled"])).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View usage →" })).not.toBeInTheDocument();
   });
 
   it("asks for confirmation before disabling the Context layer for an enrolled organization", async () => {
@@ -445,7 +384,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    const toggle = screen.getByRole("checkbox", { name: "Context layer" });
+    const toggle = screen.getByRole("checkbox", { name: "Agent access" });
     expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
 
@@ -472,7 +411,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Context layer" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent access" }));
     expect(await screen.findByText("Disable the Context layer for this organization?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Disable" }));
 
@@ -502,7 +441,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Context layer" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent access" }));
     expect(await screen.findByText("Disable the Context layer for this organization?")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -524,7 +463,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.getByRole("checkbox", { name: "Context layer" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
   });
 
   it("renders real workspace connectors and the empty state", async () => {
@@ -1480,7 +1419,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByTestId("context-layer-unavailable")).toHaveTextContent(
       "The context layer is not available for this organization yet. Contact Airbyte support if you'd like to learn more."
     );
-    expect(screen.queryByRole("button", { name: "Enable Context Layer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Agent access" })).not.toBeInTheDocument();
   });
 
   it("shows the not-available state when the provisioning status belongs to another organization", () => {
@@ -1535,7 +1474,7 @@ describe("ContextLayerPage", () => {
     renderWithIntl();
 
     expect(screen.getByTestId("context-layer-card")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Enable Context Layer" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).not.toBeChecked();
   });
 
   it("hides enrollment and connector access for an unenrolled organization when the opt-in is disabled", () => {
@@ -1586,7 +1525,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByTestId("context-layer-card")).toBeInTheDocument();
   });
 
-  it("keeps the terms modal open and shows an error when enrollment fails", async () => {
+  it("shows an error and leaves the switch off when enrollment fails", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       is_instance_admin: false,
@@ -1596,42 +1535,67 @@ describe("ContextLayerPage", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: "test-org-123",
     });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+    } as never);
     const mutateAsync = jest.fn().mockRejectedValue(new Error("enrollment failed"));
     mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync } as never);
     const registerNotification = jest.fn();
     mockUseNotificationService.mockReturnValue({ registerNotification } as never);
-    const onComplete = jest.fn();
-    mockUseModalService.mockReturnValue({
-      openModal: jest.fn().mockImplementation(({ content }) => {
-        const Content = content;
-        return Promise.resolve(
-          render(
-            <IntlProvider locale="en" messages={messages}>
-              <Content onCancel={jest.fn()} onComplete={onComplete} />
-            </IntlProvider>
-          )
-        );
-      }),
-    } as never);
-
     renderWithIntl();
-    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent access" }));
 
     await waitFor(() => {
       expect(registerNotification).toHaveBeenCalledWith({
         id: "context-layer-enrollment-error",
-        text: messages["cloud.contextLayer.terms.enrollError"],
+        text: messages["cloud.contextLayer.enable.error"],
         type: "error",
       });
     });
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeInTheDocument();
+    expect(mutateAsync).toHaveBeenCalledWith({ workspaceIds: ["workspace-1"], addAllSupportedActors: false });
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).not.toBeChecked();
+  });
+
+  it("stops paging workspaces before enrollment when a workspace page fails", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      is_instance_admin: false,
+      provisioning_state: "not_provisioned",
+      organization_id: "test-org-123",
+      organization_kind: null,
+      external_cloud_eligible: true,
+      eligible_external_organization_id: "test-org-123",
+    });
+    const fetchNextPage = jest.fn().mockResolvedValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: true,
+      isError: true,
+      error: new Error("Too many requests"),
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: true,
+      fetchNextPage,
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+    renderWithIntl();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent access" }));
+
+    await waitFor(() => {
+      expect(registerNotification).toHaveBeenCalledWith({
+        id: "context-layer-enrollment-error",
+        text: messages["cloud.contextLayer.enable.error"],
+        type: "error",
+      });
+    });
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  it("shows the admin-only message instead of the enable button", () => {
+  it("disables the switch and shows the admin-only message for non-admin viewers", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       is_instance_admin: false,
@@ -1645,7 +1609,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.queryByRole("button", { name: "Enable Context Layer" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
     expect(screen.getByTestId("context-layer-admin-required")).toHaveTextContent(
       "Enabling the context layer requires an organization admin."
     );
