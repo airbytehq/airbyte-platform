@@ -11,6 +11,7 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -32,5 +33,15 @@ open class FusionSearchApiController : FusionSearchApi {
   override fun searchFusionDestination(
     @PathVariable destinationId: UUID,
     @Body request: FusionSearchRequest,
+  ): JsonNode = throw ApiNotImplementedInOssProblem()
+
+  @Get("/sources/{sourceId}/search-status")
+  override fun getFusionSourceSearchStatus(
+    @PathVariable sourceId: UUID,
+  ): JsonNode = throw ApiNotImplementedInOssProblem()
+
+  @Get("/destinations/{destinationId}/search-status")
+  override fun getFusionDestinationSearchStatus(
+    @PathVariable destinationId: UUID,
   ): JsonNode = throw ApiNotImplementedInOssProblem()
 }

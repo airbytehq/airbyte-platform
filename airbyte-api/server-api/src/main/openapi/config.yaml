@@ -197,6 +197,72 @@ paths:
           description: Upstream unavailable
         "504":
           description: Upstream timed out
+  /v1/sources/{sourceId}/search-status:
+    get:
+      tags: [fusion_search]
+      operationId: getFusionSourceSearchStatus
+      summary: Get source search indexing status (Cloud only)
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Backfill and index status for each indexed stream
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSearchStatusResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Workspace reader permission required
+        "404":
+          description: Actor not found
+        "409":
+          description: Search status is unavailable in the current resource state
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Upstream unavailable
+        "504":
+          description: Upstream timed out
+  /v1/destinations/{destinationId}/search-status:
+    get:
+      tags: [fusion_search]
+      operationId: getFusionDestinationSearchStatus
+      summary: Get destination search indexing status (Cloud only)
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Backfill and index status for each indexed stream
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSearchStatusResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Workspace reader permission required
+        "404":
+          description: Actor not found
+        "409":
+          description: Search status is unavailable in the current resource state
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Upstream unavailable
+        "504":
+          description: Upstream timed out
   /v1/sources/{sourceId}/enablement:
     post:
       tags: [fusion_source_enablement]
@@ -22337,6 +22403,125 @@ components:
         search_time_ms:
           type: integer
           format: int64
+    FusionSearchStatusResponse:
+      type: object
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchStatusSource"
+    FusionSearchStatusSource:
+      type: object
+      required: [source_id, destination_id, connection_id, streams]
+      properties:
+        source_id:
+          type: string
+          format: uuid
+        destination_id:
+          type: string
+          format: uuid
+        connection_id:
+          type: string
+          format: uuid
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchStatusStream"
+    FusionSearchStatusStream:
+      type: object
+      required: [name, backfill, indexes]
+      properties:
+        namespace:
+          type: string
+          nullable: true
+        name:
+          type: string
+        backfill:
+          description: Null when backfill is disabled.
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/FusionSearchStatusBackfill"
+        indexes:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchStatusIndex"
+    FusionSearchStatusBackfill:
+      type: object
+      required:
+        [
+          backfill_start_time,
+          expected_total_records,
+          collected_records,
+          indexed_records,
+          started_at,
+          completed_at,
+          status,
+        ]
+      properties:
+        backfill_start_time:
+          type: string
+          format: date-time
+          nullable: true
+        expected_total_records:
+          type: integer
+          format: int64
+        collected_records:
+          type: integer
+          format: int64
+        indexed_records:
+          type: integer
+          format: int64
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [starting, running, finalizing, complete]
+    FusionSearchStatusIndex:
+      type: object
+      required:
+        [
+          type,
+          name,
+          indexed_records,
+          physical_rows,
+          optimized_physical_rows,
+          updated_at,
+          status,
+          storage_size_mb,
+        ]
+      properties:
+        type:
+          type: string
+          enum: [keyword, semantic]
+        name:
+          type: string
+          nullable: true
+        indexed_records:
+          type: integer
+          format: int64
+        physical_rows:
+          type: integer
+          format: int64
+        optimized_physical_rows:
+          type: integer
+          format: int64
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [backfilling, updating, optimizing, truncating, idle]
+        storage_size_mb:
+          type: number
+          format: double
     SourceExecuteRequest:
       type: object
       additionalProperties: false
