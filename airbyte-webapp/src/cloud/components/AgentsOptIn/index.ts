@@ -9,7 +9,7 @@ export {
   useShowActorContextLayerToggles,
 } from "./ActorContextLayerToggles";
 export { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
-export { ContextLayerPage } from "./ContextLayerPage";
+export { ContextLayerPage, ContextLayerConnectorsPage } from "./ContextLayerPage";
 export { InstallMcpPage } from "./InstallMcpPage";
 export { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
 export { SourceContextLayerOptIn } from "./SourceContextLayerOptIn";

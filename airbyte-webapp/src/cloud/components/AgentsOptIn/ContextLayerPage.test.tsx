@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
@@ -18,7 +18,7 @@ import { useModalService } from "core/services/Modal";
 import { NotificationService, useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
-import { ContextLayerPage } from "./ContextLayerPage";
+import { ContextLayerConnectorsPage, ContextLayerPage } from "./ContextLayerPage";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 jest.mock("area/organization/utils", () => ({
@@ -49,9 +49,7 @@ jest.mock("core/utils/app", () => ({
   useIsCloudApp: () => true,
 }));
 
-jest.mock("./useShowAgentsOptIn", () => ({
-  useShowAgentsOptIn: jest.fn(),
-}));
+jest.mock("./useShowAgentsOptIn", () => ({ useShowAgentsOptIn: jest.fn() }));
 
 jest.mock("core/utils/links", () => ({
   links: {
@@ -88,8 +86,8 @@ const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.Mock
 >;
 const mockUseModalService = useModalService as jest.MockedFunction<typeof useModalService>;
 const mockUseNotificationService = useNotificationService as jest.MockedFunction<typeof useNotificationService>;
-const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
+const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
 const messages = {
   "cloud.contextLayer.title": "Context layer",
@@ -130,17 +128,37 @@ const messages = {
   "cloud.contextLayer.terms.accept": "Accept and Enable",
   "cloud.contextLayer.terms.footnote": "* These terms are required for compliance and data processing purposes.",
   "cloud.contextLayer.terms.enrollError": "Context layer could not be enabled. Please try again.",
-  "cloud.contextLayer.workspace.title": "Workspace connector access",
-  "cloud.contextLayer.workspace.description":
-    "Control which connectors AI agents can access within each workspace. Sources are enabled by default. Destinations must be explicitly enabled.",
+  "cloud.contextLayer.sources.title": "Context layer sources",
+  "cloud.contextLayer.sources.description":
+    "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+  "cloud.contextLayer.destinations.title": "Context layer destinations",
+  "cloud.contextLayer.destinations.description":
+    "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
+  "cloud.contextLayer.destinations.noAccess.pageDescription":
+    "Choose which destinations populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+  "cloud.contextLayer.sources.noAccess.title": "Enable agent access or semantic search",
+  "cloud.contextLayer.sources.noAccess.description":
+    "Before you can control agent access to sources, you need to enable agent access or semantic search",
+  "cloud.contextLayer.destinations.noAccess.title": "Enable agent access",
+  "cloud.contextLayer.destinations.noAccess.description":
+    "Before you can control agent access to destinations, you need to enable agent access",
+  "cloud.contextLayer.noAccess.settings": "Go to settings",
+  "cloud.contextLayer.sources.empty.title": "No sources yet",
+  "cloud.contextLayer.sources.empty.description": "Add sources to Airbyte to start populating your context layer.",
+  "cloud.contextLayer.sources.empty.add": "Add your first source",
+  "cloud.contextLayer.destinations.empty.title": "No destinations yet",
+  "cloud.contextLayer.destinations.empty.description":
+    "Add destinations to Airbyte to start populating your context layer.",
+  "cloud.contextLayer.destinations.empty.add": "Add your first destination",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
   "cloud.contextLayer.workspace.loadMoreError": "Some workspaces could not be loaded.",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
-  "cloud.contextLayer.workspace.noConnectors": "No connectors found in this workspace.",
-  "cloud.contextLayer.workspace.counts": "{sources} sources, {destinations} destinations",
+  "cloud.contextLayer.workspace.noKindConnectors":
+    "No {actorKind, select, source {sources} other {destinations}} found in this workspace.",
+  "cloud.contextLayer.workspace.kindCount": "{count} {actorKind, select, source {sources} other {destinations}}",
   "cloud.contextLayer.workspace.sources": "Sources",
   "cloud.contextLayer.workspace.destinations": "Destinations",
   "cloud.contextLayer.workspace.enabledCount":
@@ -176,6 +194,19 @@ const renderWithIntl = () =>
     </MemoryRouter>
   );
 
+const renderConnectorsWithIntl = (actorKind: "source" | "destination" = "source") =>
+  render(
+    <MemoryRouter>
+      <IntlProvider locale="en" messages={messages}>
+        <NotificationService>
+          <ConfirmationModalService>
+            <ContextLayerConnectorsPage actorKind={actorKind} />
+          </ConfirmationModalService>
+        </NotificationService>
+      </IntlProvider>
+    </MemoryRouter>
+  );
+
 describe("ContextLayerPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -195,6 +226,8 @@ describe("ContextLayerPage", () => {
       sources: [],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -279,6 +312,49 @@ describe("ContextLayerPage", () => {
     );
   });
 
+  it("stops enrollment when a workspace page fails", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
+    const fetchNextPage = jest
+      .fn()
+      .mockResolvedValue({ isError: true, error: new Error("rate limited"), hasNextPage: true });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: true,
+      fetchNextPage,
+    } as never);
+    const enroll = jest.fn();
+    mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync: enroll } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+    mockUseModalService.mockReturnValue({
+      openModal: jest.fn().mockImplementation(({ content }) => {
+        const Content = content;
+        return Promise.resolve(
+          render(
+            <IntlProvider locale="en" messages={messages}>
+              <Content onCancel={jest.fn()} onComplete={jest.fn()} />
+            </IntlProvider>
+          )
+        );
+      }),
+    } as never);
+
+    renderWithIntl();
+    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
+    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+
+    await waitFor(() =>
+      expect(registerNotification).toHaveBeenCalledWith({
+        id: "context-layer-enrollment-error",
+        text: messages["cloud.contextLayer.terms.enrollError"],
+        type: "error",
+      })
+    );
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(enroll).not.toHaveBeenCalled();
+  });
+
   it.each(["inventory", "actor"])("retries %s failures in the existing enrollment modal", async (failure) => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
@@ -330,7 +406,7 @@ describe("ContextLayerPage", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Accept and Enable" })).not.toBeInTheDocument());
   });
 
-  it("renders workspace connector access for an enrolled organization", () => {
+  it("keeps connector access off Settings for an enrolled organization", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
       is_instance_admin: false,
@@ -343,8 +419,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.getByText("Workspace connector access")).toBeInTheDocument();
-    expect(screen.getByText("No workspaces found in this organization.")).toBeInTheDocument();
+    expect(screen.queryByText("No workspaces found in this organization.")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).toHaveAttribute(
       "href",
       "https://docs.airbyte.com/ai-agents/get-started"
@@ -353,45 +428,6 @@ describe("ContextLayerPage", () => {
       "target",
       "_blank"
     );
-  });
-
-  it("hydrates connector enablement only for expanded workspaces", () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
-    });
-    mockUseListWorkspacesInOrganization.mockReturnValue({
-      data: {
-        pages: [
-          {
-            workspaces: [
-              { workspaceId: "workspace-1", name: "Workspace 1" },
-              { workspaceId: "workspace-2", name: "Workspace 2" },
-            ],
-          },
-        ],
-      },
-    } as never);
-
-    renderWithIntl();
-
-    expect(screen.getByRole("button", { name: /Workspace 1/ })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: /Workspace 2/ })).toHaveAttribute("aria-expanded", "false");
-    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: false });
-    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-2", { hydrate: false });
-    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-1", { hydrate: true });
-    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-2", { hydrate: true });
-
-    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
-
-    expect(screen.getByRole("button", { name: /Workspace 1/ })).toHaveAttribute("aria-expanded", "true");
-    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: true });
-    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-2", { hydrate: true });
   });
 
   it("asks for confirmation before disabling the Context layer for an enrolled organization", async () => {
@@ -551,27 +587,37 @@ describe("ContextLayerPage", () => {
               },
             ],
             isLoading: false,
+            sourcesLoading: false,
+            destinationsLoading: false,
             sourcesError: false,
             destinationsError: false,
           }
-        : { sources: [], destinations: [], isLoading: false, sourcesError: false, destinationsError: false }
+        : {
+            sources: [],
+            destinations: [],
+            isLoading: false,
+            sourcesLoading: false,
+            destinationsLoading: false,
+            sourcesError: false,
+            destinationsError: false,
+          }
     );
 
-    renderWithIntl();
+    const view = renderConnectorsWithIntl();
 
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: false });
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-2", { hydrate: false });
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-2", { hydrate: true });
     fireEvent.click(screen.getByRole("button", { name: /Workspace 2/ }));
-
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: true });
     expect(screen.getByText("GitHub account")).toBeInTheDocument();
     expect(screen.getByText("Stripe account")).toBeInTheDocument();
-    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
-    expect(screen.getByText("Snowflake warehouse")).toBeInTheDocument();
-    expect(screen.getByText("No connectors found in this workspace.")).toBeInTheDocument();
+    expect(screen.queryByText("BigQuery warehouse")).not.toBeInTheDocument();
+    expect(screen.getByText("No sources found in this workspace.")).toBeInTheDocument();
     expect(screen.getByText("1 of 2 enabled")).toBeInTheDocument();
-    expect(screen.getByText("1 of 1 enabled (excludes 1 not supported)")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Stripe account" })).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() =>
@@ -583,6 +629,81 @@ describe("ContextLayerPage", () => {
         enabled: false,
       })
     );
+
+    view.unmount();
+    renderConnectorsWithIntl("destination");
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 2/ }));
+    expect(screen.queryByText("GitHub account")).not.toBeInTheDocument();
+    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
+    expect(screen.getByText("Snowflake warehouse")).toBeInTheDocument();
+    expect(screen.getByText("No destinations found in this workspace.")).toBeInTheDocument();
+    expect(screen.getByText("1 of 1 enabled (excludes 1 not supported)")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
+  });
+
+  it("shows source connectors while destination inventory is loading", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: false }],
+      destinations: [],
+      isLoading: true,
+      sourcesLoading: false,
+      destinationsLoading: true,
+      sourcesError: false,
+      destinationsError: false,
+    });
+
+    renderConnectorsWithIntl();
+
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeVisible();
+    expect(screen.getByText("GitHub account")).toBeVisible();
+    expect(screen.queryByText("Loading connectors...")).not.toBeInTheDocument();
+  });
+
+  it("shows a ready workspace while another workspace inventory is pending", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: [
+              { workspaceId: "workspace-1", name: "Workspace 1" },
+              { workspaceId: "workspace-2", name: "Workspace 2" },
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+    mockUseFusionWorkspaceConnectors.mockImplementation((workspaceId) => ({
+      sources:
+        workspaceId === "workspace-1"
+          ? [{ id: "source-1", name: "GitHub account", supported: true, enabled: false }]
+          : [],
+      destinations: [],
+      isLoading: workspaceId === "workspace-2",
+      sourcesLoading: workspaceId === "workspace-2",
+      destinationsLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    }));
+
+    renderConnectorsWithIntl();
+
+    await waitFor(() => expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeVisible());
+    expect(screen.getByTestId("context-layer-workspace-workspace-2")).not.toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    expect(screen.getByText("GitHub account")).toBeVisible();
   });
 
   it("shows a confirmation modal on disable but not on enable", async () => {
@@ -624,10 +745,9 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     } as never);
 
-    renderWithIntl();
+    renderConnectorsWithIntl();
 
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
-
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     expect(await screen.findByText("Disable Agents access?")).toBeInTheDocument();
     expect(mutateAsync).not.toHaveBeenCalled();
@@ -655,90 +775,91 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
 
-  it("loads another workspace page only when requested", async () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
-    });
-    let workspacePages = [
-      {
-        workspaces: Array.from({ length: 25 }, (_, index) => ({
-          workspaceId: `workspace-${index + 1}`,
-          name: `Workspace ${index + 1}`,
-        })),
-      },
-    ];
-    let hasNextPage = true;
-    const fetchNextPage = jest.fn().mockImplementation(async () => {
-      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
-      hasNextPage = false;
-      return { data: { pages: workspacePages }, hasNextPage: false };
-    });
-    mockUseListWorkspacesInOrganization.mockImplementation(
-      () =>
-        ({
-          get data() {
-            return { pages: workspacePages };
-          },
-          get hasNextPage() {
-            return hasNextPage;
-          },
-          fetchNextPage,
-          isFetchingNextPage: false,
-          isLoading: false,
-        }) as never
-    );
-    mockUseFusionWorkspaceConnectors.mockReturnValue({
-      sources: [],
-      destinations: [],
-      isLoading: false,
-      sourcesError: false,
-      destinationsError: false,
-    } as never);
+  it.each(["source", "destination"] as const)(
+    "loads another %s workspace page only when requested",
+    async (actorKind) => {
+      mockUseAgentsProvisioningStatus.mockReturnValue({
+        is_enrolled: true,
+        is_instance_admin: false,
+        provisioning_state: "provisioned",
+        organization_id: "test-org-123",
+        organization_kind: "external_cloud",
+        external_cloud_eligible: true,
+        eligible_external_organization_id: null,
+      });
+      let workspacePages = [
+        {
+          workspaces: Array.from({ length: 25 }, (_, index) => ({
+            workspaceId: `workspace-${index + 1}`,
+            name: `Workspace ${index + 1}`,
+          })),
+        },
+      ];
+      let hasNextPage = true;
+      const fetchNextPage = jest.fn().mockImplementation(async () => {
+        workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
+        hasNextPage = false;
+        return { data: { pages: workspacePages }, hasNextPage: false };
+      });
+      mockUseListWorkspacesInOrganization.mockImplementation(
+        () =>
+          ({
+            get data() {
+              return { pages: workspacePages };
+            },
+            get hasNextPage() {
+              return hasNextPage;
+            },
+            fetchNextPage,
+            isFetchingNextPage: false,
+            isLoading: false,
+          }) as never
+      );
+      mockUseFusionWorkspaceConnectors.mockReturnValue({
+        sources: [],
+        destinations: [],
+        isLoading: false,
+        sourcesError: false,
+        destinationsError: false,
+      } as never);
 
-    const view = renderWithIntl();
+      const view = renderConnectorsWithIntl(actorKind);
 
-    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(
-      expect.objectContaining({ pagination: { pageSize: 25, rowOffset: 0 } })
-    );
-    expect(fetchNextPage).not.toHaveBeenCalled();
-    expect(screen.getByText("Workspace 1")).toBeInTheDocument();
-    expect(screen.getByText("Workspace 25")).toBeInTheDocument();
-    expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
-    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
+      expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(
+        expect.objectContaining({ pagination: { pageSize: 25, rowOffset: 0 } })
+      );
+      expect(fetchNextPage).not.toHaveBeenCalled();
+      expect(screen.getByText("Workspace 1")).toBeInTheDocument();
+      expect(screen.getByText("Workspace 25")).toBeInTheDocument();
+      expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
+      expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
+      expect(
+        screen.queryByText(actorKind === "source" ? "No sources yet" : "No destinations yet")
+      ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
-    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
-    view.rerender(
-      <MemoryRouter>
-        <IntlProvider locale="en" messages={messages}>
-          <NotificationService>
-            <ConfirmationModalService>
-              <ContextLayerPage />
-            </ConfirmationModalService>
-          </NotificationService>
-        </IntlProvider>
-      </MemoryRouter>
-    );
-    expect(screen.getByText("Workspace 1")).toBeInTheDocument();
-    expect(screen.getByText("Workspace 26")).toBeInTheDocument();
-  });
+      fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
+      await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
+      view.rerender(
+        <MemoryRouter>
+          <IntlProvider locale="en" messages={messages}>
+            <NotificationService>
+              <ConfirmationModalService>
+                <ContextLayerConnectorsPage actorKind={actorKind} />
+              </ConfirmationModalService>
+            </NotificationService>
+          </IntlProvider>
+        </MemoryRouter>
+      );
+      expect(screen.getByText("Workspace 1")).toBeInTheDocument();
+      expect(screen.getByText("Workspace 26")).toBeInTheDocument();
+      expect(
+        await screen.findByText(actorKind === "source" ? "No sources yet" : "No destinations yet")
+      ).toBeInTheDocument();
+    }
+  );
 
   it("shows only 25 cached workspaces until more are requested", () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
-    });
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
     const fetchNextPage = jest.fn();
     mockUseListWorkspacesInOrganization.mockReturnValue({
       data: {
@@ -758,7 +879,7 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
 
-    renderWithIntl();
+    renderConnectorsWithIntl();
 
     expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
     expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
@@ -768,15 +889,7 @@ describe("ContextLayerPage", () => {
   });
 
   it("resets the visible workspace count when the organization changes", () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
-    });
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
     let organizationId = "organization-1";
     mockUseCurrentOrganizationId.mockImplementation(() => organizationId);
     mockUseListWorkspacesInOrganization.mockReturnValue({
@@ -796,8 +909,7 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
 
-    const view = renderWithIntl();
-
+    const view = renderConnectorsWithIntl();
     fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
     expect(screen.getByText("Workspace 26")).toBeInTheDocument();
 
@@ -807,7 +919,7 @@ describe("ContextLayerPage", () => {
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerPage />
+              <ContextLayerConnectorsPage actorKind="source" />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
@@ -817,17 +929,9 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByText("Workspace 26")).not.toBeInTheDocument();
   });
 
-  it("shows an error with a retry instead of the load more button after a workspace page fails", async () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
-    });
-    const workspacePages = [
+  it("shows a retry after a workspace page fails without fetching again automatically", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    let workspacePages = [
       {
         workspaces: Array.from({ length: 25 }, (_, index) => ({
           workspaceId: `workspace-${index + 1}`,
@@ -836,16 +940,26 @@ describe("ContextLayerPage", () => {
       },
     ];
     let isError = false;
-    // The page request fails (e.g. HTTP 429): the fetch settles while hasNextPage stays true.
+    let hasNextPage = true;
     const fetchNextPage = jest.fn().mockImplementation(async () => {
-      isError = true;
-      return { data: { pages: workspacePages }, hasNextPage: true, isError: true };
+      if (fetchNextPage.mock.calls.length === 1) {
+        isError = true;
+        return { data: { pages: workspacePages }, hasNextPage: true, isError: true };
+      }
+      isError = false;
+      hasNextPage = false;
+      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
+      return { data: { pages: workspacePages }, hasNextPage: false, isError: false };
     });
     mockUseListWorkspacesInOrganization.mockImplementation(
       () =>
         ({
-          data: { pages: workspacePages },
-          hasNextPage: true,
+          get data() {
+            return { pages: workspacePages };
+          },
+          get hasNextPage() {
+            return hasNextPage;
+          },
           fetchNextPage,
           isFetchingNextPage: false,
           get isError() {
@@ -854,33 +968,29 @@ describe("ContextLayerPage", () => {
           isLoading: false,
         }) as never
     );
-    const page = () => (
+
+    const view = renderConnectorsWithIntl();
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
+    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
+    view.rerender(
       <MemoryRouter>
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerPage />
+              <ContextLayerConnectorsPage actorKind="source" />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
       </MemoryRouter>
     );
 
-    const view = renderWithIntl();
-    expect(fetchNextPage).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole("button", { name: messages["cloud.contextLayer.workspace.loadMore"] }));
-    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
-    view.rerender(page());
-
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
-    expect(
-      screen.queryByRole("button", { name: messages["cloud.contextLayer.workspace.loadMore"] })
-    ).not.toBeInTheDocument();
-    expect(screen.getByText(messages["cloud.contextLayer.workspace.loadMoreError"])).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: messages["form.tryAgain"] }));
+    expect(screen.queryByRole("button", { name: "Load more workspaces" })).not.toBeInTheDocument();
+    expect(screen.getByText("Some workspaces could not be loaded.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(fetchNextPage).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Workspace 26")).toBeInTheDocument();
   });
 
   it("disables all connector switches and does not mutate for read-only viewers", () => {
@@ -924,16 +1034,275 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     } as never);
 
-    renderWithIntl();
+    const view = renderConnectorsWithIntl();
 
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
-
     expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeDisabled();
+    view.unmount();
+    renderConnectorsWithIntl("destination");
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
     expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  it("renders a connector error for one category without hiding the other category", () => {
+  it("enables only the matching workspace editor's switch", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent, meta) => intent === Intent.CreateOrEditDestination && meta?.workspaceId === "workspace-1"
+    );
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: true });
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: false }],
+      destinations: [{ id: "destination-1", name: "Snowflake warehouse", supported: true, enabled: false }],
+      isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+
+    const sourceView = renderConnectorsWithIntl();
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeDisabled();
+    sourceView.unmount();
+    renderConnectorsWithIntl("destination");
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    const destinationSwitch = screen.getByRole("checkbox", { name: "Snowflake warehouse" });
+    expect(destinationSwitch).toBeEnabled();
+    fireEvent.click(destinationSwitch);
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "destination-1",
+        actorKind: "destination",
+        workspaceId: "workspace-1",
+        expectedState: undefined,
+        enabled: true,
+      })
+    );
+    expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditDestination, { workspaceId: "workspace-1" });
+  });
+
+  it.each([
+    [
+      "source",
+      "Context layer sources",
+      "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+      "Enable agent access or semantic search",
+      "Before you can control agent access to sources, you need to enable agent access or semantic search",
+    ],
+    [
+      "destination",
+      "Context layer destinations",
+      "Choose which destinations populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+      "Enable agent access",
+      "Before you can control agent access to destinations, you need to enable agent access",
+    ],
+  ] as const)("shows the %s pre-enrollment settings action", (actorKind, pageTitle, subtitle, title, description) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
+
+    renderConnectorsWithIntl(actorKind);
+
+    expect(screen.getByRole("heading", { name: pageTitle })).toBeInTheDocument();
+    expect(screen.getByText(subtitle)).toBeInTheDocument();
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to settings" })).toBeInTheDocument();
+    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+  });
+
+  it("sends the pre-enrollment action to Context Layer Settings", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
+
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/sources"]}>
+        <IntlProvider locale="en" messages={messages}>
+          <Routes>
+            <Route
+              path="/organization/:organizationId/context-layer/sources"
+              element={<ContextLayerConnectorsPage actorKind="source" />}
+            />
+            <Route path="/organization/:organizationId/context-layer" element={<div>Settings destination</div>} />
+          </Routes>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to settings" }));
+    expect(screen.getByText("Settings destination")).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "source",
+      "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+      "No sources yet",
+      "Add sources to Airbyte to start populating your context layer.",
+      "Add your first source",
+      "/workspaces/workspace-1/source/new-source",
+    ],
+    [
+      "destination",
+      "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
+      "No destinations yet",
+      "Add destinations to Airbyte to start populating your context layer.",
+      "Add your first destination",
+      "/workspaces/workspace-1/destination/new-destination",
+    ],
+  ] as const)(
+    "shows the %s empty state and opens connector setup",
+    async (actorKind, subtitle, title, description, action, path) => {
+      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true, external_cloud_eligible: true } as never);
+      mockUseListWorkspacesInOrganization.mockReturnValue({
+        data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        isLoading: false,
+      } as never);
+
+      render(
+        <MemoryRouter initialEntries={[`/organization/test-org-123/context-layer/${actorKind}s`]}>
+          <IntlProvider locale="en" messages={messages}>
+            <NotificationService>
+              <ConfirmationModalService>
+                <Routes>
+                  <Route
+                    path="/organization/:organizationId/context-layer/:kind"
+                    element={<ContextLayerConnectorsPage actorKind={actorKind} />}
+                  />
+                  <Route path={path} element={<div>Connector setup</div>} />
+                </Routes>
+              </ConfirmationModalService>
+            </NotificationService>
+          </IntlProvider>
+        </MemoryRouter>
+      );
+
+      expect(await screen.findByText(title)).toBeInTheDocument();
+      expect(screen.getByText(subtitle)).toBeInTheDocument();
+      expect(screen.getByText(description)).toBeInTheDocument();
+      expect(screen.getByTestId("context-layer-workspace-workspace-1")).not.toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: action }));
+      expect(screen.getByText("Connector setup")).toBeInTheDocument();
+    }
+  );
+
+  it("waits for destination inventory after switching from an empty Sources page", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [],
+      isLoading: true,
+      sourcesLoading: false,
+      destinationsLoading: true,
+      sourcesError: false,
+      destinationsError: false,
+    });
+
+    const view = renderConnectorsWithIntl();
+    expect(await screen.findByText("No sources yet")).toBeVisible();
+
+    view.rerender(
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerConnectorsPage actorKind="destination" />
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("No destinations yet")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading connectors...")).toBeVisible();
+  });
+
+  it.each(["source", "destination"] as const)(
+    "hides the %s empty-state action from read-only viewers",
+    async (actorKind) => {
+      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+      mockUseListWorkspacesInOrganization.mockReturnValue({
+        data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        isLoading: false,
+      } as never);
+      mockUseGeneratedIntent.mockReturnValue(false);
+
+      renderConnectorsWithIntl(actorKind);
+
+      expect(await screen.findByText(actorKind === "source" ? "No sources yet" : "No destinations yet")).toBeVisible();
+      expect(
+        screen.queryByRole("button", {
+          name: actorKind === "source" ? "Add your first source" : "Add your first destination",
+        })
+      ).not.toBeInTheDocument();
+    }
+  );
+
+  it("uses an authorized workspace when the stored workspace cannot create sources", async () => {
+    window.localStorage.setItem(
+      "airbyte_organization-workspace-map",
+      JSON.stringify({ "test-org-123": "workspace-1" })
+    );
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: [
+              { workspaceId: "workspace-1", name: "Workspace 1" },
+              { workspaceId: "workspace-2", name: "Workspace 2" },
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent, meta) => intent === Intent.CreateOrEditSource && meta?.workspaceId === "workspace-2"
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/sources"]}>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <Routes>
+                <Route
+                  path="/organization/:organizationId/context-layer/sources"
+                  element={<ContextLayerConnectorsPage actorKind="source" />}
+                />
+                <Route
+                  path="/workspaces/workspace-2/source/new-source"
+                  element={<div>Authorized connector setup</div>}
+                />
+              </Routes>
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("No sources yet")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Add your first source" }));
+    expect(screen.getByText("Authorized connector setup")).toBeInTheDocument();
+  });
+
+  it("shows errors only for the selected connector kind", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
       is_instance_admin: false,
@@ -963,15 +1332,18 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     } as never);
 
-    renderWithIntl();
+    const view = renderConnectorsWithIntl();
 
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
-
     expect(screen.getByTestId("context-layer-source-error")).toHaveTextContent(
       "Unable to load connectors. Please try again."
     );
+    expect(screen.queryByText("BigQuery warehouse")).not.toBeInTheDocument();
+    view.unmount();
+    renderConnectorsWithIntl("destination");
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    expect(screen.queryByTestId("context-layer-source-error")).not.toBeInTheDocument();
     expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
-    expect(screen.queryByText("No connectors found in this workspace.")).not.toBeInTheDocument();
   });
 
   it("clears the optimistic connector state after a successful mutation", async () => {
@@ -1006,7 +1378,7 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     } as never);
 
-    const view = renderWithIntl();
+    const view = renderConnectorsWithIntl();
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
     const checkbox = screen.getByRole("checkbox", { name: "GitHub account" });
     fireEvent.click(checkbox);
@@ -1017,7 +1389,7 @@ describe("ContextLayerPage", () => {
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerPage />
+              <ContextLayerConnectorsPage actorKind="source" />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
@@ -1061,7 +1433,7 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     } as never);
 
-    renderWithIntl();
+    renderConnectorsWithIntl();
     fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
@@ -1086,7 +1458,7 @@ describe("ContextLayerPage", () => {
     });
     mockUseListWorkspacesInOrganization.mockReturnValue({ isLoading: true } as never);
 
-    renderWithIntl();
+    renderConnectorsWithIntl();
 
     expect(screen.getByText("Loading workspaces...")).toBeInTheDocument();
     expect(screen.queryByText("No workspaces found in this organization.")).not.toBeInTheDocument();
@@ -1149,8 +1521,7 @@ describe("ContextLayerPage", () => {
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the not-available state when the opt-in flag is off and the org is not enrolled", () => {
-    mockUseShowAgentsOptIn.mockReturnValue(false);
+  it("shows the enable card when the API reports an eligible unenrolled organization", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       is_instance_admin: false,
@@ -1163,10 +1534,42 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
+    expect(screen.getByTestId("context-layer-card")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enable Context Layer" })).toBeInTheDocument();
   });
 
-  it("renders the enrolled page when the opt-in flag is off but the org is enrolled", () => {
+  it("hides enrollment and connector access for an unenrolled organization when the opt-in is disabled", () => {
+    mockUseShowAgentsOptIn.mockReturnValue(false);
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      external_cloud_eligible: true,
+    } as never);
+
+    const settingsView = renderWithIntl();
+    expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enable Context Layer" })).not.toBeInTheDocument();
+
+    settingsView.unmount();
+    renderConnectorsWithIntl();
+    expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Go to settings")).not.toBeInTheDocument();
+  });
+
+  it("shows the unavailable page instead of connector access for an ineligible organization", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      external_cloud_eligible: false,
+    } as never);
+
+    renderConnectorsWithIntl();
+
+    expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add your first source" })).not.toBeInTheDocument();
+    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalled();
+  });
+
+  it("renders the enrolled page when external eligibility is false", () => {
     mockUseShowAgentsOptIn.mockReturnValue(false);
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
@@ -1226,62 +1629,6 @@ describe("ContextLayerPage", () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeInTheDocument();
     expect(mutateAsync).not.toHaveBeenCalled();
-  });
-
-  it("stops paging workspaces and keeps the terms modal open when a workspace page fails during enrollment", async () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: false,
-      is_instance_admin: false,
-      provisioning_state: "not_provisioned",
-      organization_id: "test-org-123",
-      organization_kind: null,
-      external_cloud_eligible: true,
-      eligible_external_organization_id: "test-org-123",
-    });
-    const fetchNextPage = jest.fn().mockResolvedValue({
-      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
-      hasNextPage: true,
-      isError: true,
-      error: new Error("Too many requests"),
-    });
-    mockUseListWorkspacesInOrganization.mockReturnValue({
-      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
-      hasNextPage: true,
-      fetchNextPage,
-    } as never);
-    const mutateAsync = jest.fn().mockResolvedValue(undefined);
-    mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync } as never);
-    const registerNotification = jest.fn();
-    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
-    const onComplete = jest.fn();
-    mockUseModalService.mockReturnValue({
-      openModal: jest.fn().mockImplementation(({ content }) => {
-        const Content = content;
-        return Promise.resolve(
-          render(
-            <IntlProvider locale="en" messages={messages}>
-              <Content onCancel={jest.fn()} onComplete={onComplete} />
-            </IntlProvider>
-          )
-        );
-      }),
-    } as never);
-
-    renderWithIntl();
-    fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
-
-    await waitFor(() => {
-      expect(registerNotification).toHaveBeenCalledWith({
-        id: "context-layer-enrollment-error",
-        text: messages["cloud.contextLayer.terms.enrollError"],
-        type: "error",
-      });
-    });
-    expect(fetchNextPage).toHaveBeenCalledTimes(1);
-    expect(mutateAsync).not.toHaveBeenCalled();
-    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it("shows the admin-only message instead of the enable button", () => {

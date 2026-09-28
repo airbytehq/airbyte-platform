@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -28,6 +30,8 @@ import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useLocalStorage } from "core/utils/useLocalStorage";
+import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 
 import styles from "./ContextLayerPage.module.scss";
 import { ContextLayerTosModal } from "./ContextLayerTosModal";
@@ -49,28 +53,37 @@ interface WorkspaceConnectorData {
   workspaceName: string;
 }
 
+type ActorKind = "source" | "destination";
+
 const WorkspaceConnectorCard: React.FC<{
   workspace: WorkspaceConnectorData;
   enabledConnectors: Record<string, boolean>;
   onToggle: (key: string, enabled: boolean) => void;
   onClearOptimistic: (key: string) => void;
-  canManageOrganizationPermissions: boolean;
-}> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, canManageOrganizationPermissions }) => {
+  actorKind: ActorKind;
+  onInventoryLoaded: (workspaceId: string, count: number | null, canManageConnectors: boolean) => void;
+}> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, actorKind, onInventoryLoaded }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { sources, destinations, isLoading, sourcesError, destinationsError } = useFusionWorkspaceConnectors(
-    workspace.workspaceId,
-    { hydrate: isExpanded }
-  );
+  const { sources, destinations, sourcesLoading, destinationsLoading, sourcesError, destinationsError } =
+    useFusionWorkspaceConnectors(workspace.workspaceId, { hydrate: isExpanded });
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
+  const canManageConnectors = useGeneratedIntent(
+    actorKind === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination,
+    { workspaceId: workspace.workspaceId }
+  );
   const confirmDisable = useConfirmContextLayerDisable();
-  const sourceCount = sources.filter(
-    (connector) =>
-      connector.supported && (enabledConnectors[`${workspace.workspaceId}:${connector.id}`] ?? connector.enabled)
-  ).length;
-  const destinationCount = destinations.filter(
+  const connectors = actorKind === "source" ? sources : destinations;
+  const isLoading = actorKind === "source" ? sourcesLoading : destinationsLoading;
+  const hasError = actorKind === "source" ? sourcesError : destinationsError;
+  useEffect(() => {
+    if (!isLoading) {
+      onInventoryLoaded(workspace.workspaceId, hasError ? null : connectors.length, canManageConnectors);
+    }
+  }, [canManageConnectors, connectors.length, hasError, isLoading, onInventoryLoaded, workspace.workspaceId]);
+  const enabledCount = connectors.filter(
     (connector) =>
       connector.supported && (enabledConnectors[`${workspace.workspaceId}:${connector.id}`] ?? connector.enabled)
   ).length;
@@ -90,14 +103,14 @@ const WorkspaceConnectorCard: React.FC<{
             size="sm"
             checked={checked}
             disabled={
-              !canManageOrganizationPermissions ||
+              !canManageConnectors ||
               !connector.supported ||
               connector.loading ||
               connector.error ||
               pendingConnectors[key]
             }
             onChange={
-              canManageOrganizationPermissions
+              canManageConnectors
                 ? async (event) => {
                     const enabled = event.target.checked;
                     if (!enabled && !(await confirmDisable(connector.name))) {
@@ -196,8 +209,8 @@ const WorkspaceConnectorCard: React.FC<{
         <div className={styles.workspaceCounts}>
           <Text as="span" size="xs" color="grey">
             <FormattedMessage
-              id="cloud.contextLayer.workspace.counts"
-              values={{ sources: sources.length, destinations: destinations.length }}
+              id="cloud.contextLayer.workspace.kindCount"
+              values={{ count: connectors.length, actorKind }}
             />
           </Text>
         </div>
@@ -208,29 +221,20 @@ const WorkspaceConnectorCard: React.FC<{
             <Text color="grey">
               <FormattedMessage id="cloud.contextLayer.workspace.connectorsLoading" />
             </Text>
-          ) : !sourcesError && !destinationsError && sources.length === 0 && destinations.length === 0 ? (
+          ) : !hasError && connectors.length === 0 ? (
             <Text color="grey">
-              <FormattedMessage id="cloud.contextLayer.workspace.noConnectors" />
+              <FormattedMessage id="cloud.contextLayer.workspace.noKindConnectors" values={{ actorKind }} />
             </Text>
           ) : (
-            <>
-              {(sourcesError || sources.length > 0) &&
-                renderConnectorSection(
-                  "cloud.contextLayer.workspace.sources",
-                  sources,
-                  "source",
-                  sourceCount,
-                  sourcesError
-                )}
-              {(destinationsError || destinations.length > 0) &&
-                renderConnectorSection(
-                  "cloud.contextLayer.workspace.destinations",
-                  destinations,
-                  "destination",
-                  destinationCount,
-                  destinationsError
-                )}
-            </>
+            renderConnectorSection(
+              actorKind === "source"
+                ? "cloud.contextLayer.workspace.sources"
+                : "cloud.contextLayer.workspace.destinations",
+              connectors,
+              actorKind,
+              enabledCount,
+              hasError
+            )
           )}
         </div>
       )}
@@ -240,11 +244,24 @@ const WorkspaceConnectorCard: React.FC<{
 
 const WorkspaceConnectorAccess: React.FC<{
   workspacesQuery: ReturnType<typeof useListWorkspacesInOrganization>;
-  canManageOrganizationPermissions: boolean;
-}> = ({ workspacesQuery, canManageOrganizationPermissions }) => {
+  actorKind: ActorKind;
+}> = ({ workspacesQuery, actorKind }) => {
   const [enabledConnectors, setEnabledConnectors] = useState<Record<string, boolean>>({});
+  const [connectorInventories, setConnectorInventories] = useState<
+    Record<string, { count: number | null; canManageConnectors: boolean }>
+  >({});
   const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
+  const navigate = useNavigate();
+  const organizationId = useCurrentOrganizationId();
+  const [organizationWorkspaceMap] = useLocalStorage("airbyte_organization-workspace-map", {});
   const { fetchNextPage, hasNextPage, isFetchingNextPage, isError } = workspacesQuery;
+  const onInventoryLoaded = useCallback((workspaceId: string, count: number | null, canManageConnectors: boolean) => {
+    setConnectorInventories((current) =>
+      current[workspaceId]?.count === count && current[workspaceId]?.canManageConnectors === canManageConnectors
+        ? current
+        : { ...current, [workspaceId]: { count, canManageConnectors } }
+    );
+  }, []);
 
   const allWorkspaces = useMemo<WorkspaceConnectorData[]>(() => {
     const apiWorkspaces = workspacesQuery.data?.pages.flatMap((page) => page.workspaces ?? []) ?? [];
@@ -255,21 +272,45 @@ const WorkspaceConnectorAccess: React.FC<{
   }, [workspacesQuery.data?.pages]);
   const workspaces = allWorkspaces.slice(0, visibleWorkspaceCount);
   const hasMoreWorkspaces = allWorkspaces.length > visibleWorkspaceCount || hasNextPage;
-
   const loadMoreWorkspaces = async () => {
     if (allWorkspaces.length <= visibleWorkspaceCount && hasNextPage) {
-      await fetchNextPage();
+      const nextPage = await fetchNextPage();
+      if (nextPage.isError) {
+        return;
+      }
     }
     setVisibleWorkspaceCount((count) => count + 25);
   };
+  const inventoriesLoaded =
+    workspaces.length > 0 && workspaces.every((workspace) => workspace.workspaceId in connectorInventories);
+  const isEmpty =
+    inventoriesLoaded &&
+    !hasMoreWorkspaces &&
+    !isFetchingNextPage &&
+    workspaces.every((workspace) => connectorInventories[workspace.workspaceId].count === 0);
+  const storedWorkspaceId = organizationWorkspaceMap[organizationId];
+  const targetWorkspaceId =
+    workspaces.find(
+      (workspace) =>
+        workspace.workspaceId === storedWorkspaceId && connectorInventories[workspace.workspaceId]?.canManageConnectors
+    )?.workspaceId ??
+    workspaces.find((workspace) => connectorInventories[workspace.workspaceId]?.canManageConnectors)?.workspaceId;
 
   return (
     <div className={styles.workspaceSection}>
       <Heading as="h2" size="sm">
-        <FormattedMessage id="cloud.contextLayer.workspace.title" />
+        <FormattedMessage
+          id={actorKind === "source" ? "cloud.contextLayer.sources.title" : "cloud.contextLayer.destinations.title"}
+        />
       </Heading>
       <Text className={styles.workspaceDescription}>
-        <FormattedMessage id="cloud.contextLayer.workspace.description" />
+        <FormattedMessage
+          id={
+            actorKind === "source"
+              ? "cloud.contextLayer.sources.description"
+              : "cloud.contextLayer.destinations.description"
+          }
+        />
       </Text>
       {workspacesQuery.isLoading ? (
         <Text color="grey">
@@ -281,26 +322,82 @@ const WorkspaceConnectorAccess: React.FC<{
         </Text>
       ) : (
         <>
-          {workspaces.map((workspace) => (
-            <WorkspaceConnectorCard
-              key={workspace.workspaceId}
-              workspace={workspace}
-              enabledConnectors={enabledConnectors}
-              canManageOrganizationPermissions={canManageOrganizationPermissions}
-              onToggle={(key, enabled) => setEnabledConnectors((current) => ({ ...current, [key]: enabled }))}
-              onClearOptimistic={(key) =>
-                setEnabledConnectors((current) => {
-                  const next = { ...current };
-                  delete next[key];
-                  return next;
-                })
+          {isEmpty && (
+            <EmptyState
+              icon="aiStars"
+              text={
+                <FormattedMessage
+                  id={
+                    actorKind === "source"
+                      ? "cloud.contextLayer.sources.empty.title"
+                      : "cloud.contextLayer.destinations.empty.title"
+                  }
+                />
+              }
+              description={
+                <FormattedMessage
+                  id={
+                    actorKind === "source"
+                      ? "cloud.contextLayer.sources.empty.description"
+                      : "cloud.contextLayer.destinations.empty.description"
+                  }
+                />
+              }
+              button={
+                targetWorkspaceId && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className={styles.emptyStateButton}
+                    onClick={() =>
+                      navigate(
+                        `/${RoutePaths.Workspaces}/${targetWorkspaceId}/${
+                          actorKind === "source" ? RoutePaths.Source : RoutePaths.Destination
+                        }/${
+                          actorKind === "source" ? SourcePaths.SelectSourceNew : DestinationPaths.SelectDestinationNew
+                        }`
+                      )
+                    }
+                  >
+                    <FormattedMessage
+                      id={
+                        actorKind === "source"
+                          ? "cloud.contextLayer.sources.empty.add"
+                          : "cloud.contextLayer.destinations.empty.add"
+                      }
+                    />
+                  </Button>
+                )
               }
             />
+          )}
+          {workspaces.map((workspace) => (
+            <div key={workspace.workspaceId} hidden={isEmpty || !(workspace.workspaceId in connectorInventories)}>
+              <WorkspaceConnectorCard
+                workspace={workspace}
+                enabledConnectors={enabledConnectors}
+                actorKind={actorKind}
+                onInventoryLoaded={onInventoryLoaded}
+                onToggle={(key, enabled) => setEnabledConnectors((current) => ({ ...current, [key]: enabled }))}
+                onClearOptimistic={(key) =>
+                  setEnabledConnectors((current) => {
+                    const next = { ...current };
+                    delete next[key];
+                    return next;
+                  })
+                }
+              />
+            </div>
           ))}
           {hasMoreWorkspaces && !isFetchingNextPage && !isError && (
             <Button type="button" variant="secondary" onClick={() => void loadMoreWorkspaces()}>
               <FormattedMessage id="cloud.contextLayer.workspace.loadMore" />
             </Button>
+          )}
+          {!inventoriesLoaded && !isFetchingNextPage && (
+            <Text color="grey">
+              <FormattedMessage id="cloud.contextLayer.workspace.connectorsLoading" />
+            </Text>
           )}
           {isFetchingNextPage && (
             <Text color="grey">
@@ -312,7 +409,7 @@ const WorkspaceConnectorAccess: React.FC<{
               <Text color="grey">
                 <FormattedMessage id="cloud.contextLayer.workspace.loadMoreError" />
               </Text>
-              <Button type="button" variant="secondary" onClick={() => void fetchNextPage()}>
+              <Button type="button" variant="secondary" onClick={() => void loadMoreWorkspaces()}>
                 <FormattedMessage id="form.tryAgain" />
               </Button>
             </FlexContainer>
@@ -415,9 +512,10 @@ const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) =
   );
 };
 
-const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showAgentsOptIn }) => {
+const ContextLayerPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
+  const showAgentsOptIn = useShowAgentsOptIn();
   const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
   const status = statusQuery.data;
   const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
@@ -596,24 +694,112 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
             )}
           </div>
         </Card>
-        {status.is_enrolled && (
-          <WorkspaceConnectorAccess
-            key={organizationId}
-            workspacesQuery={workspacesQuery}
-            canManageOrganizationPermissions={canManageOrganizationPermissions}
-          />
-        )}
       </FlexContainer>
     </div>
   );
 };
 
-export const ContextLayerPage: React.FC = () => {
+const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({ actorKind }) => {
+  const organizationId = useCurrentOrganizationId();
+  const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
+  const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
+  const status = statusQuery.data;
+  const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
+  const navigate = useNavigate();
+  const workspacesQuery = useListWorkspacesInOrganization({
+    organizationId,
+    pagination: { pageSize: 25, rowOffset: 0 },
+    enabled: Boolean(status?.is_enrolled),
+  });
+
+  if (isCloudApp && statusQuery.isInitialLoading) {
+    return <LoadingPage />;
+  }
+  if (isCloudApp && statusQuery.isError) {
+    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
+  }
+  if (!isCloudApp || !isEligible || !status) {
+    return <ContextLayerUnavailable />;
+  }
+
+  if (!status.is_enrolled) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.workspaceSection}>
+          <Heading as="h2" size="sm">
+            <FormattedMessage
+              id={actorKind === "source" ? "cloud.contextLayer.sources.title" : "cloud.contextLayer.destinations.title"}
+            />
+          </Heading>
+          <Text className={styles.workspaceDescription}>
+            <FormattedMessage
+              id={
+                actorKind === "source"
+                  ? "cloud.contextLayer.sources.description"
+                  : "cloud.contextLayer.destinations.noAccess.pageDescription"
+              }
+            />
+          </Text>
+          <EmptyState
+            icon="aiStars"
+            text={
+              <FormattedMessage
+                id={
+                  actorKind === "source"
+                    ? "cloud.contextLayer.sources.noAccess.title"
+                    : "cloud.contextLayer.destinations.noAccess.title"
+                }
+              />
+            }
+            description={
+              <FormattedMessage
+                id={
+                  actorKind === "source"
+                    ? "cloud.contextLayer.sources.noAccess.description"
+                    : "cloud.contextLayer.destinations.noAccess.description"
+                }
+              />
+            }
+            button={
+              <Button
+                type="button"
+                variant="primary"
+                className={styles.emptyStateButton}
+                onClick={() => navigate(`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`)}
+              >
+                <FormattedMessage id="cloud.contextLayer.noAccess.settings" />
+              </Button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
+    <div className={styles.page}>
+      <WorkspaceConnectorAccess
+        key={`${organizationId}:${actorKind}`}
+        workspacesQuery={workspacesQuery}
+        actorKind={actorKind}
+      />
+    </div>
+  );
+};
+
+export const ContextLayerPage: React.FC = () => {
+  return (
     <React.Suspense fallback={<LoadingPage />}>
-      <ContextLayerPageContent showAgentsOptIn={showAgentsOptIn} />
+      <ContextLayerPageContent />
+    </React.Suspense>
+  );
+};
+
+export const ContextLayerConnectorsPage: React.FC<{ actorKind: ActorKind }> = ({ actorKind }) => {
+  return (
+    <React.Suspense fallback={<LoadingPage />}>
+      <ContextLayerConnectorsPageContent actorKind={actorKind} />
     </React.Suspense>
   );
 };

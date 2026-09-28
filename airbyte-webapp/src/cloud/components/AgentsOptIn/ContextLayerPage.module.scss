@@ -1,4 +1,7 @@
 @use "scss/colors";
+@use "scss/variables";
+
+$emptyStateButtonWidth: 360px;
 
 .page {
   width: 100%;
@@ -52,6 +55,12 @@
 
 .workspaceDescription {
   margin-top: -8px;
+}
+
+.emptyStateButton {
+  width: $emptyStateButtonWidth;
+  max-width: 100%;
+  margin-top: variables.$spacing-sm;
 }
 
 .workspaceCard {

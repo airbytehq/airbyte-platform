@@ -100,6 +100,8 @@ describe("ActorContextLayerCard", () => {
       sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
       destinations: [{ id: "actor-id", name: "Snowflake", supported: true, enabled: true }],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });

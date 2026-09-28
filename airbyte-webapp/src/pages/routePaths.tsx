@@ -13,6 +13,11 @@ export enum RoutePaths {
   Onboarding = "onboarding",
 }
 
+export enum ContextLayerRoutePaths {
+  Sources = "sources",
+  Destinations = "destinations",
+}
+
 export enum DestinationPaths {
   Root = ":destinationId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Connections = "connections",

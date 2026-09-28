@@ -6,26 +6,61 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./AgentsSidebarLink.module.scss";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
-interface AgentsSidebarLinkContentProps {
-  labelId: string;
-  icon: "aiStars" | "mcp";
-  organizationPath: string;
-  testId: string;
-  isContextLayer?: boolean;
-}
+const UnenrolledContextLayerSidebarLink: React.FC<{ organizationId: string }> = ({ organizationId }) => {
+  const canManageOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions, { organizationId });
 
-const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
-  labelId,
-  icon,
-  organizationPath,
-  testId,
-  isContextLayer,
-}) => {
+  if (!canManageOrganizationPermissions) {
+    return null;
+  }
+
+  return (
+    <NavItem
+      label={<FormattedMessage id="cloud.contextLayer.sidebar" />}
+      icon="aiStars"
+      to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`}
+      testId="agentsSidebarLink"
+      className={styles.contextLayerLink}
+      labelColor="blue"
+      withBadge="new"
+    />
+  );
+};
+
+const ContextLayerSidebarLink: React.FC = () => {
+  const isCloudApp = useIsCloudApp();
+  const showAgentsOptIn = useShowAgentsOptIn();
+  const organizationId = useCurrentOrganizationId();
+  const status = useAgentsProvisioningStatus({ enabled: isCloudApp });
+
+  if (!isCloudApp || !status) {
+    return null;
+  }
+  if (!status.is_enrolled) {
+    return status.external_cloud_eligible && showAgentsOptIn ? (
+      <UnenrolledContextLayerSidebarLink organizationId={organizationId} />
+    ) : null;
+  }
+
+  return (
+    <NavItem
+      label={<FormattedMessage id="cloud.contextLayer.sidebar" />}
+      icon="aiStars"
+      to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`}
+      testId="agentsSidebarLink"
+      className={styles.contextLayerLink}
+      labelColor="blue"
+      withBadge="new"
+    />
+  );
+};
+
+const InstallMcpSidebarLinkContent: React.FC = () => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const organizationId = useCurrentOrganizationId();
@@ -35,17 +70,14 @@ const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
     return null;
   }
 
-  const href = `/${RoutePaths.Organization}/${organizationId}/${organizationPath}`;
-
   return (
     <NavItem
-      label={<FormattedMessage id={labelId} />}
-      icon={icon}
-      to={href}
-      testId={testId}
-      className={isContextLayer ? styles.contextLayerLink : styles.installMcpLink}
-      labelColor={isContextLayer ? "blue" : undefined}
-      withBadge={isContextLayer ? "new" : "beta"}
+      label={<FormattedMessage id="cloud.installMcp.sidebar" />}
+      icon="mcp"
+      to={`/${RoutePaths.Organization}/${organizationId}/${CloudSettingsRoutePaths.InstallMcp}`}
+      testId="installMcpSidebarLink"
+      className={styles.installMcpLink}
+      withBadge="beta"
     />
   );
 };
@@ -53,13 +85,7 @@ const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
 export const AgentsSidebarLink: React.FC = () => {
   return (
     <React.Suspense>
-      <AgentsSidebarLinkContent
-        labelId="cloud.contextLayer.sidebar"
-        icon="aiStars"
-        organizationPath={RoutePaths.ContextLayer}
-        testId="agentsSidebarLink"
-        isContextLayer
-      />
+      <ContextLayerSidebarLink />
     </React.Suspense>
   );
 };
@@ -67,12 +93,7 @@ export const AgentsSidebarLink: React.FC = () => {
 export const InstallMcpSidebarLink: React.FC = () => {
   return (
     <React.Suspense>
-      <AgentsSidebarLinkContent
-        labelId="cloud.installMcp.sidebar"
-        icon="mcp"
-        organizationPath={CloudSettingsRoutePaths.InstallMcp}
-        testId="installMcpSidebarLink"
-      />
+      <InstallMcpSidebarLinkContent />
     </React.Suspense>
   );
 };

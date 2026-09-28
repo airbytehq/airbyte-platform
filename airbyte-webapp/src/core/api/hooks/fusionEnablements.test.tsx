@@ -270,3 +270,58 @@ it.each(["source", "destination"] as const)(
     });
   }
 );
+
+it("keeps source inventory ready while destination inventory is pending", async () => {
+  jest.mocked(listSourcesForWorkspace).mockResolvedValue({ sources: [] });
+  jest.mocked(listDestinationsForWorkspace).mockImplementation(() => new Promise(() => {}));
+
+  const { result } = renderHook(() => useFusionWorkspaceConnectors("workspace"), { wrapper });
+
+  await waitFor(() => expect(result.current.sourcesLoading).toBe(false));
+  expect(result.current.sources).toEqual([]);
+  expect(result.current.destinationsLoading).toBe(true);
+  expect(result.current.isLoading).toBe(true);
+});
+
+it("refreshes a cached empty inventory after returning from connector setup", async () => {
+  jest.mocked(listSourcesForWorkspace).mockResolvedValue({ sources: [] });
+  jest.mocked(listDestinationsForWorkspace).mockResolvedValue({ destinations: [] });
+  const firstVisit = renderHook(() => useFusionWorkspaceConnectors("workspace"), { wrapper });
+  await waitFor(() => expect(firstVisit.result.current.isLoading).toBe(false));
+  expect(firstVisit.result.current.sources).toHaveLength(0);
+  firstVisit.unmount();
+
+  jest.mocked(listSourcesForWorkspace).mockResolvedValue({
+    sources: [{ sourceId: "new-source", name: "New source", sourceDefinitionId: "supported" }],
+  } as never);
+  const secondVisit = renderHook(() => useFusionWorkspaceConnectors("workspace"), { wrapper });
+  await waitFor(() => expect(secondVisit.result.current.sources.map((source) => source.name)).toEqual(["New source"]));
+  expect(listSourcesForWorkspace).toHaveBeenCalledTimes(2);
+});
+
+it("keeps cached connectors available while a refresh is pending or fails", async () => {
+  jest.mocked(listSourcesForWorkspace).mockResolvedValue({
+    sources: [{ sourceId: "source", name: "Cached source", sourceDefinitionId: "supported" }],
+  } as never);
+  jest.mocked(listDestinationsForWorkspace).mockResolvedValue({ destinations: [] });
+  const firstVisit = renderHook(() => useFusionWorkspaceConnectors("workspace"), { wrapper });
+  await waitFor(() => expect(firstVisit.result.current.sources[0]?.name).toBe("Cached source"));
+  firstVisit.unmount();
+
+  let rejectRefresh: (reason?: Error) => void = () => {};
+  const refresh = new Promise<never>((_, reject) => {
+    rejectRefresh = reject;
+  });
+  jest.mocked(listSourcesForWorkspace).mockReturnValue(refresh);
+  const secondVisit = renderHook(() => useFusionWorkspaceConnectors("workspace"), { wrapper });
+  await waitFor(() => expect(listSourcesForWorkspace).toHaveBeenCalledTimes(2));
+  expect(secondVisit.result.current.sources[0]?.name).toBe("Cached source");
+  expect(secondVisit.result.current.sourcesLoading).toBe(false);
+
+  await act(async () => {
+    rejectRefresh(new Error("429"));
+    await refresh.catch(() => {});
+  });
+  expect(secondVisit.result.current.sources[0]?.name).toBe("Cached source");
+  expect(secondVisit.result.current.sourcesError).toBe(false);
+});

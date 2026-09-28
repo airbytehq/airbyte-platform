@@ -190,6 +190,8 @@ export const useFusionWorkspaceConnectors = (
   sources: FusionWorkspaceConnector[];
   destinations: FusionWorkspaceConnector[];
   isLoading: boolean;
+  sourcesLoading: boolean;
+  destinationsLoading: boolean;
   sourcesError: boolean;
   destinationsError: boolean;
 } => {
@@ -231,6 +233,8 @@ export const useFusionWorkspaceConnectors = (
       enabled,
       retry: false,
       staleTime: 30_000,
+      // Connector setup can add an actor while this inventory is still cached.
+      refetchOnMount: "always" as const,
     })),
   });
   const actors = inventories.flatMap((inventory) => inventory.data ?? []);
@@ -255,8 +259,10 @@ export const useFusionWorkspaceConnectors = (
     sources: connectors.filter((actor) => actor.kind === "source"),
     destinations: connectors.filter((actor) => actor.kind === "destination"),
     isLoading: inventories.some((inventory) => inventory.isLoading),
-    sourcesError: inventories[0].isError,
-    destinationsError: inventories[1].isError,
+    sourcesLoading: inventories[0].isLoading,
+    destinationsLoading: inventories[1].isLoading,
+    sourcesError: inventories[0].isError && inventories[0].data === undefined,
+    destinationsError: inventories[1].isError && inventories[1].data === undefined,
   };
 };
 

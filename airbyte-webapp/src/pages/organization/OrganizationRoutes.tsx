@@ -18,13 +18,16 @@ import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/Or
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
 
-import { RoutePaths, SettingsRoutePaths } from "../routePaths";
+import { ContextLayerRoutePaths, RoutePaths, SettingsRoutePaths } from "../routePaths";
 
 const OrganizationWorkspacesPage = React.lazy(() => import("pages/workspaces/OrganizationWorkspacesPage"));
 const OrganizationBillingPage = React.lazy(() => import("cloud/views/billing/OrganizationBillingPage"));
 const OrganizationPlanPage = React.lazy(() => import("cloud/views/billing/OrganizationPlanPage"));
 const OrganizationUsagePage = React.lazy(() => import("cloud/views/billing/OrganizationUsagePage"));
 const OrganizationContextLayerPage = React.lazy(() => import("pages/ContextLayerPage/OrganizationContextLayerPage"));
+const OrganizationContextLayerConnectorsPage = React.lazy(
+  () => import("pages/ContextLayerPage/OrganizationContextLayerConnectorsPage")
+);
 const OrganizationInstallMcpPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationInstallMcpPage"));
 
 export const OrganizationRoutes: React.FC = () => {
@@ -57,6 +60,14 @@ export const OrganizationRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
           <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
             <Route index element={<OrganizationContextLayerPage />} />
+            <Route
+              path={ContextLayerRoutePaths.Sources}
+              element={<OrganizationContextLayerConnectorsPage actorKind="source" />}
+            />
+            <Route
+              path={ContextLayerRoutePaths.Destinations}
+              element={<OrganizationContextLayerConnectorsPage actorKind="destination" />}
+            />
             <Route
               path="*"
               element={

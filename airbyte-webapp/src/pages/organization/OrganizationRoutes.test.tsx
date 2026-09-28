@@ -110,6 +110,13 @@ jest.mock("pages/ContextLayerPage/OrganizationContextLayerPage", () => ({
   default: () => <div data-testid="organization-context-layer-page" />,
 }));
 
+jest.mock("pages/ContextLayerPage/OrganizationContextLayerConnectorsPage", () => ({
+  __esModule: true,
+  default: ({ actorKind }: { actorKind: string }) => (
+    <div data-testid={`organization-context-layer-${actorKind}-page`} />
+  ),
+}));
+
 jest.mock("pages/SettingsPage/pages/OrganizationInstallMcpPage", () => ({
   __esModule: true,
   default: () => <div data-testid="organization-install-mcp-page" />,
@@ -169,6 +176,23 @@ describe("OrganizationRoutes", () => {
 
     await waitFor(() => expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument());
     expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer");
+  });
+
+  it.each(["sources", "destinations"])("registers the Context Layer %s child route", async (child) => {
+    const kind = child === "sources" ? "source" : "destination";
+    render(
+      <MemoryRouter initialEntries={[`/organization/test-org/context-layer/${child}`]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByTestId(`organization-context-layer-${kind}-page`)).toBeInTheDocument());
+    expect(screen.getByTestId("location")).toHaveTextContent(`/organization/test-org/context-layer/${child}`);
   });
 
   it("does not register the first-class context layer route outside cloud", async () => {

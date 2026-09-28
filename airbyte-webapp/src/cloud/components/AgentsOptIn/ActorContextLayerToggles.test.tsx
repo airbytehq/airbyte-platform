@@ -123,6 +123,8 @@ describe("ActorContextLayerToggles", () => {
       sources: [],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -174,6 +176,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -199,6 +203,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -224,6 +230,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -243,6 +251,8 @@ describe("ActorContextLayerToggles", () => {
       sources: [],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: true,
       destinationsError: false,
     });
@@ -284,6 +294,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -325,6 +337,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -357,6 +371,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -391,6 +407,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -430,6 +448,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -500,6 +520,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -550,6 +572,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -590,6 +614,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -624,6 +650,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -657,6 +685,8 @@ describe("ActorContextLayerToggles", () => {
       ],
       destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -684,6 +714,8 @@ describe("ActorContextLayerToggles", () => {
         },
       ],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
@@ -726,6 +758,8 @@ describe("ActorContextLayerToggles", () => {
         sourcesError: false,
         destinationsError: false,
         isLoading: false,
+        sourcesLoading: false,
+        destinationsLoading: false,
       });
       const mutateAsync = jest.fn().mockResolvedValue({});
       mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
