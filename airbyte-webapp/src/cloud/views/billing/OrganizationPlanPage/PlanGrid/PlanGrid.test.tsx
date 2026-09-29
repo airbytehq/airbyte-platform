@@ -86,7 +86,10 @@ const expectDisabledCta = (testId: (typeof CARD_TEST_IDS)[number], buttonName: R
   expect(card(testId).queryByTestId("current-plan-badge")).not.toBeInTheDocument();
 };
 
+jest.useFakeTimers();
+
 beforeEach(() => {
+  jest.setSystemTime(new Date("2026-09-14T12:00:00-07:00"));
   jest.clearAllMocks();
   mocked(useGeneratedIntent).mockReturnValue(true);
   mocked(useExperiment).mockReturnValue(false);
@@ -362,7 +365,7 @@ describe("PlanGrid", () => {
 
     await render(<PlanGrid />);
 
-    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by September 29");
+    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by October 21");
   });
 
   it.each([
@@ -405,7 +408,7 @@ describe("PlanGrid", () => {
 
     await render(<PlanGrid />);
 
-    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by September 29");
+    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by October 21");
   });
 
   it.each([
@@ -435,4 +438,8 @@ describe("PlanGrid", () => {
     expect(screen.getByRole("heading", { name: "Pricing calculator" })).toBeInTheDocument();
     expect(screen.getByRole("slider", { name: "Monthly credits" })).toBeEnabled();
   });
+});
+
+afterAll(() => {
+  jest.useRealTimers();
 });

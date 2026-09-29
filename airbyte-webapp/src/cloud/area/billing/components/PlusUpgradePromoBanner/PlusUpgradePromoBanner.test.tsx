@@ -41,7 +41,7 @@ describe("PlusUpgradePromoBanner", () => {
     await render(<PlusUpgradePromoBanner />);
 
     expect(screen.getByTestId("plus-upgrade-promo-banner")).toHaveTextContent(
-      "Upgrade to the Plus plan by September 29 and get up to 500 free overage credits. Conditions apply."
+      "Upgrade to the Plus plan by October 21 and get up to 500 free overage credits. Conditions apply."
     );
     expect(screen.getByRole("link", { name: "View plans and pricing →" })).toHaveAttribute(
       "href",
@@ -79,14 +79,14 @@ describe("PlusUpgradePromoBanner", () => {
   });
 
   it("still renders one second before the cutoff", async () => {
-    jest.setSystemTime(new Date("2026-09-28T23:59:59-07:00"));
+    jest.setSystemTime(new Date("2026-10-21T23:59:59-07:00"));
 
     await render(<PlusUpgradePromoBanner />);
 
     expect(screen.getByTestId("plus-upgrade-promo-banner")).toBeInTheDocument();
   });
 
-  it("stops rendering at midnight Pacific on September 29, 2026", async () => {
+  it("stops rendering at midnight Pacific at the end of October 21, 2026", async () => {
     jest.setSystemTime(new Date(PLUS_UPGRADE_PROMO_BANNER_END));
 
     await render(<PlusUpgradePromoBanner />);
@@ -95,7 +95,7 @@ describe("PlusUpgradePromoBanner", () => {
   });
 
   it("does not render after the cutoff has passed", async () => {
-    jest.setSystemTime(new Date("2026-10-01T09:00:00-07:00"));
+    jest.setSystemTime(new Date("2026-10-22T09:00:00-07:00"));
 
     await render(<PlusUpgradePromoBanner />);
 
