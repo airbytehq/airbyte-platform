@@ -177,6 +177,7 @@ export const useSetFusionActorEnablement = () => {
 export interface FusionWorkspaceConnector {
   id: string;
   name: string;
+  icon?: string;
   supported: boolean;
   enabled: boolean;
   state?: FusionEnablementState;
@@ -212,6 +213,7 @@ export const useFusionWorkspaceConnectors = (
                   (source) => ({
                     id: source.sourceId,
                     name: source.name,
+                    icon: source.icon,
                     supported: supportedSources.has(source.sourceDefinitionId),
                   })
                 )
@@ -219,6 +221,7 @@ export const useFusionWorkspaceConnectors = (
                   (destination) => ({
                     id: destination.destinationId,
                     name: destination.name,
+                    icon: destination.icon,
                     supported: supportedDestinations.has(destination.destinationDefinitionId),
                   })
                 );

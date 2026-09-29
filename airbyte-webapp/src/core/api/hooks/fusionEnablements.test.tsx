@@ -97,6 +97,49 @@ it("uses displayed expectedState and refetches committed revocations after failu
   );
 });
 
+it("keeps semantic search connector state in sync after enabling and deleting its index", async () => {
+  jest.mocked(listSourcesForWorkspace).mockResolvedValue({
+    sources: [{ sourceId: "source", name: "Source", sourceDefinitionId: "supported" }],
+  } as never);
+  jest.mocked(listDestinationsForWorkspace).mockResolvedValue({ destinations: [] } as never);
+  const indexed = { ...state, enable_indexing: true };
+  jest
+    .mocked(updateFusionSourceEnablement)
+    .mockImplementationOnce(async () => {
+      jest.mocked(getFusionSourceEnablement).mockResolvedValue(indexed as never);
+      return indexed as never;
+    })
+    .mockImplementationOnce(async () => {
+      jest.mocked(getFusionSourceEnablement).mockResolvedValue(state as never);
+      return state as never;
+    });
+
+  const { result } = renderHook(
+    () => ({ connectors: useFusionWorkspaceConnectors("workspace"), write: useSetFusionActorEnablement() }),
+    { wrapper }
+  );
+  await waitFor(() => expect(result.current.connectors.sources[0]?.state?.enable_indexing).toBe(false));
+
+  await act(async () => {
+    await result.current.write.mutateAsync({
+      ...actor,
+      expectedState: basic,
+      state: { ...basic, enable_indexing: true },
+    });
+  });
+  await waitFor(() => expect(result.current.connectors.sources[0]?.state?.enable_indexing).toBe(true));
+
+  await act(async () => {
+    await result.current.write.mutateAsync({
+      ...actor,
+      expectedState: { ...basic, enable_indexing: true },
+      state: basic,
+    });
+  });
+  await waitFor(() => expect(result.current.connectors.sources[0]?.state?.enable_indexing).toBe(false));
+  expect(updateFusionSourceEnablement).toHaveBeenCalledTimes(2);
+});
+
 it("basic opt-in preserves existing indexing without implicitly adding it", async () => {
   const { result } = renderHook(() => useSetFusionActorEnablement(), { wrapper });
   await act(async () => {
@@ -227,9 +270,18 @@ it("enrollment leaves supported destinations disabled for individual opt-in", as
 it.each(["source", "destination"] as const)(
   "keeps the other inventory usable when %s inventory fails and recovers",
   async (failedKind) => {
-    const sources = { sources: [{ sourceId: "source", name: "Source", sourceDefinitionId: "supported" }] };
+    const sources = {
+      sources: [{ sourceId: "source", name: "Source", icon: "source.svg", sourceDefinitionId: "supported" }],
+    };
     const destinations = {
-      destinations: [{ destinationId: "destination", name: "Destination", destinationDefinitionId: "supported" }],
+      destinations: [
+        {
+          destinationId: "destination",
+          name: "Destination",
+          icon: "destination.svg",
+          destinationDefinitionId: "supported",
+        },
+      ],
     };
     jest.mocked(listSourcesForWorkspace).mockResolvedValue(sources as never);
     jest.mocked(listDestinationsForWorkspace).mockResolvedValue(destinations as never);
@@ -252,6 +304,8 @@ it.each(["source", "destination"] as const)(
       expect(result.current.destinationsError).toBe(false);
       expect(result.current.sources[0].state?.enable_agent_access).toBe(true);
       expect(result.current.destinations[0].state?.enable_agent_access).toBe(true);
+      expect(result.current.sources[0].icon).toBe("source.svg");
+      expect(result.current.destinations[0].icon).toBe("destination.svg");
     });
   }
 );

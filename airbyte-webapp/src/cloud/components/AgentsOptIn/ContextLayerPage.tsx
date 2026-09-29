@@ -11,8 +11,11 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink, Link } from "components/ui/Link";
 import { LoadingPage } from "components/ui/LoadingPage";
 import { Switch } from "components/ui/Switch";
+import { Table, TableColumns } from "components/ui/Table";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import {
@@ -23,7 +26,7 @@ import {
   useListWorkspacesInOrganization,
   useSetFusionActorEnablement,
   useEnableFusionWorkspaceActors,
-  FusionEnablementState,
+  FusionWorkspaceConnector,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useNotificationService } from "core/services/Notification";
@@ -37,16 +40,6 @@ import styles from "./ContextLayerPage.module.scss";
 import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
-interface Connector {
-  id: string;
-  name: string;
-  enabled: boolean;
-  supported: boolean;
-  state?: FusionEnablementState;
-  loading?: boolean;
-  error?: boolean;
-}
-
 interface WorkspaceConnectorData {
   workspaceId: string;
   workspaceName: string;
@@ -54,7 +47,7 @@ interface WorkspaceConnectorData {
 
 type ActorKind = "source" | "destination";
 
-const WorkspaceConnectorCard: React.FC<{
+const WorkspaceConnectorTable: React.FC<{
   workspace: WorkspaceConnectorData;
   enabledConnectors: Record<string, boolean>;
   onToggle: (key: string, enabled: boolean) => void;
@@ -62,12 +55,13 @@ const WorkspaceConnectorCard: React.FC<{
   actorKind: ActorKind;
   onInventoryLoaded: (workspaceId: string, count: number | null, canManageConnectors: boolean) => void;
 }> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, actorKind, onInventoryLoaded }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
+  const [indexedConnectors, setIndexedConnectors] = useState<Record<string, boolean>>({});
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { sources, destinations, sourcesLoading, destinationsLoading, sourcesError, destinationsError } =
-    useFusionWorkspaceConnectors(workspace.workspaceId, { hydrate: isExpanded });
+    useFusionWorkspaceConnectors(workspace.workspaceId, { hydrate: true });
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const canManageConnectors = useGeneratedIntent(
     actorKind === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination,
@@ -82,22 +76,58 @@ const WorkspaceConnectorCard: React.FC<{
       onInventoryLoaded(workspace.workspaceId, hasError ? null : connectors.length, canManageConnectors);
     }
   }, [canManageConnectors, connectors.length, hasError, isLoading, onInventoryLoaded, workspace.workspaceId]);
-  const enabledCount = connectors.filter(
-    (connector) =>
-      connector.supported && (enabledConnectors[`${workspace.workspaceId}:${connector.id}`] ?? connector.enabled)
-  ).length;
-  const connectorRows = (connectors: Connector[], actorKind: "source" | "destination") =>
-    connectors.map((connector) => {
-      const key = `${workspace.workspaceId}:${connector.id}`;
-      const checked = connector.supported && (enabledConnectors[key] ?? connector.enabled);
-      return (
-        <div className={styles.connectorRow} key={connector.id}>
-          <div className={styles.connectorName}>
-            <Icon type="file" size="sm" />
-            <Text as="span" size="sm">
-              {connector.name}
-            </Text>
-          </div>
+  const columns: TableColumns<FusionWorkspaceConnector> = [
+    {
+      header: formatMessage({
+        id: actorKind === "source" ? "cloud.contextLayer.sources.column" : "cloud.contextLayer.destinations.column",
+      }),
+      accessorKey: "name",
+      meta: { thClassName: styles.connectorColumn, tdClassName: styles.connectorColumn },
+      cell: ({ row }) => (
+        <FlexContainer alignItems="center" gap="sm">
+          <ConnectorIcon icon={row.original.icon} />
+          <Text as="span" size="sm">
+            {row.original.name}
+          </Text>
+        </FlexContainer>
+      ),
+    },
+    {
+      id: "agentAccess",
+      meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
+      header: () => (
+        <FlexContainer alignItems="center" gap="sm">
+          <FormattedMessage id="cloud.contextLayer.setup.agentAccess.title" />
+          <Tooltip
+            control={
+              <button
+                type="button"
+                className={styles.infoTooltipButton}
+                aria-label={formatMessage({
+                  id:
+                    actorKind === "source"
+                      ? "cloud.contextLayer.sources.agentAccess.tooltip"
+                      : "cloud.contextLayer.destinations.agentAccess.tooltip",
+                })}
+              >
+                <Icon type="infoOutline" size="xs" />
+              </button>
+            }
+          >
+            <FormattedMessage
+              id={
+                actorKind === "source"
+                  ? "cloud.contextLayer.sources.agentAccess.tooltip"
+                  : "cloud.contextLayer.destinations.agentAccess.tooltip"
+              }
+            />
+          </Tooltip>
+        </FlexContainer>
+      ),
+      cell: ({ row: { original: connector } }) => {
+        const key = `${workspace.workspaceId}:${connector.id}`;
+        const checked = connector.supported && (enabledConnectors[key] ?? connector.enabled);
+        return (
           <Switch
             size="sm"
             checked={checked}
@@ -143,100 +173,136 @@ const WorkspaceConnectorCard: React.FC<{
                   }
                 : undefined
             }
-            aria-label={connector.name}
+            aria-label={formatMessage({ id: "cloud.contextLayer.agentAccess.controlLabel" }, { name: connector.name })}
           />
-        </div>
-      );
-    });
-
-  const renderConnectorSection = (
-    labelId: string,
-    connectors: Connector[],
-    actorKind: "source" | "destination",
-    count: number,
-    hasError: boolean
-  ) => {
-    const supportedCount = connectors.filter((connector) => connector.supported).length;
-
-    return (
-      <div className={styles.connectorSection}>
-        <div className={styles.connectorSectionHeader}>
-          <Text size="xs" bold smallcaps>
-            <FormattedMessage id={labelId} />
-          </Text>
-          {!hasError && (
-            <span className={styles.countBadge}>
-              <FormattedMessage
-                id="cloud.contextLayer.workspace.enabledCount"
-                values={{
-                  enabled: count,
-                  supported: supportedCount,
-                  unsupported: connectors.length - supportedCount,
-                }}
-              />
-            </span>
-          )}
-        </div>
-        {hasError ? (
-          <Text color="grey" data-testid={`context-layer-${actorKind}-error`}>
-            <FormattedMessage id="cloud.contextLayer.connectors.error" />
-          </Text>
-        ) : (
-          <div className={styles.connectorRows}>{connectorRows(connectors, actorKind)}</div>
-        )}
-      </div>
-    );
-  };
-
-  const workspaceBodyId = `context-layer-workspace-body-${workspace.workspaceId}`;
+        );
+      },
+    },
+    ...(actorKind === "source"
+      ? [
+          {
+            id: "semanticSearch",
+            meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
+            header: () => (
+              <FlexContainer alignItems="center" gap="sm">
+                <FormattedMessage id="cloud.contextLayer.setup.semanticSearch.title" />
+                <Tooltip
+                  control={
+                    <button
+                      type="button"
+                      className={styles.infoTooltipButton}
+                      aria-label={formatMessage({ id: "cloud.contextLayer.sources.semanticSearch.tooltip" })}
+                    >
+                      <Icon type="infoOutline" size="xs" />
+                    </button>
+                  }
+                >
+                  <FormattedMessage id="cloud.contextLayer.sources.semanticSearch.tooltip" />
+                </Tooltip>
+              </FlexContainer>
+            ),
+            cell: ({ row: { original: connector } }) => {
+              const key = `${workspace.workspaceId}:${connector.id}`;
+              const accessEnabled = connector.supported && (enabledConnectors[key] ?? connector.enabled);
+              const checked = accessEnabled && (indexedConnectors[key] ?? connector.state?.enable_indexing ?? false);
+              const saveIndexing = async (enabled: boolean) => {
+                if (!connector.state) {
+                  return;
+                }
+                setPendingConnectors((current) => ({ ...current, [key]: true }));
+                setIndexedConnectors((current) => ({ ...current, [key]: enabled }));
+                try {
+                  await setFusionActorEnablement({
+                    actorId: connector.id,
+                    workspaceId: workspace.workspaceId,
+                    actorKind: "source",
+                    expectedState: connector.state,
+                    state: { ...connector.state, enable_indexing: enabled },
+                  });
+                } catch {
+                  registerNotification({
+                    id: `context-layer-semantic-search-toggle-error-${key}`,
+                    text: formatMessage(
+                      { id: "cloud.contextLayer.sources.semanticSearch.toggleError" },
+                      { name: connector.name }
+                    ),
+                    type: "error",
+                  });
+                } finally {
+                  setIndexedConnectors((current) => {
+                    const next = { ...current };
+                    delete next[key];
+                    return next;
+                  });
+                  setPendingConnectors((current) => ({ ...current, [key]: false }));
+                }
+              };
+              return (
+                <Switch
+                  size="sm"
+                  checked={checked}
+                  disabled={
+                    !canManageConnectors ||
+                    !connector.supported ||
+                    !connector.state ||
+                    !accessEnabled ||
+                    connector.loading ||
+                    connector.error ||
+                    pendingConnectors[key]
+                  }
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      void saveIndexing(true);
+                    } else {
+                      openConfirmationModal({
+                        title: "cloud.contextLayer.sources.semanticSearch.disableTitle",
+                        text: "cloud.contextLayer.sources.semanticSearch.disableText",
+                        submitButtonText: "cloud.contextLayer.sources.semanticSearch.disableSubmit",
+                        submitButtonVariant: "danger",
+                        onSubmit: () => {
+                          closeConfirmationModal();
+                          void saveIndexing(false);
+                        },
+                      });
+                    }
+                  }}
+                  aria-label={formatMessage(
+                    { id: "cloud.contextLayer.sources.semanticSearch.controlLabel" },
+                    { name: connector.name }
+                  )}
+                />
+              );
+            },
+          } as TableColumns<FusionWorkspaceConnector>[number],
+        ]
+      : []),
+  ];
 
   return (
-    <div className={styles.workspaceCard} data-testid={`context-layer-workspace-${workspace.workspaceId}`}>
-      <button
-        type="button"
-        className={styles.workspaceHeader}
-        onClick={() => setIsExpanded((expanded) => !expanded)}
-        aria-expanded={isExpanded}
-        aria-controls={workspaceBodyId}
-      >
-        <div className={styles.workspaceHeaderInfo}>
-          <Icon type={isExpanded ? "chevronDown" : "chevronRight"} size="sm" color="affordance" />
-          <Text as="span" size="sm" bold>
-            {workspace.workspaceName}
-          </Text>
-        </div>
-        <div className={styles.workspaceCounts}>
-          <Text as="span" size="xs" color="grey">
-            <FormattedMessage
-              id="cloud.contextLayer.workspace.kindCount"
-              values={{ count: connectors.length, actorKind }}
-            />
-          </Text>
-        </div>
-      </button>
-      {isExpanded && (
-        <div id={workspaceBodyId} className={styles.workspaceBody}>
-          {isLoading ? (
-            <Text color="grey">
-              <FormattedMessage id="cloud.contextLayer.workspace.connectorsLoading" />
-            </Text>
-          ) : !hasError && connectors.length === 0 ? (
-            <Text color="grey">
-              <FormattedMessage id="cloud.contextLayer.workspace.noKindConnectors" values={{ actorKind }} />
-            </Text>
-          ) : (
-            renderConnectorSection(
-              actorKind === "source"
-                ? "cloud.contextLayer.workspace.sources"
-                : "cloud.contextLayer.workspace.destinations",
-              connectors,
-              actorKind,
-              enabledCount,
-              hasError
-            )
-          )}
-        </div>
+    <div className={styles.workspaceGroup} data-testid={`context-layer-workspace-${workspace.workspaceId}`}>
+      {!isLoading && (hasError || connectors.length > 0) && (
+        <Heading as="h3" size="sm">
+          {workspace.workspaceName}
+        </Heading>
       )}
+      {hasError ? (
+        <Text color="grey" data-testid={`context-layer-${actorKind}-error`}>
+          <FormattedMessage id="cloud.contextLayer.connectors.error" />
+        </Text>
+      ) : connectors.length > 0 ? (
+        <div className={styles.tableWrapper}>
+          <Table
+            className={styles.connectorTable}
+            columns={columns}
+            data={connectors}
+            rowId="id"
+            variant="light"
+            sorting={false}
+            stickyHeaders={false}
+            showEmptyPlaceholder={false}
+          />
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -371,8 +437,15 @@ const WorkspaceConnectorAccess: React.FC<{
             />
           )}
           {workspaces.map((workspace) => (
-            <div key={workspace.workspaceId} hidden={isEmpty || !(workspace.workspaceId in connectorInventories)}>
-              <WorkspaceConnectorCard
+            <div
+              key={workspace.workspaceId}
+              hidden={
+                isEmpty ||
+                !(workspace.workspaceId in connectorInventories) ||
+                connectorInventories[workspace.workspaceId].count === 0
+              }
+            >
+              <WorkspaceConnectorTable
                 workspace={workspace}
                 enabledConnectors={enabledConnectors}
                 actorKind={actorKind}

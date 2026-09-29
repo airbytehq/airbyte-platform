@@ -46,78 +46,53 @@ $emptyStateButtonWidth: 360px;
   margin-top: variables.$spacing-sm;
 }
 
-.workspaceCard {
-  overflow: hidden;
+.workspaceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
+}
+
+.tableWrapper {
+  overflow-x: auto;
   border: 1px solid colors.$grey-200;
   border-radius: 4px;
   background: colors.$foreground;
 }
 
-.workspaceHeader {
+.connectorTable {
+  min-width: 480px;
+  table-layout: fixed;
+
+  th {
+    height: 40px;
+    padding: 8px 16px;
+    border-bottom: 1px solid colors.$grey-200;
+  }
+
+  td {
+    height: 42px;
+    padding: 8px 16px;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.connectorColumn {
+  width: 180px;
+}
+
+.controlColumn {
+  width: 150px;
+}
+
+.infoTooltipButton {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 16px;
+  padding: 5px;
   border: 0;
   background: transparent;
-  color: colors.$dark-blue;
-  cursor: pointer;
-  text-align: left;
-}
-
-.workspaceHeader:hover {
-  background: colors.$grey-50;
-}
-
-.workspaceHeaderInfo,
-.workspaceCounts {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.workspaceBody {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 0 16px 16px;
-}
-
-.connectorSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.connectorSectionHeader,
-.connectorRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.connectorSectionHeader {
-  padding-top: 4px;
-}
-
-.connectorRows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.connectorName {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.countBadge {
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: colors.$grey-100;
-  color: colors.$grey-600;
-  font-size: 12px;
+  color: colors.$grey;
+  cursor: help;
 }

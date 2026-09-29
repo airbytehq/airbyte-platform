@@ -32,6 +32,7 @@ export const Tooltip: React.FC<React.PropsWithChildren<TooltipProps>> = (props) 
   } = props;
 
   const [isMouseOver, setIsMouseOver] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
   const { x, y, reference, floating, strategy } = useFloating({
@@ -40,7 +41,7 @@ export const Tooltip: React.FC<React.PropsWithChildren<TooltipProps>> = (props) 
   });
 
   useEffect(() => {
-    if (isMouseOver) {
+    if (isMouseOver || isFocused) {
       setIsVisible(true);
       return;
     }
@@ -52,7 +53,7 @@ export const Tooltip: React.FC<React.PropsWithChildren<TooltipProps>> = (props) 
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [isMouseOver]);
+  }, [isFocused, isMouseOver]);
 
   const canShowTooltip = useMemo(() => isVisible && !disabled, [disabled, isVisible]);
 
@@ -72,6 +73,8 @@ export const Tooltip: React.FC<React.PropsWithChildren<TooltipProps>> = (props) 
         style={disabled ? undefined : { cursor }}
         onMouseOver={onMouseOver}
         onMouseOut={onMouseOut}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       >
         {control}
       </span>
