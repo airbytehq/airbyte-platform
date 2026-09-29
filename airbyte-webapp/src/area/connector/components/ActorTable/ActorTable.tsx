@@ -15,10 +15,7 @@ import { ConnectorName } from "area/connection/components/EntityTable/components
 import { EntityNameCell } from "area/connection/components/EntityTable/components/EntityNameCell";
 import { LastSyncCell } from "area/connection/components/EntityTable/components/LastSyncCell";
 import { NumberOfConnectionsCell } from "area/connection/components/EntityTable/components/NumberOfConnectionsCell";
-import {
-  ActorSemanticSearchToggle,
-  useShowActorContextLayerToggles,
-} from "cloud/components/AgentsOptIn/ActorContextLayerToggles";
+import { useShowActorContextLayerToggles } from "cloud/components/AgentsOptIn/ActorContextLayerToggles";
 import { AgentsSourceCta } from "cloud/components/AgentsOptIn/AgentsSourceCta";
 import {
   useAgentsSupportedDestinationDefinitionIds,
@@ -132,23 +129,24 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
 
 const columnHelper = createColumnHelper<ActorTableDataItem>();
 
-const ActorAgentAccessStatus: React.FC<{
+const ActorFeatureStatus: React.FC<{
   actor: ActorTableDataItem;
   supported: boolean;
-}> = ({ actor, supported }) => {
+  field: "enable_agent_access" | "enable_indexing";
+}> = ({ actor, supported, field }) => {
   const { formatMessage } = useIntl();
   const { data, isLoading, isError } = useFusionActorEnablement(
     { actorId: actor.id, actorKind: actor.actorType, workspaceId: actor.workspaceId },
     supported
   );
-  const label = formatMessage({ id: "tables.agentAccess" });
+  const label = formatMessage({ id: field === "enable_agent_access" ? "tables.agentAccess" : "tables.semanticSearch" });
   const state = !supported
     ? "notApplicable"
     : isLoading
     ? "loading"
     : isError
     ? "unavailable"
-    : data?.enable_agent_access
+    : data?.[field]
     ? "configured"
     : "notConfigured";
   const title = formatMessage({ id: `tables.featureStatus.${state}` }, { feature: label });
@@ -276,8 +274,9 @@ export const ActorTable: React.FC<ActorTableProps> = ({
                 noPadding: false,
               },
               cell: (props) => (
-                <ActorAgentAccessStatus
+                <ActorFeatureStatus
                   actor={props.row.original}
+                  field="enable_agent_access"
                   supported={(props.row.original.actorType === "source"
                     ? supportedSourceDefinitionIds
                     : supportedDestinationDefinitionIds
@@ -297,7 +296,11 @@ export const ActorTable: React.FC<ActorTableProps> = ({
                 noPadding: false,
               },
               cell: (props) => (
-                <ActorSemanticSearchToggle actorId={props.row.original.id} actorType={props.row.original.actorType} />
+                <ActorFeatureStatus
+                  actor={props.row.original}
+                  field="enable_indexing"
+                  supported={supportedSourceDefinitionIds.has(props.row.original.actorDefinitionId)}
+                />
               ),
               enableSorting: false,
             }),
