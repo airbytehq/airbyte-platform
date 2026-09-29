@@ -19,7 +19,7 @@ const unwrapVsCodeRedirect = (installUrl: string, redirectHost: string): string 
 
 describe("mcpInstallConfigs", () => {
   it("exports the cloud MCP server URL", () => {
-    expect(CLOUD_MCP_URL).toBe("https://mcp.internal.airbyte.ai/cloud-mcp-preview");
+    expect(CLOUD_MCP_URL).toBe("https://mcp.airbyte.com/mcp");
   });
 
   it("builds a Cursor deeplink with base64-encoded config and server name", () => {

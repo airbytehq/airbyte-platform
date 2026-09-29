@@ -1,7 +1,6 @@
 const MCP_SERVER_NAME = "airbyte";
 
-// Preview URL, swapped for prod later.
-export const CLOUD_MCP_URL = "https://mcp.internal.airbyte.ai/cloud-mcp-preview";
+export const CLOUD_MCP_URL = "https://mcp.airbyte.com/mcp";
 
 export const buildCursorDeeplink = (url: string): string => {
   const config = { url };
