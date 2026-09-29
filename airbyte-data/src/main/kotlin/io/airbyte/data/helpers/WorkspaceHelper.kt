@@ -95,6 +95,10 @@ class WorkspaceHelper(
   // ORGANIZATION ID
   fun getOrganizationForWorkspace(workspaceId: UUID): UUID = swallowExecutionException { workspaceToOrganizationCache.get(workspaceId) }
 
+  fun invalidateWorkspaceOrganization(workspaceId: UUID) {
+    workspaceToOrganizationCache.invalidate(workspaceId)
+  }
+
   // CONNECTION ID
 
   /**

@@ -14,6 +14,7 @@ import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpVersion
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
@@ -184,5 +185,37 @@ internal class AuthorizationServerHandlerTest {
     scimHandler.channelRead(context, request)
 
     verify(exactly = 1) { extractor.contentToJson(any()) }
+  }
+
+  @Test
+  fun `id and jobId are copied to separate headers`() {
+    val request = buildRequest("/api/v1/jobs/get", """{"id":7,"jobId":4242}""")
+
+    handler.channelRead(context, request)
+
+    assertEquals("7", request.headers().get(AuthenticationHttpHeaders.JOB_ID_HEADER))
+    assertEquals("4242", request.headers().get(AuthenticationHttpHeaders.JOB_ID_ALT_HEADER))
+  }
+
+  @Test
+  fun `both spellings of the organization id are copied to separate headers`() {
+    val camelCase = UUID.randomUUID()
+    val snakeCase = UUID.randomUUID()
+    val request = buildRequest("/api/v1/organizations/get", """{"organizationId":"$camelCase","organization_id":"$snakeCase"}""")
+
+    handler.channelRead(context, request)
+
+    assertEquals(camelCase.toString(), request.headers().get(AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER))
+    assertEquals(snakeCase.toString(), request.headers().get(AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER))
+  }
+
+  @Test
+  fun `a field with a JSON null sets no header`() {
+    val request = buildRequest("/api/v1/jobs/retry_states/create_or_update", """{"id":null,"jobId":4242}""")
+
+    handler.channelRead(context, request)
+
+    assertNull(request.headers().get(AuthenticationHttpHeaders.JOB_ID_HEADER))
+    assertEquals("4242", request.headers().get(AuthenticationHttpHeaders.JOB_ID_ALT_HEADER))
   }
 }

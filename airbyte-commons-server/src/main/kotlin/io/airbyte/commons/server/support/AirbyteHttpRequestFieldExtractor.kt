@@ -50,15 +50,15 @@ class AirbyteHttpRequestFieldExtractor {
     jsonNode: JsonNode,
     idFieldName: String,
   ): Optional<String> {
+    // A field that is present with a JSON null names nothing, so it is treated like a field that is absent.
+    val field = Optional.ofNullable(jsonNode[idFieldName]).filter { !it.isNull }
     if (ARRAY_FIELDS.contains(idFieldName)) {
       log.trace("Try to extract list of ids for field {}", idFieldName)
-      return Optional
-        .ofNullable(jsonNode[idFieldName])
+      return field
         .map { `object`: JsonNode? -> Jsons.serialize(`object`) }
         .filter { str: String? -> StringUtils.hasText(str) }
     } else {
-      return Optional
-        .ofNullable(jsonNode[idFieldName])
+      return field
         .map { obj: JsonNode -> obj.asText() }
         .filter { str: String? -> StringUtils.hasText(str) }
     }

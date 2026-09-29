@@ -109,6 +109,10 @@ enum class OssMetricsRegistry(
     metricName = "authentication_request",
     metricDescription = "increments when an authentication request is attempted.",
   ),
+  AUTHORIZATION_SCOPE_CONFLICT(
+    metricName = "authorization_scope_conflict",
+    metricDescription = "increments when a request is denied because its scope identifiers resolved to different workspaces or organizations.",
+  ),
   COMMAND(
     metricName = "command",
     metricDescription = "increments when a command is done.",

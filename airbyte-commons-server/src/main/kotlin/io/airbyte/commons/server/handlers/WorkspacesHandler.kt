@@ -56,6 +56,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
@@ -99,6 +100,7 @@ class WorkspacesHandler
     private val sourceHandler: SourceHandler,
     @param:Named("uuidGenerator") private val uuidSupplier: Supplier<UUID>,
     private val workspaceService: WorkspaceService,
+    private val workspaceHelper: WorkspaceHelper,
     private val dataplaneGroupService: DataplaneGroupService,
     private val entitlementService: EntitlementService,
     private val trackingClient: TrackingClient,
@@ -556,6 +558,7 @@ class WorkspacesHandler
       persistedWorkspace
         .withOrganizationId(workspaceUpdateOrganization.organizationId)
       workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace)
+      workspaceHelper.invalidateWorkspaceOrganization(workspaceId)
       return buildWorkspaceReadFromId(workspaceId)
     }
 

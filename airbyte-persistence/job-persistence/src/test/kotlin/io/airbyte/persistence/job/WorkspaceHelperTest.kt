@@ -16,6 +16,7 @@ import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOperation
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
@@ -224,6 +225,23 @@ internal class WorkspaceHelperTest {
 
     val jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
     assertEquals(WORKSPACE_ID, jobWorkspace)
+  }
+
+  @Test
+  fun `invalidating workspace organization reloads the mapping on the next lookup`() {
+    val oldOrganizationId = UUID.randomUUID()
+    val newOrganizationId = UUID.randomUUID()
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false) } returns
+      StandardWorkspace().withOrganizationId(oldOrganizationId) andThen
+      StandardWorkspace().withOrganizationId(newOrganizationId)
+
+    assertEquals(oldOrganizationId, workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID))
+    assertEquals(oldOrganizationId, workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID))
+
+    workspaceHelper.invalidateWorkspaceOrganization(WORKSPACE_ID)
+
+    assertEquals(newOrganizationId, workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID))
+    verify(exactly = 2) { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false) }
   }
 
   companion object {

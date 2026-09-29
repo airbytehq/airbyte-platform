@@ -4,7 +4,9 @@
 
 package io.airbyte.audit.logging
 
+import io.airbyte.api.model.generated.DataWorkerAddCapacityRequestBody
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.micronaut.http.HttpHeaders
@@ -49,6 +51,25 @@ class AuditScopeResolverTest {
 
     assertEquals(headerOrganizationId, scope.organizationId)
     assertEquals(workspaceId, scope.workspaceId)
+  }
+
+  @Test
+  fun `typed snake case organization target wins over conflicting camel case alias`() {
+    val targetOrganizationId = UUID.randomUUID()
+    val decoyOrganizationId = UUID.randomUUID()
+    val headers =
+      headersWith(
+        ORGANIZATION_ID_HEADER to decoyOrganizationId.toString(),
+        ORGANIZATION_ID_SNAKE_CASE_HEADER to targetOrganizationId.toString(),
+      )
+    val requestBody =
+      DataWorkerAddCapacityRequestBody()
+        .organizationId(targetOrganizationId)
+        .amount(1.0)
+
+    val scope = resolver.resolveScope(headers, requestBody, null)
+
+    assertEquals(targetOrganizationId, scope.organizationId)
   }
 
   @Test
@@ -198,6 +219,7 @@ class AuditScopeResolverTest {
     val headers = mockk<HttpHeaders>()
     every { headers.get(WORKSPACE_ID_HEADER) } returns null
     every { headers.get(ORGANIZATION_ID_HEADER) } returns null
+    every { headers.get(ORGANIZATION_ID_SNAKE_CASE_HEADER) } returns null
     entries.forEach { (name, value) -> every { headers.get(name) } returns value }
     return headers
   }

@@ -30,7 +30,9 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -45,6 +47,7 @@ internal class AuthenticationHeaderResolverTest {
   private lateinit var userPersistence: UserPersistence
   private lateinit var dataplaneGroupService: DataplaneGroupService
   private lateinit var dataplaneService: DataplaneService
+  private lateinit var metricClient: MetricClient
   private lateinit var resolver: AuthenticationHeaderResolver
 
   @BeforeEach
@@ -54,7 +57,16 @@ internal class AuthenticationHeaderResolverTest {
     this.userPersistence = Mockito.mock(UserPersistence::class.java)
     this.dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
     this.dataplaneService = Mockito.mock(DataplaneService::class.java)
-    this.resolver = AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence, dataplaneGroupService, dataplaneService)
+    this.metricClient = mockk(relaxed = true)
+    this.resolver =
+      AuthenticationHeaderResolver(
+        workspaceHelper,
+        permissionHandler,
+        userPersistence,
+        dataplaneGroupService,
+        dataplaneService,
+        metricClient,
+      )
   }
 
   @Test
@@ -289,6 +301,28 @@ internal class AuthenticationHeaderResolverTest {
   @Test
   fun testResolvingAuthUserFromExternalAuthUserId() {
     val properties = mapOf<String?, String?>(EXTERNAL_AUTH_ID_HEADER to AUTH_USER_ID)
+
+    val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
+
+    Assertions.assertEquals(setOf(AUTH_USER_ID), resolvedAuthUserIds)
+  }
+
+  @Test
+  fun testUserIdsThatNameDifferentUsersResolveToNoUser() {
+    val victimUserId = UUID.randomUUID()
+    val properties = mapOf<String?, String?>(EXTERNAL_AUTH_ID_HEADER to AUTH_USER_ID, AIRBYTE_USER_ID_HEADER to victimUserId.toString())
+    Mockito.`when`(userPersistence.listAuthUserIdsForUser(victimUserId)).thenReturn(listOf("victim-auth-id"))
+
+    val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
+
+    Assertions.assertEquals(emptySet<String>(), resolvedAuthUserIds)
+  }
+
+  @Test
+  fun testUserIdsThatNameTheSameUserResolveToThatUser() {
+    val userId = UUID.randomUUID()
+    val properties = mapOf<String?, String?>(EXTERNAL_AUTH_ID_HEADER to AUTH_USER_ID, AIRBYTE_USER_ID_HEADER to userId.toString())
+    Mockito.`when`(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(listOf(AUTH_USER_ID, "some-other-id"))
 
     val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
 

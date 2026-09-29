@@ -86,6 +86,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.logback.classic)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.micronaut.http)
   testImplementation(libs.mockk)

@@ -60,6 +60,7 @@ import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
@@ -103,6 +104,7 @@ internal class WorkspacesHandlerTest {
   lateinit var permissionHandler: PermissionHandler
   lateinit var workspacePersistence: WorkspacePersistence
   lateinit var workspaceService: WorkspaceService
+  lateinit var workspaceHelper: WorkspaceHelper
   lateinit var dataplaneGroupService: DataplaneGroupService
   lateinit var entitlementService: EntitlementService
   lateinit var organizationService: OrganizationService
@@ -126,6 +128,7 @@ internal class WorkspacesHandlerTest {
     sourceHandler = Mockito.mock(SourceHandler::class.java)
     uuidSupplier = Mockito.mock(Supplier::class.java) as Supplier<UUID>
     workspaceService = Mockito.mock(WorkspaceService::class.java)
+    workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
     dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
     entitlementService = Mockito.mock(EntitlementService::class.java)
     trackingClient = Mockito.mock(TrackingClient::class.java)
@@ -174,6 +177,7 @@ internal class WorkspacesHandlerTest {
       sourceHandler,
       uuidSupplier,
       workspaceService,
+      workspaceHelper,
       dataplaneGroupService,
       entitlementService,
       trackingClient,
@@ -1452,6 +1456,7 @@ internal class WorkspacesHandlerTest {
     val actualWorkspaceRead =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspaceOrganization(workspaceUpdateOrganization)
     Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    Mockito.verify(workspaceHelper).invalidateWorkspaceOrganization(workspace.workspaceId)
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
@@ -1622,6 +1627,7 @@ internal class WorkspacesHandlerTest {
         sourceHandler,
         uuidSupplier,
         workspaceService,
+        workspaceHelper,
         dataplaneGroupService,
         entitlementService,
         trackingClient,

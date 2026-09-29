@@ -37,6 +37,11 @@ object AuthenticationHttpHeaders {
   const val JOB_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Job-Id"
 
   /**
+   * HTTP header that contains the job ID from a body field named `jobId`.
+   */
+  const val JOB_ID_ALT_HEADER: String = AIRBYTE_HEADER_PREFIX + "Job-Id-Alt"
+
+  /**
    * HTTP header that contains the operation ID for authorization purposes.
    */
   const val OPERATION_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Operation-Id"
@@ -75,6 +80,7 @@ object AuthenticationHttpHeaders {
   const val CONFIG_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Config-Id"
 
   const val ORGANIZATION_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Organization-Id"
+  const val ORGANIZATION_ID_SNAKE_CASE_HEADER: String = AIRBYTE_HEADER_PREFIX + "Organization-Id-Snake-Case"
   const val PERMISSION_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Permission-Id"
   const val IS_PUBLIC_API_HEADER: String = AIRBYTE_HEADER_PREFIX + "Is-Public-Api"
 

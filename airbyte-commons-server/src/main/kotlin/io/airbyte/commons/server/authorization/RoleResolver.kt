@@ -211,16 +211,17 @@ open class RoleResolver(
     ): Set<String> {
       logger.debug { "Resolving permissions for $subject and $perms" }
 
-      val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
-      val resolvedOrgIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
+      val scope = authenticationHeaderResolver.resolveScope(props, workspaceOrganizations)
+      val workspaceIds = scope?.workspaceIds?.toSet() ?: emptySet()
+      val resolvedOrgIds = scope?.organizationIds?.toSet() ?: emptySet()
       val workspaceOrganizationIds =
-        if (usePerTargetPermissionReduction) {
-          authenticationHeaderResolver.resolveWorkspaceOrganizations(workspaceIds - workspaceOrganizations.keys) + workspaceOrganizations
+        if (scope != null && usePerTargetPermissionReduction) {
+          scope.workspaceOrganizations + workspaceOrganizations
         } else {
           emptyMap()
         }
       val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props.toMap()) ?: emptySet()
-      val allOrgIds = orgs + resolvedOrgIds
+      val allOrgIds = if (scope != null) orgs + resolvedOrgIds else emptySet()
 
       return resolveRoles(
         perms,

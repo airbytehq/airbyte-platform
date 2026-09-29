@@ -18,6 +18,7 @@ import io.airbyte.data.auth.TokenType
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.metrics.MetricClient
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.utils.SecurityService
 import io.mockk.every
@@ -47,6 +48,8 @@ class RoleResolverTest {
   @BeforeEach
   fun setUp() {
     workspaceHelper = mockk()
+    // Every workspace belongs to some organization; tests that care about which one stub it specifically.
+    every { workspaceHelper.getOrganizationForWorkspace(any()) } answers { UUID.randomUUID() }
     userPersistence = mockk()
     currentUserService = mockk()
     permissionHandler = mockk()
@@ -54,7 +57,14 @@ class RoleResolverTest {
     dataplaneGroupService = mockk()
     dataplaneService = mockk()
     val authenticationHeaderResolver =
-      AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence, dataplaneGroupService, dataplaneService)
+      AuthenticationHeaderResolver(
+        workspaceHelper,
+        permissionHandler,
+        userPersistence,
+        dataplaneGroupService,
+        dataplaneService,
+        mockk<MetricClient>(relaxed = true),
+      )
     roleResolver = RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler)
   }
 

@@ -17,6 +17,7 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.micronaut.security.utils.SecurityService
 import io.mockk.every
@@ -45,6 +46,7 @@ internal class AmbiguousSubjectAuthorizationIntegrationTest : BaseConfigDatabase
           userPersistence,
           mockk<DataplaneGroupService>(),
           mockk<DataplaneService>(),
+          mockk<MetricClient>(relaxed = true),
         ),
         mockk<CurrentUserService>(),
         mockk<SecurityService>(),

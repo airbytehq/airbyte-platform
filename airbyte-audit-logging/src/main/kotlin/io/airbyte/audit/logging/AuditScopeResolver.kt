@@ -7,6 +7,7 @@ package io.airbyte.audit.logging
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -33,9 +34,10 @@ data class ResolvedAuditScope(
  * - workspaceId: `X-Airbyte-Workspace-Id` header -> `workspaceId` field in the request/response
  *   body -> resource lookup when the body only carries a `connectionId`/`sourceId`/`destinationId`
  *   (the resource's workspace is used) -> null.
- * - organizationId: `X-Airbyte-Organization-Id` header -> `organizationId` field in the
- *   request/response body -> the organization of the resolved workspaceId -> null (the entry is
- *   written under the `unknown` organization partition and is considered internal-only).
+ * - organizationId: canonical `organization_id` field in the request body ->
+ *   `X-Airbyte-Organization-Id` header -> `organizationId` field in the request/response body ->
+ *   the organization of the resolved workspaceId -> null (the entry is written under the
+ *   `unknown` organization partition and is considered internal-only).
  *
  * Resolution never throws: any failure to read a header, parse a body field, or look up a resource
  * falls through to the next source so that attribution problems never break the audited request.
@@ -77,7 +79,9 @@ class AuditScopeResolver(
     responseBody: Any?,
     workspaceId: UUID?,
   ): UUID? =
-    uuidFromHeader(headers, ORGANIZATION_ID_HEADER)
+    uuidFromBodyField(ORGANIZATION_ID_SNAKE_CASE_FIELD, requestBody)
+      ?: uuidFromHeader(headers, ORGANIZATION_ID_HEADER)
+      ?: uuidFromHeader(headers, ORGANIZATION_ID_SNAKE_CASE_HEADER)
       ?: uuidFromBodyField(ORGANIZATION_ID_FIELD, requestBody, responseBody)
       ?: workspaceId?.let { resolveOrganizationForWorkspace(it) }
 
@@ -155,6 +159,7 @@ class AuditScopeResolver(
     private val logger = KotlinLogging.logger {}
     private const val WORKSPACE_ID_FIELD = "workspaceId"
     private const val ORGANIZATION_ID_FIELD = "organizationId"
+    private const val ORGANIZATION_ID_SNAKE_CASE_FIELD = "organization_id"
     private const val CONNECTION_ID_FIELD = "connectionId"
     private const val SOURCE_ID_FIELD = "sourceId"
     private const val DESTINATION_ID_FIELD = "destinationId"

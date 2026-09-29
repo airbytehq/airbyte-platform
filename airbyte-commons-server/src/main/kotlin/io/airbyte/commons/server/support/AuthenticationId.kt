@@ -7,6 +7,9 @@ package io.airbyte.commons.server.support
 /**
  * Enumeration of the ID values that are used to perform authentication. These values are used to
  * fetch roles associated with an authenticated user.
+ *
+ * Every body field has a header of its own. Two fields that shared a header would let one of them replace the
+ * other, so the permission check would read one id while the endpoint reads the other.
  */
 enum class AuthenticationId(
   @JvmField val fieldName: String,
@@ -18,7 +21,7 @@ enum class AuthenticationId(
 
   DESTINATION_ID_(AuthenticationFields.DESTINATION_ID_FIELD_NAME, AuthenticationHttpHeaders.DESTINATION_ID_HEADER),
   JOB_ID(AuthenticationFields.JOB_ID_FIELD_NAME, AuthenticationHttpHeaders.JOB_ID_HEADER),
-  JOB_ID_ALT(AuthenticationFields.JOB_ID_ALT_FIELD_NAME, AuthenticationHttpHeaders.JOB_ID_HEADER),
+  JOB_ID_ALT(AuthenticationFields.JOB_ID_ALT_FIELD_NAME, AuthenticationHttpHeaders.JOB_ID_ALT_HEADER),
   OPERATION_ID(AuthenticationFields.OPERATION_ID_FIELD_NAME, AuthenticationHttpHeaders.OPERATION_ID_HEADER),
   SOURCE_ID(AuthenticationFields.SOURCE_ID_FIELD_NAME, AuthenticationHttpHeaders.SOURCE_ID_HEADER),
   SOURCE_DEFINITION_ID(AuthenticationFields.SOURCE_DEFINITION_ID_FIELD_NAME, AuthenticationHttpHeaders.SOURCE_DEFINITION_ID_HEADER),
@@ -39,5 +42,8 @@ enum class AuthenticationId(
    */
   DATAPLANE_GROUP_ID_SNAKE_CASE(AuthenticationFields.DATAPLANE_GROUP_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.DATAPLANE_GROUP_ID_HEADER),
   DATAPLANE_ID_SNAKE_CASE(AuthenticationFields.DATAPLANE_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.DATAPLANE_ID_HEADER),
-  ORGANIZATION_ID_SNAKE_CASE(AuthenticationFields.ORGANIZATION_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER),
+  ORGANIZATION_ID_SNAKE_CASE(
+    AuthenticationFields.ORGANIZATION_ID_SNAKE_CASE_FIELD_NAME,
+    AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER,
+  ),
 }

@@ -110,6 +110,14 @@ internal class AirbyteHttpRequestFieldExtractorTest {
     Assertions.assertEquals(extractedId, Optional.of(valueString))
   }
 
+  @Test
+  fun testExtractionWithJsonNull() {
+    val contentAsJson = airbyteHttpRequestFieldExtractor.contentToJson("""{"$SOME_ID":null,"$WORKSPACE_IDS_FIELD_NAME":null}""").get()
+
+    Assertions.assertTrue(airbyteHttpRequestFieldExtractor.extractId(contentAsJson, SOME_ID).isEmpty())
+    Assertions.assertTrue(airbyteHttpRequestFieldExtractor.extractId(contentAsJson, WORKSPACE_IDS_FIELD_NAME).isEmpty())
+  }
+
   // Just want to make sure that coverage exists
   @Test
   fun testContentToJson() {
