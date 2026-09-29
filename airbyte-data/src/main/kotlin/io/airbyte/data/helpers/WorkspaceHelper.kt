@@ -19,6 +19,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.CompletionException
 import java.util.function.Supplier
@@ -58,8 +59,13 @@ class WorkspaceHelper(
       }
     }
 
+  // A workspace can move to another organization, so this mapping must not live for the life of the process.
   private val workspaceToOrganizationCache: LoadingCache<UUID, UUID> =
-    getExpiringCache { workspaceId -> workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId }
+    Caffeine
+      .newBuilder()
+      .maximumSize(20000)
+      .expireAfterWrite(Duration.ofMinutes(5))
+      .build<UUID, UUID> { workspaceId -> workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId }
 
   /**
    * There are generally two kinds of helper methods present here. The first kind propagate exceptions
