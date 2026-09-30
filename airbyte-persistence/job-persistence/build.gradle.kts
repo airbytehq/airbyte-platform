@@ -30,7 +30,7 @@ dependencies {
   implementation(libs.sentry.java)
   implementation(libs.otel.semconv)
   implementation(libs.micrometer.statsd)
-  implementation(libs.datadog.statsd.client)
+  implementation(libs.java.dogstatsd.client)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(platform(libs.fasterxml))

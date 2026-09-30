@@ -13,7 +13,6 @@ grpc_version = "1.69.1"
 hikaricp = "7.0.2"
 jax-rs = "3.1.0"
 jna = "5.18.1"
-jmh = "1.37"
 jooq = "3.19.18"
 junit-jupiter = "6.0.3"
 keycloak-client = "26.7.3" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
@@ -30,11 +29,9 @@ micronaut = "4.10.10"
 micronaut-cache = "5.3.0"
 micronaut-core = "4.10.18"
 micronaut-data = "4.14.3"
-micronaut-email = "2.11.0"
 micronaut-jaxrs = "4.10.0"
 micronaut-jdbc = "7.0.0"
 micronaut-kotlin = "4.7.0"
-micronaut-kubernetes = "7.2.1"
 micronaut-micrometer = "5.13.2"
 micronaut-openapi = "6.19.2"
 micronaut-security = "4.17.1"
@@ -79,7 +76,6 @@ bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref 
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.18.7" }
 cron-utils = { module = "com.cronutils:cron-utils", version = "9.2.1" }
-datadog-statsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.0.0" }
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker.java" }
 elasticsearch = { module = "org.elasticsearch:elasticsearch", version = "7.17.21" }
@@ -87,7 +83,6 @@ fasterxml = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "faste
 failsafe = { module = "dev.failsafe:failsafe", version.ref = "failsafe" }
 failsafe-okhttp = { module = "dev.failsafe:failsafe-okhttp", version.ref = "failsafe" }
 failsafe-retrofit = { module = "dev.failsafe:failsafe-retrofit", version.ref = "failsafe"}
-firebase-admin = { module = "com.google.firebase:firebase-admin", version = "8.1.0" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version = "1.20.0" }
@@ -124,12 +119,10 @@ jakarta-ws-rs-api = { module = "jakarta.ws.rs:jakarta.ws.rs-api", version.ref = 
 java-dogstatsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.1.0" }
 java-jwt = { module = "com.auth0:java-jwt", version = "3.19.2" }
 javax-databind = { module = "javax.xml.bind:jaxb-api", version = "2.4.0-b180830.0359" }
-jersey-bom = { module = "org.glassfish.jersey:jersey-bom", version = "3.1.5" }
 jcl-over-slf4j = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
-jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
 json-assert = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
 json-path = { module = "com.jayway.jsonpath:json-path", version = "2.9.0" }
@@ -165,14 +158,12 @@ mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.
 mockk = { module = "io.mockk:mockk", version = "1.14.9" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
-okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
 openai-java = { module = "com.openai:openai-java", version = "0.36.0" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
 orb = { module = "com.withorb.api:orb-kotlin", version = "1.12.0" }
 
 otel-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "otel-api" }
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version = "2.21.0"}
-otel-opentracing-shim = { module = "io.opentelemetry:opentelemetry-opentracing-shim", version.ref = "otel-api"}
 otel-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version = "1.37.0" }
 
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
@@ -199,7 +190,6 @@ s3 = { module = "software.amazon.awssdk:s3", version = "2.23.17" }
 sts = { module = "software.amazon.awssdk:sts", version = "2.23.17" }
 segment-java-analytics = { module = "com.segment.analytics.java:analytics", version.ref = "segment" }
 semver4j = { module = "org.semver4j:semver4j", version = "5.3.0" }
-sendgrid-java = { module = "com.sendgrid:sendgrid-java", version = "4.0.1" }
 sentry-java = { module = "io.sentry:sentry", version.ref = "sentry" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
@@ -229,8 +219,6 @@ micronaut-data-processor = { module = "io.micronaut.data:micronaut-data-processo
 micronaut-data-jdbc = { module = "io.micronaut.data:micronaut-data-jdbc", version.ref = "micronaut-data" }
 micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", version.ref = "micronaut-data" }
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
-micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
-micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
 micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.9.2" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
@@ -243,22 +231,18 @@ micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind
 micronaut-jaxrs-common = { module = "io.micronaut.jaxrs:micronaut-jaxrs-common", version.ref = "micronaut-jaxrs"}
 micronaut-jaxrs-processor = { module = "io.micronaut.jaxrs:micronaut-jaxrs-processor", version.ref = "micronaut-jaxrs" }
 micronaut-jaxrs-server = { module = "io.micronaut.jaxrs:micronaut-jaxrs-server", version.ref = "micronaut-jaxrs" }
-micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version.ref = "micronaut-jdbc" }
 micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", version.ref = "micronaut-jdbc" }
 micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
 micronaut-kotlin-extension-functions = { module = "io.micronaut.kotlin:micronaut-kotlin-extension-functions", version.ref = "micronaut-kotlin" }
 micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runtime", version.ref = "micronaut-kotlin" }
-micronaut-kubernetes-discovery-client = { module = "io.micronaut.kubernetes:micronaut-kubernetes-discovery-client", version.ref = "micronaut-kubernetes" }
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut-core" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
-micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-otlp = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-otlp", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-statsd = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-statsd", version.ref = "micronaut-micrometer" }
 micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version.ref = "micronaut-openapi" }
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations", version.ref = "micronaut-openapi" }
 micronaut-picocli = { module = "io.micronaut.picocli:micronaut-picocli", version = "5.9.0" }
 micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version.ref = "micronaut" }
-micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "5.9.0" }
 micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.9.0" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut-core" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
@@ -296,7 +280,6 @@ micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micr
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
 micronaut-cache = ["micronaut-cache-caffeine", "micronaut-cache-management"]
 micronaut-data-jdbc = [ "micronaut-data-connection", "micronaut-data-jdbc", "micronaut-data-model", "micronaut-data-tx", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
-micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
 micronaut-jaxrs =  ["micronaut-jaxrs-common", "micronaut-jaxrs-server"]
 micronaut-kotlin = ["micronaut-kotlin-extension-functions", "micronaut-kotlin-runtime"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-otlp", "micronaut-micrometer-registry-statsd"]
@@ -314,6 +297,5 @@ temporal-telemetry = ["temporal-opentracing"]
 [plugins]
 node-gradle = { id = "com.github.node-gradle.node", version = "7.1.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
-use-python = { id = "ru.vyarus.use-python", version = "4.1.0" }
 
 de-undercouch-download = { id = "de.undercouch.download", version = "5.5.0" }
