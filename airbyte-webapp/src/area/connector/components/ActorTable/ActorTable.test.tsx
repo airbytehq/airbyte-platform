@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 
 import { mockDestination, mockSource, render } from "test-utils";
+import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useShowActorContextLayerToggles } from "cloud/components/AgentsOptIn/ActorContextLayerToggles";
 import {
@@ -91,6 +92,7 @@ describe("ActorTable", () => {
       isLoading: false,
       isError: false,
     } as ReturnType<typeof useFusionActorEnablement>);
+    mockExperiments({ "platform.fusion-semantic-search-ui": true });
   });
 
   it("renders read-only Agent Access and Semantic Search statuses for sources", async () => {
@@ -104,6 +106,16 @@ describe("ActorTable", () => {
     expect(screen.getByRole("img", { name: "Agent Access configured" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Semantic Search configured" })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("hides the Semantic Search column when its flag is off", async () => {
+    mockUseShowActorContextLayerToggles.mockReturnValue(true);
+    mockExperiments({ "platform.fusion-semantic-search-ui": false });
+
+    await renderActorTable(sourceReadList);
+
+    expect(screen.getByRole("columnheader", { name: "Agent Access" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Semantic Search" })).not.toBeInTheDocument();
   });
 
   it("renders only Agent Access for destinations when toggles are enabled", async () => {

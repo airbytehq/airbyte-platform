@@ -46,6 +46,7 @@ export const CreateSourcePage: React.FC = () => {
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const [isAgentView, setIsAgentView] = useState(false);
 
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
@@ -117,7 +118,7 @@ export const CreateSourcePage: React.FC = () => {
         workspaceId: result.workspaceId,
         state: {
           enable_agent_access: contextLayerOptIn.agentAccess,
-          enable_indexing: contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
+          enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
         },
       }).catch(() => undefined);
     }
@@ -167,7 +168,7 @@ export const CreateSourcePage: React.FC = () => {
         workspaceId: source.workspaceId,
         state: {
           enable_agent_access: contextLayerOptIn.agentAccess,
-          enable_indexing: contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
+          enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
         },
       }).catch(() => undefined);
     }

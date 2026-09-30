@@ -29,6 +29,7 @@ import {
   FusionWorkspaceConnector,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
@@ -57,6 +58,7 @@ const WorkspaceConnectorTable: React.FC<{
 }> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, actorKind, onInventoryLoaded }) => {
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
   const [indexedConnectors, setIndexedConnectors] = useState<Record<string, boolean>>({});
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -178,7 +180,7 @@ const WorkspaceConnectorTable: React.FC<{
         );
       },
     },
-    ...(actorKind === "source"
+    ...(actorKind === "source" && showSemanticSearch
       ? [
           {
             id: "semanticSearch",
@@ -316,6 +318,7 @@ const WorkspaceConnectorAccess: React.FC<{
     Record<string, { count: number | null; canManageConnectors: boolean }>
   >({});
   const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const navigate = useNavigate();
   const organizationId = useCurrentOrganizationId();
   const [organizationWorkspaceMap] = useLocalStorage("airbyte_organization-workspace-map", {});
@@ -372,8 +375,12 @@ const WorkspaceConnectorAccess: React.FC<{
         <FormattedMessage
           id={
             actorKind === "source"
-              ? "cloud.contextLayer.sources.description"
-              : "cloud.contextLayer.destinations.description"
+              ? showSemanticSearch
+                ? "cloud.contextLayer.sources.description"
+                : "cloud.contextLayer.sources.description.agentAccess"
+              : showSemanticSearch
+              ? "cloud.contextLayer.destinations.description"
+              : "cloud.contextLayer.destinations.description.agentAccess"
           }
         />
       </Text>
@@ -403,8 +410,12 @@ const WorkspaceConnectorAccess: React.FC<{
                 <FormattedMessage
                   id={
                     actorKind === "source"
-                      ? "cloud.contextLayer.sources.empty.description"
-                      : "cloud.contextLayer.destinations.empty.description"
+                      ? showSemanticSearch
+                        ? "cloud.contextLayer.sources.empty.description"
+                        : "cloud.contextLayer.sources.empty.description.agentAccess"
+                      : showSemanticSearch
+                      ? "cloud.contextLayer.destinations.empty.description"
+                      : "cloud.contextLayer.destinations.empty.description.agentAccess"
                   }
                 />
               }
@@ -745,6 +756,7 @@ const ContextLayerPageContent: React.FC = () => {
 };
 
 const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({ actorKind }) => {
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
@@ -781,8 +793,12 @@ const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({
             <FormattedMessage
               id={
                 actorKind === "source"
-                  ? "cloud.contextLayer.sources.description"
-                  : "cloud.contextLayer.destinations.noAccess.pageDescription"
+                  ? showSemanticSearch
+                    ? "cloud.contextLayer.sources.description"
+                    : "cloud.contextLayer.sources.description.agentAccess"
+                  : showSemanticSearch
+                  ? "cloud.contextLayer.destinations.noAccess.pageDescription"
+                  : "cloud.contextLayer.destinations.description.agentAccess"
               }
             />
           </Text>
@@ -791,7 +807,7 @@ const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({
             text={
               <FormattedMessage
                 id={
-                  actorKind === "source"
+                  actorKind === "source" && showSemanticSearch
                     ? "cloud.contextLayer.sources.noAccess.title"
                     : "cloud.contextLayer.destinations.noAccess.title"
                 }
@@ -801,7 +817,9 @@ const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({
               <FormattedMessage
                 id={
                   actorKind === "source"
-                    ? "cloud.contextLayer.sources.noAccess.description"
+                    ? showSemanticSearch
+                      ? "cloud.contextLayer.sources.noAccess.description"
+                      : "cloud.contextLayer.sources.noAccess.description.agentAccess"
                     : "cloud.contextLayer.destinations.noAccess.description"
                 }
               />

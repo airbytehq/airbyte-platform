@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { IntlProvider } from "react-intl";
 
+import { mockExperiments } from "test-utils/mockExperiments";
+
 import { ConnectorIds } from "area/connector/utils/constants";
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
@@ -80,6 +82,7 @@ describe("SourceContextLayerOptIn", () => {
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);
+    mockExperiments({ "platform.fusion-semantic-search-ui": true });
   });
 
   it("renders disabled unchecked toggles with an enrollment tooltip before enrollment", async () => {
@@ -141,6 +144,15 @@ describe("SourceContextLayerOptIn", () => {
       )
     ).toBeInTheDocument();
     expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditSource);
+  });
+
+  it("hides semantic search while keeping agent access in source setup", () => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": false });
+    renderOptIn();
+
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeChecked();
+    expect(screen.queryByText("Semantic search")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 
   it("renders both toggles disabled and shows an unsupported tooltip for an unsupported source", async () => {

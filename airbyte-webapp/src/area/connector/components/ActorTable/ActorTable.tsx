@@ -31,6 +31,7 @@ import {
   SupportState,
 } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline, shouldDisplayBreakingChangeBanner } from "core/domain/connector";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPage/ConnectionStatusMessages";
 
@@ -179,6 +180,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
 }) => {
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const showActorContextLayerToggles = useShowActorContextLayerToggles();
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const isSourceList = isSourceReadList(actorReadList);
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
@@ -287,7 +289,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
             }),
           ]
         : []),
-      ...(showActorContextLayerToggles && isSourceList
+      ...(showActorContextLayerToggles && isSourceList && showSemanticSearch
         ? [
             columnHelper.display({
               header: () => <FormattedMessage id="tables.semanticSearch" />,
@@ -363,6 +365,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
       connectorBreakingChangeDeadlinesEnabled,
       isSourceList,
       showActorContextLayerToggles,
+      showSemanticSearch,
       supportedSourceDefinitionIds,
       supportedDestinationDefinitionIds,
     ]

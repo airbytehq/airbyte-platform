@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
+import { mockExperiments } from "test-utils/mockExperiments";
+
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
   useAgentsProvisioningStatusQuery,
@@ -148,26 +150,36 @@ const messages = {
     "Use the Airbyte MCP to query the source directly for up-to-date direct API results. You don’t need to create a connection in Airbyte.",
   "cloud.contextLayer.sources.description":
     "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
+  "cloud.contextLayer.sources.description.agentAccess":
+    "Choose which sources agents can access directly through the Airbyte MCP.",
   "cloud.contextLayer.destinations.title": "Context layer destinations",
   "cloud.contextLayer.destinations.column": "Destination",
   "cloud.contextLayer.destinations.agentAccess.tooltip": "Query the destination directly, no sync required.",
   "cloud.contextLayer.destinations.description":
     "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
+  "cloud.contextLayer.destinations.description.agentAccess":
+    "Choose which destinations agents can query directly through the Airbyte MCP.",
   "cloud.contextLayer.destinations.noAccess.pageDescription":
     "Choose which destinations populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
   "cloud.contextLayer.sources.noAccess.title": "Enable agent access or semantic search",
   "cloud.contextLayer.sources.noAccess.description":
     "Before you can control agent access to sources, you need to enable agent access or semantic search",
+  "cloud.contextLayer.sources.noAccess.description.agentAccess":
+    "Before you can control agent access to sources, you need to enable agent access.",
   "cloud.contextLayer.destinations.noAccess.title": "Enable agent access",
   "cloud.contextLayer.destinations.noAccess.description":
     "Before you can control agent access to destinations, you need to enable agent access",
   "cloud.contextLayer.noAccess.settings": "Go to settings",
   "cloud.contextLayer.sources.empty.title": "No sources yet",
   "cloud.contextLayer.sources.empty.description": "Add sources to Airbyte to start populating your context layer.",
+  "cloud.contextLayer.sources.empty.description.agentAccess":
+    "Add sources to Airbyte to make them available to agents.",
   "cloud.contextLayer.sources.empty.add": "Add your first source",
   "cloud.contextLayer.destinations.empty.title": "No destinations yet",
   "cloud.contextLayer.destinations.empty.description":
     "Add destinations to Airbyte to start populating your context layer.",
+  "cloud.contextLayer.destinations.empty.description.agentAccess":
+    "Add destinations to Airbyte to make them available to agents.",
   "cloud.contextLayer.destinations.empty.add": "Add your first destination",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
@@ -232,6 +244,7 @@ describe("ContextLayerPage", () => {
     window.localStorage.clear();
     mockUseCurrentOrganizationId.mockReturnValue("test-org-123");
     mockUseShowAgentsOptIn.mockReturnValue(true);
+    mockExperiments({ "platform.fusion-semantic-search-ui": true });
     mockUseAgentsProvisioningStatusQuery.mockImplementation(
       () =>
         ({
@@ -647,6 +660,16 @@ describe("ContextLayerPage", () => {
         sourcesError: false,
         destinationsError: false,
       }));
+    });
+
+    it("hides semantic search while keeping source agent access available", () => {
+      mockExperiments({ "platform.fusion-semantic-search-ui": false });
+      renderConnectorsWithIntl();
+
+      expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: /Semantic search/ })).not.toBeInTheDocument();
+      expect(screen.getByText(messages["cloud.contextLayer.sources.description.agentAccess"])).toBeInTheDocument();
+      expect(screen.queryByText(messages["cloud.contextLayer.sources.description"])).not.toBeInTheDocument();
     });
 
     it("shows the Figma semantic-search tooltip", async () => {
@@ -1254,6 +1277,20 @@ describe("ContextLayerPage", () => {
     expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
+  it("shows only agent access copy before enrollment when semantic search is off", () => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": false });
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
+
+    renderConnectorsWithIntl("source");
+
+    expect(screen.getByText(messages["cloud.contextLayer.sources.description.agentAccess"])).toBeInTheDocument();
+    expect(
+      screen.getByText(messages["cloud.contextLayer.sources.noAccess.description.agentAccess"])
+    ).toBeInTheDocument();
+    expect(screen.getByText("Enable agent access")).toBeInTheDocument();
+    expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
+  });
+
   it("sends the pre-enrollment action to Context Layer Settings", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
 
@@ -1278,6 +1315,7 @@ describe("ContextLayerPage", () => {
   it.each([
     [
       "source",
+      true,
       "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
       "No sources yet",
       "Add sources to Airbyte to start populating your context layer.",
@@ -1286,15 +1324,35 @@ describe("ContextLayerPage", () => {
     ],
     [
       "destination",
+      true,
       "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
       "No destinations yet",
       "Add destinations to Airbyte to start populating your context layer.",
       "Add your first destination",
       "/workspaces/workspace-1/destination/new-destination",
     ],
+    [
+      "source",
+      false,
+      "Choose which sources agents can access directly through the Airbyte MCP.",
+      "No sources yet",
+      "Add sources to Airbyte to make them available to agents.",
+      "Add your first source",
+      "/workspaces/workspace-1/source/new-source",
+    ],
+    [
+      "destination",
+      false,
+      "Choose which destinations agents can query directly through the Airbyte MCP.",
+      "No destinations yet",
+      "Add destinations to Airbyte to make them available to agents.",
+      "Add your first destination",
+      "/workspaces/workspace-1/destination/new-destination",
+    ],
   ] as const)(
-    "shows the %s empty state and opens connector setup",
-    async (actorKind, subtitle, title, description, action, path) => {
+    "shows the %s empty state with semantic search flag %s and opens connector setup",
+    async (actorKind, showSemanticSearch, subtitle, title, description, action, path) => {
+      mockExperiments({ "platform.fusion-semantic-search-ui": showSemanticSearch });
       mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true, external_cloud_eligible: true } as never);
       mockUseListWorkspacesInOrganization.mockReturnValue({
         data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },

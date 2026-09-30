@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
+import { mockExperiments } from "test-utils/mockExperiments";
+
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAgentsProvisioningStatus, useFusionWorkspaceConnectors, useSetFusionActorEnablement } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
@@ -109,6 +111,7 @@ describe("ActorContextLayerCard", () => {
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);
+    mockExperiments({ "platform.fusion-semantic-search-ui": true });
   });
 
   it("renders nothing when context layer toggles are not visible", () => {
@@ -129,6 +132,15 @@ describe("ActorContextLayerCard", () => {
     expect(
       screen.getByText("Data will be indexed when this source is synced to an enabled Context Layer destination.")
     ).toBeInTheDocument();
+  });
+
+  it("hides semantic search for sources when its flag is off", () => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": false });
+    renderCard("source");
+
+    expect(screen.getByText("Agent Access")).toBeInTheDocument();
+    expect(screen.queryByText("Semantic Search")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 
   it("nests the semantic search row under agent access", () => {

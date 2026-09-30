@@ -5,6 +5,8 @@ import { useIntl } from "react-intl";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useExperiment } from "core/services/Experiment";
+
 import styles from "./ActorContextLayerCard.module.scss";
 import {
   ActorAgentAccessToggle,
@@ -21,6 +23,7 @@ interface ActorContextLayerCardProps {
 export const ActorContextLayerCard: React.FC<ActorContextLayerCardProps> = ({ actorId, actorType }) => {
   const { formatMessage } = useIntl();
   const isVisible = useShowActorContextLayerToggles();
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
 
   if (!isVisible) {
     return null;
@@ -33,7 +36,7 @@ export const ActorContextLayerCard: React.FC<ActorContextLayerCardProps> = ({ ac
           <ContextLayerSettingLabel setting="agentAccess" actorType={actorType} />
           <ActorAgentAccessToggle actorId={actorId} actorType={actorType} />
         </FlexContainer>
-        {actorType === "source" && (
+        {actorType === "source" && showSemanticSearch && (
           <FlexContainer
             className={classNames(styles.row, styles.tierTwo)}
             justifyContent="space-between"

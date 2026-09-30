@@ -36,6 +36,7 @@ export interface Experiments {
   "organization.workerUsagePage": boolean;
   "plan-page-redesign-ui": boolean;
   "platform.enable-data-worker-allocation": boolean;
+  "platform.fusion-semantic-search-ui": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   "platform.use-verified-domains-for-sso-activate": boolean;
@@ -94,6 +95,7 @@ export const defaultExperimentValues: Experiments = {
   "organization.workerUsagePage": false,
   "plan-page-redesign-ui": false,
   "platform.enable-data-worker-allocation": false,
+  "platform.fusion-semantic-search-ui": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   "platform.use-verified-domains-for-sso-activate": false,

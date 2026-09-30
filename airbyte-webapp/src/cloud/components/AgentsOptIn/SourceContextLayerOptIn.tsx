@@ -6,6 +6,7 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -31,6 +32,7 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
 }) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const isEnrolled = status?.is_enrolled === true;
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
@@ -86,22 +88,24 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
           />
         )}
       </div>
-      <div className={styles.card} role="group" aria-label={semanticSearchTitle}>
-        <ContextLayerSettingLabel setting="semanticSearch" actorType="source" variant="setup" />
-        {withPermissionTooltip(
-          <Switch
-            size="sm"
-            checked={semanticSearch}
-            disabled={!isEnrolled || !supported || !value.agentAccess || !canManage}
-            onChange={
-              isEnrolled && supported && value.agentAccess && canManage
-                ? (event) => onChange({ ...value, semanticSearch: event.target.checked })
-                : undefined
-            }
-            aria-label={semanticSearchTitle}
-          />
-        )}
-      </div>
+      {showSemanticSearch && (
+        <div className={styles.card} role="group" aria-label={semanticSearchTitle}>
+          <ContextLayerSettingLabel setting="semanticSearch" actorType="source" variant="setup" />
+          {withPermissionTooltip(
+            <Switch
+              size="sm"
+              checked={semanticSearch}
+              disabled={!isEnrolled || !supported || !value.agentAccess || !canManage}
+              onChange={
+                isEnrolled && supported && value.agentAccess && canManage
+                  ? (event) => onChange({ ...value, semanticSearch: event.target.checked })
+                  : undefined
+              }
+              aria-label={semanticSearchTitle}
+            />
+          )}
+        </div>
+      )}
       {!supported && (
         <Text className={styles.unsupported} size="xs" color="grey">
           <FormattedMessage id="cloud.contextLayer.actor.notSupported" />
