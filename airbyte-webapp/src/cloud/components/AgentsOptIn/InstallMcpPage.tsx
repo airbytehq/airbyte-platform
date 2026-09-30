@@ -18,6 +18,7 @@ import { links } from "core/utils/links";
 import styles from "./InstallMcpPage.module.scss";
 import {
   buildClaudeCodeCommand,
+  buildCodexCommand,
   buildCursorConfig,
   buildCursorDeeplink,
   buildVsCodeCliCommand,
@@ -149,6 +150,8 @@ const InstallMcpPageContent: React.FC = () => {
             <CodeBlock content={buildClaudeCodeCommand(CLOUD_MCP_URL)} />
             <Label id="cloud.installMcp.cli.vscodeLabel" />
             <CodeBlock content={buildVsCodeCliCommand(CLOUD_MCP_URL)} />
+            <Label id="cloud.installMcp.cli.codexLabel" />
+            <CodeBlock content={buildCodexCommand(CLOUD_MCP_URL)} />
           </FlexContainer>
         </InstallCard>
         <Divider />

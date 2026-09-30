@@ -30,6 +30,8 @@ export const buildVsCodeInsidersDeeplink = (url: string): string => buildVsCodeI
 export const buildClaudeCodeCommand = (url: string): string =>
   `claude mcp add --transport http ${MCP_SERVER_NAME} ${url}`;
 
+export const buildCodexCommand = (url: string): string => `codex mcp add ${MCP_SERVER_NAME} --url ${url}`;
+
 export const buildCursorConfig = (url: string): string =>
   JSON.stringify({ mcpServers: { [MCP_SERVER_NAME]: { url } } }, null, 2);
 

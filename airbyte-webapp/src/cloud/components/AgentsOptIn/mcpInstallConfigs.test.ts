@@ -1,5 +1,6 @@
 import {
   buildClaudeCodeCommand,
+  buildCodexCommand,
   buildCursorConfig,
   buildCursorDeeplink,
   buildVsCodeCliCommand,
@@ -58,6 +59,10 @@ describe("mcpInstallConfigs", () => {
 
   it("builds the Claude Code CLI command", () => {
     expect(buildClaudeCodeCommand(TEST_URL)).toBe(`claude mcp add --transport http airbyte ${TEST_URL}`);
+  });
+
+  it("builds the Codex CLI command", () => {
+    expect(buildCodexCommand(TEST_URL)).toBe(`codex mcp add airbyte --url ${TEST_URL}`);
   });
 
   it("builds the Cursor JSON config", () => {

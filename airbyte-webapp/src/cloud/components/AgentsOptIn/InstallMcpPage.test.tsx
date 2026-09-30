@@ -55,7 +55,8 @@ describe("InstallMcpPage", () => {
       "CLI command",
       "JSON config file",
     ]);
-    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(6);
+    expect(screen.getByText(/codex mcp add airbyte/)).toBeInTheDocument();
     expect(screen.getByText(/"servers":/)).toBeInTheDocument();
     expect(screen.getByText(/"mcpServers":/)).toBeInTheDocument();
   });
