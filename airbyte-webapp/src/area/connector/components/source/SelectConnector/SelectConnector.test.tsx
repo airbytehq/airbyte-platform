@@ -69,7 +69,6 @@ jest.mock("area/organization/utils", () => ({
     CORE: "plan-airbyte-core",
     FLEX: "plan-airbyte-flex",
     PRO: "plan-airbyte-pro",
-    SME: "plan-airbyte-sme",
     STANDARD: "plan-airbyte-standard",
     STANDARD_TRIAL: "plan-airbyte-standard-trial",
   },
