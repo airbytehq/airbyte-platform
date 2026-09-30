@@ -117,7 +117,7 @@ describe("PlusPlanGridCard", () => {
     expect(goToCustomerPortal).toHaveBeenCalledTimes(1);
   });
 
-  it("opens a proration confirmation before upgrading an active paid plan to Plus", async () => {
+  it("opens a confirmation before upgrading an active paid plan to Plus", async () => {
     await render(<PlusPlanGridCard isPaidPlan />);
 
     await userEvent.click(screen.getByRole("button", { name: /Upgrade/i }));

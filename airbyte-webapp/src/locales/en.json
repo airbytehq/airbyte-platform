@@ -1852,7 +1852,7 @@
   "plans.plus.supportDetails": "Weekdays 7am–7pm ET. Response within 24 hours.",
   "plans.plus.upgrade": "Upgrade to Plus",
   "plans.plus.upgrade.confirmTitle": "Upgrade to Plus?",
-  "plans.plus.upgrade.confirmText": "Your Plus plan starts immediately. Your first month will be prorated based on the time remaining in your current billing period.",
+  "plans.plus.upgrade.confirmText": "Your Plus plan starts immediately. You'll be charged now for Plus and any unbilled Standard usage. Your billing cycle will restart today.",
   "plans.plus.upgrade.confirmSubmit": "Upgrade to Plus",
   "plans.plus.upgrade.confirmCancel": "Keep Standard",
   "plans.plus.get": "Subscribe",
