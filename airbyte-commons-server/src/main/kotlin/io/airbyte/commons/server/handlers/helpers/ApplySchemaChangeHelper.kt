@@ -189,11 +189,10 @@ class ApplySchemaChangeHelper(
           }
 
           StreamTransform.TransformTypeEnum.REMOVE_STREAM -> {
-            if (nonBreakingChangesPreference == NonBreakingChangesPreference.PROPAGATE_FULLY) {
-              oldCatalogPerStream.remove(streamDescriptor)
-              changes.add(formatDiff(transformation))
-              appliedDiff.addTransformsItem(transformation)
-            }
+            // Removed regardless of preference, so the sync stops asking for a table that is gone.
+            oldCatalogPerStream.remove(streamDescriptor)
+            changes.add(formatDiff(transformation))
+            appliedDiff.addTransformsItem(transformation)
           }
 
           else -> throw NotSupportedException("Not supported transformation.")

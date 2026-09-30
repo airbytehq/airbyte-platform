@@ -439,7 +439,7 @@
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully": "Propagate all field and stream changes",
   "connectionForm.nonBreakingChangesPreference.autopropagation.ignore.description": "Schema changes will be detected, but not propagated. Syncs will continue running with the schema you've set up, if possible.",
   "connectionForm.nonBreakingChangesPreference.autopropagation.disable.description": "Connections will be automatically disabled as soon as any schema changes are detected.",
-  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns.description": "Only column changes will be propagated. Incompatible schema changes (type changes, deletions) will be detected, but not propagated.",
+  "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_columns.description": "Column changes will be propagated, and tables deleted at the source will be removed from this connection. Incompatible schema changes (type changes) will be detected, but not propagated.",
   "connectionForm.nonBreakingChangesPreference.autopropagation.propagate_fully.description": "All new tables and column changes from the source (additions and deletions) are automatically synced to the destination.",
   "connectionForm.nonBreakingChangesPreference.autopropagation.message": "Determine how Airbyte handles <lnk>schema changes</lnk> from the source.",
   "connectionForm.nonBreakingChangesPreference.autopropagation.messageOnChange": "Auto-propagation will start with your next scheduled sync. To apply immediately, run a manual sync after saving the connection.",

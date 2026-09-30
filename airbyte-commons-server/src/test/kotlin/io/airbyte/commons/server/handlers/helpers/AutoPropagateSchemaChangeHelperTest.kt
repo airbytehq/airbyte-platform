@@ -347,8 +347,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   fun applyRemoveNotFully() {
-    val oldSchema = deserialize(OLD_SCHEMA)
-    val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema)
+    val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, deserialize(OLD_SCHEMA))
 
     val newAirbyteCatalog = AirbyteCatalog()
 
@@ -358,18 +357,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
         .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
 
     val result =
-      applySchemaChangeHelper
-        .getUpdatedSchema(
-          oldAirbyteCatalog,
-          newAirbyteCatalog,
-          listOf(transform),
-          NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-          SUPPORTED_DESTINATION_SYNC_MODES,
-        ).catalog
+      applySchemaChangeHelper.getUpdatedSchema(
+        oldAirbyteCatalog,
+        newAirbyteCatalog,
+        listOf(transform),
+        NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+        SUPPORTED_DESTINATION_SYNC_MODES,
+      )
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(1)
-    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
-    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.catalog.streams).isEmpty()
+    Assertions.assertThat<@Valid StreamTransform?>(result.appliedDiff.transforms).containsExactly(transform)
+    Assertions.assertThat(result.changeDescription).containsExactly("Removed stream '$NAME1'")
   }
 
   @Test

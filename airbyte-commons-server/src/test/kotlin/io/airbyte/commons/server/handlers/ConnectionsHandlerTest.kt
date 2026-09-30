@@ -5184,6 +5184,31 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
+    fun testRemovedStreamIsAppliedWhenPropagatingColumnsOnly() {
+      standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.PROPAGATE_COLUMNS
+      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
+
+      val request =
+        ConnectionAutoPropagateSchemaChange()
+          .connectionId(connectionId)
+          .workspaceId(workspaceId)
+          .catalogId(sourceCatalogId)
+          .catalog(
+            io.airbyte.api.model.generated
+              .AirbyteCatalog(),
+          )
+
+      val actualResult = connectionsHandler.applySchemaChange(request)
+
+      val standardSyncArgumentCaptor = argumentCaptor<StandardSync>()
+      verify(connectionService).writeStandardSync(standardSyncArgumentCaptor.capture())
+      val actualStandardSync = standardSyncArgumentCaptor.firstValue
+      assertTrue(actualStandardSync.catalog.streams.isEmpty())
+      assertEquals(sourceCatalogId, actualStandardSync.sourceCatalogId)
+      assertEquals(1, actualResult.propagatedDiff.transforms.size)
+    }
+
+    @Test
     fun testSendingNotificationToManuallyApplySchemaChange() {
       // Override the non-breaking changes preference to ignore so that the changes are not
       // auto-propagated, but needs to be manually applied.
