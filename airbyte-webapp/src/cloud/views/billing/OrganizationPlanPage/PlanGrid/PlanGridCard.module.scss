@@ -28,6 +28,8 @@
 
   // Nested so it outranks .button:disabled regardless of stylesheet injection order.
   .planGridCard__currentPlan:disabled {
+    pointer-events: auto;
+    cursor: not-allowed;
     opacity: 1;
     background-color: colors.$grey-100;
     border-color: colors.$grey-100;

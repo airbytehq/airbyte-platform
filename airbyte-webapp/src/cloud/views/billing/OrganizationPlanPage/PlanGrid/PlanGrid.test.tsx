@@ -210,7 +210,7 @@ describe("PlanGrid", () => {
     expect(card("standard-plan-card").queryByRole("button", { name: /^Downgrade$/i })).not.toBeInTheDocument();
   });
 
-  it("marks the Plus tier from the subscription current and offers the next tier up", async () => {
+  it("selects the Plus tier from the subscription as the current plan", async () => {
     mocked(useOrgInfo).mockReturnValue(billingState());
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
     mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
@@ -220,9 +220,9 @@ describe("PlanGrid", () => {
     await render(<PlanGrid />);
 
     expect(card("plus-plan-card").getByTestId("current-plan-badge")).toHaveTextContent("Current plan");
-    expect(card("plus-plan-card").getByRole("button", { name: "1,000 credits · $3,199/month" })).toBeEnabled();
-    expect(card("plus-plan-card").getByText("$3,199")).toBeInTheDocument();
-    expect(card("plus-plan-card").getByRole("button", { name: "Upgrade" })).toBeEnabled();
+    expect(card("plus-plan-card").getByRole("button", { name: "500 credits · $1,799/month" })).toBeEnabled();
+    expect(card("plus-plan-card").getByText("$1,799")).toBeInTheDocument();
+    expect(card("plus-plan-card").getByRole("button", { name: "Current plan" })).toBeDisabled();
     expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
   });
 
@@ -237,7 +237,8 @@ describe("PlanGrid", () => {
 
     expect(screen.getAllByTestId("current-plan-badge")).toHaveLength(1);
     expect(card("plus-plan-card").getByTestId("current-plan-badge")).toBeInTheDocument();
-    expect(card("plus-plan-card").getByRole("button", { name: "250 credits · $999/month" })).toBeEnabled();
+    expect(card("plus-plan-card").getByRole("button", { name: "100 credits · $449/month" })).toBeEnabled();
+    expect(card("plus-plan-card").getByRole("button", { name: "Current plan" })).toBeDisabled();
     expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
   });
 

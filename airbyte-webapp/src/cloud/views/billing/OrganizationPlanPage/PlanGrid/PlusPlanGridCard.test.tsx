@@ -74,6 +74,7 @@ describe("PlusPlanGridCard", () => {
       "1,000 credits · $3,199/month",
       "2,000 credits · $4,999/month",
     ]);
+    expect(options.some((option) => option.querySelector('[data-icon="check-circle"]'))).toBe(false);
   });
 
   it.each([
@@ -165,6 +166,7 @@ describe("PlusPlanGridCard", () => {
   it("disables the Downgrade CTA when a cancellation is pending", async () => {
     await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_2000" cancellationDate="2030-01-15T00:00:00Z" />);
 
+    await selectCredits("1,000 credits · $3,199/month");
     expect(screen.getByRole("button", { name: "Downgrade" })).toBeDisabled();
   });
 
@@ -175,30 +177,34 @@ describe("PlusPlanGridCard", () => {
     expect(screen.getByRole("button", { name: "40 credits · $189/month" })).toBeEnabled();
   });
 
-  it("preselects the next tier up and disables the current tier for a Plus org", async () => {
-    await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_250" />);
+  it("preselects the active Plus tier with a Current plan button and badge", async () => {
+    await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_40" />);
 
     expect(screen.getByTestId("current-plan-badge")).toHaveTextContent("Current plan");
-    expect(screen.getByRole("button", { name: "500 credits · $1,799/month" })).toBeEnabled();
-    expect(screen.getByText("$1,799")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upgrade" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: /Current plan/i })).not.toBeInTheDocument();
-    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_500");
+    expect(screen.getByRole("button", { name: "40 credits · $189/month" })).toBeEnabled();
+    expect(screen.getByText("$189")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_40");
 
-    await userEvent.click(screen.getByRole("button", { name: "500 credits · $1,799/month" }));
-    const currentOption = await screen.findByRole("option", { name: "250 credits · $999/month (current plan)" });
-    expect(currentOption).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("option", { name: "1,000 credits · $3,199/month" })).not.toHaveAttribute(
-      "aria-disabled",
-      "true"
-    );
+    await userEvent.click(screen.getByRole("button", { name: "40 credits · $189/month" }));
+    const currentOption = await screen.findByRole("option", { name: "40 credits · $189/month (current plan)" });
+    expect(currentOption).not.toHaveAttribute("aria-disabled", "true");
+    expect(currentOption.querySelector('[data-icon="check-circle"]')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("option").filter((option) => option.querySelector('[data-icon="check-circle"]'))
+    ).toEqual([currentOption]);
   });
 
-  it("preselects the next tier down when the org is on the top tier", async () => {
+  it("preselects the active top tier and offers a downgrade after another tier is selected", async () => {
     await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_2000" />);
 
-    expect(screen.getByRole("button", { name: "1,000 credits · $3,199/month" })).toBeEnabled();
-    expect(screen.getByText("$3,199")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2,000 credits · $4,999/month" })).toBeEnabled();
+    expect(screen.getByText("$4,999")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_2000");
+
+    await selectCredits("1,000 credits · $3,199/month");
+    expect(screen.queryByTestId("current-plan-badge")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Downgrade" })).toBeEnabled();
     expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_1000");
   });
@@ -208,6 +214,7 @@ describe("PlusPlanGridCard", () => {
 
     await selectCredits("1,000 credits · $3,199/month");
     expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_1000");
+    expect(screen.queryByTestId("current-plan-badge")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Upgrade" }));
 
@@ -223,11 +230,12 @@ describe("PlusPlanGridCard", () => {
     expect(goToCustomerPortal).toHaveBeenCalledTimes(1);
   });
 
-  it("confirms an end-of-term downgrade when a lower tier is selected on a Plus org", async () => {
-    await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_500" />);
+  it("offers a downgrade from Plus 100 to Plus 40", async () => {
+    await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_100" />);
 
-    await selectCredits("100 credits · $449/month");
-    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_100");
+    await selectCredits("40 credits · $189/month");
+    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_40");
+    expect(screen.queryByTestId("current-plan-badge")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Downgrade" }));
 
@@ -237,15 +245,28 @@ describe("PlusPlanGridCard", () => {
     expect(modalOptions.cancelButtonText).toBe("plans.plus.tierDowngrade.confirmCancel");
   });
 
-  it("does not let the current tier be selected", async () => {
+  it("restores the Current plan button and badge when selecting the active tier again", async () => {
     await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_500" />);
 
-    await userEvent.click(screen.getByRole("button", { name: "1,000 credits · $3,199/month" }));
-    await userEvent.click(await screen.findByRole("option", { name: "500 credits · $1,799/month (current plan)" }));
-    await userEvent.keyboard("{Escape}");
-
-    expect(screen.getByRole("button", { name: "1,000 credits · $3,199/month" })).toBeInTheDocument();
+    await selectCredits("1,000 credits · $3,199/month");
+    expect(screen.queryByTestId("current-plan-badge")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upgrade" })).toBeEnabled();
-    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_1000");
+
+    await userEvent.click(screen.getByRole("button", { name: "1,000 credits · $3,199/month" }));
+    expect(
+      screen
+        .getByRole("option", { name: "500 credits · $1,799/month (current plan)" })
+        .querySelector('[data-icon="check-circle"]')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "1,000 credits · $3,199/month" }).querySelector('[data-icon="check-circle"]')
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("option", { name: "500 credits · $1,799/month (current plan)" }));
+
+    expect(screen.getByTestId("current-plan-badge")).toHaveTextContent("Current plan");
+    expect(screen.getByRole("button", { name: "500 credits · $1,799/month" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
+    expect(useRedirectToCustomerPortal).toHaveBeenLastCalledWith("setup", "plus_500");
   });
 });
