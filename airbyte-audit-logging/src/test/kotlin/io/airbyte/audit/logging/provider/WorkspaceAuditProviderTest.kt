@@ -4,14 +4,14 @@
 
 package io.airbyte.audit.logging.provider
 
-import io.airbyte.api.server.generated.models.WebhookConfigRead
-import io.airbyte.api.server.generated.models.WebhookConfigWrite
-import io.airbyte.api.server.generated.models.WorkspaceCreate
-import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
-import io.airbyte.api.server.generated.models.WorkspaceRead
-import io.airbyte.api.server.generated.models.WorkspaceUpdate
-import io.airbyte.api.server.generated.models.WorkspaceUpdateName
-import io.airbyte.api.server.generated.models.WorkspaceUpdateOrganization
+import io.airbyte.api.model.generated.WebhookConfigRead
+import io.airbyte.api.model.generated.WebhookConfigWrite
+import io.airbyte.api.model.generated.WorkspaceCreate
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.api.model.generated.WorkspaceUpdateName
+import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.commons.json.Jsons
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -25,12 +25,11 @@ class WorkspaceAuditProviderTest {
   fun `createWorkspace request summary omits the webhook authToken but keeps identity`() {
     val organizationId = UUID.randomUUID()
     val request =
-      WorkspaceCreate(
-        name = "my workspace",
-        email = "owner@example.com",
-        organizationId = organizationId,
-        webhookConfigs = listOf(WebhookConfigWrite(name = "hook", authToken = "super-secret-value")),
-      )
+      WorkspaceCreate()
+        .name("my workspace")
+        .email("owner@example.com")
+        .organizationId(organizationId)
+        .webhookConfigs(listOf(WebhookConfigWrite().name("hook").authToken("super-secret-value")))
 
     val summary = provider.generateSummaryFromRequest(request)
 
@@ -49,16 +48,12 @@ class WorkspaceAuditProviderTest {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val result =
-      WorkspaceRead(
-        workspaceId = workspaceId,
-        name = "my workspace",
-        slug = "my-workspace",
-        customerId = UUID.randomUUID(),
-        initialSetupComplete = true,
-        email = "owner@example.com",
-        organizationId = organizationId,
-        webhookConfigs = listOf(WebhookConfigRead(id = UUID.randomUUID(), name = "hook")),
-      )
+      WorkspaceRead()
+        .workspaceId(workspaceId)
+        .name("my workspace")
+        .email("owner@example.com")
+        .organizationId(organizationId)
+        .webhookConfigs(listOf(WebhookConfigRead().id(UUID.randomUUID()).name("hook")))
 
     val summary = provider.generateSummaryFromResult(result)
 
@@ -75,12 +70,11 @@ class WorkspaceAuditProviderTest {
   fun `updateWorkspace request summary omits the webhook authToken`() {
     val workspaceId = UUID.randomUUID()
     val request =
-      WorkspaceUpdate(
-        workspaceId = workspaceId,
-        name = "renamed",
-        email = "owner@example.com",
-        webhookConfigs = listOf(WebhookConfigWrite(name = "hook", authToken = "super-secret-value")),
-      )
+      WorkspaceUpdate()
+        .workspaceId(workspaceId)
+        .name("renamed")
+        .email("owner@example.com")
+        .webhookConfigs(listOf(WebhookConfigWrite().name("hook").authToken("super-secret-value")))
 
     val summary = provider.generateSummaryFromRequest(request)
 
@@ -96,7 +90,7 @@ class WorkspaceAuditProviderTest {
   fun `updateWorkspaceName request summary identifies the workspace and its new name`() {
     val workspaceId = UUID.randomUUID()
 
-    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceUpdateName(workspaceId = workspaceId, name = "renamed")))
+    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceUpdateName().workspaceId(workspaceId).name("renamed")))
 
     assertEquals(workspaceId.toString(), node.get("workspaceId").asText())
     assertEquals("renamed", node.get("name").asText())
@@ -110,7 +104,7 @@ class WorkspaceAuditProviderTest {
     val node =
       Jsons.deserialize(
         provider.generateSummaryFromRequest(
-          WorkspaceUpdateOrganization(workspaceId = workspaceId, organizationId = organizationId),
+          WorkspaceUpdateOrganization().workspaceId(workspaceId).organizationId(organizationId),
         ),
       )
 
@@ -122,7 +116,7 @@ class WorkspaceAuditProviderTest {
   fun `deleteWorkspace request summary identifies which workspace was deleted`() {
     val workspaceId = UUID.randomUUID()
 
-    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceIdRequestBody(workspaceId = workspaceId)))
+    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceIdRequestBody().workspaceId(workspaceId)))
 
     assertEquals(workspaceId.toString(), node.get("workspaceId").asText())
   }

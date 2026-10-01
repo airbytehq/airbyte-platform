@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.model.generated.PermissionRead
 import io.airbyte.publicApi.server.generated.models.PermissionResponseRead
 import io.airbyte.publicApi.server.generated.models.PermissionScope
 import java.util.UUID
@@ -33,8 +33,12 @@ object PermissionResponseReadMapper {
           PermissionScope.NONE
         },
       scopeId =
-        permissionRead.workspaceId
-          ?: permissionRead.organizationId
-          ?: UUID.fromString("00000000-0000-0000-0000-000000000000"),
+        if (permissionRead.workspaceId != null) {
+          permissionRead.workspaceId
+        } else if (permissionRead.organizationId != null) {
+          permissionRead.organizationId
+        } else {
+          UUID.fromString("00000000-0000-0000-0000-000000000000")
+        },
     )
 }

@@ -28,7 +28,7 @@ val logger = KotlinLogging.logger {}
  */
 
 @WithSpan
-internal fun <T> execute(call: Callable<T>): T {
+internal fun <T> execute(call: Callable<T>): T? {
   try {
     return call.call()
   } catch (e: Exception) {

@@ -14,8 +14,8 @@ import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import java.util.UUID
 
-typealias ModelConnectorRolloutActorSelectionInfo = io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
-typealias ModelActorSyncInfo = io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
+typealias ModelConnectorRolloutActorSelectionInfo = io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
+typealias ModelActorSyncInfo = io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 
 object ConnectorRolloutActivityHelpers {
   fun mapToConnectorRollout(rolloutRead: ConnectorRolloutRead): ConnectorRolloutOutput =
@@ -48,23 +48,21 @@ object ConnectorRolloutActivityHelpers {
     if (actorSelectionInfo == null) {
       null
     } else {
-      ModelConnectorRolloutActorSelectionInfo(
-        numActors = actorSelectionInfo.numActors,
-        numPinnedToConnectorRollout = actorSelectionInfo.numPinnedToConnectorRollout,
-        numActorsEligibleOrAlreadyPinned = (actorSelectionInfo.numActorsEligibleOrAlreadyPinned),
-      )
+      ModelConnectorRolloutActorSelectionInfo()
+        .numActors(actorSelectionInfo.numActors)
+        .numPinnedToConnectorRollout(actorSelectionInfo.numPinnedToConnectorRollout)
+        .numActorsEligibleOrAlreadyPinned((actorSelectionInfo.numActorsEligibleOrAlreadyPinned))
     }
 
   private fun mapActorSyncs(actorSyncs: Map<String, ConnectorRolloutActorSyncInfo>?): Map<UUID, ModelActorSyncInfo>? =
     actorSyncs
       ?.map {
         UUID.fromString(it.key) to
-          ModelActorSyncInfo(
-            actorId = it.value.actorId,
-            numFailed = it.value.numFailed,
-            numSucceeded = it.value.numSucceeded,
-            numConnections = it.value.numConnections,
-          )
+          ModelActorSyncInfo()
+            .actorId(it.value.actorId)
+            .numFailed(it.value.numFailed)
+            .numSucceeded(it.value.numSucceeded)
+            .numConnections(it.value.numConnections)
       }?.toMap()
 
   private fun mapState(state: ConnectorRolloutState): ConnectorEnumRolloutState = state.let { ConnectorEnumRolloutState.valueOf(it.name) }

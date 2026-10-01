@@ -4,15 +4,15 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.server.generated.models.PermissionCheckRead
-import io.airbyte.api.server.generated.models.PermissionCheckRequest
-import io.airbyte.api.server.generated.models.PermissionDeleteUserFromWorkspaceRequestBody
-import io.airbyte.api.server.generated.models.PermissionIdRequestBody
-import io.airbyte.api.server.generated.models.PermissionRead
-import io.airbyte.api.server.generated.models.PermissionReadList
-import io.airbyte.api.server.generated.models.PermissionType
-import io.airbyte.api.server.generated.models.PermissionUpdate
-import io.airbyte.api.server.generated.models.PermissionsCheckMultipleWorkspacesRequest
+import io.airbyte.api.model.generated.PermissionCheckRead
+import io.airbyte.api.model.generated.PermissionCheckRequest
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody
+import io.airbyte.api.model.generated.PermissionIdRequestBody
+import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.api.model.generated.PermissionReadList
+import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.model.generated.PermissionUpdate
+import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -135,9 +135,6 @@ open class PermissionHandler(
     if (permission.groupId != null) {
       throw OperationNotAllowedException("Permission is inherited from a group and cannot be read as a user permission.")
     }
-    if (permission.userId == null) {
-      throw OperationNotAllowedException("Permission does not belong to a user and cannot be read as a user permission.")
-    }
     return buildPermissionRead(permission)
   }
 
@@ -178,7 +175,7 @@ open class PermissionHandler(
     val updatedPermission =
       Permission()
         .withPermissionId(permissionUpdate.permissionId)
-        .withPermissionType(permissionUpdate.permissionType!!.convertTo<Permission.PermissionType>())
+        .withPermissionType(permissionUpdate.permissionType.convertTo<Permission.PermissionType>())
         .withOrganizationId(existingPermission.organizationId) // cannot be updated
         .withWorkspaceId(existingPermission.workspaceId) // cannot be updated
         .withUserId(existingPermission.userId) // cannot be updated
@@ -209,9 +206,7 @@ open class PermissionHandler(
         )
       }
 
-    return PermissionCheckRead(
-      status = if (anyMatch) PermissionCheckRead.Status.SUCCEEDED else PermissionCheckRead.Status.FAILED,
-    )
+    return PermissionCheckRead().status(if (anyMatch) PermissionCheckRead.StatusEnum.SUCCEEDED else PermissionCheckRead.StatusEnum.FAILED)
   }
 
   /**
@@ -285,10 +280,9 @@ open class PermissionHandler(
     // does not belong to the organization.
 
     if (userPermission.organizationId != null && request.workspaceId != null) {
-      val workspaceId = request.workspaceId!!
       val requestedWorkspaceOrganizationId: UUID?
       try {
-        requestedWorkspaceOrganizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
+        requestedWorkspaceOrganizationId = workspaceService.getStandardWorkspaceNoSecrets(request.workspaceId, false).organizationId
       } catch (e: ConfigNotFoundException) {
         throw io.airbyte.config.persistence
           .ConfigNotFoundException(e.type, e.configId)
@@ -316,14 +310,13 @@ open class PermissionHandler(
     // Turn the multiple-request into a list of individual requests, one per workspace
 
     val permissionCheckRequests =
-      multiRequest.workspaceIds!!
+      multiRequest.workspaceIds
         .stream()
         .map { workspaceId: UUID? ->
-          PermissionCheckRequest(
-            userId = multiRequest.userId,
-            permissionType = multiRequest.permissionType,
-            workspaceId = workspaceId,
-          )
+          PermissionCheckRequest()
+            .userId(multiRequest.userId)
+            .permissionType(multiRequest.permissionType)
+            .workspaceId(workspaceId)
         }.toList()
 
     // Perform the individual permission checks and store the results in a list
@@ -335,16 +328,16 @@ open class PermissionHandler(
             return@map checkPermissions(permissionCheckRequest)
           } catch (e: IOException) {
             log.error(e) { "Error checking permissions for request: $permissionCheckRequest" }
-            return@map PermissionCheckRead(status = PermissionCheckRead.Status.FAILED)
+            return@map PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
           }
         }.toList()
 
     // If each individual workspace check succeeded, return an overall success. Otherwise, return an
     // overall failure.
-    return if (results.stream().allMatch { result: PermissionCheckRead -> result.status == PermissionCheckRead.Status.SUCCEEDED }) {
-      PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED)
+    return if (results.stream().allMatch { result: PermissionCheckRead -> result.status == PermissionCheckRead.StatusEnum.SUCCEEDED }) {
+      PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED)
     } else {
-      PermissionCheckRead(status = PermissionCheckRead.Status.FAILED)
+      PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
     }
   }
 
@@ -371,13 +364,12 @@ open class PermissionHandler(
       } else {
         emptySet()
       }
-    return PermissionReadList(
-      permissions =
-        permissions
-          .stream()
-          .filter { permission: Permission -> permission.workspaceId == null || liveWorkspaceIds.contains(permission.workspaceId) }
-          .map { permission: Permission -> buildPermissionRead(permission) }
-          .collect(Collectors.toList<@Valid PermissionRead?>()),
+    return PermissionReadList().permissions(
+      permissions
+        .stream()
+        .filter { permission: Permission -> permission.workspaceId == null || liveWorkspaceIds.contains(permission.workspaceId) }
+        .map { permission: Permission -> buildPermissionRead(permission) }
+        .collect(Collectors.toList<@Valid PermissionRead?>()),
     )
   }
 
@@ -399,14 +391,16 @@ open class PermissionHandler(
    */
   fun effectivePermissionReadListForUser(userId: UUID): PermissionReadList {
     val permissions = permissionService.getEffectivePermissionsForUser(userId)
-    return PermissionReadList(
-      permissions =
-        permissions
-          .stream()
-          .map { permission: Permission ->
-            // group-derived rows carry no user id on the underlying permission row; expose the requested user
-            buildPermissionRead(permission, permission.userId ?: userId)
-          }.collect(Collectors.toList<@Valid PermissionRead?>()),
+    return PermissionReadList().permissions(
+      permissions
+        .stream()
+        .map { permission: Permission ->
+          val read = buildPermissionRead(permission)
+          if (permission.userId == null) {
+            read.userId(userId)
+          }
+          read
+        }.collect(Collectors.toList<@Valid PermissionRead?>()),
     )
   }
 
@@ -429,12 +423,11 @@ open class PermissionHandler(
         .stream()
         .filter { it: Permission -> organizationId == it.organizationId }
         .toList()
-    return PermissionReadList(
-      permissions =
-        permissions
-          .stream()
-          .map { permission: Permission -> buildPermissionRead(permission) }
-          .collect(Collectors.toList<@Valid PermissionRead?>()),
+    return PermissionReadList().permissions(
+      permissions
+        .stream()
+        .map { permission: Permission -> buildPermissionRead(permission) }
+        .collect(Collectors.toList<@Valid PermissionRead?>()),
     )
   }
 
@@ -527,17 +520,14 @@ open class PermissionHandler(
   companion object {
     private val log = KotlinLogging.logger {}
 
-    private fun buildPermissionRead(
-      permission: Permission,
-      readUserId: UUID? = permission.userId,
-    ): PermissionRead =
-      PermissionRead(
-        permissionId = permission.permissionId,
-        userId = readUserId!!,
-        permissionType = permission.permissionType.convertTo<PermissionType>(),
-        workspaceId = permission.workspaceId,
-        organizationId = permission.organizationId,
-        groupId = permission.groupId,
-      )
+    private fun buildPermissionRead(permission: Permission): PermissionRead =
+      PermissionRead()
+        .permissionId(permission.permissionId)
+        .userId(permission.userId)
+        .permissionType(
+          permission.permissionType.convertTo<PermissionType>(),
+        ).workspaceId(permission.workspaceId)
+        .organizationId(permission.organizationId)
+        .groupId(permission.groupId)
   }
 }

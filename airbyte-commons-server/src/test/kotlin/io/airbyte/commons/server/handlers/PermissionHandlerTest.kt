@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.server.generated.models.PermissionCheckRead
-import io.airbyte.api.server.generated.models.PermissionCheckRequest
-import io.airbyte.api.server.generated.models.PermissionDeleteUserFromWorkspaceRequestBody
-import io.airbyte.api.server.generated.models.PermissionIdRequestBody
-import io.airbyte.api.server.generated.models.PermissionType
-import io.airbyte.api.server.generated.models.PermissionUpdate
-import io.airbyte.api.server.generated.models.PermissionsCheckMultipleWorkspacesRequest
+import io.airbyte.api.model.generated.PermissionCheckRead
+import io.airbyte.api.model.generated.PermissionCheckRequest
+import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody
+import io.airbyte.api.model.generated.PermissionIdRequestBody
+import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.model.generated.PermissionUpdate
+import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -143,54 +143,53 @@ internal class PermissionHandlerTest {
     private val permissionWorkspaceReader: Permission =
       Permission()
         .withPermissionId(UUID.randomUUID())
-        .withUserId(user.userId)
+        .withUserId(user.getUserId())
         .withWorkspaceId(UUID.randomUUID())
         .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
 
     private val permissionOrganizationAdmin: Permission =
       Permission()
         .withPermissionId(UUID.randomUUID())
-        .withUserId(user.userId)
+        .withUserId(user.getUserId())
         .withOrganizationId(organizationId)
         .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
 
     @BeforeEach
     fun setup() {
-      whenever(permissionService.getPermission(permissionWorkspaceReader.permissionId))
+      whenever(permissionService.getPermission(permissionWorkspaceReader.getPermissionId()))
         .thenReturn(
           Permission()
-            .withPermissionId(permissionWorkspaceReader.permissionId)
+            .withPermissionId(permissionWorkspaceReader.getPermissionId())
             .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
-            .withWorkspaceId(permissionWorkspaceReader.workspaceId)
-            .withUserId(permissionWorkspaceReader.userId),
+            .withWorkspaceId(permissionWorkspaceReader.getWorkspaceId())
+            .withUserId(permissionWorkspaceReader.getUserId()),
         )
 
-      whenever(permissionService.getPermission(permissionOrganizationAdmin.permissionId))
+      whenever(permissionService.getPermission(permissionOrganizationAdmin.getPermissionId()))
         .thenReturn(
           Permission()
-            .withPermissionId(permissionOrganizationAdmin.permissionId)
+            .withPermissionId(permissionOrganizationAdmin.getPermissionId())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
-            .withOrganizationId(permissionOrganizationAdmin.organizationId)
-            .withUserId(permissionOrganizationAdmin.userId),
+            .withOrganizationId(permissionOrganizationAdmin.getOrganizationId())
+            .withUserId(permissionOrganizationAdmin.getUserId()),
         )
     }
 
     @Test
     fun updatesPermission() {
       val update =
-        PermissionUpdate(
-          permissionId = permissionWorkspaceReader.permissionId,
-          permissionType = PermissionType.WORKSPACE_ADMIN,
-        ) // changing to workspace_admin
+        PermissionUpdate()
+          .permissionId(permissionWorkspaceReader.getPermissionId())
+          .permissionType(PermissionType.WORKSPACE_ADMIN) // changing to workspace_admin
 
       permissionHandler.updatePermission(update)
 
       verify(permissionService).updatePermission(
         Permission()
-          .withPermissionId(permissionWorkspaceReader.permissionId)
+          .withPermissionId(permissionWorkspaceReader.getPermissionId())
           .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
-          .withUserId(permissionWorkspaceReader.userId)
-          .withWorkspaceId(permissionWorkspaceReader.workspaceId)
+          .withUserId(permissionWorkspaceReader.getUserId())
+          .withWorkspaceId(permissionWorkspaceReader.getWorkspaceId())
           .withOrganizationId(null),
       )
     }
@@ -198,10 +197,9 @@ internal class PermissionHandlerTest {
     @Test
     fun testUpdateToInstanceAdminPermissionThrows() {
       val permissionUpdate =
-        PermissionUpdate(
-          permissionType = PermissionType.INSTANCE_ADMIN,
-          permissionId = permissionOrganizationAdmin.permissionId,
-        )
+        PermissionUpdate()
+          .permissionType(PermissionType.INSTANCE_ADMIN)
+          .permissionId(permissionOrganizationAdmin.getPermissionId())
       Assertions.assertThrows(
         JsonValidationException::class.java,
       ) { permissionHandler.updatePermission(permissionUpdate) }
@@ -210,10 +208,9 @@ internal class PermissionHandlerTest {
     @Test
     fun throwsConflictExceptionIfServiceBlocksUpdate() {
       val update =
-        PermissionUpdate(
-          permissionId = permissionOrganizationAdmin.permissionId,
-          permissionType = PermissionType.ORGANIZATION_EDITOR,
-        ) // changing to organization_editor
+        PermissionUpdate()
+          .permissionId(permissionOrganizationAdmin.getPermissionId())
+          .permissionType(PermissionType.ORGANIZATION_EDITOR) // changing to organization_editor
 
       doAnswer { throw RemoveLastOrgAdminPermissionException("test") }
         .whenever(permissionService)
@@ -222,49 +219,38 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    fun throwsWhenPermissionTypeIsMissing() {
-      val update = PermissionUpdate(permissionId = permissionWorkspaceReader.permissionId, permissionType = null)
-
-      Assertions.assertThrows(NullPointerException::class.java) { permissionHandler.updatePermission(update) }
-
-      verify(permissionService, times(0)).updatePermission(anyOrNull())
-    }
-
-    @Test
     fun workspacePermissionUpdatesDoNotModifyIdFields() {
       val workspacePermissionUpdate =
-        PermissionUpdate(
-          permissionId = permissionWorkspaceReader.permissionId,
-          permissionType = PermissionType.WORKSPACE_EDITOR,
-        ) // changing to workspace_editor
+        PermissionUpdate()
+          .permissionId(permissionWorkspaceReader.getPermissionId())
+          .permissionType(PermissionType.WORKSPACE_EDITOR) // changing to workspace_editor
 
       permissionHandler.updatePermission(workspacePermissionUpdate)
 
       verify(permissionService).updatePermission(
         Permission()
-          .withPermissionId(permissionWorkspaceReader.permissionId)
+          .withPermissionId(permissionWorkspaceReader.getPermissionId())
           .withPermissionType(Permission.PermissionType.WORKSPACE_EDITOR)
-          .withWorkspaceId(permissionWorkspaceReader.workspaceId) // workspace ID preserved from original permission
-          .withUserId(permissionWorkspaceReader.userId),
+          .withWorkspaceId(permissionWorkspaceReader.getWorkspaceId()) // workspace ID preserved from original permission
+          .withUserId(permissionWorkspaceReader.getUserId()),
       ) // user ID preserved from original permission
     }
 
     @Test
     fun organizationPermissionUpdatesDoNotModifyIdFields() {
       val orgPermissionUpdate =
-        PermissionUpdate(
-          permissionId = permissionOrganizationAdmin.permissionId,
-          permissionType = PermissionType.ORGANIZATION_EDITOR,
-        ) // changing to organization_editor
+        PermissionUpdate()
+          .permissionId(permissionOrganizationAdmin.getPermissionId())
+          .permissionType(PermissionType.ORGANIZATION_EDITOR) // changing to organization_editor
 
       permissionHandler.updatePermission(orgPermissionUpdate)
 
       verify(permissionService).updatePermission(
         Permission()
-          .withPermissionId(permissionOrganizationAdmin.permissionId)
+          .withPermissionId(permissionOrganizationAdmin.getPermissionId())
           .withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR)
-          .withOrganizationId(permissionOrganizationAdmin.organizationId) // organization ID preserved from original permission
-          .withUserId(permissionOrganizationAdmin.userId),
+          .withOrganizationId(permissionOrganizationAdmin.getOrganizationId()) // organization ID preserved from original permission
+          .withUserId(permissionOrganizationAdmin.getUserId()),
       ) // user ID preserved from original permission
     }
   }
@@ -283,36 +269,36 @@ internal class PermissionHandlerTest {
     private val permissionWorkspaceReader: Permission =
       Permission()
         .withPermissionId(UUID.randomUUID())
-        .withUserId(user.userId)
+        .withUserId(user.getUserId())
         .withWorkspaceId(UUID.randomUUID())
         .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
 
     private val permissionOrganizationAdmin: Permission =
       Permission()
         .withPermissionId(UUID.randomUUID())
-        .withUserId(user.userId)
+        .withUserId(user.getUserId())
         .withOrganizationId(organizationId)
         .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
 
     @Test
     fun deletesPermission() {
-      whenever(permissionService.getPermission(permissionWorkspaceReader.permissionId)).thenReturn(permissionWorkspaceReader)
+      whenever(permissionService.getPermission(permissionWorkspaceReader.getPermissionId())).thenReturn(permissionWorkspaceReader)
 
-      permissionHandler.deletePermission(PermissionIdRequestBody(permissionId = permissionWorkspaceReader.permissionId))
+      permissionHandler.deletePermission(PermissionIdRequestBody().permissionId(permissionWorkspaceReader.getPermissionId()))
 
-      verify(permissionService).deletePermission(permissionWorkspaceReader.permissionId)
+      verify(permissionService).deletePermission(permissionWorkspaceReader.getPermissionId())
     }
 
     @Test
     fun throwsConflictIfPersistenceBlocks() {
-      whenever(permissionService.getPermission(permissionOrganizationAdmin.permissionId)).thenReturn(permissionOrganizationAdmin)
+      whenever(permissionService.getPermission(permissionOrganizationAdmin.getPermissionId())).thenReturn(permissionOrganizationAdmin)
       doAnswer { throw RemoveLastOrgAdminPermissionException("test") }
         .whenever(permissionService)
         .deletePermission(anyOrNull())
 
       Assertions.assertThrows(ConflictException::class.java) {
         permissionHandler.deletePermission(
-          PermissionIdRequestBody(permissionId = permissionOrganizationAdmin.permissionId),
+          PermissionIdRequestBody().permissionId(permissionOrganizationAdmin.getPermissionId()),
         )
       }
     }
@@ -329,22 +315,20 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withUserId(userId),
         ),
       )
 
       val request =
-        PermissionCheckRequest(
-          permissionType = PermissionType.WORKSPACE_ADMIN,
-          userId = UUID.randomUUID(),
-          workspaceId = workspaceId,
-        )
+        PermissionCheckRequest()
+          .permissionType(PermissionType.WORKSPACE_ADMIN)
+          .userId(UUID.randomUUID()) // different user
+          .workspaceId(workspaceId)
 
       val result = permissionHandler.checkPermissions(request)
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, result.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, result.getStatus())
     }
 
     @Test
@@ -352,7 +336,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withUserId(userId),
@@ -363,15 +346,14 @@ internal class PermissionHandlerTest {
         .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
 
       val request =
-        PermissionCheckRequest(
-          permissionType = PermissionType.WORKSPACE_ADMIN,
-          userId = userId,
-          workspaceId = UUID.randomUUID(),
-        ) // different workspace
+        PermissionCheckRequest()
+          .permissionType(PermissionType.WORKSPACE_ADMIN)
+          .userId(userId)
+          .workspaceId(UUID.randomUUID()) // different workspace
 
       val result = permissionHandler.checkPermissions(request)
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, result.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, result.getStatus())
     }
 
     @Test
@@ -379,7 +361,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
             .withOrganizationId(organizationId)
             .withUserId(userId),
@@ -387,15 +368,14 @@ internal class PermissionHandlerTest {
       )
 
       val request =
-        PermissionCheckRequest(
-          permissionType = PermissionType.ORGANIZATION_ADMIN,
-          userId = userId,
-          organizationId = UUID.randomUUID(),
-        ) // different organization
+        PermissionCheckRequest()
+          .permissionType(PermissionType.ORGANIZATION_ADMIN)
+          .userId(userId)
+          .organizationId(UUID.randomUUID()) // different organization
 
       val result = permissionHandler.checkPermissions(request)
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, result.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, result.getStatus())
     }
 
     @Test
@@ -404,12 +384,10 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withUserId(userId)
             .withWorkspaceId(workspaceId),
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
             .withUserId(userId)
             .withWorkspaceId(otherWorkspaceId),
@@ -427,26 +405,24 @@ internal class PermissionHandlerTest {
       // EDITOR fails because READER is below editor
       val editorResult =
         permissionHandler.permissionsCheckMultipleWorkspaces(
-          PermissionsCheckMultipleWorkspacesRequest(
-            permissionType = PermissionType.WORKSPACE_EDITOR,
-            userId = userId,
-            workspaceIds = listOf<UUID>(workspaceId, otherWorkspaceId),
-          ),
+          PermissionsCheckMultipleWorkspacesRequest()
+            .permissionType(PermissionType.WORKSPACE_EDITOR)
+            .userId(userId)
+            .workspaceIds(listOf<UUID?>(workspaceId, otherWorkspaceId)),
         )
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, editorResult.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, editorResult.getStatus())
 
       // READER succeeds because both workspaces have at least READER permissions
       val readerResult =
         permissionHandler.permissionsCheckMultipleWorkspaces(
-          PermissionsCheckMultipleWorkspacesRequest(
-            permissionType = PermissionType.WORKSPACE_READER,
-            userId = userId,
-            workspaceIds = listOf<UUID>(workspaceId, otherWorkspaceId),
-          ),
+          PermissionsCheckMultipleWorkspacesRequest()
+            .permissionType(PermissionType.WORKSPACE_READER)
+            .userId(userId)
+            .workspaceIds(listOf<UUID?>(workspaceId, otherWorkspaceId)),
         )
 
-      Assertions.assertEquals(PermissionCheckRead.Status.SUCCEEDED, readerResult.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.SUCCEEDED, readerResult.getStatus())
     }
 
     @Test
@@ -455,12 +431,10 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withUserId(userId)
             .withWorkspaceId(workspaceId),
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_READER)
             .withUserId(userId)
             .withOrganizationId(organizationId),
@@ -477,26 +451,24 @@ internal class PermissionHandlerTest {
       // EDITOR fails because READER is below editor
       val editorResult =
         permissionHandler.permissionsCheckMultipleWorkspaces(
-          PermissionsCheckMultipleWorkspacesRequest(
-            permissionType = PermissionType.WORKSPACE_EDITOR,
-            userId = userId,
-            workspaceIds = listOf<UUID>(workspaceId, otherWorkspaceId),
-          ),
+          PermissionsCheckMultipleWorkspacesRequest()
+            .permissionType(PermissionType.WORKSPACE_EDITOR)
+            .userId(userId)
+            .workspaceIds(listOf<UUID?>(workspaceId, otherWorkspaceId)),
         )
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, editorResult.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, editorResult.getStatus())
 
       // READER succeeds because both workspaces have at least READER permissions
       val readerResult =
         permissionHandler.permissionsCheckMultipleWorkspaces(
-          PermissionsCheckMultipleWorkspacesRequest(
-            permissionType = PermissionType.WORKSPACE_READER,
-            userId = userId,
-            workspaceIds = listOf<UUID>(workspaceId, otherWorkspaceId),
-          ),
+          PermissionsCheckMultipleWorkspacesRequest()
+            .permissionType(PermissionType.WORKSPACE_READER)
+            .userId(userId)
+            .workspaceIds(listOf<UUID?>(workspaceId, otherWorkspaceId)),
         )
 
-      Assertions.assertEquals(PermissionCheckRead.Status.SUCCEEDED, readerResult.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.SUCCEEDED, readerResult.getStatus())
     }
 
     @Test
@@ -504,7 +476,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
             .withOrganizationId(organizationId)
             .withUserId(userId),
@@ -512,19 +483,18 @@ internal class PermissionHandlerTest {
       )
 
       val workspace = mock<StandardWorkspace>()
-      whenever(workspace.organizationId).thenReturn(UUID.randomUUID()) // different organization
+      whenever(workspace.getOrganizationId()).thenReturn(UUID.randomUUID()) // different organization
       whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(workspace)
 
       val request =
-        PermissionCheckRequest(
-          permissionType = PermissionType.WORKSPACE_ADMIN,
-          userId = userId,
-          workspaceId = workspaceId,
-        )
+        PermissionCheckRequest()
+          .permissionType(PermissionType.WORKSPACE_ADMIN)
+          .userId(userId)
+          .workspaceId(workspaceId)
 
       val result = permissionHandler.checkPermissions(request)
 
-      Assertions.assertEquals(PermissionCheckRead.Status.FAILED, result.status)
+      Assertions.assertEquals(PermissionCheckRead.StatusEnum.FAILED, result.getStatus())
     }
 
     @ParameterizedTest
@@ -543,7 +513,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(userPermissionType)
             .withWorkspaceId(workspaceId)
             .withUserId(userId),
@@ -555,102 +524,102 @@ internal class PermissionHandlerTest {
 
       if (userPermissionType == Permission.PermissionType.WORKSPACE_OWNER) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.WORKSPACE_ADMIN) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.WORKSPACE_EDITOR) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_ADMIN,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
@@ -665,81 +634,81 @@ internal class PermissionHandlerTest {
           }
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(userPermissionType)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(userPermissionType)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_RUNNER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_RUNNER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         // The opposite actor type's editor, and the full workspace editor, are both out of reach.
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(oppositeActorEditor)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(oppositeActorEditor)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.WORKSPACE_READER) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_ADMIN,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_EDITOR,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
     }
@@ -753,7 +722,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(userPermissionType)
             .withOrganizationId(organizationId)
             .withUserId(userId),
@@ -761,159 +729,159 @@ internal class PermissionHandlerTest {
       )
 
       val workspace = mock<StandardWorkspace>()
-      whenever(workspace.organizationId).thenReturn(organizationId)
+      whenever(workspace.getOrganizationId()).thenReturn(organizationId)
       whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(workspace)
 
       if (userPermissionType == Permission.PermissionType.ORGANIZATION_ADMIN) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.ORGANIZATION_EDITOR) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_ADMIN,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.ORGANIZATION_READER) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_ADMIN,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_EDITOR,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
 
       if (userPermissionType == Permission.PermissionType.ORGANIZATION_MEMBER) {
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_ADMIN,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
+          PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler
             .checkPermissions(
               getWorkspacePermissionCheck(
                 Permission.PermissionType.WORKSPACE_EDITOR,
               ),
-            ).status,
+            ).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
         )
 
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.FAILED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
         )
         Assertions.assertEquals(
-          PermissionCheckRead.Status.SUCCEEDED,
-          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
         )
       }
     }
@@ -923,53 +891,54 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
             .withUserId(userId),
         ),
       )
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
         permissionHandler
           .checkPermissions(
-            PermissionCheckRequest(permissionType = PermissionType.INSTANCE_ADMIN, userId = userId),
-          ).status,
+            PermissionCheckRequest()
+              .permissionType(PermissionType.INSTANCE_ADMIN)
+              .userId(userId),
+          ).getStatus(),
       )
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
         permissionHandler
           .checkPermissions(
             getWorkspacePermissionCheck(
               Permission.PermissionType.WORKSPACE_ADMIN,
             ),
-          ).status,
+          ).getStatus(),
       )
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
       )
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
       )
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
       )
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_EDITOR)).getStatus(),
       )
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
       )
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
       )
     }
 
@@ -1008,12 +977,10 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
             .withOrganizationId(organizationId)
             .withUserId(userId),
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withUserId(userId),
@@ -1027,15 +994,14 @@ internal class PermissionHandlerTest {
         .thenReturn(StandardWorkspace().withWorkspaceId(workspaceId))
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
         permissionHandler
           .checkPermissions(
-            PermissionCheckRequest(
-              permissionType = PermissionType.WORKSPACE_ADMIN,
-              workspaceId = workspaceId,
-              userId = userId,
-            ),
-          ).status,
+            PermissionCheckRequest()
+              .permissionType(PermissionType.WORKSPACE_ADMIN)
+              .workspaceId(workspaceId)
+              .userId(userId),
+          ).getStatus(),
       )
     }
 
@@ -1046,12 +1012,10 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
             .withOrganizationId(organizationId)
             .withUserId(userId),
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withUserId(userId),
@@ -1065,15 +1029,14 @@ internal class PermissionHandlerTest {
         .thenReturn(StandardWorkspace().withWorkspaceId(workspaceId))
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.FAILED,
+        PermissionCheckRead.StatusEnum.FAILED,
         permissionHandler
           .checkPermissions(
-            PermissionCheckRequest(
-              permissionType = PermissionType.ORGANIZATION_ADMIN,
-              workspaceId = workspaceId,
-              userId = userId,
-            ),
-          ).status,
+            PermissionCheckRequest()
+              .permissionType(PermissionType.ORGANIZATION_ADMIN)
+              .workspaceId(workspaceId)
+              .userId(userId),
+          ).getStatus(),
       )
     }
 
@@ -1084,7 +1047,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withGroupId(UUID.randomUUID()),
@@ -1092,8 +1054,8 @@ internal class PermissionHandlerTest {
       )
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.SUCCEEDED,
-        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+        PermissionCheckRead.StatusEnum.SUCCEEDED,
+        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
       )
     }
 
@@ -1102,7 +1064,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withUserId(UUID.randomUUID()), // direct row owned by another user
@@ -1110,8 +1071,8 @@ internal class PermissionHandlerTest {
       )
 
       Assertions.assertEquals(
-        PermissionCheckRead.Status.FAILED,
-        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).status,
+        PermissionCheckRead.StatusEnum.FAILED,
+        permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
       )
     }
 
@@ -1124,13 +1085,11 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getEffectivePermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionId(groupPermissionId)
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withGroupId(groupId),
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionId(directPermissionId)
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
@@ -1155,7 +1114,6 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
             .withWorkspaceId(workspaceId)
             .withUserId(userId),
@@ -1177,7 +1135,6 @@ internal class PermissionHandlerTest {
       val expected =
         listOf(
           Permission()
-            .withPermissionId(UUID.randomUUID())
             .withPermissionType(Permission.PermissionType.DATAPLANE)
             .withServiceAccountId(serviceAccountId),
         )
@@ -1188,34 +1145,17 @@ internal class PermissionHandlerTest {
       Assertions.assertEquals(expected, permissionHandler.getPermissionsByServiceAccountId(serviceAccountId))
     }
 
-    @Test
-    fun `permissionsCheckMultipleWorkspaces throws when workspaceIds is missing`() {
-      Assertions.assertThrows(NullPointerException::class.java) {
-        permissionHandler.permissionsCheckMultipleWorkspaces(
-          PermissionsCheckMultipleWorkspacesRequest(
-            permissionType = PermissionType.WORKSPACE_READER,
-            userId = userId,
-            workspaceIds = null,
-          ),
-        )
-      }
-
-      verify(permissionService, times(0)).getEffectivePermissionsForUser(anyOrNull())
-    }
-
     private fun getWorkspacePermissionCheck(targetPermissionType: Permission.PermissionType): PermissionCheckRequest =
-      PermissionCheckRequest(
-        permissionType = targetPermissionType.convertTo<PermissionType>(),
-        userId = userId,
-        workspaceId = workspaceId,
-      )
+      PermissionCheckRequest()
+        .permissionType(targetPermissionType.convertTo<PermissionType>())
+        .userId(userId)
+        .workspaceId(workspaceId)
 
     private fun getOrganizationPermissionCheck(targetPermissionType: Permission.PermissionType): PermissionCheckRequest =
-      PermissionCheckRequest(
-        permissionType = targetPermissionType.convertTo<PermissionType>(),
-        userId = userId,
-        organizationId = organizationId,
-      )
+      PermissionCheckRequest()
+        .permissionType(targetPermissionType.convertTo<PermissionType>())
+        .userId(userId)
+        .organizationId(organizationId)
   }
 
   @Nested
@@ -1272,7 +1212,7 @@ internal class PermissionHandlerTest {
       val result = permissionHandler.permissionReadListForUser(userId)
 
       Assertions.assertEquals(
-        setOf(liveWorkspacePermission.permissionId, organizationPermission.permissionId, instancePermission.permissionId),
+        setOf(liveWorkspacePermission.getPermissionId(), organizationPermission.getPermissionId(), instancePermission.getPermissionId()),
         result.permissions.map { it.permissionId }.toSet(),
       )
       verify(workspaceService, times(1))
@@ -1332,21 +1272,7 @@ internal class PermissionHandlerTest {
       whenever(permissionService.getPermission(permissionId)).thenReturn(groupOwnedPermission)
 
       Assertions.assertThrows(OperationNotAllowedException::class.java) {
-        permissionHandler.getPermissionRead(PermissionIdRequestBody(permissionId = permissionId))
-      }
-    }
-
-    @Test
-    fun `getPermissionRead rejects service account permission`() {
-      whenever(permissionService.getPermission(permissionId)).thenReturn(
-        Permission()
-          .withPermissionId(permissionId)
-          .withPermissionType(Permission.PermissionType.DATAPLANE)
-          .withServiceAccountId(UUID.randomUUID()),
-      )
-
-      Assertions.assertThrows(OperationNotAllowedException::class.java) {
-        permissionHandler.getPermissionRead(PermissionIdRequestBody(permissionId = permissionId))
+        permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(permissionId))
       }
     }
 
@@ -1356,7 +1282,7 @@ internal class PermissionHandlerTest {
 
       Assertions.assertThrows(OperationNotAllowedException::class.java) {
         permissionHandler.updatePermission(
-          PermissionUpdate(permissionId = permissionId, permissionType = PermissionType.WORKSPACE_ADMIN),
+          PermissionUpdate().permissionId(permissionId).permissionType(PermissionType.WORKSPACE_ADMIN),
         )
       }
 
@@ -1372,7 +1298,7 @@ internal class PermissionHandlerTest {
       Assertions.assertEquals(permissionId, listed.permissionId)
 
       Assertions.assertThrows(OperationNotAllowedException::class.java) {
-        permissionHandler.getPermissionRead(PermissionIdRequestBody(permissionId = listed.permissionId))
+        permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(listed.permissionId))
       }
     }
 
@@ -1386,10 +1312,7 @@ internal class PermissionHandlerTest {
 
       Assertions.assertThrows(OperationNotAllowedException::class.java) {
         permissionHandler.updatePermission(
-          PermissionUpdate(
-            permissionId = listed.permissionId,
-            permissionType = PermissionType.WORKSPACE_ADMIN,
-          ),
+          PermissionUpdate().permissionId(listed.permissionId).permissionType(PermissionType.WORKSPACE_ADMIN),
         )
       }
 
@@ -1405,7 +1328,7 @@ internal class PermissionHandlerTest {
       Assertions.assertEquals(permissionId, listed.permissionId)
 
       Assertions.assertThrows(OperationNotAllowedException::class.java) {
-        permissionHandler.deletePermission(PermissionIdRequestBody(permissionId = listed.permissionId))
+        permissionHandler.deletePermission(PermissionIdRequestBody().permissionId(listed.permissionId))
       }
 
       verify(permissionService, times(0)).deletePermission(anyOrNull())
@@ -1447,10 +1370,10 @@ internal class PermissionHandlerTest {
         listOf<Permission>(workspacePermission, otherWorkspacePermission, orgPermission),
       )
 
-      permissionHandler.deleteUserFromWorkspace(PermissionDeleteUserFromWorkspaceRequestBody(userId = userId, workspaceId = workspaceId))
+      permissionHandler.deleteUserFromWorkspace(PermissionDeleteUserFromWorkspaceRequestBody().userId(userId).workspaceId(workspaceId))
 
       // verify the intended permission was deleted
-      verify(permissionService).deletePermissions(listOf<UUID>(workspacePermission.permissionId))
+      verify(permissionService).deletePermissions(listOf<UUID>(workspacePermission.getPermissionId()))
       verify(permissionService, times(1)).deletePermissions(anyOrNull())
     }
   }

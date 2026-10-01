@@ -4,8 +4,8 @@
 
 package io.airbyte.connector.rollout.shared.models
 
-import io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
-import io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
+import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import java.time.OffsetDateTime

@@ -4,11 +4,10 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.api.model.generated.PermissionIdRequestBody
+import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.api.server.generated.models.PermissionIdRequestBody
-import io.airbyte.api.server.generated.models.PermissionType
-import io.airbyte.api.server.generated.models.PermissionUpdate
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -333,7 +332,8 @@ open class PermissionsController(
    * Gets a permission.
    */
   private fun doGetPermission(permissionId: UUID): PermissionResponse {
-    val permissionIdRequestBody = PermissionIdRequestBody(permissionId = permissionId)
+    val permissionIdRequestBody = PermissionIdRequestBody()
+    permissionIdRequestBody.permissionId = permissionId
     val result =
       runCatching { permissionHandler.getPermissionRead(permissionIdRequestBody) }
         .onFailure {
@@ -351,15 +351,13 @@ open class PermissionsController(
     permissionId: UUID,
     permissionUpdateRequest: PermissionUpdateRequest,
   ): PermissionResponse {
-    val permissionUpdate =
-      PermissionUpdate(
-        permissionId = permissionId,
-        permissionType = enumValueOf<PermissionType>(permissionUpdateRequest.permissionType.name),
-      )
+    val permissionUpdate = PermissionUpdate()
+    permissionUpdate.permissionId = permissionId
+    permissionUpdate.permissionType = enumValueOf(permissionUpdateRequest.permissionType.name)
     val updatedPermission =
       runCatching {
         permissionHandler.updatePermission(permissionUpdate)
-        val updatedPermission = permissionHandler.getPermissionRead(PermissionIdRequestBody(permissionId = permissionId))
+        val updatedPermission = permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(permissionId))
         updatedPermission
       }.onFailure {
         log.error(it) { "Error for updatePermission" }
@@ -373,7 +371,8 @@ open class PermissionsController(
    * Deletes a permission.
    */
   private fun doDeletePermission(permissionId: UUID) {
-    val permissionIdRequestBody = PermissionIdRequestBody(permissionId = permissionId)
+    val permissionIdRequestBody = PermissionIdRequestBody()
+    permissionIdRequestBody.permissionId = permissionId
     val result =
       runCatching { permissionHandler.deletePermission(permissionIdRequestBody) }
         .onFailure {

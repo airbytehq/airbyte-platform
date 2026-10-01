@@ -1,11 +1,9 @@
 # AGENTS.md — `oss/airbyte-api/`
 
 OpenAPI is the source of truth for HTTP contracts. This directory holds
-the YAML specs and the Gradle plumbing that generates Kotlin server
-interfaces/models (the `kotlin-server` flavor) and Kotlin client classes
-from them. A legacy `jaxrs-spec` Java flavor is still generated during
-the migration but must not be imported — see the first Conventions rule.
-Read the root [AGENTS.md](../../AGENTS.md) and [`oss/AGENTS.md`](../AGENTS.md) first.
+the YAML specs and the Gradle plumbing that generates JAX-RS server
+interfaces and Kotlin client classes from them. Read the root
+[AGENTS.md](../../AGENTS.md) and [`oss/AGENTS.md`](../AGENTS.md) first.
 
 ## Submodules
 
@@ -47,10 +45,8 @@ it's currently `config.yaml`.
    operation in the spec.
 2. **Build the API modules** — `./gradlew :oss:airbyte-api:build` (the
    aggregator builds every submodule). Codegen runs automatically:
-   - `genApiServer2` — **Kotlin server interfaces and models**
-     (`server-api`) — the flavor to implement and import
-   - `generateApiServer` — legacy JAX-RS Java interfaces/models
-     (`server-api`) — slated for removal; do not import
+   - `generateApiServer` — JAX-RS Java interfaces (`server-api`)
+   - `genApiServer2` — Kotlin server interfaces (`server-api`)
    - `genApiClient` — Kotlin client classes (`server-api-client`,
      generated from `server-api`'s spec)
    Building only `:oss:airbyte-api:server-api` skips the client — build
@@ -89,15 +85,6 @@ it's currently `config.yaml`.
 
 ## Conventions
 
-- **Import Kotlin API models only.** Consume the `kotlin-server` flavor:
-  `io.airbyte.api.server.generated.apis.*` (interfaces) and
-  `io.airbyte.api.server.generated.models.*` (models). Never import the
-  legacy Java flavor — `io.airbyte.api.generated.*` or
-  `io.airbyte.api.model.generated.*` — it is being removed. New endpoints,
-  handlers, and tests always target the Kotlin interfaces/models; when
-  touching code that still uses the Java flavor, migrate it with
-  `tools/openapi-kotlin-migration/codemod.py` (run `--validate` first,
-  then `--write`, and resolve the flagged sites by hand).
 - **Don't reformat the YAML files**. Spotless explicitly excludes
   them (see `server-api/build.gradle.kts` `airbyte.spotless.excludes`).
   Keeping the YAML diff small makes review tractable.

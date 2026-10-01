@@ -6,14 +6,14 @@ package io.airbyte.server.handlers
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
-import io.airbyte.api.server.generated.models.InviteCodeRequestBody
-import io.airbyte.api.server.generated.models.PermissionType
-import io.airbyte.api.server.generated.models.UserInvitationAdminRead
-import io.airbyte.api.server.generated.models.UserInvitationCancelRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationCreateRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
-import io.airbyte.api.server.generated.models.UserInvitationListRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationRead
+import io.airbyte.api.model.generated.InviteCodeRequestBody
+import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.model.generated.UserInvitationAdminRead
+import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
+import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
+import io.airbyte.api.model.generated.UserInvitationCreateResponse
+import io.airbyte.api.model.generated.UserInvitationListRequestBody
+import io.airbyte.api.model.generated.UserInvitationRead
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -97,12 +97,11 @@ internal class UserInvitationHandlerTest {
     private val workspaceName = "workspace-name"
     private val orgId: UUID = UUID.randomUUID()
     private val userInvitationCreateRequestBody: UserInvitationCreateRequestBody =
-      UserInvitationCreateRequestBody(
-        invitedEmail = invitedEmail,
-        scopeType = io.airbyte.api.server.generated.models.ScopeType.WORKSPACE,
-        scopeId = workspaceId,
-        permissionType = PermissionType.WORKSPACE_ADMIN,
-      )
+      UserInvitationCreateRequestBody()
+        .invitedEmail(invitedEmail)
+        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
+        .scopeId(workspaceId)
+        .permissionType(PermissionType.WORKSPACE_ADMIN)
     private val userInvitation: UserInvitation =
       UserInvitation()
         .withInvitedEmail(invitedEmail)
@@ -258,7 +257,7 @@ internal class UserInvitationHandlerTest {
         verify(exactly = 0) { permissionHandler.createPermission(any<Permission>()) }
 
         // make sure the final result is correct
-        Assertions.assertFalse(result.directlyAdded!!)
+        Assertions.assertFalse(result.directlyAdded)
 
         // verify we sent an invitation tracking event
         verify(exactly = 1) {
@@ -343,7 +342,7 @@ internal class UserInvitationHandlerTest {
         verify(exactly = 0) { service.createUserInvitation(any<UserInvitation>()) }
 
         // make sure the final result is correct
-        Assertions.assertTrue(result.directlyAdded!!)
+        Assertions.assertTrue(result.directlyAdded)
         // we don't send a "user invited" event when a user is directly added to a workspace.
         verify(exactly = 0) {
           trackingClient.track(any<UUID>(), any<ScopeType>(), any<String>())
@@ -355,7 +354,7 @@ internal class UserInvitationHandlerTest {
   @Nested
   internal inner class AcceptInvitation {
     private val inviteCode = "invite-code"
-    private val inviteCodeRequestBody: InviteCodeRequestBody = InviteCodeRequestBody(inviteCode = inviteCode)
+    private val inviteCodeRequestBody: InviteCodeRequestBody = InviteCodeRequestBody().inviteCode(inviteCode)
     private val currentUser: AuthenticatedUser = AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail(CURRENT_USER_EMAIL)
 
     @ParameterizedTest
@@ -449,7 +448,7 @@ internal class UserInvitationHandlerTest {
     @Test
     fun testCancelInvitationCallsService() {
       val invitationId = UUID.randomUUID()
-      val req = UserInvitationCancelRequestBody(id = invitationId)
+      val req = UserInvitationCancelRequestBody().id(invitationId)
 
       val cancelledInvitation =
         UserInvitation()
@@ -468,7 +467,7 @@ internal class UserInvitationHandlerTest {
     @Test
     fun testCancelInvitationThrowsConflictExceptionOnUnexpectedStatus() {
       val invitationId = UUID.randomUUID()
-      val req = UserInvitationCancelRequestBody(id = invitationId)
+      val req = UserInvitationCancelRequestBody().id(invitationId)
 
       every { service.cancelUserInvitation(invitationId) } answers { throw InvitationStatusUnexpectedException("unexpected status") }
 
@@ -480,7 +479,7 @@ internal class UserInvitationHandlerTest {
     @Test
     fun testCancelInvitationByInviteCodeCallsService() {
       val inviteCode = "invite-code"
-      val req = UserInvitationCancelRequestBody(inviteCode = inviteCode)
+      val req = UserInvitationCancelRequestBody().inviteCode(inviteCode)
       val cancelledInvitation =
         UserInvitation()
           .withInviteCode(inviteCode)
@@ -522,23 +521,21 @@ internal class UserInvitationHandlerTest {
     every { service.getPendingInvitations(ScopeType.WORKSPACE, workspaceId) } returns workspaceInvitations
     every { service.getPendingInvitations(ScopeType.ORGANIZATION, organizationId) } returns organizationInvitations
 
-    every { mapper.toDomain(io.airbyte.api.server.generated.models.ScopeType.WORKSPACE) } returns ScopeType.WORKSPACE
-    every { mapper.toDomain(io.airbyte.api.server.generated.models.ScopeType.ORGANIZATION) } returns ScopeType.ORGANIZATION
+    every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.WORKSPACE) } returns ScopeType.WORKSPACE
+    every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.ORGANIZATION) } returns ScopeType.ORGANIZATION
     every { mapper.toAdminApi(any<UserInvitation>()) } returns mockk<UserInvitationAdminRead>()
 
     val workspaceResult =
       handler.getPendingInvitations(
-        UserInvitationListRequestBody(
-          scopeType = io.airbyte.api.server.generated.models.ScopeType.WORKSPACE,
-          scopeId = workspaceId,
-        ),
+        UserInvitationListRequestBody()
+          .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
+          .scopeId(workspaceId),
       )
     val organizationResult =
       handler.getPendingInvitations(
-        UserInvitationListRequestBody(
-          scopeType = io.airbyte.api.server.generated.models.ScopeType.ORGANIZATION,
-          scopeId = organizationId,
-        ),
+        UserInvitationListRequestBody()
+          .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
+          .scopeId(organizationId),
       )
 
     Assertions.assertEquals(workspaceInvitations.size, workspaceResult.size)

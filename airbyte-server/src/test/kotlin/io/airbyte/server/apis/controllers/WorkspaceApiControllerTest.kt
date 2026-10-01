@@ -4,13 +4,13 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
-import io.airbyte.api.server.generated.models.PermissionCheckRead
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -59,10 +59,10 @@ internal class WorkspaceApiControllerTest {
 
   @Test
   fun testCreateWorkspace() {
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED) andThen
-      PermissionCheckRead(status = PermissionCheckRead.Status.FAILED)
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED) andThen
+      PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
     every { workspacesHandler.createWorkspace(any()) } returns WorkspaceRead()
-    every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(UUID.randomUUID())
+    every { currentUserService.getCurrentUser() } returns AuthenticatedUser()
 
     val path = "/api/v1/workspaces/create"
 
@@ -76,10 +76,10 @@ internal class WorkspaceApiControllerTest {
 
   @Test
   fun testCreateWorkspaceIfNotExist() {
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED) andThen
-      PermissionCheckRead(status = PermissionCheckRead.Status.FAILED)
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED) andThen
+      PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
     every { workspacesHandler.createWorkspaceIfNotExist(any()) } returns WorkspaceRead()
-    every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(UUID.randomUUID())
+    every { currentUserService.getCurrentUser() } returns AuthenticatedUser()
 
     val path = "/api/v1/workspaces/create_if_not_exist"
 

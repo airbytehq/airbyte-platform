@@ -95,11 +95,7 @@ delegate to a handler or service.
   `organization_id`.
 - **OpenAPI is the source of truth for HTTP contracts.** Edit
   `oss/airbyte-api/<submodule>/src/main/openapi/*.yaml`, let Gradle
-  regenerate the Kotlin server interfaces, then implement them. Import
-  the Kotlin generated models only —
-  `io.airbyte.api.server.generated.apis/models`, never the legacy Java
-  `io.airbyte.api.generated`/`io.airbyte.api.model.generated` (see
-  [`airbyte-api/AGENTS.md`](airbyte-api/AGENTS.md)). Don't add
+  regenerate the JAX-RS interfaces, then implement them. Don't add
   endpoint classes that don't correspond to a YAML operation.
 - **Config API routes are subject to change; Public API routes are
   final.** `server-api` (the Config API) is internal and may evolve

@@ -4,7 +4,7 @@
 
 package io.airbyte.connector.rollout.worker.activities
 
-import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
+import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

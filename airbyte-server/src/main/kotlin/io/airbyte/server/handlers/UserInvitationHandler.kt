@@ -6,15 +6,15 @@ package io.airbyte.server.handlers
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
-import io.airbyte.api.server.generated.models.InviteCodeRequestBody
-import io.airbyte.api.server.generated.models.PermissionType
-import io.airbyte.api.server.generated.models.ScopeType
-import io.airbyte.api.server.generated.models.UserInvitationAdminRead
-import io.airbyte.api.server.generated.models.UserInvitationCancelRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationCreateRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
-import io.airbyte.api.server.generated.models.UserInvitationListRequestBody
-import io.airbyte.api.server.generated.models.UserInvitationRead
+import io.airbyte.api.model.generated.InviteCodeRequestBody
+import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.model.generated.ScopeType
+import io.airbyte.api.model.generated.UserInvitationAdminRead
+import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
+import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
+import io.airbyte.api.model.generated.UserInvitationCreateResponse
+import io.airbyte.api.model.generated.UserInvitationListRequestBody
+import io.airbyte.api.model.generated.UserInvitationRead
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -69,10 +69,9 @@ class UserInvitationHandler(
     return mapper.toApi(invitation)
   }
 
-  fun getPendingInvitations(invitationListRequestBody: UserInvitationListRequestBody?): List<UserInvitationAdminRead> {
-    val requestBody = invitationListRequestBody ?: throw BadRequestException("Request body is required.")
-    val scopeType = mapper.toDomain(requestBody.scopeType)
-    val invitations = service.getPendingInvitations(scopeType, requestBody.scopeId)
+  fun getPendingInvitations(invitationListRequestBody: UserInvitationListRequestBody): List<UserInvitationAdminRead> {
+    val scopeType = mapper.toDomain(invitationListRequestBody.scopeType)
+    val invitations = service.getPendingInvitations(scopeType, invitationListRequestBody.scopeId)
 
     return invitations.map { domain -> mapper.toAdminApi(domain) }
   }
@@ -90,11 +89,11 @@ class UserInvitationHandler(
     val wasDirectAdd = attemptDirectAddEmailToOrg(req, currentUser)
 
     if (wasDirectAdd) {
-      return UserInvitationCreateResponse(directlyAdded = true)
+      return UserInvitationCreateResponse().directlyAdded(true)
     } else {
       try {
         createUserInvitationForNewOrgEmail(req, currentUser)
-        response = UserInvitationCreateResponse(directlyAdded = false)
+        response = UserInvitationCreateResponse().directlyAdded(false)
         trackUserInvited(req, currentUser)
         return response
       } catch (e: InvitationDuplicateException) {

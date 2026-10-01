@@ -11,6 +11,9 @@ import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
+import io.airbyte.api.model.generated.PermissionCheckRead
+import io.airbyte.api.model.generated.PermissionCheckRequest
+import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SlugRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
@@ -30,9 +33,6 @@ import io.airbyte.api.model.generated.WorkspaceUsageRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.api.server.generated.models.PermissionCheckRead
-import io.airbyte.api.server.generated.models.PermissionCheckRequest
-import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -81,13 +81,12 @@ open class WorkspaceApiController(
         val permissionCheckStatus =
           permissionHandler
             .checkPermissions(
-              PermissionCheckRequest(
-                userId = currentUserService.getCurrentUser().userId,
-                permissionType = PermissionType.ORGANIZATION_ADMIN,
-                organizationId = workspaceCreate.organizationId,
-              ),
+              PermissionCheckRequest()
+                .userId(currentUserService.getCurrentUser().userId)
+                .permissionType(PermissionType.ORGANIZATION_ADMIN)
+                .organizationId(workspaceCreate.organizationId),
             ).status
-        if (permissionCheckStatus != PermissionCheckRead.Status.SUCCEEDED) {
+        if (permissionCheckStatus != PermissionCheckRead.StatusEnum.SUCCEEDED) {
           throw ForbiddenProblem(
             ProblemMessageData()
               .message("User does not have permission to create a workspace in organization " + workspaceCreate.organizationId),
@@ -109,13 +108,12 @@ open class WorkspaceApiController(
         val permissionCheckStatus =
           permissionHandler
             .checkPermissions(
-              PermissionCheckRequest(
-                userId = currentUserService.getCurrentUser().userId,
-                permissionType = PermissionType.ORGANIZATION_ADMIN,
-                organizationId = workspaceCreateWithId.organizationId,
-              ),
+              PermissionCheckRequest()
+                .userId(currentUserService.getCurrentUser().userId)
+                .permissionType(PermissionType.ORGANIZATION_ADMIN)
+                .organizationId(workspaceCreateWithId.organizationId),
             ).status
-        if (permissionCheckStatus != PermissionCheckRead.Status.SUCCEEDED) {
+        if (permissionCheckStatus != PermissionCheckRead.StatusEnum.SUCCEEDED) {
           throw ForbiddenProblem(
             ProblemMessageData().message(
               "User does not have permission to create a workspace in organization " + workspaceCreateWithId.organizationId,
