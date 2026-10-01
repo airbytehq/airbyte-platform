@@ -593,7 +593,7 @@ class AirbyteKeycloakClient(
       // If JwtTokenParser cannot extract the realm (e.g. missing "auth/realms/"),
       // it returns the full issuer URL. We should ignore such values here.
       if (realm != null && (realm.startsWith("http://") || realm.startsWith("https://"))) {
-        logger.error { "Extracted realm $realm appears to be a URL, ignoring." }
+        logger.debug { "Extracted realm $realm appears to be a URL, ignoring." }
         metricClient.count(OssMetricsRegistry.KEYCLOAK_TOKEN_INVALID_REALM, 1)
         null
       } else {
