@@ -121,23 +121,30 @@ open class DataWorkerAllocatedCapacityService(
    * Raises the organization's total capacity by [amount].
    *
    * This changes what the organization holds overall, so it added by the admin user to an organization.
-   * Capacity is stored per region, so the new capacity goes to the default region.
-   * Use [reallocateCapacity] afterwards to move capacity across regions.
+   * Capacity is stored per region, so the new capacity goes to [dataplaneGroupId], or to the default
+   * region when it is null.
    *
    * @throws BadRequestProblem if the amount is not a positive finite number the capacity column can
-   *   hold.
+   *   hold, or the given region does not exist or has been deleted.
    */
   open fun addCapacity(
     organizationId: OrganizationId,
+    dataplaneGroupId: DataplaneGroupId?,
     amount: Double,
   ) {
     requireValidAmount(amount, CapacityOperation.ADD)
 
     // The default region is configuration rather than caller input, so it is not validated the way
     // a supplied region is — a missing default is our own misconfiguration, not a bad request.
-    val defaultRegionId = dataplaneGroupService.getDefaultDataplaneGroup().id
+    val regionId =
+      if (dataplaneGroupId != null) {
+        requireDestinationRegionIsUsable(dataplaneGroupId)
+        dataplaneGroupId.value
+      } else {
+        dataplaneGroupService.getDefaultDataplaneGroup().id
+      }
 
-    dataWorkerAllocatedCapacityRepository.addCapacity(organizationId.value, defaultRegionId, amount)
+    dataWorkerAllocatedCapacityRepository.addCapacity(organizationId.value, regionId, amount)
   }
 
   /**

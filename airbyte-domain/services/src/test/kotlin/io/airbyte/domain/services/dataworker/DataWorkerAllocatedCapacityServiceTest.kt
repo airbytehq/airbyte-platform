@@ -283,14 +283,40 @@ internal class DataWorkerAllocatedCapacityServiceTest {
 
   @Test
   fun `addCapacity adds to the default region`() {
-    service.addCapacity(organizationId, 5.0)
+    service.addCapacity(organizationId, null, 5.0)
 
     verify { allocatedCapacityRepository.addCapacity(organizationId.value, defaultRegion.value, 5.0) }
   }
 
   @Test
+  fun `addCapacity adds to the given region instead of the default`() {
+    service.addCapacity(organizationId, lowerRegion, 5.0)
+
+    verify { allocatedCapacityRepository.addCapacity(organizationId.value, lowerRegion.value, 5.0) }
+    verify(exactly = 0) { allocatedCapacityRepository.addCapacity(any(), defaultRegion.value, any()) }
+  }
+
+  @Test
+  fun `addCapacity rejects a given region that does not exist`() {
+    every { dataplaneGroupRepository.findById(lowerRegion.value) } returns Optional.empty()
+
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, lowerRegion, 1.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity rejects a given region that has been deleted`() {
+    givenRegionExists(lowerRegion, tombstone = true)
+
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, lowerRegion, 1.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
   fun `addCapacity does not touch any other region`() {
-    service.addCapacity(organizationId, 5.0)
+    service.addCapacity(organizationId, null, 5.0)
 
     verify(exactly = 0) { allocatedCapacityRepository.addCapacity(any(), lowerRegion.value, any()) }
     verify(exactly = 0) { allocatedCapacityRepository.subtractCapacityIfSufficient(any(), any(), any()) }
@@ -298,35 +324,35 @@ internal class DataWorkerAllocatedCapacityServiceTest {
 
   @Test
   fun `addCapacity rejects a zero amount`() {
-    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, 0.0) }
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, null, 0.0) }
 
     verifyNothingWasWritten()
   }
 
   @Test
   fun `addCapacity rejects a negative amount`() {
-    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, -1.0) }
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, null, -1.0) }
 
     verifyNothingWasWritten()
   }
 
   @Test
   fun `addCapacity rejects a NaN amount`() {
-    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Double.NaN) }
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, null, Double.NaN) }
 
     verifyNothingWasWritten()
   }
 
   @Test
   fun `addCapacity rejects an infinite amount`() {
-    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Double.POSITIVE_INFINITY) }
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, null, Double.POSITIVE_INFINITY) }
 
     verifyNothingWasWritten()
   }
 
   @Test
   fun `addCapacity rejects an amount larger than the capacity column can hold`() {
-    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Float.MAX_VALUE.toDouble() * 2) }
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, null, Float.MAX_VALUE.toDouble() * 2) }
 
     verifyNothingWasWritten()
   }
@@ -335,7 +361,7 @@ internal class DataWorkerAllocatedCapacityServiceTest {
   fun `addCapacity scopes the write to the organization`() {
     val otherOrganizationId = OrganizationId(UUID.randomUUID())
 
-    service.addCapacity(otherOrganizationId, 1.0)
+    service.addCapacity(otherOrganizationId, null, 1.0)
 
     verify { allocatedCapacityRepository.addCapacity(otherOrganizationId.value, defaultRegion.value, 1.0) }
     verify(exactly = 0) { allocatedCapacityRepository.addCapacity(organizationId.value, any(), any()) }
