@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.PermissionCheckRead
-import io.airbyte.api.model.generated.PermissionCheckRequest
-import io.airbyte.api.model.generated.PermissionCreate
-import io.airbyte.api.model.generated.PermissionIdRequestBody
-import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.api.model.generated.PermissionReadList
-import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.api.model.generated.PermissionUpdate
-import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
-import io.airbyte.api.model.generated.UserIdRequestBody
+import io.airbyte.api.server.generated.models.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRequest
+import io.airbyte.api.server.generated.models.PermissionCreate
+import io.airbyte.api.server.generated.models.PermissionIdRequestBody
+import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionReadList
+import io.airbyte.api.server.generated.models.PermissionType
+import io.airbyte.api.server.generated.models.PermissionUpdate
+import io.airbyte.api.server.generated.models.PermissionsCheckMultipleWorkspacesRequest
+import io.airbyte.api.server.generated.models.UserIdRequestBody
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.Permission
 import io.airbyte.server.assertStatus
@@ -55,6 +55,7 @@ internal class PermissionApiControllerTest {
   fun testCreatePermission() {
     every { permissionHandler.createPermission(any()) } returns
       Permission()
+        .withPermissionId(UUID.randomUUID())
         .withUserId(UUID.randomUUID())
         .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
 
@@ -64,9 +65,7 @@ internal class PermissionApiControllerTest {
       client.status(
         HttpRequest.POST(
           path,
-          PermissionCreate()
-            .workspaceId(UUID.randomUUID())
-            .permissionType(PermissionType.WORKSPACE_ADMIN),
+          PermissionCreate(userId = UUID.randomUUID(), workspaceId = UUID.randomUUID(), permissionType = PermissionType.WORKSPACE_ADMIN),
         ),
       ),
     )
@@ -74,20 +73,22 @@ internal class PermissionApiControllerTest {
 
   @Test
   fun testGetPermission() {
-    every { permissionHandler.getPermissionRead(any()) } returns PermissionRead()
+    every { permissionHandler.getPermissionRead(any()) } returns
+      PermissionRead(permissionId = UUID.randomUUID(), permissionType = PermissionType.WORKSPACE_ADMIN, userId = UUID.randomUUID())
 
     val path = "/api/v1/permissions/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionIdRequestBody(permissionId = UUID.randomUUID()))))
   }
 
   @Test
   fun testUpdatePermission() {
     val userId = UUID.randomUUID()
-    every { permissionHandler.getPermissionRead(any()) } returns PermissionRead().userId(userId)
+    every { permissionHandler.getPermissionRead(any()) } returns
+      PermissionRead(permissionId = UUID.randomUUID(), permissionType = PermissionType.WORKSPACE_ADMIN, userId = userId)
     every { permissionHandler.updatePermission(any()) } returns Unit
 
     val path = "/api/v1/permissions/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionUpdate().permissionId(UUID.randomUUID()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionUpdate(permissionId = UUID.randomUUID()))))
   }
 
   @Test
@@ -95,7 +96,7 @@ internal class PermissionApiControllerTest {
     every { permissionHandler.deletePermission(any()) } returns Unit
 
     val path = "/api/v1/permissions/delete"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionIdRequestBody(permissionId = UUID.randomUUID()))))
   }
 
   @Test
@@ -105,20 +106,22 @@ internal class PermissionApiControllerTest {
     val workspaceId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
     every { permissionHandler.effectivePermissionReadListForUser(userId) } returns
-      PermissionReadList().permissions(
-        listOf(
-          PermissionRead()
-            .permissionId(permissionId)
-            .userId(userId)
-            .groupId(groupId)
-            .workspaceId(workspaceId)
-            .permissionType(PermissionType.WORKSPACE_RUNNER),
-        ),
+      PermissionReadList(
+        permissions =
+          listOf(
+            PermissionRead(
+              permissionId = permissionId,
+              userId = userId,
+              groupId = groupId,
+              workspaceId = workspaceId,
+              permissionType = PermissionType.WORKSPACE_RUNNER,
+            ),
+          ),
       )
 
     val response =
       client.toBlocking().retrieve(
-        HttpRequest.POST("/api/v1/permissions/list_by_user", UserIdRequestBody().userId(userId)),
+        HttpRequest.POST("/api/v1/permissions/list_by_user", UserIdRequestBody(userId = userId)),
         PermissionReadList::class.java,
       )
 
@@ -133,17 +136,31 @@ internal class PermissionApiControllerTest {
 
   @Test
   fun testCheckPermission() {
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead()
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED)
 
     val path = "/api/v1/permissions/check"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionCheckRequest())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(path, PermissionCheckRequest(permissionType = PermissionType.WORKSPACE_ADMIN, userId = UUID.randomUUID())),
+      ),
+    )
   }
 
   @Test
   fun testCheckMultipleWorkspacesPermission() {
-    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns PermissionCheckRead()
+    every { permissionHandler.permissionsCheckMultipleWorkspaces(any()) } returns
+      PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED)
 
     val path = "/api/v1/permissions/check_multiple_workspaces"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, PermissionsCheckMultipleWorkspacesRequest())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(
+          path,
+          PermissionsCheckMultipleWorkspacesRequest(permissionType = PermissionType.WORKSPACE_ADMIN, userId = UUID.randomUUID()),
+        ),
+      ),
+    )
   }
 }

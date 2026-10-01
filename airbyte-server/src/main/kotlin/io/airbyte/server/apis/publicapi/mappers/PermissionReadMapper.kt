@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionRead
 import io.airbyte.publicApi.server.generated.models.PermissionResponse
 
 /**

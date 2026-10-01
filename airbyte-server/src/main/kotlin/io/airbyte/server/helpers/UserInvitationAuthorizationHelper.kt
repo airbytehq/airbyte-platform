@@ -4,9 +4,9 @@
 
 package io.airbyte.server.helpers
 
-import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum
-import io.airbyte.api.model.generated.PermissionCheckRequest
-import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.server.generated.models.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRequest
+import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.ScopeType
@@ -70,13 +70,14 @@ class UserInvitationAuthorizationHelper(
   ) {
     val result =
       permissionHandler.checkPermissions(
-        PermissionCheckRequest()
-          .userId(userId)
-          .permissionType(PermissionType.WORKSPACE_ADMIN)
-          .workspaceId(workspaceId),
+        PermissionCheckRequest(
+          userId = userId,
+          permissionType = PermissionType.WORKSPACE_ADMIN,
+          workspaceId = workspaceId,
+        ),
       )
 
-    if (!result.status.equals(StatusEnum.SUCCEEDED)) {
+    if (!result.status.equals(PermissionCheckRead.Status.SUCCEEDED)) {
       throw OperationNotAllowedException("User $userId is not an admin of workspace $workspaceId")
     }
   }
@@ -87,13 +88,14 @@ class UserInvitationAuthorizationHelper(
   ) {
     val result =
       permissionHandler.checkPermissions(
-        PermissionCheckRequest()
-          .userId(userId)
-          .permissionType(PermissionType.ORGANIZATION_ADMIN)
-          .organizationId(organizationId),
+        PermissionCheckRequest(
+          userId = userId,
+          permissionType = PermissionType.ORGANIZATION_ADMIN,
+          organizationId = organizationId,
+        ),
       )
 
-    if (!result.status.equals(StatusEnum.SUCCEEDED)) {
+    if (!result.status.equals(PermissionCheckRead.Status.SUCCEEDED)) {
       throw OperationNotAllowedException("User $userId is not an admin of organization $organizationId")
     }
   }

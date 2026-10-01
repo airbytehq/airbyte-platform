@@ -5,7 +5,7 @@
 package io.airbyte.audit.logging.provider
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.PermissionUpdate
+import io.airbyte.api.server.generated.models.PermissionUpdate
 import io.airbyte.audit.logging.AuditLoggingHelper
 import io.airbyte.audit.logging.model.AuditPermissionLogEntry
 import io.airbyte.audit.logging.model.TargetScope

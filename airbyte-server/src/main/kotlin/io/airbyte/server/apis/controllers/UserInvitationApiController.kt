@@ -4,14 +4,14 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.UserInvitationApi
-import io.airbyte.api.model.generated.InviteCodeRequestBody
-import io.airbyte.api.model.generated.UserInvitationAdminRead
-import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
-import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
-import io.airbyte.api.model.generated.UserInvitationCreateResponse
-import io.airbyte.api.model.generated.UserInvitationListRequestBody
-import io.airbyte.api.model.generated.UserInvitationRead
+import io.airbyte.api.server.generated.apis.UserInvitationApi
+import io.airbyte.api.server.generated.models.InviteCodeRequestBody
+import io.airbyte.api.server.generated.models.UserInvitationAdminRead
+import io.airbyte.api.server.generated.models.UserInvitationCancelRequestBody
+import io.airbyte.api.server.generated.models.UserInvitationCreateRequestBody
+import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
+import io.airbyte.api.server.generated.models.UserInvitationListRequestBody
+import io.airbyte.api.server.generated.models.UserInvitationRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -41,7 +41,7 @@ class UserInvitationApiController(
   @Path("/by_code/{inviteCode}")
   override fun getUserInvitation(
     @PathParam("inviteCode") inviteCode: String,
-  ): UserInvitationRead? =
+  ): UserInvitationRead =
     execute(
       Callable {
         val currentUser = currentUserService.getCurrentUser()
@@ -53,46 +53,49 @@ class UserInvitationApiController(
   @Path("/list_pending")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   override fun listPendingInvitations(
-    @Body invitationListRequestBody: UserInvitationListRequestBody,
+    @Body invitationListRequestBody: UserInvitationListRequestBody?,
   ): List<UserInvitationAdminRead> = userInvitationHandler.getPendingInvitations(invitationListRequestBody)
 
   @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun createUserInvitation(
     @Body invitationCreateRequestBody: UserInvitationCreateRequestBody?,
-  ): UserInvitationCreateResponse? =
+  ): UserInvitationCreateResponse =
     execute {
       val currentUser = currentUserService.getCurrentUser()
       userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody!!, currentUser)
     }
 
   override fun acceptUserInvitation(
-    @Body inviteCodeRequestBody: InviteCodeRequestBody,
-  ): io.airbyte.api.model.generated.UserInvitationRead? =
+    @Body inviteCodeRequestBody: InviteCodeRequestBody?,
+  ): UserInvitationRead =
     execute {
       val currentUser = currentUserService.getCurrentUser()
-      userInvitationHandler.accept(inviteCodeRequestBody, currentUser)
+      userInvitationHandler.accept(inviteCodeRequestBody!!, currentUser)
     }
 
   override fun declineUserInvitation(
     @Body inviteCodeRequestBody: InviteCodeRequestBody?,
-  ): io.airbyte.api.model.generated.UserInvitationRead? =
-    execute<UserInvitationRead?> {
+  ): UserInvitationRead =
+    execute<UserInvitationRead> {
       // TODO only the invitee can decline the invitation
       throw RuntimeException("Not yet implemented")
     }
 
   override fun cancelUserInvitation(
-    @Body invitationRequestBody: UserInvitationCancelRequestBody,
-  ): UserInvitationAdminRead? {
+    @Body invitationRequestBody: UserInvitationCancelRequestBody?,
+  ): UserInvitationAdminRead {
     // note: this endpoint is accessible to all authenticated users, but `authorizeInvitationAdmin`
     // throws a 403 if a non-admin user of the invitation's scope tries to cancel it.
     return execute {
+      val requestBody = invitationRequestBody ?: throw BadRequestException("Request body is required.")
+      val invitationId = requestBody.id
+      val inviteCode = requestBody.inviteCode
       when {
-        invitationRequestBody.id != null -> authorizeInvitationAdmin(invitationRequestBody.id)
-        invitationRequestBody.inviteCode != null -> authorizeInvitationAdmin(invitationRequestBody.inviteCode)
+        invitationId != null -> authorizeInvitationAdmin(invitationId)
+        inviteCode != null -> authorizeInvitationAdmin(inviteCode)
         else -> throw BadRequestException("Either id or inviteCode must be provided.")
       }
-      userInvitationHandler.cancel(invitationRequestBody)
+      userInvitationHandler.cancel(requestBody)
     }
   }
 

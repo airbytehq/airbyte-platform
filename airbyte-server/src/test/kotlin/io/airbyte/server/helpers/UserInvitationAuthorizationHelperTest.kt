@@ -4,7 +4,7 @@
 
 package io.airbyte.server.helpers
 
-import io.airbyte.api.model.generated.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRead
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.ScopeType
@@ -40,7 +40,7 @@ class UserInvitationAuthorizationHelperTest {
   fun `successful permission check does not throw`(scopeType: ScopeType) {
     invitation.scopeType = scopeType
     every { userInvitationService.getUserInvitationById(invitationId) } returns invitation
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED)
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED)
 
     assertDoesNotThrow { authorizationHelper.authorizeInvitationAdmin(invitationId, userId) }
   }
@@ -50,7 +50,7 @@ class UserInvitationAuthorizationHelperTest {
   fun `failed permission check throws`(scopeType: ScopeType) {
     invitation.scopeType = scopeType
     every { userInvitationService.getUserInvitationById(invitationId) } returns invitation
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.FAILED)
 
     assertThrows<OperationNotAllowedException> { authorizationHelper.authorizeInvitationAdmin(invitationId, userId) }
   }
@@ -67,7 +67,7 @@ class UserInvitationAuthorizationHelperTest {
   fun `invite code authorization uses invite code lookup`(scopeType: ScopeType) {
     invitation.scopeType = scopeType
     every { userInvitationService.getUserInvitationByInviteCode(inviteCode) } returns invitation
-    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED)
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead(status = PermissionCheckRead.Status.SUCCEEDED)
 
     assertDoesNotThrow { authorizationHelper.authorizeInvitationAdmin(inviteCode, userId) }
   }

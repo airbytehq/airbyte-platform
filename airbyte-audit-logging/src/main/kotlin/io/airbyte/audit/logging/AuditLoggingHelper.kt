@@ -7,7 +7,7 @@ package io.airbyte.audit.logging
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionRead
 import io.airbyte.audit.logging.model.Actor
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler

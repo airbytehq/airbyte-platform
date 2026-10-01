@@ -4,7 +4,7 @@
 
 package io.airbyte.audit.logging
 
-import io.airbyte.api.model.generated.DataWorkerAddCapacityRequestBody
+import io.airbyte.api.server.generated.models.DataWorkerAddCapacityRequestBody
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
@@ -63,9 +63,7 @@ class AuditScopeResolverTest {
         ORGANIZATION_ID_SNAKE_CASE_HEADER to targetOrganizationId.toString(),
       )
     val requestBody =
-      DataWorkerAddCapacityRequestBody()
-        .organizationId(targetOrganizationId)
-        .amount(1.0)
+      DataWorkerAddCapacityRequestBody(organizationId = targetOrganizationId, amount = 1.0)
 
     val scope = resolver.resolveScope(headers, requestBody, null)
 

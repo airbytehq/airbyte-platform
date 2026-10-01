@@ -4,8 +4,8 @@
 
 package io.airbyte.connector.rollout.worker
 
-import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
-import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
 import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
@@ -186,10 +186,11 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.IN_PROGRESS,
         actorSyncs = emptyMap(),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(0)
-            .numPinnedToConnectorRollout(0)
-            .numActorsEligibleOrAlreadyPinned(0),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 0,
+            numPinnedToConnectorRollout = 0,
+            numActorsEligibleOrAlreadyPinned = 0,
+          ),
       )
 
     every {
@@ -202,10 +203,11 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.PAUSED,
         actorSyncs = emptyMap(),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(0)
-            .numPinnedToConnectorRollout(0)
-            .numActorsEligibleOrAlreadyPinned(0),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 0,
+            numPinnedToConnectorRollout = 0,
+            numActorsEligibleOrAlreadyPinned = 0,
+          ),
       )
 
     // Run workflow
@@ -234,16 +236,16 @@ internal class ConnectorRolloutWorkflowImplTest {
   @Test
   fun `test ConnectorRolloutWorkflow automated rollout releases when success threshold is met`() {
     val successActorSelectionInfo =
-      ConnectorRolloutActorSelectionInfo()
-        .numPinnedToConnectorRollout(1)
-        .numActorsEligibleOrAlreadyPinned(1)
+      ConnectorRolloutActorSelectionInfo(
+        numActors = 1,
+        numPinnedToConnectorRollout = 1,
+        numActorsEligibleOrAlreadyPinned = 1,
+      )
     val successActorSyncs =
       mapOf<UUID, ConnectorRolloutActorSyncInfo>(
-        UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(0)
-            .numConnections(1),
+        UUID.randomUUID().let {
+          it to ConnectorRolloutActorSyncInfo(actorId = it, numSucceeded = 1, numFailed = 0, numConnections = 1)
+        },
       )
     val input =
       ConnectorRolloutWorkflowInput(
@@ -322,17 +324,16 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.IN_PROGRESS,
         actorSyncs =
           mapOf<UUID, ConnectorRolloutActorSyncInfo>(
-            UUID.randomUUID() to
-              ConnectorRolloutActorSyncInfo()
-                .numSucceeded(1)
-                .numFailed(1)
-                .numConnections(2),
+            UUID.randomUUID().let {
+              it to ConnectorRolloutActorSyncInfo(actorId = it, numSucceeded = 1, numFailed = 1, numConnections = 2)
+            },
           ),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(1)
-            .numPinnedToConnectorRollout(1)
-            .numActorsEligibleOrAlreadyPinned(1),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 1,
+            numPinnedToConnectorRollout = 1,
+            numActorsEligibleOrAlreadyPinned = 1,
+          ),
       )
 
     val pausedConnectorRolloutOutput =
@@ -340,17 +341,16 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.PAUSED,
         actorSyncs =
           mapOf<UUID, ConnectorRolloutActorSyncInfo>(
-            UUID.randomUUID() to
-              ConnectorRolloutActorSyncInfo()
-                .numSucceeded(1)
-                .numFailed(1)
-                .numConnections(2),
+            UUID.randomUUID().let {
+              it to ConnectorRolloutActorSyncInfo(actorId = it, numSucceeded = 1, numFailed = 1, numConnections = 2)
+            },
           ),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(1)
-            .numPinnedToConnectorRollout(1)
-            .numActorsEligibleOrAlreadyPinned(1),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 1,
+            numPinnedToConnectorRollout = 1,
+            numActorsEligibleOrAlreadyPinned = 1,
+          ),
       )
 
     every {
@@ -413,10 +413,11 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.IN_PROGRESS,
         actorSyncs = emptyMap(),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(1)
-            .numPinnedToConnectorRollout(1)
-            .numActorsEligibleOrAlreadyPinned(1),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 1,
+            numPinnedToConnectorRollout = 1,
+            numActorsEligibleOrAlreadyPinned = 1,
+          ),
       )
 
     val pausedConnectorRolloutOutput =
@@ -424,17 +425,16 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.PAUSED,
         actorSyncs =
           mapOf<UUID, ConnectorRolloutActorSyncInfo>(
-            UUID.randomUUID() to
-              ConnectorRolloutActorSyncInfo()
-                .numSucceeded(1)
-                .numFailed(1)
-                .numConnections(2),
+            UUID.randomUUID().let {
+              it to ConnectorRolloutActorSyncInfo(actorId = it, numSucceeded = 1, numFailed = 1, numConnections = 2)
+            },
           ),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(1)
-            .numPinnedToConnectorRollout(1)
-            .numActorsEligibleOrAlreadyPinned(1),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 1,
+            numPinnedToConnectorRollout = 1,
+            numActorsEligibleOrAlreadyPinned = 1,
+          ),
       )
 
     every {
@@ -497,10 +497,11 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.IN_PROGRESS,
         actorSyncs = emptyMap(),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(0)
-            .numPinnedToConnectorRollout(0)
-            .numActorsEligibleOrAlreadyPinned(0),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 0,
+            numPinnedToConnectorRollout = 0,
+            numActorsEligibleOrAlreadyPinned = 0,
+          ),
       )
 
     val pausedRolloutOutput =
@@ -508,10 +509,11 @@ internal class ConnectorRolloutWorkflowImplTest {
         state = ConnectorEnumRolloutState.PAUSED,
         actorSyncs = emptyMap(),
         actorSelectionInfo =
-          ConnectorRolloutActorSelectionInfo()
-            .numActors(0)
-            .numPinnedToConnectorRollout(0)
-            .numActorsEligibleOrAlreadyPinned(0),
+          ConnectorRolloutActorSelectionInfo(
+            numActors = 0,
+            numPinnedToConnectorRollout = 0,
+            numActorsEligibleOrAlreadyPinned = 0,
+          ),
       )
 
     every { startRolloutActivity.startRollout(any(), any()) } returns
