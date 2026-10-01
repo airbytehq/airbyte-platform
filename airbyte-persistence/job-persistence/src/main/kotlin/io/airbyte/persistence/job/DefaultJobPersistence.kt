@@ -1050,7 +1050,8 @@ class DefaultJobPersistence
                   )
                 },
               ).getSQL(ParamType.INLINED) + ") AS jobs"
-        val fullQuery = jobSelectAndJoin(jobsSubquery)
+        // A job spans one row per attempt, and the mapper only groups adjacent rows.
+        val fullQuery = jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME
         log.debug { "jobs query: $fullQuery" }
         getJobsFromResult(ctx.fetch(fullQuery))
       }
@@ -1067,7 +1068,8 @@ class DefaultJobPersistence
                 Tables.JOBS.CREATED_AT.desc(),
                 Tables.JOBS.ID.desc(),
               ).getSQL(ParamType.INLINED) + ") AS jobs"
-        getJobsFromResultLight(ctx.fetch(jobSelectAndJoin(jobsSubquery)))
+        // A job spans one row per attempt, and the mapper only groups adjacent rows.
+        getJobsFromResultLight(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME))
       }
 
     override fun listJobsLight(

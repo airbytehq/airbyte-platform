@@ -2943,6 +2943,24 @@ internal class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("Should return each job once when listing by id, even with several attempts")
+    fun testListJobsLightByIdGroupsAttemptsPerJob() {
+      val jobIds =
+        (0 until 3).map { _ ->
+          val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+          jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
+          jobPersistence.succeedAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH.resolve("2")))
+          jobId
+        }
+
+      val actualList = jobPersistence.listJobsLight(jobIds.toSet())
+
+      assertEquals(jobIds.size, actualList.size)
+      assertEquals(jobIds.toSet(), actualList.map { it.id }.toSet())
+      actualList.forEach { assertEquals(2, it.attempts.size) }
+    }
+
+    @Test
     @DisplayName("Should list all jobs with all attempts in descending order")
     fun testListJobsWithMultipleAttemptsInDescOrder() {
       // create first job with multiple attempts
