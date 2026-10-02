@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.github.javaparser.utils.StringEscapeUtils
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.security.md5
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -94,12 +93,12 @@ class DeclarativeSourceManifestInjector {
    */
   fun createComponentFileChecksumsInjection(
     sourceDefinitionId: UUID?,
-    componentsFileContentString: String?,
+    componentsFileContentString: String,
   ): ActorDefinitionConfigInjection {
     val checksumNode = JsonNodeFactory.instance.objectNode()
 
-    val md5Hash = computeMD5Hash(componentsFileContentString)
-    checksumNode.put("md5", md5Hash)
+    // Must equal the CDK md5 of the exact __injected_components_py text (custom_code_compiler._hash_text).
+    checksumNode.put("md5", componentsFileContentString.toByteArray(Charsets.UTF_8).md5())
 
     return ActorDefinitionConfigInjection()
       .withActorDefinitionId(sourceDefinitionId)
@@ -171,20 +170,5 @@ class DeclarativeSourceManifestInjector {
     const val INJECTED_DECLARATIVE_MANIFEST_KEY: String = "__injected_declarative_manifest"
     const val INJECTED_COMPONENT_FILE_KEY: String = "__injected_components_py"
     const val INJECTED_COMPONENT_FILE_CHECKSUMS_KEY: String = "__injected_components_py_checksums"
-
-    /**
-     * Computes an MD5 hash of the provided content string.
-     *
-     * The content string is first unescaped using Java string unescaping rules to get the actual
-     * content. This ensures the MD5 hash is computed consistently across different platforms and
-     * matches what source-declarative-manifest expects.
-     *
-     * @param content The string content to hash, potentially containing escaped characters
-     * @return The MD5 hash of the unescaped content as a hex string
-     */
-    private fun computeMD5Hash(content: String?): String {
-      val unescapedContentString = StringEscapeUtils.unescapeJava(content)
-      return unescapedContentString.toByteArray().md5()
-    }
   }
 }

@@ -8,12 +8,16 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionConfigInjection
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.net.URI
 import java.util.UUID
 
@@ -88,6 +92,18 @@ internal class DeclarativeSourceManifestInjectorTest {
     Assertions.assertEquals(A_COMPONENT_FILE_MD5_HASH, actualMd5Hash)
   }
 
+  @ParameterizedTest
+  @MethodSource("componentFilesWithCdkMd5")
+  fun whenGetManifestConnectorInjectionsThenChecksumMatchesInjectedComponentFile(
+    componentFile: String,
+    expectedMd5: String,
+  ) {
+    val injections = injector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, componentFile)
+
+    Assertions.assertEquals(componentFile, injections[1].jsonToInject.asText())
+    Assertions.assertEquals(expectedMd5, injections[2].jsonToInject.get("md5").asText())
+  }
+
   @Test
   fun givenDocumentationUrlWhenAdaptDeclarativeManifestThenReturnConnectorSpecificationHasDocumentationUrl() {
     val spec = givenSpecWithDocumentationUrl(DOCUMENTATION_URL)
@@ -132,7 +148,7 @@ internal class DeclarativeSourceManifestInjectorTest {
     )
 
     // Verify component file injection
-    val expectedComponentJson = ObjectMapper().readValue("\"" + A_COMPONENT_FILE.replace("\\n", "\\\\n") + "\"", JsonNode::class.java)
+    val expectedComponentJson = TextNode.valueOf(A_COMPONENT_FILE)
     Assertions.assertEquals(
       ActorDefinitionConfigInjection()
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
@@ -178,7 +194,7 @@ internal class DeclarativeSourceManifestInjectorTest {
     private val A_MANIFEST: JsonNode
     private val A_SOURCE_DEFINITION_ID: UUID = UUID.randomUUID()
     private const val A_COMPONENT_FILE =
-      "from dataclasses import dataclass\\n\\nfrom airbyte_cdk.sources.declarative.transformations import AddFields\\n\\n\\n@dataclass\\nclass OverrideAddFields(AddFields):\\n    pass"
+      "from dataclasses import dataclass\n\nfrom airbyte_cdk.sources.declarative.transformations import AddFields\n\n\n@dataclass\nclass OverrideAddFields(AddFields):\n    pass"
     private const val A_COMPONENT_FILE_MD5_HASH = "cc93b2d066f94e041da68ecd251396f3"
     private val DOCUMENTATION_URL: URI = URI.create("https://documentation-url.com")
 
@@ -193,5 +209,20 @@ internal class DeclarativeSourceManifestInjectorTest {
         throw RuntimeException(e)
       }
     }
+
+    // Expected values from airbyte_cdk custom_code_compiler._hash_text on the same text.
+    @JvmStatic
+    private fun componentFilesWithCdkMd5() =
+      listOf(
+        Arguments.of("NAME = '\\u4e2d'\n", "44713eeb6b1b11cc62935db229e9068c"),
+        Arguments.of("NAME = '中文'\n", "c29fc23ad2dc698af4a8ab91fea362ad"),
+        Arguments.of("E = '\uD83D\uDE00'\n", "db7e1b95876c6b8e6a7aef339a387dc1"),
+        Arguments.of("x = 1\r\ny = 2\r\n", "da5d665f762851a81554363c76eae0de"),
+        Arguments.of("s = 'a\\nb'\n", "86606756b46bc4c0e949efd607e7e18b"),
+        Arguments.of("s = '\\\\'\n", "f09ae8c8fa968eb3b01936c7c8438bb9"),
+        Arguments.of("P = re.compile(r'\\d+')\n", "5cfbc7a513654f0ae158f6e60ee80bb9"),
+        Arguments.of("P = r'C:\\users\\x'\n", "b890b80bae5b0cac4d86144747fa5d06"),
+        Arguments.of("x = 1 + \\\n    2\n", "1b4794c7289b9eabf010c30aa2e91f98"),
+      )
   }
 }
