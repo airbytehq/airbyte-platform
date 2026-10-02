@@ -54,7 +54,7 @@ jest.mock("./useShowAgentsOptIn", () => ({ useShowAgentsOptIn: jest.fn() }));
 
 jest.mock("core/utils/links", () => ({
   links: {
-    agentsDocs: "https://docs.airbyte.com/ai-agents/get-started",
+    contextLayerDocs: "https://docs.airbyte.com/platform/context-layer",
   },
 }));
 

@@ -94,7 +94,7 @@ const InstallMcpPageContent: React.FC = () => {
           </Heading>
           <Text color="grey">
             <FormattedMessage id="cloud.installMcp.subtitle" />{" "}
-            <ExternalLink href={links.agentsDocs} opensInNewTab>
+            <ExternalLink href={links.airbyteMcpDocs} opensInNewTab>
               <FormattedMessage id="cloud.installMcp.documentation" />
             </ExternalLink>
           </Text>
@@ -169,7 +169,7 @@ const InstallMcpPageContent: React.FC = () => {
         </InstallCard>
         <Text size="sm" color="grey">
           <FormattedMessage id="cloud.installMcp.footer" />{" "}
-          <ExternalLink href={links.agentsDocs} opensInNewTab>
+          <ExternalLink href={links.airbyteMcpDocs} opensInNewTab>
             <FormattedMessage id="cloud.installMcp.documentation" />
           </ExternalLink>
         </Text>

@@ -548,7 +548,7 @@ const ContextLayerUnavailable: React.FC = () => {
             <Text>
               <FormattedMessage id="cloud.contextLayer.unavailable.description" />
             </Text>
-            <ExternalLink href={links.agentsDocs} opensInNewTab>
+            <ExternalLink href={links.contextLayerDocs} opensInNewTab>
               <FormattedMessage id="cloud.contextLayer.docs" />
             </ExternalLink>
           </div>

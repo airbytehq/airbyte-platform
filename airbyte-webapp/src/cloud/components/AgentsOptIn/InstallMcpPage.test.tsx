@@ -19,7 +19,7 @@ jest.mock("core/utils/app", () => ({
 
 jest.mock("core/utils/links", () => ({
   links: {
-    agentsDocs: "https://docs.airbyte.com/ai-agents/get-started",
+    airbyteMcpDocs: "https://docs.airbyte.com/platform/airbyte-mcp",
   },
 }));
 
