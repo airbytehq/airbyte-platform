@@ -2,7 +2,22 @@ import { test, expect } from "@playwright/test";
 import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { connectionAPI, connectionUI, connectionTestHelpers } from "../../helpers/connection";
+import { test as mockedTest } from "../../helpers/frontendTest";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+
+mockedTest.describe("Connection Status - mocked API", () => {
+  mockedTest("renders pending status returned by the API", async ({ page, airbyte }) => {
+    airbyte.connection.syncCatalog.streams[0].config!.selected = false;
+    await page.goto(
+      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/status`
+    );
+    await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "pending");
+    expect(airbyte.requests).toContainEqual({
+      key: "POST /api/v1/connections/status",
+      body: { connectionIds: [airbyte.connection.connectionId] },
+    });
+  });
+});
 
 test.describe("Connection Status - Faker + E2E", () => {
   let workspaceId: string;
@@ -34,21 +49,6 @@ test.describe("Connection Status - Faker + E2E", () => {
       sourceId: source.sourceId,
       destinationId: destination.destinationId,
     });
-  });
-
-  test("should initialize as pending", async ({ page, request }) => {
-    const connection = await connectionAPI.create(request, source, destination);
-    connectionId = connection.connectionId;
-
-    await connectionUI.visit(page, connection, "status");
-
-    return expect(page.locator("[data-testid='connection-status-indicator']")).toHaveAttribute(
-      "data-status",
-      "pending",
-      {
-        timeout: 10000,
-      }
-    );
   });
 
   test("should allow starting a sync", async ({ page, request }) => {

@@ -8,7 +8,55 @@ import {
   connectionDeletion,
   connectionWorkflows,
 } from "../../helpers/connectionConfiguration";
+import { test as mockedTest } from "../../helpers/frontendTest";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+
+mockedTest.describe("Connection Configuration - mocked API", () => {
+  mockedTest("saves a cron schedule and displays it after reload", async ({ page, airbyte }) => {
+    await page.goto(
+      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/settings`
+    );
+    await page.getByTestId("schedule-type-listbox-button").click();
+    await page.getByTestId("cron-option").click();
+    await page.locator("button[type='submit']").click();
+    await expect(page.getByText("Your changes were saved!", { exact: true })).toBeVisible();
+    expect(airbyte.updates).toHaveLength(1);
+    expect(airbyte.updates[0]).toMatchObject({
+      connectionId: airbyte.connection.connectionId,
+      skipReset: true,
+      scheduleType: "cron",
+    });
+    expect(airbyte.updates[0].scheduleData).toEqual({ cron: { cronTimeZone: "UTC", cronExpression: "0 0 12 * * ?" } });
+
+    await page.reload();
+    await expect(page.getByTestId("schedule-type-listbox-button")).toContainText("Cron");
+    await expect(page.getByTestId("cronExpression")).toHaveValue("0 0 12 * * ?");
+    await expect(page.getByRole("button", { name: "UTC", exact: true })).toBeVisible();
+  });
+
+  mockedTest("saves an hourly schedule and displays it after reload", async ({ page, airbyte }) => {
+    await page.goto(
+      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/settings`
+    );
+    await page.getByTestId("schedule-type-listbox-button").click();
+    await page.getByTestId("scheduled-option").click();
+    await page.getByTestId("basic-schedule-listbox-button").click();
+    await page.getByTestId("frequency-1-hours-option").click();
+    await page.locator("button[type='submit']").click();
+    await expect(page.getByText("Your changes were saved!", { exact: true })).toBeVisible();
+    expect(airbyte.updates).toHaveLength(1);
+    expect(airbyte.updates[0]).toMatchObject({
+      connectionId: airbyte.connection.connectionId,
+      skipReset: true,
+      scheduleType: "basic",
+    });
+    expect(airbyte.updates[0].scheduleData).toEqual({ basicSchedule: { timeUnit: "hours", units: 1 } });
+
+    await page.reload();
+    await expect(page.getByTestId("schedule-type-listbox-button")).toContainText("Scheduled");
+    await expect(page.getByTestId("basic-schedule-listbox-button")).toContainText("Every 1 hour");
+  });
+});
 
 test.describe("Connection Configuration", () => {
   let workspaceId: string;
@@ -44,33 +92,6 @@ test.describe("Connection Configuration", () => {
       // Already navigated in beforeAll
       const scheduleTypeButton = page.locator('[data-testid="schedule-type-listbox-button"]');
       await expect(scheduleTypeButton).toContainText("Manual", { timeout: 10000 });
-    });
-
-    test("should set cron as schedule type", async () => {
-      const requestBody = await connectionWorkflows.updateConnection(page, testData.connection, async (page) => {
-        await connectionForm.selectScheduleType(page, "Cron");
-      });
-
-      expect(requestBody.scheduleType).toBe("cron");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((requestBody.scheduleData as any).cron).toEqual({
-        cronTimeZone: "UTC",
-        cronExpression: "0 0 12 * * ?",
-      });
-    });
-
-    test("should set hourly as schedule type", async () => {
-      const requestBody = await connectionWorkflows.updateConnection(page, testData.connection, async (page) => {
-        await connectionForm.selectScheduleType(page, "Scheduled");
-        await connectionForm.selectBasicScheduleData(page, "1-hours");
-      });
-
-      expect(requestBody.scheduleType).toBe("basic");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect((requestBody.scheduleData as any).basicSchedule).toEqual({
-        timeUnit: "hours",
-        units: 1,
-      });
     });
   });
 
