@@ -9,9 +9,12 @@ import {
   connectionWorkflows,
 } from "../../helpers/connectionConfiguration";
 import { test as mockedTest } from "../../helpers/frontendTest";
+import { fakerExistingConnectionScenario } from "../../helpers/mockApiState";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
 
 mockedTest.describe("Connection Configuration - mocked API", () => {
+  mockedTest.use({ airbyteScenario: fakerExistingConnectionScenario });
+
   mockedTest("saves a cron schedule and displays it after reload", async ({ page, airbyte }) => {
     await page.goto(
       `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/settings`

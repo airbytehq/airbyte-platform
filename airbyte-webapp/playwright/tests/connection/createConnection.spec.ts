@@ -1,7 +1,9 @@
-import { test, expect, Request, Page, BrowserContext } from "@playwright/test";
-import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
+import type { MockAirbyte } from "../../helpers/mockApi";
+import type { Page } from "@playwright/test";
 
-import { connectionTestHelpers } from "../../helpers/connection";
+import destinationIds from "@src/area/connector/utils/destinations.json";
+import sourceIds from "@src/area/connector/utils/sources.json";
+
 import {
   navigateToConnectionConfig,
   selectSyncMode,
@@ -9,179 +11,111 @@ import {
   completeConnectionCreation,
   namespaceHelpers,
 } from "../../helpers/connectionCreation";
-import { setupWorkspaceForTests } from "../../helpers/workspace";
+import { test, expect } from "../../helpers/frontendTest";
+import { createMockPostgresCatalog } from "../../helpers/mocks";
+
+// Connector definitions and catalog data describe the scenario without configuring routes.
+test.use({
+  airbyteScenario: {
+    source: {
+      definition: {
+        sourceDefinitionId: sourceIds.Postgres,
+        name: "Postgres",
+        dockerRepository: "airbyte/source-postgres",
+        dockerImageTag: "1.0.0",
+      },
+      name: "Test Postgres source",
+      connectionConfiguration: {},
+      specification: { type: "object", properties: {} },
+      catalog: createMockPostgresCatalog(),
+    },
+    destination: {
+      definition: {
+        destinationDefinitionId: destinationIds.Postgres,
+        name: "Postgres",
+        dockerRepository: "airbyte/destination-postgres",
+        dockerImageTag: "1.0.0",
+        documentationUrl: "",
+      },
+      name: "Test Postgres destination",
+      connectionConfiguration: {},
+      specification: { type: "object", properties: {} },
+      supportedSyncModes: ["overwrite", "append", "append_dedup"],
+    },
+    connections: [],
+  },
+});
+
+async function openConfiguration(page: Page, airbyte: MockAirbyte) {
+  await navigateToConnectionConfig(page, airbyte.workspace.workspaceId, airbyte.source, airbyte.destination, {
+    setupDiscoverSchemaIntercept: false,
+  });
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window._e2ePlaywrightEnvironment = true;
+    window._e2eOverwrites = { asyncSchemaDiscovery: true };
+  });
+});
 
 test.describe("Connection - Create new connection", () => {
-  // - CI: Uses POSTGRES_TEST_HOST environment variable to connect to deployed postgres pods
-  // - Local: Falls back to platform-specific docker networking (host.docker.internal/172.17.0.1)
-  let workspaceId: string;
-
-  test.beforeAll(async () => {
-    workspaceId = await setupWorkspaceForTests();
-  });
-
   test.describe("Set up connection", () => {
     test.describe("From connection page", () => {
-      test.describe.configure({ mode: "serial" });
-
-      let page: Page;
-      let context: BrowserContext;
-      let source: SourceRead;
-      let destination: DestinationRead;
-
-      test.beforeAll(async ({ browser, request }) => {
-        // Serial tests share source/destination and page to avoid redundant setup overhead
-        const testResources = await connectionTestHelpers.setupPostgresConnectionTest(
-          request,
-          workspaceId,
-          "Test source - From page",
-          "Test destination - From page"
-        );
-        source = testResources.source;
-        destination = testResources.destination;
-
-        context = await browser.newContext();
-        page = await context.newPage();
+      test.beforeEach(async ({ page, airbyte }) => {
+        airbyte.connections.push(airbyte.connection);
+        await page.goto(`/workspaces/${airbyte.workspace.workspaceId}/connections`);
+        await page.getByTestId("new-connection-button").click();
       });
 
-      test.afterAll(async ({ request }) => {
-        await connectionTestHelpers.cleanupConnectionTest(request, {
-          sourceId: source?.sourceId,
-          destinationId: destination?.destinationId,
-        });
-        await page.close();
-        await context.close();
+      test("should open 'New connection' page", async ({ page, airbyte }) => {
+        await expect(page).toHaveURL(/\/connections\/new-connection$/);
+        await expect
+          .poll(() => airbyte.requests.filter(({ key }) => key === "POST /api/v1/sources/list").length)
+          .toBeGreaterThanOrEqual(1);
+        await expect
+          .poll(
+            () =>
+              airbyte.requests.filter(({ key }) => key === "POST /api/v1/source_definitions/list_for_workspace").length
+          )
+          .toBeGreaterThanOrEqual(1);
       });
 
-      test("should open 'New connection' page", async () => {
-        // Set up API interceptors to track the requests made when opening new connection page
-        const sourcesListRequests: Request[] = [];
-        const sourceDefinitionsRequests: Request[] = [];
-
-        // Intercept sources list request
-        await page.route("**/api/v1/sources/list", (route) => {
-          sourcesListRequests.push(route.request());
-          return route.continue();
-        });
-
-        // Intercept source definitions request
-        await page.route("**/api/v1/source_definitions/list_for_workspace", (route) => {
-          sourceDefinitionsRequests.push(route.request());
-          return route.continue();
-        });
-
-        // Navigate to connections list page
-        await page.goto(`/workspaces/${workspaceId}/connections`, { timeout: 20000 });
-
-        // Click new connection button to open the creation flow
-        await page.locator('[data-testid="new-connection-button"]').click({ timeout: 15000 });
-
-        // Verify that the required API calls were made
-        await expect.poll(() => sourcesListRequests.length).toBeGreaterThanOrEqual(1);
-        await expect.poll(() => sourceDefinitionsRequests.length).toBeGreaterThanOrEqual(1);
-
-        // Verify we're on the new connection page
-        return expect(page).toHaveURL(/\/connections\/new-connection$/, { timeout: 20000 });
+      test("should select existing Source", async ({ page, airbyte }) => {
+        await expect(page.getByTestId("radio-button-tile-sourceType-existing")).toBeChecked();
+        await expect(page.getByTestId("radio-button-tile-sourceType-new")).not.toBeChecked();
+        await page.getByTestId(`select-existing-source-${airbyte.source.name}`).click();
+        await expect(page.getByTestId("radio-button-tile-destinationType-existing")).toBeVisible();
       });
 
-      test("should select existing Source", async () => {
-        // Continue from previous test - we're already on the new connection page
-        // Verify that "existing connector" type is selected for source by default
-        await expect(page.locator('[data-testid="radio-button-tile-sourceType-existing"]')).toBeChecked({
-          timeout: 10000,
-        });
-        await expect(page.locator('[data-testid="radio-button-tile-sourceType-new"]')).not.toBeChecked({
-          timeout: 10000,
-        });
-
-        // Select the source we created from the list
-        const sourceSelector = `button[data-testid="select-existing-source-${source.name}"]`;
-        await page.locator(sourceSelector).click({ timeout: 10000 });
-
-        // Verify that selecting the source progressed us to destination selection
-        // (The source section should now show as completed/selected)
-        return expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
-          timeout: 20000,
-        });
+      test("should select existing Destination", async ({ page, airbyte }) => {
+        await page.getByTestId(`select-existing-source-${airbyte.source.name}`).click();
+        await expect(page.getByTestId("radio-button-tile-destinationType-existing")).toBeChecked();
+        await expect(page.getByTestId("radio-button-tile-destinationType-new")).not.toBeChecked();
+        await page.getByTestId(`select-existing-destination-${airbyte.destination.name}`).click();
+        await expect
+          .poll(() => airbyte.requests.filter(({ key }) => key === "POST /api/v1/commands/run/discover").length)
+          .toBeGreaterThanOrEqual(1);
       });
 
-      test("should select existing Destination", async () => {
-        // Continue from previous test - we're already on destination selection step
-        // Set up API interceptor for discover schema request before selecting destination
-        const discoverSchemaRequests: Request[] = [];
-        await page.route("**/commands/run/discover", (route) => {
-          discoverSchemaRequests.push(route.request());
-          return route.continue();
-        });
-
-        // Verify that "existing connector" type is selected for destination by default
-        await expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeChecked({
-          timeout: 10000,
-        });
-        await expect(page.locator('[data-testid="radio-button-tile-destinationType-new"]')).not.toBeChecked({
-          timeout: 10000,
-        });
-
-        // Select the destination we created from the list
-        const destinationSelector = `button[data-testid="select-existing-destination-${destination.name}"]`;
-        await page.locator(destinationSelector).click({ timeout: 10000 });
-
-        // Wait for discover schema request to be made
-        await expect.poll(() => discoverSchemaRequests.length).toBeGreaterThanOrEqual(1);
-      });
-
-      test("should redirect to 'New connection' configuration page with stream table", async () => {
-        // Continue from previous test - after selecting destination, we should be redirected automatically
-        // Verify we're redirected to the configuration page with stream table
-        await expect(page).toHaveURL(/\/connections\/new-connection\/configure/, { timeout: 15000 });
-
-        // Verify the streams table is present
-        const streamsTable = page.locator('table[data-testid="sync-catalog-table"]');
-        await expect(streamsTable).toBeVisible({ timeout: 30000 });
+      test("should redirect to 'New connection' configuration page with stream table", async ({ page, airbyte }) => {
+        await page.getByTestId(`select-existing-source-${airbyte.source.name}`).click();
+        await page.getByTestId(`select-existing-destination-${airbyte.destination.name}`).click();
+        await expect(page).toHaveURL(/\/connections\/new-connection\/configure/);
+        const streamsTable = page.getByTestId("sync-catalog-table");
+        await expect(streamsTable).toBeVisible();
         await streamsTable.scrollIntoViewIfNeeded();
-
-        // Verify stream rows are loaded
-        const streamRows = page.locator('[data-testid^="row-depth-1-stream"]');
-        return expect(streamRows.first()).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('[data-testid^="row-depth-1-stream"]').first()).toBeVisible();
       });
     });
   });
 
   test.describe("Streams table", () => {
-    test.describe.configure({ mode: "serial" });
-
-    let page: Page;
-    let context: BrowserContext;
-    let source: SourceRead;
-    let destination: DestinationRead;
-
-    test.beforeAll(async ({ browser, request }) => {
-      // Serial tests share source/destination and page to avoid redundant setup overhead
-      const testResources = await connectionTestHelpers.setupPostgresConnectionTest(
-        request,
-        workspaceId,
-        "Test source - Streams table",
-        "Test destination - Streams table"
-      );
-      source = testResources.source;
-      destination = testResources.destination;
-
-      context = await browser.newContext();
-      page = await context.newPage();
-
-      await navigateToConnectionConfig(page, workspaceId, source, destination);
+    test.beforeEach(async ({ page, airbyte }) => {
+      await openConfiguration(page, airbyte);
     });
 
-    test.afterAll(async ({ request }) => {
-      await connectionTestHelpers.cleanupConnectionTest(request, {
-        sourceId: source?.sourceId,
-        destinationId: destination?.destinationId,
-      });
-      await page.close();
-      await context.close();
-    });
-
-    test("should have no streams checked by default", async () => {
+    test("should have no streams checked by default", async ({ page }) => {
       // Verify namespace checkbox is not checked
       const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
       await expect(namespaceCheckbox).not.toBeChecked({ timeout: 10000 });
@@ -196,7 +130,7 @@ test.describe("Connection - Create new connection", () => {
       }
     });
 
-    test("should verify namespace row", async () => {
+    test("should verify namespace row", async ({ page }) => {
       // Verify namespace checkbox is enabled but not checked
       const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
       await expect(namespaceCheckbox).toBeEnabled({ timeout: 10000 });
@@ -206,7 +140,7 @@ test.describe("Connection - Create new connection", () => {
       return namespaceHelpers.verifyNamespaceRow(page, "public");
     });
 
-    test("should show 'no selected streams' error", async () => {
+    test("should show 'no selected streams' error", async ({ page }) => {
       // Verify no selected streams error is displayed
       await expect(page.locator("text=Select at least 1 stream to sync.")).toBeVisible({ timeout: 10000 });
 
@@ -223,7 +157,7 @@ test.describe("Connection - Create new connection", () => {
       return expect(page.locator('[data-testid="next-creation-page"]')).toBeDisabled({ timeout: 10000 });
     });
 
-    test("should NOT show 'no selected streams' error", async () => {
+    test("should NOT show 'no selected streams' error", async ({ page }) => {
       // Toggle namespace checkbox to enable all streams
       await namespaceHelpers.toggleNamespaceCheckbox(page, "public", true);
 
@@ -246,7 +180,7 @@ test.describe("Connection - Create new connection", () => {
       return namespaceHelpers.toggleNamespaceCheckbox(page, "public", false);
     });
 
-    test("should not replace refresh schema button with form controls", async () => {
+    test("should not replace refresh schema button with form controls", async ({ page }) => {
       // Verify refresh schema button exists
       await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
 
@@ -268,7 +202,7 @@ test.describe("Connection - Create new connection", () => {
       return namespaceHelpers.toggleNamespaceCheckbox(page, "public", false);
     });
 
-    test("should enable all streams in namespace", async () => {
+    test("should enable all streams in namespace", async ({ page }) => {
       // Toggle namespace checkbox to enable all streams
       await namespaceHelpers.toggleNamespaceCheckbox(page, "public", true);
 
@@ -292,64 +226,11 @@ test.describe("Connection - Create new connection", () => {
   });
 
   test.describe("Stream", () => {
-    test.describe.configure({ mode: "serial" });
-
-    let page: Page;
-    let context: BrowserContext;
-    let source: SourceRead;
-    let destination: DestinationRead;
-
-    test.beforeAll(async ({ browser, request }) => {
-      // Serial tests share source/destination and page to avoid redundant setup overhead
-      const testResources = await connectionTestHelpers.setupPostgresConnectionTest(
-        request,
-        workspaceId,
-        "Test source - Stream",
-        "Test destination - Stream"
-      );
-      source = testResources.source;
-      destination = testResources.destination;
-
-      context = await browser.newContext();
-      page = await context.newPage();
-
-      await navigateToConnectionConfig(page, workspaceId, source, destination);
+    test.beforeEach(async ({ page, airbyte }) => {
+      await openConfiguration(page, airbyte);
     });
 
-    test.afterEach(async () => {
-      // Cleanup: clear search and reset the 3 known streams
-      const searchInput = page.locator('input[data-testid="sync-catalog-search"]');
-      await searchInput.clear().catch(() => {});
-
-      // Reset each of the 3 test streams (cars, cities, users)
-      for (const streamName of ["cars", "cities", "users"]) {
-        const streamRow = page.locator(`[data-testid="row-depth-1-stream-${streamName}"]`);
-        const checkbox = streamRow.locator('input[data-testid="sync-stream-checkbox"]');
-        const expandButton = streamRow.locator('button[data-testid="expand-collapse-stream-btn"]');
-
-        // Uncheck if checked
-        if (await checkbox.isChecked().catch(() => false)) {
-          await checkbox.uncheck({ force: true }).catch(() => {});
-        }
-
-        // Collapse if expanded
-        const isExpanded = await expandButton.getAttribute("aria-expanded").catch(() => "false");
-        if (isExpanded === "true") {
-          await expandButton.click().catch(() => {});
-        }
-      }
-    });
-
-    test.afterAll(async ({ request }) => {
-      await connectionTestHelpers.cleanupConnectionTest(request, {
-        sourceId: source?.sourceId,
-        destinationId: destination?.destinationId,
-      });
-      await page.close();
-      await context.close();
-    });
-
-    test("should enable and disable stream", async () => {
+    test("should enable and disable stream", async ({ page }) => {
       // Filter by stream name to find the users stream
       const usersStreamRow = await filterAndFindStream(page, "users");
 
@@ -375,7 +256,7 @@ test.describe("Connection - Create new connection", () => {
       return expect(usersStreamRow.locator("text=Cursor missing")).toBeVisible({ timeout: 10000 });
     });
 
-    test("should expand and collapse stream", async () => {
+    test("should expand and collapse stream", async ({ page }) => {
       // Filter by stream name to find the users stream
       const usersStreamRow = await filterAndFindStream(page, "users");
 
@@ -387,7 +268,7 @@ test.describe("Connection - Create new connection", () => {
       return expect(expandButton).toHaveAttribute("aria-expanded", "true", { timeout: 10000 });
     });
 
-    test("should enable field", async () => {
+    test("should enable field", async ({ page }) => {
       // Filter by stream name to find the users stream
       const usersStreamRow = await filterAndFindStream(page, "users");
 
@@ -440,7 +321,7 @@ test.describe("Connection - Create new connection", () => {
       return expect(namespaceCheckbox).toHaveAttribute("aria-checked", "mixed", { timeout: 10000 });
     });
 
-    test("should enable form submit after a stream is selected and configured", async () => {
+    test("should enable form submit after a stream is selected and configured", async ({ page }) => {
       // Filter by stream name to find the users stream
       const usersStreamRow = await filterAndFindStream(page, "users");
 
@@ -469,43 +350,9 @@ test.describe("Connection - Create new connection", () => {
   });
 
   test.describe("Submit form", () => {
-    test.describe.configure({ mode: "serial" });
-
-    let page: Page;
-    let context: BrowserContext;
-    let source: SourceRead;
-    let destination: DestinationRead;
-    let connectionId: string;
-
-    test.beforeAll(async ({ browser, request }) => {
-      // Serial tests share source/destination and page to avoid redundant setup overhead
-      const testResources = await connectionTestHelpers.setupPostgresConnectionTest(
-        request,
-        workspaceId,
-        "Test source - Submit",
-        "Test destination - Submit"
-      );
-      source = testResources.source;
-      destination = testResources.destination;
-
-      context = await browser.newContext();
-      page = await context.newPage();
-    });
-
-    test.afterAll(async ({ request }) => {
-      // Clean up all resources (connection, source, and destination)
-      await connectionTestHelpers.cleanupConnectionTest(request, {
-        connectionId,
-        sourceId: source?.sourceId,
-        destinationId: destination?.destinationId,
-      });
-      await page.close();
-      await context.close();
-    });
-
-    test("should set up a connection and redirect to connection overview page", async () => {
+    test("should set up a connection and redirect to connection overview page", async ({ page, airbyte }) => {
       // Navigate to the configuration page
-      await navigateToConnectionConfig(page, workspaceId, source, destination);
+      await openConfiguration(page, airbyte);
 
       // Filter by stream name to find users stream
       const usersStreamRow = await filterAndFindStream(page, "users");
@@ -541,18 +388,40 @@ test.describe("Connection - Create new connection", () => {
 
       // Get the request body to verify connection details
       const requestBody = createRequest.postDataJSON();
-      expect(requestBody.name).toBe(`${source.name} → ${destination.name}`);
+      expect(requestBody.name).toBe(`${airbyte.source.name} → ${airbyte.destination.name}`);
       expect(requestBody.scheduleType).toBe("manual");
 
       const responseBody = await response.json();
-      expect(responseBody.name).toBe(`${source.name} → ${destination.name}`);
+      expect(responseBody.name).toBe(`${airbyte.source.name} → ${airbyte.destination.name}`);
       expect(responseBody.scheduleType).toBe("manual");
 
-      connectionId = responseBody.connectionId;
+      const connectionId = responseBody.connectionId;
       expect(connectionId).toBeDefined();
 
       // Verify we're redirected to the connection overview page after creation
-      return expect(page).toHaveURL(new RegExp(`.*/connections/${connectionId}/status`), { timeout: 20000 });
+      expect(airbyte.creations).toHaveLength(1);
+      expect(airbyte.creations[0]).toMatchObject({
+        sourceId: airbyte.source.sourceId,
+        destinationId: airbyte.destination.destinationId,
+        syncCatalog: {
+          streams: expect.arrayContaining([
+            expect.objectContaining({
+              stream: expect.objectContaining({ name: "users", namespace: "public" }),
+              config: expect.objectContaining({
+                selected: true,
+                syncMode: "full_refresh",
+                destinationSyncMode: "overwrite",
+              }),
+            }),
+          ]),
+        },
+      });
+      expect(airbyte.creations[0].syncCatalog?.streams.filter(({ config }) => config?.selected)).toHaveLength(1);
+
+      await expect(page).toHaveURL(new RegExp(`.*/connections/${connectionId}/status`));
+      await page.reload();
+      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "pending");
+      expect(airbyte.connections[0].syncCatalog).toEqual(requestBody.syncCatalog);
     });
   });
 });

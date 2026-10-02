@@ -3,9 +3,12 @@ import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { connectionAPI, connectionUI, connectionTestHelpers } from "../../helpers/connection";
 import { test as mockedTest } from "../../helpers/frontendTest";
+import { fakerExistingConnectionScenario } from "../../helpers/mockApiState";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
 
 mockedTest.describe("Connection Status - mocked API", () => {
+  mockedTest.use({ airbyteScenario: fakerExistingConnectionScenario });
+
   mockedTest("renders pending status returned by the API", async ({ page, airbyte }) => {
     airbyte.connection.syncCatalog.streams[0].config!.selected = false;
     await page.goto(

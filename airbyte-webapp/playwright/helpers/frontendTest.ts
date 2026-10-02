@@ -1,16 +1,19 @@
-import type { MockAirbyte } from "./mockApi";
+import type { MockAirbyte, MockAirbyteScenario } from "./mockApi";
 
 import { test as base, expect } from "@playwright/test";
 
 import { createMockAirbyte } from "./mockApi";
 
-export const test = base.extend<{ airbyte: MockAirbyte }>({
+export const test = base.extend<{ airbyte: MockAirbyte; airbyteScenario: MockAirbyteScenario | undefined }>({
+  airbyteScenario: [undefined, { option: true }],
   storageState: { cookies: [], origins: [] },
   serviceWorkers: "block",
-  // Playwright requires fixture dependencies to use an object pattern.
-  // eslint-disable-next-line no-empty-pattern
-  airbyte: async ({}, use) => {
-    const airbyte = createMockAirbyte();
+  airbyte: async ({ airbyteScenario }, use) => {
+    if (!airbyteScenario) {
+      throw new Error("Frontend acceptance tests require an airbyteScenario supplied through test.use()");
+    }
+
+    const airbyte = createMockAirbyte(airbyteScenario);
     await use(airbyte);
     airbyte.assertNoUnexpectedRequests();
   },
