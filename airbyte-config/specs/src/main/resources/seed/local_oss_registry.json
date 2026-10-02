@@ -1456,7 +1456,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations",
         "releaseCandidates": {
-          "3.1.2": {
+          "3.2.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 300,
@@ -1539,7 +1539,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "22f6c74f-5699-40ff-833c-4a879ea40133",
-            "dockerImageTag": "3.1.2",
+            "dockerImageTag": "3.2.0",
             "dockerRepository": "airbyte/destination-bigquery",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery",
             "externalDocumentationUrls": [
@@ -1576,33 +1576,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Sunil Kuruba",
-                "commit_author_email": "sunil.kuruba@airbyte.io",
-                "commit_sha": "55891eaefc1c027d50623e028f189eb105ba1072",
-                "commit_timestamp": "2026-09-10T14:12:04-07:00"
+                "commit_author": "Johnny Schmidt",
+                "commit_author_email": "john.schmidt@airbyte.io",
+                "commit_sha": "5c1981fa05d7c22f17280d4945e886b76a2b1001",
+                "commit_timestamp": "2026-10-02T13:27:24-07:00"
               },
               "release": {
-                "attributed_to": "octavia-bot-admin",
-                "attributed_to_kind": "bot",
-                "merge_commit_sha": "55891eaefc1c027d50623e028f189eb105ba1072",
-                "merged_at": "2026-09-10T21:12:05Z",
+                "attributed_to": "johnny-schmidt",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "5c1981fa05d7c22f17280d4945e886b76a2b1001",
+                "merged_at": "2026-10-02T20:27:25Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 270477162,
-                "pr_author_login": "sunil-kuruba",
+                "pr_author_id": 173103728,
+                "pr_author_login": "johnny-schmidt",
                 "pr_author_type": "User",
-                "pr_merged_by_login": "octavia-bot-admin",
-                "pr_merged_by_type": "Bot",
-                "pr_number": 85804,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85804",
-                "released_at": "2026-09-10T21:12:05Z",
+                "pr_merged_by_login": "johnny-schmidt",
+                "pr_merged_by_type": "User",
+                "pr_number": 87631,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/87631",
+                "released_at": "2026-10-02T20:27:25Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-bigquery/3.1.2.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-bigquery/3.2.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-bigquery/3.1.2/metadata.yaml",
-                "metadata_last_modified": "2026-09-10T21:16:53.385547+00:00",
-                "registry_entry_generated_at": "2026-09-10T21:16:53.385547+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-bigquery/3.2.0/metadata.yaml",
+                "metadata_last_modified": "2026-10-02T20:32:46.756200+00:00",
+                "registry_entry_generated_at": "2026-10-02T20:32:46.756200+00:00"
               }
             },
             "githubIssueLabel": "destination-bigquery",
@@ -4517,7 +4517,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations",
         "releaseCandidates": {
-          "4.0.4": {
+          "4.0.5": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 100,
@@ -4576,7 +4576,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "072d5540-f236-4294-ba7c-ade8fd918496",
-            "dockerImageTag": "4.0.4",
+            "dockerImageTag": "4.0.5",
             "dockerRepository": "airbyte/destination-databricks",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks",
             "externalDocumentationUrls": [
@@ -4610,31 +4610,31 @@
               "git": {
                 "commit_author": "devin-ai-integration[bot]",
                 "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "026ccbd8b0a5fa954e70d6961761115828168282",
-                "commit_timestamp": "2026-10-01T22:48:49+00:00"
+                "commit_sha": "87d1e155313f56450e3c6bccb55a0957179ed1af",
+                "commit_timestamp": "2026-10-02T22:36:23+00:00"
               },
               "release": {
                 "attributed_to": "devin-ai-integration",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "026ccbd8b0a5fa954e70d6961761115828168282",
-                "merged_at": "2026-10-01T22:48:50Z",
+                "merge_commit_sha": "87d1e155313f56450e3c6bccb55a0957179ed1af",
+                "merged_at": "2026-10-02T22:36:24Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 158243242,
                 "pr_author_login": "devin-ai-integration",
                 "pr_author_type": "Bot",
                 "pr_merged_by_login": "octavia-bot-admin",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 83709,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/83709",
-                "released_at": "2026-10-01T22:48:50Z",
+                "pr_number": 87651,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/87651",
+                "released_at": "2026-10-02T22:36:24Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-databricks/4.0.4.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-databricks/4.0.5.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-databricks/4.0.4/metadata.yaml",
-                "metadata_last_modified": "2026-10-01T22:53:24.120901+00:00",
-                "registry_entry_generated_at": "2026-10-01T22:53:24.120901+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-databricks/4.0.5/metadata.yaml",
+                "metadata_last_modified": "2026-10-02T22:39:59.313779+00:00",
+                "registry_entry_generated_at": "2026-10-02T22:39:59.313779+00:00"
               }
             },
             "githubIssueLabel": "destination-databricks",
@@ -10556,7 +10556,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "d4353156-9217-4cad-8dd7-c108fd4f74cf",
-      "dockerImageTag": "2.2.22",
+      "dockerImageTag": "2.2.23",
       "dockerRepository": "airbyte/destination-mssql",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql",
       "externalDocumentationUrls": [
@@ -10588,10 +10588,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "devin-ai-integration[bot]",
-          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "550be09b12e57099658a65fc60ff7d12931dca50",
-          "commit_timestamp": "2026-09-10T00:08:56+00:00"
+          "commit_author": "octavia-bot[bot]",
+          "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+          "commit_sha": "7acae038fd3d5c6406a9c94013fadfeaf9215994",
+          "commit_timestamp": "2026-10-01T14:51:07-07:00"
         },
         "metrics": {
           "all": {
@@ -10608,27 +10608,27 @@
           }
         },
         "release": {
-          "attributed_to": "devin-ai-integration",
-          "attributed_to_kind": "bot",
-          "merge_commit_sha": "550be09b12e57099658a65fc60ff7d12931dca50",
-          "merged_at": "2026-09-10T00:08:56Z",
+          "attributed_to": "sunil-kuruba",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "7acae038fd3d5c6406a9c94013fadfeaf9215994",
+          "merged_at": "2026-10-01T21:51:07Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 158243242,
-          "pr_author_login": "devin-ai-integration",
+          "pr_author_id": 108746235,
+          "pr_author_login": "octavia-bot",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "octavia-bot-admin",
-          "pr_merged_by_type": "Bot",
-          "pr_number": 85768,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85768",
-          "released_at": "2026-09-10T00:08:56Z",
+          "pr_merged_by_login": "sunil-kuruba",
+          "pr_merged_by_type": "User",
+          "pr_number": 87618,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/87618",
+          "released_at": "2026-10-01T21:51:07Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-mssql/2.2.22.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-mssql/2.2.23.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-mssql/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-10T00:13:15.491195+00:00",
-          "registry_entry_generated_at": "2026-09-10T00:13:15.491195+00:00"
+          "metadata_last_modified": "2026-10-01T21:56:08.791912+00:00",
+          "registry_entry_generated_at": "2026-10-01T21:56:08.791912+00:00"
         }
       },
       "githubIssueLabel": "destination-mssql",
@@ -27832,7 +27832,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
         "releaseCandidates": {
-          "6.0.2": {
+          "6.0.4": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -27880,7 +27880,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "6.0.2",
+            "dockerImageTag": "6.0.4",
             "dockerRepository": "airbyte/source-amazon-seller-partner",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
             "erdUrl": "https://dbdocs.io/airbyteio/source-amazon-seller-partner?view=relationships",
@@ -27913,33 +27913,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "479c290d1134f8f9bf236afc5112067ce38da7ad",
-                "commit_timestamp": "2026-09-29T08:02:39+00:00"
+                "commit_author": "Maddie Kashyap",
+                "commit_author_email": "maddie.kashyap@airbyte.io",
+                "commit_sha": "d9618f61f72fe6fc1a49ee00f1d0cd6ea5b3285f",
+                "commit_timestamp": "2026-10-02T15:20:35-04:00"
               },
               "release": {
-                "attributed_to": "octavia-bot-hoard",
-                "attributed_to_kind": "bot",
-                "merge_commit_sha": "479c290d1134f8f9bf236afc5112067ce38da7ad",
-                "merged_at": "2026-09-29T08:02:40Z",
+                "attributed_to": "maddiekashyapAB",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "d9618f61f72fe6fc1a49ee00f1d0cd6ea5b3285f",
+                "merged_at": "2026-10-02T19:20:36Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "octavia-bot-hoard",
-                "pr_merged_by_type": "Bot",
-                "pr_number": 87083,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/87083",
-                "released_at": "2026-09-29T08:02:40Z",
+                "pr_author_id": 300578413,
+                "pr_author_login": "maddiekashyapAB",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "maddiekashyapAB",
+                "pr_merged_by_type": "User",
+                "pr_number": 86942,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/86942",
+                "released_at": "2026-10-02T19:20:36Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/6.0.2.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/6.0.4.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/6.0.2/metadata.yaml",
-                "metadata_last_modified": "2026-09-29T08:07:15.965671+00:00",
-                "registry_entry_generated_at": "2026-09-29T08:07:15.965671+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/6.0.4/metadata.yaml",
+                "metadata_last_modified": "2026-10-02T19:25:14.288731+00:00",
+                "registry_entry_generated_at": "2026-10-02T19:25:14.288731+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-seller-partner",
@@ -31333,7 +31333,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/ashby-migrations",
         "releaseCandidates": {
-          "1.4.0": {
+          "1.5.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 100,
@@ -31367,7 +31367,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "1.4.0",
+            "dockerImageTag": "1.5.0",
             "dockerRepository": "airbyte/source-ashby",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/ashby",
             "externalDocumentationUrls": [
@@ -31384,33 +31384,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "71e78003ce75e5d2902f43e88b31cfc81cebede7",
-                "commit_timestamp": "2026-09-30T13:26:11-07:00"
+                "commit_author": "Henry Bogardus",
+                "commit_author_email": "henry.bogardus@miter.com",
+                "commit_sha": "22bdf2e3d685592aed123be2f9dfe573fca6792c",
+                "commit_timestamp": "2026-10-02T00:53:26-07:00"
               },
               "release": {
-                "attributed_to": "pnilan",
+                "attributed_to": "bazarnov",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "71e78003ce75e5d2902f43e88b31cfc81cebede7",
-                "merged_at": "2026-09-30T20:26:12Z",
+                "merge_commit_sha": "22bdf2e3d685592aed123be2f9dfe573fca6792c",
+                "merged_at": "2026-10-02T07:53:27Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "pnilan",
+                "pr_author_id": 10099980,
+                "pr_author_login": "usbogie",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "bazarnov",
                 "pr_merged_by_type": "User",
-                "pr_number": 87051,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/87051",
-                "released_at": "2026-09-30T20:26:12Z",
+                "pr_number": 87597,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/87597",
+                "released_at": "2026-10-02T07:53:27Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.4.0.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.5.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-ashby/1.4.0/metadata.yaml",
-                "metadata_last_modified": "2026-09-30T20:31:06.316044+00:00",
-                "registry_entry_generated_at": "2026-09-30T20:31:06.316044+00:00"
+                "metadata_file_path": "metadata/airbyte/source-ashby/1.5.0/metadata.yaml",
+                "metadata_last_modified": "2026-10-02T07:57:50.515048+00:00",
+                "registry_entry_generated_at": "2026-10-02T07:57:50.515048+00:00"
               }
             },
             "githubIssueLabel": "source-ashby",
@@ -34602,36 +34602,28 @@
         "sl": 100
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/java-connector-base:2.0.0@sha256:5a1a21c75c5e1282606de9fa539ba136520abe2fbd013058e988bb0297a9f454"
+        "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+      },
+      "connectorIPCOptions": {
+        "dataChannel": {
+          "supportedSerialization": [
+            "JSONL",
+            "PROTOBUF"
+          ],
+          "supportedTransport": [
+            "SOCKET",
+            "STDIO"
+          ],
+          "version": "0.0.2"
+        }
       },
       "connectorTestSuitesOptions": [
         {
           "suite": "unitTests"
-        },
-        {
-          "suite": "integrationTests",
-          "testSecrets": [
-            {
-              "fileName": "credentials.json",
-              "name": "SECRET_SOURCE-BIGQUERY_CREDENTIALS__CREDS",
-              "secretStore": {
-                "alias": "airbyte-connector-testing-secret-store",
-                "type": "GSM"
-              }
-            },
-            {
-              "fileName": "sat-config.json",
-              "name": "SECRET_SOURCE-BIGQUERY_SAT__CREDS",
-              "secretStore": {
-                "alias": "airbyte-connector-testing-secret-store",
-                "type": "GSM"
-              }
-            }
-          ]
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.4.5",
+      "dockerImageTag": "1.0.0",
       "dockerRepository": "airbyte/source-bigquery",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/bigquery",
       "externalDocumentationUrls": [
@@ -34639,6 +34631,16 @@
           "title": "BigQuery REST API",
           "type": "api_reference",
           "url": "https://cloud.google.com/bigquery/docs/reference/rest"
+        },
+        {
+          "title": "BigQuery Storage Read API",
+          "type": "api_reference",
+          "url": "https://cloud.google.com/bigquery/docs/reference/storage"
+        },
+        {
+          "title": "BigQuery JDBC driver (google-cloud-bigquery-jdbc)",
+          "type": "code_repository",
+          "url": "https://github.com/googleapis/google-cloud-java/tree/main/java-bigquery-jdbc"
         },
         {
           "title": "Release notes",
@@ -34658,10 +34660,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Matt Bayley",
-          "commit_author_email": "31358253+mwbayley@users.noreply.github.com",
-          "commit_sha": "f8070555226298fb194c03a736dc12a2ec2a0e8a",
-          "commit_timestamp": "2026-01-21T11:07:39-08:00"
+          "commit_author": "Rodi Reich Zilberman",
+          "commit_author_email": "rodi@airbyte.io",
+          "commit_sha": "c7865ecaf9680571ac96be07fa770fc73d717544",
+          "commit_timestamp": "2026-10-01T19:43:51-07:00"
         },
         "metrics": {
           "all": {
@@ -34677,12 +34679,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-bigquery/0.4.5.spdx.json",
+        "release": {
+          "attributed_to": "rodireich",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "c7865ecaf9680571ac96be07fa770fc73d717544",
+          "merged_at": "2026-10-02T02:43:52Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 867491,
+          "pr_author_login": "rodireich",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "rodireich",
+          "pr_merged_by_type": "User",
+          "pr_number": 86950,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86950",
+          "released_at": "2026-10-02T02:43:52Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-bigquery/1.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-bigquery/latest/metadata.yaml",
-          "metadata_last_modified": "2026-01-21T19:13:04.744000+00:00",
-          "registry_entry_generated_at": "2026-01-21T19:14:13.567065"
+          "metadata_last_modified": "2026-10-02T02:50:05.496356+00:00",
+          "registry_entry_generated_at": "2026-10-02T02:50:05.496356+00:00"
         }
       },
       "githubIssueLabel": "source-bigquery",
@@ -34690,32 +34708,89 @@
       "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-bigquery/latest/icon.svg",
       "language": "java",
       "license": "ELv2",
+      "maxSecondsBetweenMessages": 7200,
       "name": "BigQuery",
       "packageInfo": {},
       "public": true,
-      "releaseStage": "alpha",
-      "releases": {},
+      "releaseStage": "generally_available",
+      "releases": {
+        "breakingChanges": {
+          "1.0.0": {
+            "deadlineAction": "auto_upgrade",
+            "message": "**Version 1.0.0 rebuilds the BigQuery source on Airbyte's Bulk CDK and changes the schema of most streams, so every connection must refresh its source schema before its first sync on 1.0.0.**\n**What changed:** `DATE`, `DATETIME`, `TIME` and `TIMESTAMP` columns are typed as Airbyte date and time types instead of strings, `JSON` columns as JSON, and `BYTES` columns declare their base64 encoding; `STRUCT` and `ARRAY` columns carry their nested schema; `PRIMARY KEY` constraints become source-defined primary keys; only columns of a supported cursor type can be chosen as the incremental cursor; `DATE` and `DATETIME` values change format; and the credentials must be a service account key. Saved configurations and incremental cursor state carry over. On Airbyte Cloud the connector reads tables through the BigQuery Storage Read API, and full refresh syncs now resume after an interruption.\n**What to do:** refresh the source schema of every connection before its next sync; until then, streams with a changed column type fail with an error that asks for the refresh. If a sync then fails because of the type change, refresh the affected incremental append or dedup streams with **Refresh and retain records**. Connections whose cursor is a `BOOL`, `BYTES`, `JSON`, `STRUCT` or `ARRAY` column must choose a new cursor, and sources without a service account key must add one. See the [migration guide](https://docs.airbyte.com/integrations/sources/bigquery-migrations). ",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/bigquery-migrations#1.0.0",
+            "upgradeDeadline": "2026-12-01"
+          }
+        },
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/bigquery-migrations"
+      },
       "sourceDefinitionId": "bfd1ddf8-ae8a-4620-b1d7-55597d2ba08c",
       "sourceType": "database",
       "spec": {
         "connectionSpecification": {
           "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "groups": [
+            {
+              "id": "connection",
+              "title": "Connection"
+            },
+            {
+              "id": "advanced",
+              "title": "Advanced"
+            }
+          ],
           "properties": {
             "credentials_json": {
               "airbyte_secret": true,
-              "description": "The contents of your Service Account Key JSON file. See the <a href=\"https://docs.airbyte.com/integrations/sources/bigquery#setup-the-bigquery-source-in-airbyte\">docs</a> for more information on how to obtain this key.",
-              "title": "Credentials JSON",
+              "always_show": true,
+              "description": "The contents of the JSON service account key. Check out the <a href=\"https://docs.airbyte.com/integrations/sources/bigquery#service-account-key\">docs</a> if you need help generating this key.",
+              "group": "connection",
+              "order": 2,
+              "title": "Service Account Key JSON",
               "type": "string"
             },
             "dataset_id": {
-              "description": "The dataset ID to search for tables and views. If you are only loading data from one dataset, setting this option could result in much faster schema discovery.",
-              "title": "Default Dataset ID",
+              "description": "The BigQuery dataset to read tables and views from. Leave empty to discover every dataset of the project; setting it makes schema discovery much faster on projects with many datasets. Read more <a href=\"https://cloud.google.com/bigquery/docs/datasets-intro\">here</a>.",
+              "group": "connection",
+              "order": 1,
+              "title": "Dataset ID",
               "type": "string"
             },
+            "job_project_id": {
+              "description": "Optional. The GCP project ID where BigQuery query jobs are run. When set, the queries of a sync run against this project's quota and billing instead of the data project's. This isolates the concurrent query quota between workloads (e.g. data extraction vs. analytics) and allows reading from a project in which the service account only has data access. The service account must have the BigQuery Job User role on this project. If not set, jobs run in the data project (Project ID above).",
+              "group": "advanced",
+              "order": 3,
+              "title": "Job Execution Project ID",
+              "type": "string"
+            },
+            "max_db_connections": {
+              "always_show": true,
+              "default": 1,
+              "description": "Not configurable on self-managed Airbyte, where streams are read one at a time. Airbyte Cloud reads several streams concurrently.",
+              "group": "advanced",
+              "minimum": 1,
+              "order": 4,
+              "readOnly": true,
+              "title": "Max Concurrent Queries to Database",
+              "type": "integer"
+            },
             "project_id": {
-              "description": "The GCP project ID for the project containing the target BigQuery dataset.",
+              "description": "The GCP project ID for the project containing the BigQuery datasets to read from. Read more <a href=\"https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects\">here</a>.",
+              "group": "connection",
+              "order": 0,
               "title": "Project ID",
               "type": "string"
+            },
+            "use_storage_read_api": {
+              "always_show": true,
+              "default": false,
+              "description": "Not available on self-managed Airbyte, where tables are read through the standard query API. Airbyte Cloud reads tables through the BigQuery Storage Read API for high throughput.",
+              "group": "advanced",
+              "order": 5,
+              "readOnly": true,
+              "title": "Use the BigQuery Storage Read API",
+              "type": "boolean"
             }
           },
           "required": [
@@ -34727,16 +34802,10 @@
         },
         "documentationUrl": "https://docs.airbyte.com/integrations/sources/bigquery",
         "supported_destination_sync_modes": [],
-        "supported_sync_modes": [
-          "overwrite",
-          "append",
-          "append_dedup"
-        ],
         "supportsDBT": false,
-        "supportsIncremental": true,
         "supportsNormalization": false
       },
-      "supportLevel": "community",
+      "supportLevel": "certified",
       "supportsDataActivation": false,
       "supportsFileTransfer": false,
       "tags": [
@@ -71432,7 +71501,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.5",
+      "dockerImageTag": "1.0.0",
       "dockerRepository": "airbyte/source-granola",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/granola",
       "externalDocumentationUrls": [
@@ -71446,8 +71515,8 @@
         "git": {
           "commit_author": "Maddie Kashyap",
           "commit_author_email": "maddie.kashyap@airbyte.io",
-          "commit_sha": "541b5b889864a586a28dde3d4d6f07a6fb63a0b4",
-          "commit_timestamp": "2026-09-29T12:55:56-04:00"
+          "commit_sha": "a901633ffea34ee34738e50d222207185809fc5c",
+          "commit_timestamp": "2026-10-02T17:43:21-04:00"
         },
         "metrics": {
           "all": {
@@ -71466,25 +71535,25 @@
         "release": {
           "attributed_to": "maddiekashyapAB",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "541b5b889864a586a28dde3d4d6f07a6fb63a0b4",
-          "merged_at": "2026-09-29T16:55:57Z",
+          "merge_commit_sha": "a901633ffea34ee34738e50d222207185809fc5c",
+          "merged_at": "2026-10-02T21:43:21Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 300578413,
           "pr_author_login": "maddiekashyapAB",
           "pr_author_type": "User",
           "pr_merged_by_login": "maddiekashyapAB",
           "pr_merged_by_type": "User",
-          "pr_number": 86915,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86915",
-          "released_at": "2026-09-29T16:55:57Z",
+          "pr_number": 87011,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/87011",
+          "released_at": "2026-10-02T21:43:21Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/0.3.5.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/1.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-granola/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-29T17:00:48.755848+00:00",
-          "registry_entry_generated_at": "2026-09-29T17:00:48.755848+00:00"
+          "metadata_last_modified": "2026-10-02T21:47:57.082537+00:00",
+          "registry_entry_generated_at": "2026-10-02T21:47:57.082537+00:00"
         }
       },
       "githubIssueLabel": "source-granola",
@@ -71497,6 +71566,23 @@
       "public": true,
       "releaseStage": "alpha",
       "releases": {
+        "breakingChanges": {
+          "1.0.0": {
+            "deadlineAction": "auto_upgrade",
+            "message": "The `notes` stream now syncs incrementally on `updated_at` instead of `created_at` so edited notes are replicated. If you sync `notes` in Incremental Append mode, the first sync after upgrading appends a second copy of each note; see the migration guide before clearing the stream, as clearing can permanently remove deleted notes. Deduped and overwrite connections need no action. Migration guide: https://docs.airbyte.com/integrations/sources/granola-migrations#upgrading-to-100",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/granola-migrations#1.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "notes"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-11-02"
+          }
+        },
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/granola-migrations",
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -71531,7 +71617,7 @@
               "type": "string"
             },
             "start_date": {
-              "description": "The earliest date from which to start replicating notes, in YYYY-MM-DD format.",
+              "description": "The earliest date from which to replicate notes, based on when they were last updated, in YYYY-MM-DD format.",
               "examples": [
                 "2024-01-01"
               ],
@@ -71618,7 +71704,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.4.0",
+      "dockerImageTag": "1.5.0",
       "dockerRepository": "airbyte/source-greenhouse",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse",
       "externalDocumentationUrls": [
@@ -71652,8 +71738,8 @@
         "git": {
           "commit_author": "Anatolii Yatsuk",
           "commit_author_email": "tolikyatsuk@gmail.com",
-          "commit_sha": "299db22230312f2bb7929bf4b8d4ef3ed792fa83",
-          "commit_timestamp": "2026-09-28T17:09:17+03:00"
+          "commit_sha": "0ee65ffb114fcaa525bae43692c937843e215457",
+          "commit_timestamp": "2026-10-02T19:50:34+03:00"
         },
         "metrics": {
           "all": {
@@ -71672,25 +71758,25 @@
         "release": {
           "attributed_to": "tolik0",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "299db22230312f2bb7929bf4b8d4ef3ed792fa83",
-          "merged_at": "2026-09-28T14:09:18Z",
+          "merge_commit_sha": "0ee65ffb114fcaa525bae43692c937843e215457",
+          "merged_at": "2026-10-02T16:50:35Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 35109939,
           "pr_author_login": "tolik0",
           "pr_author_type": "User",
           "pr_merged_by_login": "tolik0",
           "pr_merged_by_type": "User",
-          "pr_number": 86478,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86478",
-          "released_at": "2026-09-28T14:09:18Z",
+          "pr_number": 87442,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/87442",
+          "released_at": "2026-10-02T16:50:35Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.4.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.5.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-greenhouse/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-28T14:13:38.322823+00:00",
-          "registry_entry_generated_at": "2026-09-28T14:13:38.322823+00:00"
+          "metadata_last_modified": "2026-10-02T16:55:20.861678+00:00",
+          "registry_entry_generated_at": "2026-10-02T16:55:20.861678+00:00"
         }
       },
       "githubIssueLabel": "source-greenhouse",
@@ -71863,7 +71949,7 @@
                 "refresh_token",
                 "expires_at"
               ],
-              "scope": "harvest:application_stages:list harvest:applications:list harvest:applied_candidate_tags:list harvest:approval_flows:list harvest:approver_groups:list harvest:approvers:list harvest:attachments:list harvest:candidate_attribute_types:list harvest:candidate_educations:list harvest:candidate_employments:list harvest:candidate_tags:list harvest:candidates:list harvest:close_reasons:list harvest:custom_field_options:list harvest:custom_fields:list harvest:demographic_answer_options:list harvest:demographic_answers:list harvest:demographic_question_sets:list harvest:demographic_questions:list harvest:departments:list harvest:eeoc:list harvest:email_templates:list harvest:interview_kits:list harvest:interviewer_tags:list harvest:interviewers:list harvest:interviews:list harvest:job_hiring_managers:list harvest:job_interview_stages:list harvest:job_interviews:list harvest:job_notes:list harvest:job_owners:list harvest:job_posts:list harvest:jobs:list harvest:notes:list harvest:offers:list harvest:offices:list harvest:openings:list harvest:prospect_details:list harvest:prospect_pool_stages:list harvest:prospect_pools:list harvest:referrers:list harvest:rejection_details:list harvest:rejection_reasons:list harvest:scorecard_candidate_attributes:list harvest:scorecard_questions:list harvest:scorecards:list harvest:sources:list harvest:user_emails:list harvest:user_job_permissions:list harvest:user_roles:list harvest:users:list",
+              "scope": "harvest:application_stages:list harvest:applications:list harvest:applied_candidate_tags:list harvest:approval_flows:list harvest:approver_groups:list harvest:approvers:list harvest:attachments:list harvest:candidate_attribute_types:list harvest:candidate_educations:list harvest:candidate_employments:list harvest:candidate_tags:list harvest:candidates:list harvest:close_reasons:list harvest:custom_field_options:list harvest:custom_fields:list harvest:demographic_answer_options:list harvest:demographic_answers:list harvest:demographic_question_sets:list harvest:demographic_questions:list harvest:departments:list harvest:eeoc:list harvest:email_templates:list harvest:interview_kits:list harvest:interviewer_tags:list harvest:interviewers:list harvest:interviews:list harvest:job_candidate_attributes:list harvest:job_hiring_managers:list harvest:job_interview_stages:list harvest:job_interviews:list harvest:job_notes:list harvest:job_owners:list harvest:job_post_locations:list harvest:job_posts:list harvest:jobs:list harvest:notes:list harvest:offers:list harvest:offices:list harvest:openings:list harvest:prospect_details:list harvest:prospect_pool_stages:list harvest:prospect_pools:list harvest:referrers:list harvest:rejection_details:list harvest:rejection_reasons:list harvest:scorecard_candidate_attributes:list harvest:scorecard_question_answer_options:list harvest:scorecard_question_answers:list harvest:scorecard_question_options:list harvest:scorecard_questions:list harvest:scorecards:list harvest:sources:list harvest:user_emails:list harvest:user_job_permissions:list harvest:user_roles:list harvest:users:list",
               "scopes_join_strategy": "space"
             }
           },
@@ -111836,15 +111922,15 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.1.0",
+      "dockerImageTag": "0.2.0",
       "dockerRepository": "airbyte/source-ramp",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/ramp",
       "generated": {
         "git": {
           "commit_author": "Anatolii Yatsuk",
           "commit_author_email": "tolikyatsuk@gmail.com",
-          "commit_sha": "38f4720d4874e72bab28b0fabda79806563676f0",
-          "commit_timestamp": "2026-10-01T16:35:21+03:00"
+          "commit_sha": "f863db6249cd7a19f1d40663d6950cc728c39797",
+          "commit_timestamp": "2026-10-02T20:00:50+03:00"
         },
         "metrics": {
           "all": {
@@ -111863,25 +111949,25 @@
         "release": {
           "attributed_to": "tolik0",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "38f4720d4874e72bab28b0fabda79806563676f0",
-          "merged_at": "2026-10-01T13:35:22Z",
+          "merge_commit_sha": "f863db6249cd7a19f1d40663d6950cc728c39797",
+          "merged_at": "2026-10-02T17:00:51Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 35109939,
           "pr_author_login": "tolik0",
           "pr_author_type": "User",
           "pr_merged_by_login": "tolik0",
           "pr_merged_by_type": "User",
-          "pr_number": 86957,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86957",
-          "released_at": "2026-10-01T13:35:22Z",
+          "pr_number": 87610,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/87610",
+          "released_at": "2026-10-02T17:00:51Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ramp/0.1.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ramp/0.2.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-ramp/latest/metadata.yaml",
-          "metadata_last_modified": "2026-10-01T13:40:14.303637+00:00",
-          "registry_entry_generated_at": "2026-10-01T13:40:14.303637+00:00"
+          "metadata_last_modified": "2026-10-02T17:05:47.618655+00:00",
+          "registry_entry_generated_at": "2026-10-02T17:05:47.618655+00:00"
         }
       },
       "githubIssueLabel": "source-ramp",
@@ -111920,7 +112006,7 @@
             },
             "client_id": {
               "airbyte_secret": true,
-              "description": "Client ID of the Ramp developer app (Ramp > Company > Developer). The app needs the Client Credentials grant and the scopes `transactions:read`, `cards:read` and `reimbursements:read`.",
+              "description": "Client ID of the Ramp developer app (Ramp > Company > Developer). The app needs the Client Credentials grant and the scopes `transactions:read`, `cards:read` and `reimbursements:read`. Every other stream needs its own read scope, such as `users:read` or `bills:read`, granted only if you sync it.",
               "order": 0,
               "title": "Ramp Client ID",
               "type": "string"
@@ -111934,7 +112020,7 @@
             },
             "start_date": {
               "default": "2019-01-01T00:00:00Z",
-              "description": "Only transactions and reimbursements changed on or after this date are synced on the first sync. Use UTC, for example 2024-01-01T00:00:00Z.",
+              "description": "Only transactions and reimbursements changed on or after this date, and receipts created on or after it, are synced on the first sync. Use UTC, for example 2024-01-01T00:00:00Z.",
               "examples": [
                 "2024-01-01T00:00:00Z"
               ],
@@ -125114,11 +125200,11 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
