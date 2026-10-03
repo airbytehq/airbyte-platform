@@ -471,6 +471,7 @@ abstract class BaseOAuthFlowTest {
   open fun testDeprecatedCompleteSourceOAuth() {
     val returnedCredentials = expectedOutput
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns Jsons.serialize(returnedCredentials)
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -508,6 +509,7 @@ abstract class BaseOAuthFlowTest {
   open fun testDeprecatedCompleteDestinationOAuth() {
     val returnedCredentials = expectedOutput
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns Jsons.serialize(returnedCredentials)
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -557,6 +559,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testEmptyOutputCompleteSourceOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -580,6 +583,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testEmptyOutputCompleteDestinationOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -603,6 +607,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testEmptyInputCompleteSourceOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -633,6 +638,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testEmptyInputCompleteDestinationOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -663,6 +669,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testCompleteSourceOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -693,6 +700,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testCompleteDestinationOAuth() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
@@ -723,6 +731,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testValidateOAuthOutputFailure() {
     val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns 200
     every { response.body() } returns mockedResponse
     every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
