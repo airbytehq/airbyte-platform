@@ -50,6 +50,9 @@ spec:
       {{- if .Values.manifestServer.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestServer.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.manifestServer.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.manifestServer.extraInitContainers }}
       initContainers:
       {{- toYaml .Values.manifestServer.extraInitContainers | nindent 8 }}

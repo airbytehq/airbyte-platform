@@ -20,7 +20,7 @@ spec:
       {{ toYaml (mergeOverwrite .Values.workloadLauncher.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: Recreate
+    type: {{ .Values.workloadLauncher.deploymentStrategyType }}
   template:
     metadata:
       labels:
@@ -52,6 +52,12 @@ spec:
       {{- end }}
       {{- if .Values.workloadLauncher.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workloadLauncher.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- if .Values.workloadLauncher.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.workloadLauncher.extraInitContainers }}
       initContainers:

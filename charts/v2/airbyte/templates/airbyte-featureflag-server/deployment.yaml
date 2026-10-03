@@ -18,7 +18,7 @@ spec:
       {{ toYaml (mergeOverwrite .Values.featureflagServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: RollingUpdate
+    type: {{ .Values.featureflagServer.deploymentStrategyType }}
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 100%
@@ -52,6 +52,9 @@ spec:
       {{- end }}
       {{- if .Values.featureflagServer.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.featureflagServer.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.featureflagServer.priorityClassName }}
+      priorityClassName: {{ . }}
       {{- end }}
       {{- if .Values.featureflagServer.extraInitContainers }}
       initContainers:

@@ -36,6 +36,9 @@ spec:
   {{- if .Values.airbyteBootloader.affinity }}
   affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.affinity "context" $) | nindent 4 }}
   {{- end }}
+  {{- with .Values.airbyteBootloader.priorityClassName }}
+  priorityClassName: {{ . }}
+  {{- end }}
   {{- if .Values.airbyteBootloader.extraInitContainers }}
   initContainers:
   {{- toYaml .Values.airbyteBootloader.extraInitContainers | nindent 4 }}

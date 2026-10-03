@@ -655,6 +655,8 @@ webapp:
   # -- Affinity and anti-affinity for webapp pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for webapp pods
+  priorityClassName: ""
 
   ## Configure the ingress resource that allows you to access the Airbyte installation.
   ## ref: http://kubernetes.io/docs/user-guide/ingress/
@@ -918,6 +920,8 @@ server:
   # -- Affinity and anti-affinity for server pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for server pods
+  priorityClassName: ""
 
   log:
     # -- The log level to log at
@@ -1123,6 +1127,10 @@ worker:
   # -- Affinity and anti-affinity for worker pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for worker pods
+  priorityClassName: ""
+  # -- Topology spread constraints for worker pods
+  topologySpreadConstraints: []
 
   log:
     #! -- The log level to log at.
@@ -1153,9 +1161,6 @@ worker:
   extraInitContainers: []
   extraContainers: []
 
-  hpa:
-    enabled: false
-
   debug:
     enabled: false
 
@@ -1181,6 +1186,8 @@ workloadLauncher:
   enabled: true
   # -- Number of workload launcher replicas
   replicaCount: 1
+  # -- Deployment update strategy type for workload-launcher (Recreate or RollingUpdate)
+  deploymentStrategyType: Recreate
 
   serviceAccountName:
 
@@ -1290,6 +1297,10 @@ workloadLauncher:
   # Affinity and anti-affinity for workload launcher pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for workload-launcher pods
+  priorityClassName: ""
+  # -- Topology spread constraints for workload-launcher pods
+  topologySpreadConstraints: []
 
   log:
     # -- The log level to log at
@@ -1319,9 +1330,6 @@ workloadLauncher:
 
   extraInitContainers: []
   extraContainers: []
-
-  hpa:
-    enabled: false
 
   debug:
     enabled: false
@@ -1367,6 +1375,8 @@ connectorRolloutWorker:
   enabled: false
   # -- Number of connector rollout worker replicas
   replicaCount: 1
+  # -- Deployment update strategy type for connector-rollout-worker (Recreate or RollingUpdate)
+  deploymentStrategyType: Recreate
 
   serviceAccountName:
 
@@ -1462,6 +1472,8 @@ connectorRolloutWorker:
   # Affinity and anti-affinity for connector rollout worker pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for connector-rollout-worker pods
+  priorityClassName: ""
 
   log:
     # -- The log level to log at
@@ -1494,9 +1506,6 @@ connectorRolloutWorker:
 
   env_vars: {}
 
-  hpa:
-    enabled: false
-
   debug:
     enabled: false
 
@@ -1524,6 +1533,8 @@ metrics:
 
   # -- Number of metrics-reporter replicas
   replicaCount: 1
+  # -- Deployment update strategy type for metrics (Recreate or RollingUpdate)
+  deploymentStrategyType: Recreate
 
   serviceAccountName:
 
@@ -1591,6 +1602,8 @@ metrics:
   # -- Affinity and anti-affinity for metrics-reporter pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for metrics pods
+  priorityClassName: ""
 
   ## Example:
   ##
@@ -1679,6 +1692,8 @@ airbyteBootloader:
   # -- Affinity and anti-affinity for bootloader pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for bootloader pods
+  priorityClassName: ""
 
   # -- Security context for the container
   podSecurityContext:
@@ -1897,6 +1912,8 @@ temporal:
   # -- Affinity and anti-affinity for temporal pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for temporal pods
+  priorityClassName: ""
 
   ## Example:
   ##
@@ -2027,6 +2044,8 @@ temporalUi:
   # -- Affinity and anti-affinity for temporal-ui pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for temporal-ui pods
+  priorityClassName: ""
 
   ## Example:
   ##
@@ -2290,6 +2309,8 @@ cron:
   # -- Affinity and anti-affinity for cron pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for cron pods
+  priorityClassName: ""
 
   log:
     # -- The log level to log at.
@@ -2473,6 +2494,8 @@ keycloak:
   # -- Affinity and anti-affinity for webapp pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for keycloak pods
+  priorityClassName: ""
 
   ## Configure extra options for the keycloak containers' liveness and readiness probes
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
@@ -2616,6 +2639,8 @@ manifestServer:
   # -- Affinity and anti-affinity for webapp pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: { }
+  # -- Priority class for manifest-server pods
+  priorityClassName: ""
 
   ## Example:
   ## secrets:
@@ -2648,6 +2673,8 @@ workloadApiServer:
 
   # -- workload-api-server replicas
   replicaCount: 1
+  # -- Deployment update strategy type for workload-api-server (Recreate or RollingUpdate)
+  deploymentStrategyType: RollingUpdate
 
   serviceAccountName:
 
@@ -2738,6 +2765,10 @@ workloadApiServer:
   # -- Affinity and anti-affinity for webapp pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for workload-api-server pods
+  priorityClassName: ""
+  # -- Topology spread constraints for workload-api-server pods
+  topologySpreadConstraints: []
 
   env_vars: {}
 
@@ -2784,6 +2815,8 @@ featureflagServer:
 
   # -- workload-api-server replicas
   replicaCount: 1
+  # -- Deployment update strategy type for featureflag-server (Recreate or RollingUpdate)
+  deploymentStrategyType: RollingUpdate
 
   serviceAccountName:
 
@@ -2877,6 +2910,8 @@ featureflagServer:
   # -- Affinity and anti-affinity for webapp pod assignment, see
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
+  # -- Priority class for featureflag-server pods
+  priorityClassName: ""
 
   env_vars: {}
   service:
@@ -2922,6 +2957,8 @@ testWebapp:
 stiggSidecar:
   enabled: false
   replicaCount: 1
+  # -- Deployment update strategy type for stigg-sidecar (Recreate or RollingUpdate)
+  deploymentStrategyType: RollingUpdate
 
   serviceAccountName:
 
@@ -2990,6 +3027,8 @@ stiggSidecar:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  # -- Priority class for stigg-sidecar pods
+  priorityClassName: ""
 
   log:
     level: INFO
@@ -3002,9 +3041,6 @@ stiggSidecar:
   extraContainers: []
 
   env_vars: {}
-
-  hpa:
-    enabled: false
 
   debug:
     enabled: false
