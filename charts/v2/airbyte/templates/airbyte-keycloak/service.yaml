@@ -14,11 +14,23 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.keycloak.service.type }}
+  {{- with .Values.keycloak.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- if and .Values.keycloak.service.externalTrafficPolicy (or (eq .Values.keycloak.service.type "NodePort") (eq .Values.keycloak.service.type "LoadBalancer")) }}
+  externalTrafficPolicy: {{ .Values.keycloak.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.keycloak.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
   ports:
     - port: {{ .Values.keycloak.service.port }}
       targetPort: http
       protocol: TCP
       name: http
+      {{- with .Values.keycloak.service.appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
       {{ if and (eq .Values.keycloak.service.type "NodePort") (.Values.keycloak.service.nodePort)  }}
       nodePort: {{ .Values.keycloak.service.nodePort }}
       {{- end }}

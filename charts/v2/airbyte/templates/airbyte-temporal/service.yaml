@@ -5,14 +5,30 @@ kind: Service
 metadata:
   namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-temporal
+  {{- with .Values.temporal.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.temporal.service.type }}
+  {{- with .Values.temporal.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- if and .Values.temporal.service.externalTrafficPolicy (or (eq .Values.temporal.service.type "NodePort") (eq .Values.temporal.service.type "LoadBalancer")) }}
+  externalTrafficPolicy: {{ .Values.temporal.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.temporal.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
   ports:
   - port: {{ .Values.temporal.service.port }}
     protocol: TCP
     targetPort: 7233
+    {{- with .Values.temporal.service.appProtocol }}
+    appProtocol: {{ . }}
+    {{- end }}
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
     {{- if .Values.temporal.extraSelectorLabels }}
