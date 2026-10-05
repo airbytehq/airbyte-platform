@@ -5,7 +5,7 @@ import { Outlet } from "react-router-dom";
 import { LoadingPage } from "components";
 
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
-import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
+import { hasOrganizationBillingHistory, useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
@@ -36,12 +36,12 @@ export const OrganizationSettingsPage: React.FC = () => {
     organizationId,
   });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
-  const isSubscribed = isOrganizationSubscribed(billing);
+  const hasBillingHistory = hasOrganizationBillingHistory(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
 
   const defaultWorkspace = useDefaultWorkspaceInOrganization(organizationId);
   const isBillingNavVisible =
-    isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || isSubscribed);
+    isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || hasBillingHistory);
 
   return (
     <SettingsLayout>

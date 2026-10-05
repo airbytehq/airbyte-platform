@@ -3,7 +3,7 @@ import { screen } from "@testing-library/react";
 import { mocked, render } from "test-utils";
 
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
-import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
+import { hasOrganizationBillingHistory, useCurrentOrganizationId } from "area/organization/utils";
 import { useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -17,7 +17,7 @@ jest.mock("area/connector/utils/useConnector", () => ({
 }));
 
 jest.mock("area/organization/utils", () => ({
-  isOrganizationSubscribed: jest.fn(),
+  hasOrganizationBillingHistory: jest.fn(),
   useCurrentOrganizationId: jest.fn(),
 }));
 
@@ -55,7 +55,7 @@ jest.mock("area/settings/components/SettingsLayout", () => ({
 }));
 
 const mockUseGetConnectorsOutOfDate = mocked(useGetConnectorsOutOfDate);
-const mockIsOrganizationSubscribed = mocked(isOrganizationSubscribed);
+const mockHasOrganizationBillingHistory = mocked(hasOrganizationBillingHistory);
 const mockUseCurrentOrganizationId = mocked(useCurrentOrganizationId);
 const mockUseDefaultWorkspaceInOrganization = mocked(useDefaultWorkspaceInOrganization);
 const mockUseOrgInfo = mocked(useOrgInfo);
@@ -72,7 +72,7 @@ describe("OrganizationSettingsPage", () => {
       countNewSourceVersion: 0,
       countNewDestinationVersion: 0,
     } as unknown as ReturnType<typeof useGetConnectorsOutOfDate>);
-    mockIsOrganizationSubscribed.mockReturnValue(false);
+    mockHasOrganizationBillingHistory.mockReturnValue(false);
     mockUseDefaultWorkspaceInOrganization.mockReturnValue(undefined);
     mockUseOrgInfo.mockReturnValue(undefined);
     mockUseIsCloudApp.mockReturnValue(false);
@@ -178,5 +178,32 @@ describe("OrganizationSettingsPage", () => {
     await render(<OrganizationSettingsPage />);
 
     expect(screen.queryByText("Install MCP")).not.toBeInTheDocument();
+  });
+
+  it("shows the Billing nav link for an unsubscribed organization with billing history", async () => {
+    mockUseIsCloudApp.mockReturnValue(true);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageOrganizationBilling
+    );
+    mockUseExperiment.mockImplementation((key) => key === "billing.selfServePlusPlan");
+    mockHasOrganizationBillingHistory.mockReturnValue(true);
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.getByText("Billing")).toBeInTheDocument();
+    expect(screen.getByText("Plan")).toBeInTheDocument();
+  });
+
+  it("hides the Billing nav link for an organization without billing history when selfServePlusPlan is on", async () => {
+    mockUseIsCloudApp.mockReturnValue(true);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageOrganizationBilling
+    );
+    mockUseExperiment.mockImplementation((key) => key === "billing.selfServePlusPlan");
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Billing")).not.toBeInTheDocument();
+    expect(screen.getByText("Plan")).toBeInTheDocument();
   });
 });
