@@ -86,7 +86,7 @@ data class ConnectorPodFactory(
       .withNewSpec()
       .withSchedulerName(schedulerName)
       .withServiceAccount(serviceAccount)
-      .withAutomountServiceAccountToken(true)
+      .withAutomountServiceAccountToken(false)
       .withRestartPolicy("Never")
       .withContainers(sidecar, main)
       .withInitContainers(init)

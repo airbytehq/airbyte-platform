@@ -49,6 +49,7 @@ class ConnectorPodFactoryTest {
 
     assertEquals(2, pod.spec.containers.size)
     assertEquals(1, pod.spec.initContainers.size)
+    assertEquals(false, pod.spec.automountServiceAccountToken)
 
     val sidecarSpec = pod.spec.containers[0]
     val mainSpec = pod.spec.containers[1]

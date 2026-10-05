@@ -140,6 +140,7 @@ class RuntimeEnvVarFactory(
       getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId)) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
+      getDeploymentModeEnvVar() +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
@@ -154,6 +155,7 @@ class RuntimeEnvVarFactory(
       getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId)) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
+      getDeploymentModeEnvVar() +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
@@ -164,6 +166,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     getDdConfiguration() +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
+      getDeploymentModeEnvVar() +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
@@ -212,11 +215,14 @@ class RuntimeEnvVarFactory(
   internal fun getMetadataEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> =
     listOf(
       // Connectors still rely on the DEPLOYMENT_MODE env var, so map the Airbyte edition to it.
-      EnvVar(DEPLOYMENT_MODE, if (airbyteEdition == Configs.AirbyteEdition.CLOUD) CLOUD_DEPLOYMENT_MODE else OSS_DEPLOYMENT_MODE, null),
+      getDeploymentModeEnvVar(),
       EnvVar(WorkerEnvConstants.WORKER_CONNECTOR_IMAGE, launcherConfig.dockerImage, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ID, launcherConfig.jobId, null),
       EnvVar(WorkerEnvConstants.WORKER_JOB_ATTEMPT, launcherConfig.attemptId.toString(), null),
     )
+
+  internal fun getDeploymentModeEnvVar(): EnvVar =
+    EnvVar(DEPLOYMENT_MODE, if (airbyteEdition == Configs.AirbyteEdition.CLOUD) CLOUD_DEPLOYMENT_MODE else OSS_DEPLOYMENT_MODE, null)
 
   /**
    * Env vars that specify the resource limits of the connectors. For use by the connectors.

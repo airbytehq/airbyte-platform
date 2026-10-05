@@ -103,18 +103,7 @@ internal class RuntimeEnvVarFactoryTest {
         javaOpts = CONTAINER_ORCHESTRATOR_JAVA_OPTS,
       )
 
-    factory =
-      spyk(
-        RuntimeEnvVarFactory(
-          connectorAwsAssumedRoleSecretEnvList,
-          airbyteContainerOrchestratorConfig,
-          airbyteWorkerConfig,
-          airbyteLoggingConfig,
-          connectorApmSupportHelper,
-          ffClient,
-          airbyteEdition,
-        ),
-      )
+    factory = factoryForEdition(airbyteEdition)
   }
 
   @Test
@@ -392,6 +381,32 @@ internal class RuntimeEnvVarFactoryTest {
         apmEnvVars +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
+        EnvVar(DEPLOYMENT_MODE, OSS_DEPLOYMENT_MODE, null) +
+        EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
+      result,
+    )
+  }
+
+  @Test
+  fun `builds check connector env vars exactly in Cloud`() {
+    val cloudFactory = factoryForEdition(AirbyteEdition.CLOUD)
+    every { cloudFactory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    val apmEnvVars = listOf(EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, "connector-opts", null))
+    every { cloudFactory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+    val config =
+      IntegrationLauncherConfig()
+        .withWorkspaceId(workspaceId)
+        .withDockerImage("image-name")
+    val result = cloudFactory.checkConnectorEnvVars(config, organizationId, WORKLOAD_ID)
+
+    assertEquals(
+      connectorAwsAssumedRoleSecretEnvList +
+        apmEnvVars +
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, false.toString(), null) +
+        EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
+        EnvVar(DEPLOYMENT_MODE, CLOUD_DEPLOYMENT_MODE, null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -416,10 +431,37 @@ internal class RuntimeEnvVarFactoryTest {
         apmEnvVars +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
+        EnvVar(DEPLOYMENT_MODE, OSS_DEPLOYMENT_MODE, null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
     )
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "CLOUD,CLOUD",
+      "COMMUNITY,OSS",
+    ],
+  )
+  fun `passes deployment mode to check, discover, and spec connector containers`(
+    airbyteEdition: AirbyteEdition,
+    expectedDeploymentMode: String,
+  ) {
+    val testFactory = factoryForEdition(airbyteEdition)
+    every { testFactory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    every { testFactory.getConnectorApmEnvVars(any(), any()) } returns emptyList()
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+    val config =
+      IntegrationLauncherConfig()
+        .withWorkspaceId(workspaceId)
+        .withDockerImage("image-name")
+
+    val expectedEnvVar = EnvVar(DEPLOYMENT_MODE, expectedDeploymentMode, null)
+    assertTrue(testFactory.checkConnectorEnvVars(config, organizationId, WORKLOAD_ID).contains(expectedEnvVar))
+    assertTrue(testFactory.discoverConnectorEnvVars(config, organizationId, WORKLOAD_ID).contains(expectedEnvVar))
+    assertTrue(testFactory.specConnectorEnvVars(config, WORKLOAD_ID).contains(expectedEnvVar))
   }
 
   @Test
@@ -433,6 +475,7 @@ internal class RuntimeEnvVarFactoryTest {
     assertEquals(
       listOf(
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null),
+        EnvVar(DEPLOYMENT_MODE, OSS_DEPLOYMENT_MODE, null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       ),
@@ -556,6 +599,19 @@ internal class RuntimeEnvVarFactoryTest {
     val workspaceId = UUID.randomUUID()!!
     val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "credentials", null))
   }
+
+  private fun factoryForEdition(edition: AirbyteEdition): RuntimeEnvVarFactory =
+    spyk(
+      RuntimeEnvVarFactory(
+        connectorAwsAssumedRoleSecretEnvList,
+        airbyteContainerOrchestratorConfig,
+        airbyteWorkerConfig,
+        airbyteLoggingConfig,
+        connectorApmSupportHelper,
+        ffClient,
+        edition,
+      ),
+    )
 
   companion object {
     @JvmStatic
