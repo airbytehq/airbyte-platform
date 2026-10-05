@@ -63,7 +63,7 @@ test.describe("Connection - Create new connection", () => {
   test.describe("Set up connection", () => {
     test.describe("From connection page", () => {
       test.beforeEach(async ({ page, airbyte }) => {
-        airbyte.connections.push(airbyte.connection);
+        airbyte.connections.push(structuredClone(airbyte.connectionTemplate));
         await page.goto(`/workspaces/${airbyte.workspace.workspaceId}/connections`);
         await page.getByTestId("new-connection-button").click();
       });

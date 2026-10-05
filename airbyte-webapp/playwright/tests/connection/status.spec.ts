@@ -10,14 +10,13 @@ mockedTest.describe("Connection Status - mocked API", () => {
   mockedTest.use({ airbyteScenario: fakerExistingConnectionScenario });
 
   mockedTest("renders pending status returned by the API", async ({ page, airbyte }) => {
-    airbyte.connection.syncCatalog.streams[0].config!.selected = false;
-    await page.goto(
-      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/status`
-    );
+    const connection = airbyte.connections[0];
+    connection.syncCatalog.streams[0].config!.selected = false;
+    await page.goto(`/workspaces/${airbyte.workspace.workspaceId}/connections/${connection.connectionId}/status`);
     await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "pending");
     expect(airbyte.requests).toContainEqual({
       key: "POST /api/v1/connections/status",
-      body: { connectionIds: [airbyte.connection.connectionId] },
+      body: { connectionIds: [connection.connectionId] },
     });
   });
 });

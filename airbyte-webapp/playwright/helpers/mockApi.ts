@@ -1,7 +1,7 @@
+import type { ApiHandler } from "./mockApiHandlers";
 import type { MockAirbyteScenario } from "./mockApiState";
-import type { BrowserContext, Route } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
 import type {
-  WebBackendConnectionRead,
   WebBackendConnectionUpdate,
   WorkspaceReadList,
   InstanceConfigurationResponse,
@@ -11,11 +11,6 @@ import type {
   ListOrganizationSummariesResponse,
   PermissionReadList,
   WebBackendCheckUpdatesRead,
-  ConnectionStatusesRead,
-  StreamStatusReadList,
-  ConnectionLastJobPerStreamRead,
-  WebBackendCronExpressionDescription,
-  ConnectionState,
   DestinationDefinitionSpecificationRead,
   DataplaneGroupListResponse,
   Tag,
@@ -25,163 +20,64 @@ import type {
   SourceDefinitionReadList,
   DestinationDefinitionReadList,
   WebBackendConnectionCreate,
-  WebBackendConnectionReadList,
   RunDiscoverCommand200,
   GetCommandStatus200,
   GetDiscoverCommandOutput200,
   CancelCommand200,
-  WebBackendConnectionStatusCounts,
-  ConnectionEventListMinimal,
 } from "@src/core/api/types/AirbyteClient";
 
 import { expect } from "@playwright/test";
 
 import { createMockAirbyteState } from "./mockApiState";
+import { createConnectionHandlers } from "./mockConnectionHandlers";
 
 export type { MockAirbyteScenario } from "./mockApiState";
 
 export function createMockAirbyte(scenario: MockAirbyteScenario) {
+  const state = createMockAirbyteState(scenario);
   const {
     seed,
     user,
     workspace,
     source,
     destination,
-    connection,
+    connectionTemplate,
     catalog,
     catalogId,
     connections,
     sourceDefinition,
     destinationDefinition,
-  } = createMockAirbyteState(scenario);
+  } = state;
   const creations: WebBackendConnectionCreate[] = [];
   const commands = new Set<string>();
   const updates: WebBackendConnectionUpdate[] = [];
   const requests: Array<{ key: string; body: Record<string, unknown> }> = [];
   const unexpectedRequests: string[] = [];
 
-  type ApiHandler = (route: Route, body: Record<string, unknown>) => Promise<void>;
-
   function getCommandId(body: Record<string, unknown>) {
-    expect(commands.has(body.id as string), `Unknown discovery command ID: ${body.id}`).toBe(true);
-    return body.id as string;
-  }
-
-  function getConnection(connectionId: unknown) {
-    const saved = connections.find((connection) => connection.connectionId === connectionId);
-    expect(saved, `Unknown connection ID: ${connectionId}`).toBeDefined();
-    return saved!;
+    const commandId = body.id as string;
+    expect(commands.has(commandId), `Unknown discovery command ID: ${commandId}`).toBe(true);
+    return commandId;
   }
 
   const discoveryHandlers: Record<string, ApiHandler> = {
-    "POST /api/v1/commands/run/discover": async (route, body) => {
+    "POST /api/v1/commands/run/discover": (body) => {
       expect(body.actor_id).toBe(source.sourceId);
       expect(typeof body.id).toBe("string");
       expect(body.id).not.toBe("");
       commands.add(body.id as string);
-      await route.fulfill({ json: { id: body.id as string } satisfies RunDiscoverCommand200 });
+      return { json: { id: body.id as string } satisfies RunDiscoverCommand200 };
     },
-    "POST /api/v1/commands/status": (route, body) =>
-      route.fulfill({
-        json: { id: getCommandId(body), status: "completed" } satisfies GetCommandStatus200,
-      }),
-    "POST /api/v1/commands/output/discover": (route, body) =>
-      route.fulfill({
-        json: { id: getCommandId(body), catalog, catalogId, status: "succeeded" } satisfies GetDiscoverCommandOutput200,
-      }),
-    "POST /api/v1/commands/cancel": (route, body) =>
-      route.fulfill({ json: { id: getCommandId(body) } satisfies CancelCommand200 }),
+    "POST /api/v1/commands/status": (body) => ({
+      json: { id: getCommandId(body), status: "completed" } satisfies GetCommandStatus200,
+    }),
+    "POST /api/v1/commands/output/discover": (body) => ({
+      json: { id: getCommandId(body), catalog, catalogId, status: "succeeded" } satisfies GetDiscoverCommandOutput200,
+    }),
+    "POST /api/v1/commands/cancel": (body) => ({ json: { id: getCommandId(body) } satisfies CancelCommand200 }),
   };
 
-  const connectionHandlers: Record<string, ApiHandler> = {
-    "POST /api/v1/web_backend/connections/status_counts": async (route, body) => {
-      expect(body.workspaceId).toBe(workspace.workspaceId);
-      await route.fulfill({
-        json: {
-          running: connections.filter(({ isSyncing }) => isSyncing).length,
-          queued: 0,
-          healthy: connections.filter(({ latestSyncJobStatus }) => latestSyncJobStatus === "succeeded").length,
-          failed: connections.filter(({ latestSyncJobStatus }) => latestSyncJobStatus === "failed").length,
-          paused: connections.filter(({ status }) => status === "inactive").length,
-          notSynced: connections.filter(({ latestSyncJobStatus }) => !latestSyncJobStatus).length,
-        } satisfies WebBackendConnectionStatusCounts,
-      });
-    },
-    "POST /api/v1/connections/events/list_minimal": async (route, body) => {
-      expect(body.workspaceId).toBe(workspace.workspaceId);
-      await route.fulfill({ json: { events: [] } satisfies ConnectionEventListMinimal });
-    },
-    "POST /api/v1/web_backend/connections/get": async (route, body) => {
-      const saved = getConnection(body.connectionId);
-      expect(body.withRefreshedCatalog).toBe(false);
-      await route.fulfill({ json: saved });
-    },
-    "POST /api/v1/web_backend/connections/list": async (route, body) => {
-      expect(body.workspaceId).toBe(workspace.workspaceId);
-      await route.fulfill({
-        json: {
-          connections,
-          page_size: Number(body.pageSize ?? 25),
-          num_connections: connections.length,
-        } satisfies WebBackendConnectionReadList,
-      });
-    },
-    "POST /api/v1/connections/status": async (route, body) => {
-      expect(Array.isArray(body.connectionIds)).toBe(true);
-      const statuses: ConnectionStatusesRead = (body.connectionIds as string[]).map((connectionId) => {
-        getConnection(connectionId);
-        return { connectionId, connectionSyncStatus: "pending" };
-      });
-      await route.fulfill({ json: statuses });
-    },
-    "POST /api/v1/web_backend/connections/create": async (route, body) => {
-      expect(body.sourceId).toBe(source.sourceId);
-      expect(body.destinationId).toBe(destination.destinationId);
-      expect(body.sourceCatalogId).toBe(catalogId);
-      const creation = body as unknown as WebBackendConnectionCreate;
-      expect(creation.operations ?? []).toEqual([]);
-      expect(creation.syncCatalog?.streams.some(({ config }) => config?.selected)).toBe(true);
-
-      const saved: WebBackendConnectionRead = {
-        ...connection,
-        ...creation,
-        operations: [],
-        connectionId: `a9c8e4b5-349d-4a17-bdff-${String(connections.length + 1).padStart(12, "0")}`,
-        name: creation.name ?? `${source.name} → ${destination.name}`,
-        syncCatalog: creation.syncCatalog!,
-        catalogId,
-      };
-      creations.push(creation);
-      connections.push(saved);
-      await route.fulfill({ json: saved });
-    },
-    "POST /api/v1/web_backend/connections/update": async (route, body) => {
-      const saved = getConnection(body.connectionId);
-      expect(["cron", "basic"]).toContain(body.scheduleType);
-      expect(body.scheduleData).toBeTruthy();
-      const update = body as unknown as WebBackendConnectionUpdate;
-      if (update.scheduleType === "cron") {
-        expect(update.scheduleData?.cron).toEqual({ cronExpression: "0 0 12 * * ?", cronTimeZone: "UTC" });
-      } else {
-        expect(update.scheduleData?.basicSchedule).toEqual({ timeUnit: "hours", units: 1 });
-      }
-
-      updates.push(update);
-      saved.scheduleType = update.scheduleType;
-      saved.scheduleData = update.scheduleData;
-      await route.fulfill({ json: saved });
-    },
-    "POST /api/v1/web_backend/describe_cron_expression": async (route, body) => {
-      expect(body).toEqual({ cronExpression: "0 0 12 * * ?" });
-      await route.fulfill({
-        json: {
-          cronExpression: "0 0 12 * * ?",
-          description: "At 12:00 PM",
-          nextExecutions: [1791028800, 1791115200],
-        } satisfies WebBackendCronExpressionDescription,
-      });
-    },
-  };
+  const connectionHandlers = createConnectionHandlers(state, { creations, updates });
 
   async function install(context: BrowserContext, baseURL: string) {
     const responses: Record<string, unknown> = {
@@ -244,16 +140,11 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
           },
         ],
       } satisfies PermissionReadList,
-      "POST /api/v1/actor_definition_versions/get_for_source": connection.sourceActorDefinitionVersion,
-      "POST /api/v1/actor_definition_versions/get_for_destination": connection.destinationActorDefinitionVersion,
+      "POST /api/v1/actor_definition_versions/get_for_source": connectionTemplate.sourceActorDefinitionVersion,
+      "POST /api/v1/actor_definition_versions/get_for_destination":
+        connectionTemplate.destinationActorDefinitionVersion,
       "POST /api/v1/source_definitions/get_for_workspace": sourceDefinition,
       "POST /api/v1/destination_definitions/get_for_workspace": destinationDefinition,
-      "POST /api/v1/stream_statuses/latest_per_run_state": { streamStatuses: [] } satisfies StreamStatusReadList,
-      "POST /api/v1/connections/last_job_per_stream": [] satisfies ConnectionLastJobPerStreamRead,
-      "POST /api/v1/state/get": {
-        connectionId: connection.connectionId,
-        stateType: "not_set",
-      } satisfies ConnectionState,
       "POST /api/v1/destination_definition_specifications/get_for_destination": {
         destinationDefinitionId: destination.destinationDefinitionId,
         documentationUrl: "",
@@ -313,8 +204,9 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
       "destination_definitions/list_enterprise_stubs_for_workspace": { workspaceId: workspace.workspaceId },
     };
     const handlers = { ...discoveryHandlers, ...connectionHandlers };
+    const baseOrigin = new URL(baseURL).origin;
     await context.route(
-      (url) => url.pathname.startsWith("/api/") || url.origin !== new URL(baseURL).origin,
+      (url) => url.pathname.startsWith("/api/") || url.origin !== baseOrigin,
       async (route) => {
         const request = route.request();
         const url = new URL(request.url());
@@ -339,24 +231,8 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
           expect(body[field], `${key}: ${field}`).toBe(expected);
         }
 
-        if (
-          ["stream_statuses/latest_per_run_state", "connections/last_job_per_stream", "state/get"].includes(endpoint)
-        ) {
-          getConnection(body.connectionId);
-          if (endpoint === "state/get") {
-            await route.fulfill({
-              json: { connectionId: body.connectionId as string, stateType: "not_set" } satisfies ConnectionState,
-            });
-            return;
-          }
-        }
-
-        if (handler) {
-          await handler(route, body);
-          return;
-        }
-
-        await route.fulfill({ json: responses[key] });
+        const response = handler ? await handler(body) : { json: responses[key] };
+        await route.fulfill(response);
       }
     );
   }
@@ -367,7 +243,7 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
     source,
     destination,
     connections,
-    connection,
+    connectionTemplate,
     creations,
     updates,
     requests,

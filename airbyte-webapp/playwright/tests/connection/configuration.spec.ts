@@ -16,16 +16,15 @@ mockedTest.describe("Connection Configuration - mocked API", () => {
   mockedTest.use({ airbyteScenario: fakerExistingConnectionScenario });
 
   mockedTest("saves a cron schedule and displays it after reload", async ({ page, airbyte }) => {
-    await page.goto(
-      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/settings`
-    );
+    const connection = airbyte.connections[0];
+    await page.goto(`/workspaces/${airbyte.workspace.workspaceId}/connections/${connection.connectionId}/settings`);
     await page.getByTestId("schedule-type-listbox-button").click();
     await page.getByTestId("cron-option").click();
     await page.locator("button[type='submit']").click();
     await expect(page.getByText("Your changes were saved!", { exact: true })).toBeVisible();
     expect(airbyte.updates).toHaveLength(1);
     expect(airbyte.updates[0]).toMatchObject({
-      connectionId: airbyte.connection.connectionId,
+      connectionId: connection.connectionId,
       skipReset: true,
       scheduleType: "cron",
     });
@@ -38,9 +37,8 @@ mockedTest.describe("Connection Configuration - mocked API", () => {
   });
 
   mockedTest("saves an hourly schedule and displays it after reload", async ({ page, airbyte }) => {
-    await page.goto(
-      `/workspaces/${airbyte.workspace.workspaceId}/connections/${airbyte.connection.connectionId}/settings`
-    );
+    const connection = airbyte.connections[0];
+    await page.goto(`/workspaces/${airbyte.workspace.workspaceId}/connections/${connection.connectionId}/settings`);
     await page.getByTestId("schedule-type-listbox-button").click();
     await page.getByTestId("scheduled-option").click();
     await page.getByTestId("basic-schedule-listbox-button").click();
@@ -49,7 +47,7 @@ mockedTest.describe("Connection Configuration - mocked API", () => {
     await expect(page.getByText("Your changes were saved!", { exact: true })).toBeVisible();
     expect(airbyte.updates).toHaveLength(1);
     expect(airbyte.updates[0]).toMatchObject({
-      connectionId: airbyte.connection.connectionId,
+      connectionId: connection.connectionId,
       skipReset: true,
       scheduleType: "basic",
     });

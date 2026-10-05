@@ -117,8 +117,6 @@ export function createMockAirbyteState(scenario: MockAirbyteScenario) {
   const catalog = seed.source.catalog;
   const catalogId = "66aa3e2e-8267-48e3-b79c-78a85279069e";
   const connections = seed.connections;
-  // Existing-connection tests mutate the same record served by connection routes.
-  const connection = connections[0] ?? connectionTemplate;
   const sourceDefinition = seed.source.definition;
   const destinationDefinition = seed.destination.definition;
 
@@ -128,7 +126,7 @@ export function createMockAirbyteState(scenario: MockAirbyteScenario) {
     workspace,
     source,
     destination,
-    connection,
+    connectionTemplate,
     catalog,
     catalogId,
     connections,
@@ -136,6 +134,8 @@ export function createMockAirbyteState(scenario: MockAirbyteScenario) {
     destinationDefinition,
   };
 }
+
+export type MockAirbyteState = ReturnType<typeof createMockAirbyteState>;
 
 const fakerScenario: MockAirbyteScenario = {
   source: {
@@ -179,5 +179,5 @@ const fakerScenario: MockAirbyteScenario = {
 
 export const fakerExistingConnectionScenario: MockAirbyteScenario = {
   ...fakerScenario,
-  connections: [createMockAirbyteState(fakerScenario).connection],
+  connections: [createMockAirbyteState(fakerScenario).connectionTemplate],
 };
