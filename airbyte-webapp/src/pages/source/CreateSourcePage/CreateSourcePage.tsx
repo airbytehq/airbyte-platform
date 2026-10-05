@@ -31,6 +31,7 @@ import { SourceRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
+import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -54,6 +55,7 @@ export const CreateSourcePage: React.FC = () => {
   const { mutateAsync: createSource } = useCreateSource();
   const { mutateAsync: updateSource } = useUpdateSource();
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
+  const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
@@ -120,7 +122,13 @@ export const CreateSourcePage: React.FC = () => {
           enable_agent_access: contextLayerOptIn.agentAccess,
           enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
         },
-      }).catch(() => undefined);
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.sourceOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.sourceOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
     }
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
@@ -170,7 +178,13 @@ export const CreateSourcePage: React.FC = () => {
           enable_agent_access: contextLayerOptIn.agentAccess,
           enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
         },
-      }).catch(() => undefined);
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.sourceOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.sourceOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
     }
     clearAllFormChanges();
     navigate(`../${source.sourceId}/${SourcePaths.Connections}`);
