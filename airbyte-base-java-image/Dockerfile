@@ -3,10 +3,12 @@ FROM amazoncorretto:21
 WORKDIR /app
 
 RUN <<EOF
-yum install -y tar shadow-utils findutils
-yum update -y --security
+# Amazon Linux 2023 locks yum (an alias for dnf) to the release the upstream image was built from;
+# --releasever=latest moves to the newest release so security fixes published since then are installed.
+yum update -y --releasever=latest
+yum install -y --releasever=latest tar shadow-utils findutils
 yum clean all
-rm -rf /var/cache/yum
+rm -rf /var/cache/dnf /var/cache/yum
 groupadd --gid 1000 airbyte
 useradd --uid 1000 --gid airbyte --shell /bin/bash --create-home airbyte
 # Create mount point for secrets
