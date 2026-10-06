@@ -103,6 +103,16 @@ it's currently `config.yaml`.
   policy at client construction.
 - **One operation per route + verb**. Don't piggyback flags onto an
   existing operation to handle a new flow — define a new endpoint.
+- **Config API routes are POST-only and end in a verb.** Every
+  `config.yaml` operation is a `post:` whose path is
+  `/v1/<resource>/<verb>`, with ids and filters in the JSON request
+  body, never in path or query parameters. The final segment names the
+  action in snake_case: `/v1/workspaces/get`, `/v1/workspaces/create`,
+  `/v1/workspaces/list_by_organization_id`. Follow the neighboring
+  routes for the resource. Don't add `get:` / `put:` / `delete:`
+  operations or REST-style paths such as `/v1/sources/{sourceId}`;
+  the few existing ones are not a pattern to follow. This rule is for
+  the Config API only. Public API routes stay RESTful.
 
 ## Versioning
 

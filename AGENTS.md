@@ -82,11 +82,13 @@ delegate to a handler or service.
   `airbyte-domain:services`, code must not reference
   `javax.sql.DataSource`, `DSLContext`, `DataSourceUnwrapper`, or
   `@Transactional`, and must not call `connection.autoCommit`,
-  `rollback()`, or `prepareStatement`. That covers advisory locks
-  (`pg_advisory_*`) too. Put the lock or transaction in one of those
-  modules and call it through `airbyte-domain:services`. See the root
-  AGENTS.md data-layer rule for the exceptions (`@Factory` bean
-  wiring, migrations). Existing usages in `airbyte-commons-server`
+  `rollback()`, or `prepareStatement`. Put the transaction in one of
+  those modules, using `@Transactional` or `TransactionOperations`
+  (never a custom transaction handler, advisory lock, or other
+  database mutex), and call it through `airbyte-domain:services`. See
+  the root AGENTS.md transaction rule for alternatives to locking, and
+  its data-layer rule for the exceptions (`@Factory` bean wiring,
+  migrations). Existing usages in `airbyte-commons-server`
   handlers (`UserHandler`, `ResourceBootstrapHandler`,
   `DsrDeletionService`, and others) predate this rule. They are not a
   pattern to follow.
