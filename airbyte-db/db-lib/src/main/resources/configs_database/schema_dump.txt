@@ -209,6 +209,7 @@ create table "public"."connection" (
   "destination_catalog_id" uuid,
   "status_reason" varchar(128),
   "on_demand_enabled" boolean not null default false,
+  "enable_indexing" boolean not null default false,
   constraint "connection_pkey" primary key ("id")
 );
 create table "public"."connection_operation" (
