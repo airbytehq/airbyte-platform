@@ -2,8 +2,6 @@ import React from "react";
 
 import { ContextLayerConnectorsPage } from "cloud/components/AgentsOptIn";
 
-const OrganizationContextLayerConnectorsPage: React.FC<{ actorKind: "source" | "destination" }> = ({ actorKind }) => (
-  <ContextLayerConnectorsPage actorKind={actorKind} />
-);
+const OrganizationContextLayerConnectorsPage: React.FC = () => <ContextLayerConnectorsPage />;
 
 export default OrganizationContextLayerConnectorsPage;

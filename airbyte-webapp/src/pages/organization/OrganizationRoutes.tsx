@@ -60,14 +60,7 @@ export const OrganizationRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
           <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
             <Route index element={<OrganizationContextLayerPage />} />
-            <Route
-              path={ContextLayerRoutePaths.Sources}
-              element={<OrganizationContextLayerConnectorsPage actorKind="source" />}
-            />
-            <Route
-              path={ContextLayerRoutePaths.Destinations}
-              element={<OrganizationContextLayerConnectorsPage actorKind="destination" />}
-            />
+            <Route path={ContextLayerRoutePaths.AgentAccess} element={<OrganizationContextLayerConnectorsPage />} />
             <Route
               path="*"
               element={

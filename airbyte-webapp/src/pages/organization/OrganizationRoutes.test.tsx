@@ -112,9 +112,7 @@ jest.mock("pages/ContextLayerPage/OrganizationContextLayerPage", () => ({
 
 jest.mock("pages/ContextLayerPage/OrganizationContextLayerConnectorsPage", () => ({
   __esModule: true,
-  default: ({ actorKind }: { actorKind: string }) => (
-    <div data-testid={`organization-context-layer-${actorKind}-page`} />
-  ),
+  default: () => <div data-testid="organization-context-layer-agent-access-page" />,
 }));
 
 jest.mock("pages/SettingsPage/pages/OrganizationInstallMcpPage", () => ({
@@ -178,8 +176,8 @@ describe("OrganizationRoutes", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer");
   });
 
-  it.each(["sources", "destinations"])("registers the Context Layer %s child route", async (child) => {
-    const kind = child === "sources" ? "source" : "destination";
+  it("registers the Context Layer Agent access child route", async () => {
+    const child = "agent-access";
     render(
       <MemoryRouter initialEntries={[`/organization/test-org/context-layer/${child}`]}>
         <Suspense fallback={<div>Loading...</div>}>
@@ -191,7 +189,7 @@ describe("OrganizationRoutes", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByTestId(`organization-context-layer-${kind}-page`)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("organization-context-layer-agent-access-page")).toBeInTheDocument());
     expect(screen.getByTestId("location")).toHaveTextContent(`/organization/test-org/context-layer/${child}`);
   });
 
@@ -213,23 +211,26 @@ describe("OrganizationRoutes", () => {
     expect(screen.queryByTestId("organization-context-layer-page")).not.toBeInTheDocument();
   });
 
-  it("redirects unknown Context Layer routes to the first-class page", async () => {
-    render(
-      <MemoryRouter initialEntries={["/organization/test-org/context-layer/unknown"]}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Routes>
-            <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
-          </Routes>
-          <LocationDisplay />
-        </Suspense>
-      </MemoryRouter>
-    );
+  it.each(["unknown", "sources", "destinations"])(
+    "redirects the removed or unknown %s child route to Settings",
+    async (child) => {
+      render(
+        <MemoryRouter initialEntries={[`/organization/test-org/context-layer/${child}`]}>
+          <Suspense fallback={<div>Loading...</div>}>
+            <Routes>
+              <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
+            </Routes>
+            <LocationDisplay />
+          </Suspense>
+        </MemoryRouter>
+      );
 
-    await waitFor(() =>
-      expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer")
-    );
-    expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument();
-  });
+      await waitFor(() =>
+        expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer")
+      );
+      expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument();
+    }
+  );
 
   it("registers the first-class context layer route for org settings viewers", async () => {
     mockUseShowAgentsOptIn.mockReturnValue(false);

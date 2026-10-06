@@ -112,6 +112,7 @@ export type IconType =
   | "question"
   | "recipes"
   | "reset"
+  | "robot"
   | "rocket"
   | "rotate"
   | "schema"

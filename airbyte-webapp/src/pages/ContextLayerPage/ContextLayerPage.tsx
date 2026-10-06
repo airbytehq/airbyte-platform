@@ -23,14 +23,9 @@ const ContextLayerNavigation: React.FC = () => {
         <SettingsNavigationBlock title={formatMessage({ id: "cloud.contextLayer.navigation.title" })}>
           <SettingsLink iconType="gear" name={formatMessage({ id: "sidebar.settings" })} to={basePath} />
           <SettingsLink
-            iconType="source"
-            name={formatMessage({ id: "cloud.contextLayer.workspace.sources" })}
-            to={`${basePath}/${ContextLayerRoutePaths.Sources}`}
-          />
-          <SettingsLink
-            iconType="destination"
-            name={formatMessage({ id: "cloud.contextLayer.workspace.destinations" })}
-            to={`${basePath}/${ContextLayerRoutePaths.Destinations}`}
+            iconType="robot"
+            name={formatMessage({ id: "cloud.contextLayer.agentAccess.pageTitle" })}
+            to={`${basePath}/${ContextLayerRoutePaths.AgentAccess}`}
           />
         </SettingsNavigationBlock>
       </SettingsNavigation>

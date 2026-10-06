@@ -60,13 +60,17 @@ $emptyStateButtonWidth: 360px;
 }
 
 .connectorTable {
-  min-width: 480px;
+  min-width: 640px;
   table-layout: fixed;
 
   th {
     height: 40px;
     padding: 8px 16px;
     border-bottom: 1px solid colors.$grey-200;
+    color: colors.$grey-500;
+    font-size: variables.$font-size-sm;
+    line-height: 20px;
+    text-transform: none;
   }
 
   td {
@@ -80,7 +84,11 @@ $emptyStateButtonWidth: 360px;
 }
 
 .connectorColumn {
-  width: 180px;
+  width: 60%;
+}
+
+.typeColumn {
+  width: auto;
 }
 
 .controlColumn {

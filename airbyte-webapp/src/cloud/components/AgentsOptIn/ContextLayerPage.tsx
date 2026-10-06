@@ -29,7 +29,6 @@ import {
   FusionWorkspaceConnector,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
-import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
@@ -47,42 +46,58 @@ interface WorkspaceConnectorData {
 }
 
 type ActorKind = "source" | "destination";
+type AgentAccessConnector = FusionWorkspaceConnector & { kind: ActorKind };
+interface WorkspaceConnectorInventory {
+  count: number | null;
+  loading: boolean;
+  canManageSources: boolean;
+  canManageDestinations: boolean;
+}
 
 const WorkspaceConnectorTable: React.FC<{
   workspace: WorkspaceConnectorData;
   enabledConnectors: Record<string, boolean>;
   onToggle: (key: string, enabled: boolean) => void;
   onClearOptimistic: (key: string) => void;
-  actorKind: ActorKind;
-  onInventoryLoaded: (workspaceId: string, count: number | null, canManageConnectors: boolean) => void;
-}> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, actorKind, onInventoryLoaded }) => {
+  onInventoryChanged: (workspaceId: string, inventory: WorkspaceConnectorInventory) => void;
+}> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, onInventoryChanged }) => {
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
-  const [indexedConnectors, setIndexedConnectors] = useState<Record<string, boolean>>({});
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { sources, destinations, sourcesLoading, destinationsLoading, sourcesError, destinationsError } =
     useFusionWorkspaceConnectors(workspace.workspaceId, { hydrate: true });
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
-  const canManageConnectors = useGeneratedIntent(
-    actorKind === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination,
-    { workspaceId: workspace.workspaceId }
-  );
+  const canManageSources = useGeneratedIntent(Intent.CreateOrEditSource, { workspaceId: workspace.workspaceId });
+  const canManageDestinations = useGeneratedIntent(Intent.CreateOrEditDestination, {
+    workspaceId: workspace.workspaceId,
+  });
   const confirmDisable = useConfirmContextLayerDisable();
-  const connectors = actorKind === "source" ? sources : destinations;
-  const isLoading = actorKind === "source" ? sourcesLoading : destinationsLoading;
-  const hasError = actorKind === "source" ? sourcesError : destinationsError;
+  const connectors: AgentAccessConnector[] = [
+    ...sources.map((connector) => ({ ...connector, kind: "source" as const })),
+    ...destinations.map((connector) => ({ ...connector, kind: "destination" as const })),
+  ];
+  const isLoading = sourcesLoading || destinationsLoading;
+  const hasError = sourcesError || destinationsError;
   useEffect(() => {
-    if (!isLoading) {
-      onInventoryLoaded(workspace.workspaceId, hasError ? null : connectors.length, canManageConnectors);
-    }
-  }, [canManageConnectors, connectors.length, hasError, isLoading, onInventoryLoaded, workspace.workspaceId]);
-  const columns: TableColumns<FusionWorkspaceConnector> = [
+    onInventoryChanged(workspace.workspaceId, {
+      count: isLoading || hasError ? null : sources.length + destinations.length,
+      loading: isLoading,
+      canManageSources,
+      canManageDestinations,
+    });
+  }, [
+    canManageSources,
+    canManageDestinations,
+    sources.length,
+    destinations.length,
+    hasError,
+    isLoading,
+    onInventoryChanged,
+    workspace.workspaceId,
+  ]);
+  const columns: TableColumns<AgentAccessConnector> = [
     {
-      header: formatMessage({
-        id: actorKind === "source" ? "cloud.contextLayer.sources.column" : "cloud.contextLayer.destinations.column",
-      }),
+      header: formatMessage({ id: "cloud.contextLayer.agentAccess.nameColumn" }),
       accessorKey: "name",
       meta: { thClassName: styles.connectorColumn, tdClassName: styles.connectorColumn },
       cell: ({ row }) => (
@@ -92,6 +107,16 @@ const WorkspaceConnectorTable: React.FC<{
             {row.original.name}
           </Text>
         </FlexContainer>
+      ),
+    },
+    {
+      header: formatMessage({ id: "cloud.contextLayer.agentAccess.typeColumn" }),
+      accessorKey: "kind",
+      meta: { thClassName: styles.typeColumn, tdClassName: styles.typeColumn },
+      cell: ({ row }) => (
+        <Text size="sm" color="grey">
+          <FormattedMessage id={row.original.kind === "source" ? "connector.source" : "connector.destination"} />
+        </Text>
       ),
     },
     {
@@ -105,29 +130,19 @@ const WorkspaceConnectorTable: React.FC<{
               <button
                 type="button"
                 className={styles.infoTooltipButton}
-                aria-label={formatMessage({
-                  id:
-                    actorKind === "source"
-                      ? "cloud.contextLayer.sources.agentAccess.tooltip"
-                      : "cloud.contextLayer.destinations.agentAccess.tooltip",
-                })}
+                aria-label={formatMessage({ id: "cloud.contextLayer.agentAccess.tooltip" })}
               >
                 <Icon type="infoOutline" size="xs" />
               </button>
             }
           >
-            <FormattedMessage
-              id={
-                actorKind === "source"
-                  ? "cloud.contextLayer.sources.agentAccess.tooltip"
-                  : "cloud.contextLayer.destinations.agentAccess.tooltip"
-              }
-            />
+            <FormattedMessage id="cloud.contextLayer.agentAccess.tooltip" />
           </Tooltip>
         </FlexContainer>
       ),
       cell: ({ row: { original: connector } }) => {
-        const key = `${workspace.workspaceId}:${connector.id}`;
+        const key = `${workspace.workspaceId}:${connector.kind}:${connector.id}`;
+        const canManageConnectors = connector.kind === "source" ? canManageSources : canManageDestinations;
         const checked = connector.supported && (enabledConnectors[key] ?? connector.enabled);
         return (
           <Switch
@@ -154,7 +169,7 @@ const WorkspaceConnectorTable: React.FC<{
                         actorId: connector.id,
                         workspaceId: workspace.workspaceId,
                         expectedState: connector.state,
-                        actorKind,
+                        actorKind: connector.kind,
                         enabled,
                       });
                       onToggle(key, result.enabled);
@@ -180,155 +195,88 @@ const WorkspaceConnectorTable: React.FC<{
         );
       },
     },
-    ...(actorKind === "source" && showSemanticSearch
-      ? [
-          {
-            id: "semanticSearch",
-            meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
-            header: () => (
-              <FlexContainer alignItems="center" gap="sm">
-                <FormattedMessage id="cloud.contextLayer.setup.semanticSearch.title" />
-                <Tooltip
-                  control={
-                    <button
-                      type="button"
-                      className={styles.infoTooltipButton}
-                      aria-label={formatMessage({ id: "cloud.contextLayer.sources.semanticSearch.tooltip" })}
-                    >
-                      <Icon type="infoOutline" size="xs" />
-                    </button>
-                  }
-                >
-                  <FormattedMessage id="cloud.contextLayer.sources.semanticSearch.tooltip" />
-                </Tooltip>
-              </FlexContainer>
-            ),
-            cell: ({ row: { original: connector } }) => {
-              const key = `${workspace.workspaceId}:${connector.id}`;
-              const accessEnabled = connector.supported && (enabledConnectors[key] ?? connector.enabled);
-              const checked = accessEnabled && (indexedConnectors[key] ?? connector.state?.enable_indexing ?? false);
-              const saveIndexing = async (enabled: boolean) => {
-                if (!connector.state) {
-                  return;
-                }
-                setPendingConnectors((current) => ({ ...current, [key]: true }));
-                setIndexedConnectors((current) => ({ ...current, [key]: enabled }));
-                try {
-                  await setFusionActorEnablement({
-                    actorId: connector.id,
-                    workspaceId: workspace.workspaceId,
-                    actorKind: "source",
-                    expectedState: connector.state,
-                    state: { ...connector.state, enable_indexing: enabled },
-                  });
-                } catch {
-                  registerNotification({
-                    id: `context-layer-semantic-search-toggle-error-${key}`,
-                    text: formatMessage(
-                      { id: "cloud.contextLayer.sources.semanticSearch.toggleError" },
-                      { name: connector.name }
-                    ),
-                    type: "error",
-                  });
-                } finally {
-                  setIndexedConnectors((current) => {
-                    const next = { ...current };
-                    delete next[key];
-                    return next;
-                  });
-                  setPendingConnectors((current) => ({ ...current, [key]: false }));
-                }
-              };
-              return (
-                <Switch
-                  size="sm"
-                  checked={checked}
-                  disabled={
-                    !canManageConnectors ||
-                    !connector.supported ||
-                    !connector.state ||
-                    !accessEnabled ||
-                    connector.loading ||
-                    connector.error ||
-                    pendingConnectors[key]
-                  }
-                  onChange={(event) => {
-                    if (event.target.checked) {
-                      void saveIndexing(true);
-                    } else {
-                      openConfirmationModal({
-                        title: "cloud.contextLayer.sources.semanticSearch.disableTitle",
-                        text: "cloud.contextLayer.sources.semanticSearch.disableText",
-                        submitButtonText: "cloud.contextLayer.sources.semanticSearch.disableSubmit",
-                        submitButtonVariant: "danger",
-                        onSubmit: () => {
-                          closeConfirmationModal();
-                          void saveIndexing(false);
-                        },
-                      });
-                    }
-                  }}
-                  aria-label={formatMessage(
-                    { id: "cloud.contextLayer.sources.semanticSearch.controlLabel" },
-                    { name: connector.name }
-                  )}
-                />
-              );
-            },
-          } as TableColumns<FusionWorkspaceConnector>[number],
-        ]
-      : []),
   ];
 
   return (
     <div className={styles.workspaceGroup} data-testid={`context-layer-workspace-${workspace.workspaceId}`}>
-      {!isLoading && (hasError || connectors.length > 0) && (
+      {(hasError || connectors.length > 0) && (
         <Heading as="h3" size="sm">
           {workspace.workspaceName}
         </Heading>
       )}
-      {hasError ? (
-        <Text color="grey" data-testid={`context-layer-${actorKind}-error`}>
-          <FormattedMessage id="cloud.contextLayer.connectors.error" />
+      {sourcesError && (
+        <Text color="grey" data-testid="context-layer-source-error">
+          <FormattedMessage id="cloud.contextLayer.agentAccess.sourcesError" />
         </Text>
-      ) : connectors.length > 0 ? (
+      )}
+      {destinationsError && (
+        <Text color="grey" data-testid="context-layer-destination-error">
+          <FormattedMessage id="cloud.contextLayer.agentAccess.destinationsError" />
+        </Text>
+      )}
+      {connectors.length > 0 && (
         <div className={styles.tableWrapper}>
           <Table
             className={styles.connectorTable}
             columns={columns}
             data={connectors}
-            rowId="id"
+            rowId={(connector) => `${connector.kind}:${connector.id}`}
             variant="light"
             sorting={false}
             stickyHeaders={false}
             showEmptyPlaceholder={false}
           />
         </div>
-      ) : null}
+      )}
     </div>
+  );
+};
+
+interface AddConnectorButtonProps {
+  kind: ActorKind;
+  workspaceId: string;
+}
+
+const AddConnectorButton: React.FC<AddConnectorButtonProps> = ({ kind, workspaceId }) => {
+  const navigate = useNavigate();
+  const setupRoute =
+    kind === "source"
+      ? `${RoutePaths.Source}/${SourcePaths.SelectSourceNew}`
+      : `${RoutePaths.Destination}/${DestinationPaths.SelectDestinationNew}`;
+  const labelId =
+    kind === "source" ? "cloud.contextLayer.sources.empty.add" : "cloud.contextLayer.destinations.empty.add";
+
+  return (
+    <Button
+      type="button"
+      variant="primary"
+      className={styles.emptyStateButton}
+      onClick={() => navigate(`/${RoutePaths.Workspaces}/${workspaceId}/${setupRoute}`)}
+    >
+      <FormattedMessage id={labelId} />
+    </Button>
   );
 };
 
 const WorkspaceConnectorAccess: React.FC<{
   workspacesQuery: ReturnType<typeof useListWorkspacesInOrganization>;
-  actorKind: ActorKind;
-}> = ({ workspacesQuery, actorKind }) => {
+}> = ({ workspacesQuery }) => {
   const [enabledConnectors, setEnabledConnectors] = useState<Record<string, boolean>>({});
-  const [connectorInventories, setConnectorInventories] = useState<
-    Record<string, { count: number | null; canManageConnectors: boolean }>
-  >({});
+  const [connectorInventories, setConnectorInventories] = useState<Record<string, WorkspaceConnectorInventory>>({});
   const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
-  const navigate = useNavigate();
   const organizationId = useCurrentOrganizationId();
   const [organizationWorkspaceMap] = useLocalStorage("airbyte_organization-workspace-map", {});
   const { fetchNextPage, hasNextPage, isFetchingNextPage, isError } = workspacesQuery;
-  const onInventoryLoaded = useCallback((workspaceId: string, count: number | null, canManageConnectors: boolean) => {
-    setConnectorInventories((current) =>
-      current[workspaceId]?.count === count && current[workspaceId]?.canManageConnectors === canManageConnectors
+  const onInventoryChanged = useCallback((workspaceId: string, inventory: WorkspaceConnectorInventory) => {
+    setConnectorInventories((current) => {
+      const previous = current[workspaceId];
+      return previous?.count === inventory.count &&
+        previous?.loading === inventory.loading &&
+        previous?.canManageSources === inventory.canManageSources &&
+        previous?.canManageDestinations === inventory.canManageDestinations
         ? current
-        : { ...current, [workspaceId]: { count, canManageConnectors } }
-    );
+        : { ...current, [workspaceId]: inventory };
+    });
   }, []);
 
   const allWorkspaces = useMemo<WorkspaceConnectorData[]>(() => {
@@ -350,39 +298,35 @@ const WorkspaceConnectorAccess: React.FC<{
     setVisibleWorkspaceCount((count) => count + 25);
   };
   const inventoriesLoaded =
-    workspaces.length > 0 && workspaces.every((workspace) => workspace.workspaceId in connectorInventories);
+    workspaces.length > 0 &&
+    workspaces.every(
+      (workspace) =>
+        workspace.workspaceId in connectorInventories && !connectorInventories[workspace.workspaceId].loading
+    );
   const isEmpty =
     inventoriesLoaded &&
     !hasMoreWorkspaces &&
     !isFetchingNextPage &&
     workspaces.every((workspace) => connectorInventories[workspace.workspaceId].count === 0);
   const storedWorkspaceId = organizationWorkspaceMap[organizationId];
-  const targetWorkspaceId =
-    workspaces.find(
-      (workspace) =>
-        workspace.workspaceId === storedWorkspaceId && connectorInventories[workspace.workspaceId]?.canManageConnectors
-    )?.workspaceId ??
-    workspaces.find((workspace) => connectorInventories[workspace.workspaceId]?.canManageConnectors)?.workspaceId;
+  const targetWorkspaceId = (kind: ActorKind) => {
+    const canManage = (workspace: WorkspaceConnectorData) =>
+      kind === "source"
+        ? connectorInventories[workspace.workspaceId]?.canManageSources
+        : connectorInventories[workspace.workspaceId]?.canManageDestinations;
+    return (
+      workspaces.find((workspace) => workspace.workspaceId === storedWorkspaceId && canManage(workspace))
+        ?.workspaceId ?? workspaces.find(canManage)?.workspaceId
+    );
+  };
 
   return (
     <div className={styles.workspaceSection}>
-      <Heading as="h2" size="sm">
-        <FormattedMessage
-          id={actorKind === "source" ? "cloud.contextLayer.sources.title" : "cloud.contextLayer.destinations.title"}
-        />
+      <Heading as="h2" size="lg">
+        <FormattedMessage id="cloud.contextLayer.agentAccess.pageTitle" />
       </Heading>
       <Text className={styles.workspaceDescription}>
-        <FormattedMessage
-          id={
-            actorKind === "source"
-              ? showSemanticSearch
-                ? "cloud.contextLayer.sources.description"
-                : "cloud.contextLayer.sources.description.agentAccess"
-              : showSemanticSearch
-              ? "cloud.contextLayer.destinations.description"
-              : "cloud.contextLayer.destinations.description.agentAccess"
-          }
-        />
+        <FormattedMessage id="cloud.contextLayer.agentAccess.description.enabled" />
       </Text>
       {workspacesQuery.isLoading ? (
         <Text color="grey">
@@ -397,53 +341,15 @@ const WorkspaceConnectorAccess: React.FC<{
           {isEmpty && (
             <EmptyState
               icon="aiStars"
-              text={
-                <FormattedMessage
-                  id={
-                    actorKind === "source"
-                      ? "cloud.contextLayer.sources.empty.title"
-                      : "cloud.contextLayer.destinations.empty.title"
-                  }
-                />
-              }
-              description={
-                <FormattedMessage
-                  id={
-                    actorKind === "source"
-                      ? showSemanticSearch
-                        ? "cloud.contextLayer.sources.empty.description"
-                        : "cloud.contextLayer.sources.empty.description.agentAccess"
-                      : showSemanticSearch
-                      ? "cloud.contextLayer.destinations.empty.description"
-                      : "cloud.contextLayer.destinations.empty.description.agentAccess"
-                  }
-                />
-              }
+              text={<FormattedMessage id="cloud.contextLayer.agentAccess.empty.title" />}
+              description={<FormattedMessage id="cloud.contextLayer.agentAccess.empty.description" />}
               button={
-                targetWorkspaceId && (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className={styles.emptyStateButton}
-                    onClick={() =>
-                      navigate(
-                        `/${RoutePaths.Workspaces}/${targetWorkspaceId}/${
-                          actorKind === "source" ? RoutePaths.Source : RoutePaths.Destination
-                        }/${
-                          actorKind === "source" ? SourcePaths.SelectSourceNew : DestinationPaths.SelectDestinationNew
-                        }`
-                      )
-                    }
-                  >
-                    <FormattedMessage
-                      id={
-                        actorKind === "source"
-                          ? "cloud.contextLayer.sources.empty.add"
-                          : "cloud.contextLayer.destinations.empty.add"
-                      }
-                    />
-                  </Button>
-                )
+                <FlexContainer gap="md">
+                  {(["source", "destination"] as const).map((kind) => {
+                    const workspaceId = targetWorkspaceId(kind);
+                    return workspaceId && <AddConnectorButton key={kind} kind={kind} workspaceId={workspaceId} />;
+                  })}
+                </FlexContainer>
               }
             />
           )}
@@ -452,15 +358,14 @@ const WorkspaceConnectorAccess: React.FC<{
               key={workspace.workspaceId}
               hidden={
                 isEmpty ||
-                !(workspace.workspaceId in connectorInventories) ||
-                connectorInventories[workspace.workspaceId].count === 0
+                (workspace.workspaceId in connectorInventories &&
+                  connectorInventories[workspace.workspaceId].count === 0)
               }
             >
               <WorkspaceConnectorTable
                 workspace={workspace}
                 enabledConnectors={enabledConnectors}
-                actorKind={actorKind}
-                onInventoryLoaded={onInventoryLoaded}
+                onInventoryChanged={onInventoryChanged}
                 onToggle={(key, enabled) => setEnabledConnectors((current) => ({ ...current, [key]: enabled }))}
                 onClearOptimistic={(key) =>
                   setEnabledConnectors((current) => {
@@ -755,8 +660,7 @@ const ContextLayerPageContent: React.FC = () => {
   );
 };
 
-const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({ actorKind }) => {
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
+const ContextLayerConnectorsPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
@@ -784,46 +688,16 @@ const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({
     return (
       <div className={styles.page}>
         <div className={styles.workspaceSection}>
-          <Heading as="h2" size="sm">
-            <FormattedMessage
-              id={actorKind === "source" ? "cloud.contextLayer.sources.title" : "cloud.contextLayer.destinations.title"}
-            />
+          <Heading as="h2" size="lg">
+            <FormattedMessage id="cloud.contextLayer.agentAccess.pageTitle" />
           </Heading>
           <Text className={styles.workspaceDescription}>
-            <FormattedMessage
-              id={
-                actorKind === "source"
-                  ? showSemanticSearch
-                    ? "cloud.contextLayer.sources.description"
-                    : "cloud.contextLayer.sources.description.agentAccess"
-                  : showSemanticSearch
-                  ? "cloud.contextLayer.destinations.noAccess.pageDescription"
-                  : "cloud.contextLayer.destinations.description.agentAccess"
-              }
-            />
+            <FormattedMessage id="cloud.contextLayer.agentAccess.description.disabled" />
           </Text>
           <EmptyState
-            icon="aiStars"
-            text={
-              <FormattedMessage
-                id={
-                  actorKind === "source" && showSemanticSearch
-                    ? "cloud.contextLayer.sources.noAccess.title"
-                    : "cloud.contextLayer.destinations.noAccess.title"
-                }
-              />
-            }
-            description={
-              <FormattedMessage
-                id={
-                  actorKind === "source"
-                    ? showSemanticSearch
-                      ? "cloud.contextLayer.sources.noAccess.description"
-                      : "cloud.contextLayer.sources.noAccess.description.agentAccess"
-                    : "cloud.contextLayer.destinations.noAccess.description"
-                }
-              />
-            }
+            icon="chart"
+            text={<FormattedMessage id="cloud.contextLayer.agentAccess.noAccess.title" />}
+            description={<FormattedMessage id="cloud.contextLayer.agentAccess.noAccess.description" />}
             button={
               <Button
                 type="button"
@@ -842,11 +716,7 @@ const ContextLayerConnectorsPageContent: React.FC<{ actorKind: ActorKind }> = ({
 
   return (
     <div className={styles.page}>
-      <WorkspaceConnectorAccess
-        key={`${organizationId}:${actorKind}`}
-        workspacesQuery={workspacesQuery}
-        actorKind={actorKind}
-      />
+      <WorkspaceConnectorAccess key={organizationId} workspacesQuery={workspacesQuery} />
     </div>
   );
 };
@@ -859,10 +729,10 @@ export const ContextLayerPage: React.FC = () => {
   );
 };
 
-export const ContextLayerConnectorsPage: React.FC<{ actorKind: ActorKind }> = ({ actorKind }) => {
+export const ContextLayerConnectorsPage: React.FC = () => {
   return (
     <React.Suspense fallback={<LoadingPage />}>
-      <ContextLayerConnectorsPageContent actorKind={actorKind} />
+      <ContextLayerConnectorsPageContent />
     </React.Suspense>
   );
 };

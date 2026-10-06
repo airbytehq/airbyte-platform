@@ -104,7 +104,7 @@ const messages = {
     "We couldn't check whether the context layer is available for this organization. Please try again.",
   "cloud.contextLayer.enable.error": "Agent access could not be enabled. Please try again.",
   "cloud.contextLayer.enable.sourcesError":
-    "Agent access is on, but some sources could not be enabled. Enable them individually under Context layer sources.",
+    "Agent access is on, but some sources could not be enabled. Enable them individually under Agent access.",
   "cloud.contextLayer.enable.adminRequired": "Enabling the context layer requires an organization admin.",
   "cloud.contextLayer.enable.adminRequired.description":
     "Ask an organization admin of your Airbyte organization to enable this feature for your team.",
@@ -132,54 +132,29 @@ const messages = {
   "cloud.contextLayer.terms.accept": "Accept and Enable",
   "cloud.contextLayer.terms.footnote": "* These terms are required for compliance and data processing purposes.",
   "cloud.contextLayer.terms.enrollError": "Context layer could not be enabled. Please try again.",
-  "cloud.contextLayer.sources.title": "Context layer sources",
+  "cloud.contextLayer.agentAccess.pageTitle": "Agent access",
+  "cloud.contextLayer.agentAccess.description.enabled":
+    "Your agents can use the Airbyte MCP to read data directly from these sources and destinations. Only agent connectors are supported.",
+  "cloud.contextLayer.agentAccess.description.disabled":
+    "Choose which sources and destinations agents can access. Only Snowflake and BigQuery destinations are supported.",
+  "cloud.contextLayer.agentAccess.nameColumn": "Name",
+  "cloud.contextLayer.agentAccess.typeColumn": "Type",
+  "cloud.contextLayer.agentAccess.tooltip":
+    "Agents can use the Airbyte MCP to access supported sources and destinations directly. No sync required.",
+  "cloud.contextLayer.agentAccess.noAccess.title": "Enable agent access",
+  "cloud.contextLayer.agentAccess.noAccess.description":
+    "Before you can control agent access to sources and destinations, you need to enable agent access.",
+  "cloud.contextLayer.agentAccess.empty.title": "No connectors yet",
+  "cloud.contextLayer.agentAccess.empty.description":
+    "Add sources or destinations to Airbyte to make them available to agents.",
+  "cloud.contextLayer.agentAccess.sourcesError": "Unable to load sources. Please try again.",
+  "cloud.contextLayer.agentAccess.destinationsError": "Unable to load destinations. Please try again.",
+  "connector.source": "Source",
+  "connector.destination": "Destination",
   "cloud.contextLayer.setup.agentAccess.title": "Agent access",
   "cloud.contextLayer.agentAccess.controlLabel": "{name} Agent access",
-  "cloud.contextLayer.setup.semanticSearch.title": "Semantic search",
-  "cloud.contextLayer.sources.semanticSearch.tooltip":
-    "Builds a semantic index from your data each time you sync. Then, you can use the Airbyte MCP to search your data. Requires a connection to a supported destination.",
-  "cloud.contextLayer.sources.semanticSearch.controlLabel": "{name} Semantic search",
-  "cloud.contextLayer.sources.semanticSearch.disableTitle": "Turn off semantic search",
-  "cloud.contextLayer.sources.semanticSearch.disableText":
-    "Turning off semantic search also deletes your semantic index. If you enable this again, you will need to backfill your data again, which will incur additional compute costs on your destination.",
-  "cloud.contextLayer.sources.semanticSearch.disableSubmit": "Delete semantic index",
-  "cloud.contextLayer.sources.semanticSearch.toggleError":
-    "Could not update semantic search for {name}. Please try again.",
-  "cloud.contextLayer.sources.column": "Source",
-  "cloud.contextLayer.sources.agentAccess.tooltip":
-    "Use the Airbyte MCP to query the source directly for up-to-date direct API results. You don’t need to create a connection in Airbyte.",
-  "cloud.contextLayer.sources.description":
-    "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
-  "cloud.contextLayer.sources.description.agentAccess":
-    "Choose which sources agents can access directly through the Airbyte MCP.",
-  "cloud.contextLayer.destinations.title": "Context layer destinations",
-  "cloud.contextLayer.destinations.column": "Destination",
-  "cloud.contextLayer.destinations.agentAccess.tooltip": "Query the destination directly, no sync required.",
-  "cloud.contextLayer.destinations.description":
-    "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
-  "cloud.contextLayer.destinations.description.agentAccess":
-    "Choose which destinations agents can query directly through the Airbyte MCP.",
-  "cloud.contextLayer.destinations.noAccess.pageDescription":
-    "Choose which destinations populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
-  "cloud.contextLayer.sources.noAccess.title": "Enable agent access or semantic search",
-  "cloud.contextLayer.sources.noAccess.description":
-    "Before you can control agent access to sources, you need to enable agent access or semantic search",
-  "cloud.contextLayer.sources.noAccess.description.agentAccess":
-    "Before you can control agent access to sources, you need to enable agent access.",
-  "cloud.contextLayer.destinations.noAccess.title": "Enable agent access",
-  "cloud.contextLayer.destinations.noAccess.description":
-    "Before you can control agent access to destinations, you need to enable agent access",
   "cloud.contextLayer.noAccess.settings": "Go to settings",
-  "cloud.contextLayer.sources.empty.title": "No sources yet",
-  "cloud.contextLayer.sources.empty.description": "Add sources to Airbyte to start populating your context layer.",
-  "cloud.contextLayer.sources.empty.description.agentAccess":
-    "Add sources to Airbyte to make them available to agents.",
   "cloud.contextLayer.sources.empty.add": "Add your first source",
-  "cloud.contextLayer.destinations.empty.title": "No destinations yet",
-  "cloud.contextLayer.destinations.empty.description":
-    "Add destinations to Airbyte to start populating your context layer.",
-  "cloud.contextLayer.destinations.empty.description.agentAccess":
-    "Add destinations to Airbyte to make them available to agents.",
   "cloud.contextLayer.destinations.empty.add": "Add your first destination",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
@@ -194,7 +169,6 @@ const messages = {
   "cloud.contextLayer.workspace.destinations": "Destinations",
   "cloud.contextLayer.workspace.enabledCount":
     "{enabled} of {supported} enabled{unsupported, plural, =0 {} other { (excludes {unsupported} not supported)}}",
-  "cloud.contextLayer.connectors.error": "Unable to load connectors. Please try again.",
   "cloud.contextLayer.connectors.toggleError": "Could not update access for {name}. Please try again.",
   "cloud.contextLayer.docs": "Learn how to connect agents (SDK, API, MCP)",
   "cloud.contextLayer.disableConfirm.title": "Disable Agents access?",
@@ -225,13 +199,13 @@ const renderWithIntl = () =>
     </MemoryRouter>
   );
 
-const renderConnectorsWithIntl = (actorKind: "source" | "destination" = "source") =>
+const renderConnectorsWithIntl = () =>
   render(
     <MemoryRouter>
       <IntlProvider locale="en" messages={messages}>
         <NotificationService>
           <ConfirmationModalService>
-            <ContextLayerConnectorsPage actorKind={actorKind} />
+            <ContextLayerConnectorsPage />
           </ConfirmationModalService>
         </NotificationService>
       </IntlProvider>
@@ -500,7 +474,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
   });
 
-  it("renders real workspace connectors and the empty state", async () => {
+  it("renders a mixed Name, Type, Agent access table per workspace", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
       is_instance_admin: false,
@@ -585,13 +559,16 @@ describe("ContextLayerPage", () => {
           }
     );
 
-    const view = renderConnectorsWithIntl();
+    renderConnectorsWithIntl();
 
     expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: true });
     expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-2", { hydrate: true });
-    expect(screen.getAllByRole("columnheader", { name: "Source" })).toHaveLength(2);
+    expect(screen.getAllByRole("columnheader", { name: "Name" })).toHaveLength(2);
+    expect(screen.getAllByRole("columnheader", { name: "Type" })).toHaveLength(2);
+    expect(screen.getByText("GitHub account").closest("tr")).toHaveTextContent("Source");
+    expect(screen.getByText("Snowflake warehouse").closest("tr")).toHaveTextContent("Destination");
     expect(screen.getAllByRole("columnheader", { name: /Agent access/ })).toHaveLength(2);
-    expect(screen.getAllByRole("columnheader", { name: /Semantic search/ })).toHaveLength(2);
+    expect(screen.queryByRole("columnheader", { name: /Semantic search/ })).not.toBeInTheDocument();
     expect(screen.getByText("GitHub account")).toBeInTheDocument();
     expect(screen.getByText("Stripe account")).toBeInTheDocument();
     expect(screen.getByText("Gong account")).toBeInTheDocument();
@@ -599,7 +576,7 @@ describe("ContextLayerPage", () => {
       "src",
       "https://example.com/github.svg"
     );
-    expect(screen.queryByText("BigQuery warehouse")).not.toBeInTheDocument();
+    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Stripe account Agent access" })).not.toBeChecked();
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account Agent access" }));
@@ -614,201 +591,7 @@ describe("ContextLayerPage", () => {
       })
     );
 
-    view.unmount();
-    renderConnectorsWithIntl("destination");
-    expect(screen.getAllByRole("columnheader", { name: "Destination" })).toHaveLength(1);
-    expect(screen.queryByRole("columnheader", { name: /Semantic search/ })).not.toBeInTheDocument();
-    expect(screen.queryByText("GitHub account")).not.toBeInTheDocument();
-    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
-    expect(screen.getByText("Snowflake warehouse")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "BigQuery warehouse Agent access" })).toBeDisabled();
-  });
-
-  describe("source semantic search", () => {
-    let sourceState: { enable_agent_access: boolean; enable_indexing: boolean };
-    let sourceSupported: boolean;
-    let sourceLoading: boolean;
-    let sourceError: boolean;
-
-    beforeEach(() => {
-      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
-      mockUseListWorkspacesInOrganization.mockReturnValue({
-        data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
-        hasNextPage: false,
-        isLoading: false,
-      } as never);
-      sourceState = { enable_agent_access: true, enable_indexing: false };
-      sourceSupported = true;
-      sourceLoading = false;
-      sourceError = false;
-      mockUseFusionWorkspaceConnectors.mockImplementation(() => ({
-        sources: [
-          {
-            id: "source-1",
-            name: "GitHub account",
-            supported: sourceSupported,
-            enabled: sourceState.enable_agent_access,
-            state: sourceState,
-            loading: sourceLoading,
-            error: sourceError,
-          },
-        ],
-        destinations: [],
-        isLoading: false,
-        sourcesLoading: false,
-        destinationsLoading: false,
-        sourcesError: false,
-        destinationsError: false,
-      }));
-    });
-
-    it("hides semantic search while keeping source agent access available", () => {
-      mockExperiments({ "platform.fusion-semantic-search-ui": false });
-      renderConnectorsWithIntl();
-
-      expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeInTheDocument();
-      expect(screen.queryByRole("columnheader", { name: /Semantic search/ })).not.toBeInTheDocument();
-      expect(screen.getByText(messages["cloud.contextLayer.sources.description.agentAccess"])).toBeInTheDocument();
-      expect(screen.queryByText(messages["cloud.contextLayer.sources.description"])).not.toBeInTheDocument();
-    });
-
-    it("shows the Figma semantic-search tooltip", async () => {
-      renderConnectorsWithIntl();
-
-      fireEvent.mouseOver(screen.getByRole("columnheader", { name: /Semantic search/ }).querySelector("span")!);
-      expect(await screen.findByRole("tooltip")).toHaveTextContent(
-        messages["cloud.contextLayer.sources.semanticSearch.tooltip"]
-      );
-    });
-
-    it("shows source help when its info controls receive keyboard focus", async () => {
-      renderConnectorsWithIntl();
-
-      const semanticHelp = screen.getByRole("button", {
-        name: messages["cloud.contextLayer.sources.semanticSearch.tooltip"],
-      });
-      fireEvent.focus(semanticHelp);
-      expect(await screen.findByRole("tooltip")).toHaveTextContent(
-        messages["cloud.contextLayer.sources.semanticSearch.tooltip"]
-      );
-      fireEvent.blur(semanticHelp);
-      await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
-
-      fireEvent.focus(screen.getByRole("button", { name: messages["cloud.contextLayer.sources.agentAccess.tooltip"] }));
-      expect(await screen.findByRole("tooltip")).toHaveTextContent(
-        messages["cloud.contextLayer.sources.agentAccess.tooltip"]
-      );
-    });
-
-    it.each([
-      { access: true, indexing: true, checked: true, disabled: false },
-      { access: true, indexing: false, checked: false, disabled: false },
-      { access: false, indexing: false, checked: false, disabled: true },
-    ])(
-      "shows independent source controls for access=$access and indexing=$indexing",
-      ({ access, indexing, checked, disabled }) => {
-        sourceState = { enable_agent_access: access, enable_indexing: indexing };
-        renderConnectorsWithIntl();
-
-        const accessSwitch = screen.getByRole("checkbox", { name: "GitHub account Agent access" });
-        const semanticSwitch = screen.getByRole("checkbox", { name: "GitHub account Semantic search" });
-        expect(accessSwitch).toHaveProperty("checked", access);
-        expect(semanticSwitch).toHaveProperty("checked", checked);
-        expect(semanticSwitch).toHaveProperty("disabled", disabled);
-      }
-    );
-
-    it.each(["unsupported", "loading", "error", "read-only"] as const)(
-      "disables semantic search when the source is %s",
-      (condition) => {
-        sourceSupported = condition !== "unsupported";
-        sourceLoading = condition === "loading";
-        sourceError = condition === "error";
-        if (condition === "read-only") {
-          mockUseGeneratedIntent.mockReturnValue(false);
-        }
-        renderConnectorsWithIntl();
-
-        expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).toBeDisabled();
-      }
-    );
-
-    it("writes full state with expected state and locks both controls during a pending update", async () => {
-      let finishMutation: (state: { enable_agent_access: boolean; enable_indexing: boolean }) => void = () => {};
-      const mutateAsync = jest.fn().mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            finishMutation = resolve;
-          })
-      );
-      mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
-      renderConnectorsWithIntl();
-
-      fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account Semantic search" }));
-      await waitFor(() =>
-        expect(mutateAsync).toHaveBeenCalledWith({
-          actorId: "source-1",
-          workspaceId: "workspace-1",
-          actorKind: "source",
-          expectedState: { enable_agent_access: true, enable_indexing: false },
-          state: { enable_agent_access: true, enable_indexing: true },
-        })
-      );
-      expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).toBeChecked();
-      expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).toBeDisabled();
-      expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeDisabled();
-
-      sourceState = { enable_agent_access: true, enable_indexing: true };
-      finishMutation(sourceState);
-      await waitFor(() => expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeEnabled());
-      expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).toBeChecked();
-    });
-
-    it("confirms index deletion and leaves state unchanged on cancel", async () => {
-      sourceState = { enable_agent_access: true, enable_indexing: true };
-      const mutateAsync = jest.fn().mockResolvedValue({ enable_agent_access: true, enable_indexing: false });
-      mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
-      renderConnectorsWithIntl();
-
-      fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account Semantic search" }));
-      expect(screen.getByText("Turn off semantic search")).toBeInTheDocument();
-      expect(screen.getByText(messages["cloud.contextLayer.sources.semanticSearch.disableText"])).toBeInTheDocument();
-      expect(mutateAsync).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-      expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).toBeChecked();
-      expect(mutateAsync).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account Semantic search" }));
-      fireEvent.click(screen.getByRole("button", { name: "Delete semantic index" }));
-      await waitFor(() =>
-        expect(mutateAsync).toHaveBeenCalledWith({
-          actorId: "source-1",
-          workspaceId: "workspace-1",
-          actorKind: "source",
-          expectedState: { enable_agent_access: true, enable_indexing: true },
-          state: { enable_agent_access: true, enable_indexing: false },
-        })
-      );
-    });
-
-    it("reverts a failed update and reports a semantic-search error", async () => {
-      const mutateAsync = jest.fn().mockRejectedValue(new Error("Forbidden"));
-      const registerNotification = jest.fn();
-      mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
-      mockUseNotificationService.mockReturnValue({ registerNotification } as never);
-      renderConnectorsWithIntl();
-
-      fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account Semantic search" }));
-      await waitFor(() =>
-        expect(screen.getByRole("checkbox", { name: "GitHub account Semantic search" })).not.toBeChecked()
-      );
-      expect(registerNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text: "Could not update semantic search for GitHub account. Please try again.",
-          type: "error",
-        })
-      );
-    });
   });
 
   it("shows source connectors while destination inventory is loading", () => {
@@ -833,7 +616,7 @@ describe("ContextLayerPage", () => {
 
     expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeVisible();
     expect(screen.getByText("GitHub account")).toBeVisible();
-    expect(screen.queryByText("Loading connectors...")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading connectors...")).toBeVisible();
   });
 
   it("shows a ready workspace while another workspace inventory is pending", async () => {
@@ -869,7 +652,7 @@ describe("ContextLayerPage", () => {
     renderConnectorsWithIntl();
 
     await waitFor(() => expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeVisible());
-    expect(screen.getByTestId("context-layer-workspace-workspace-2")).not.toBeVisible();
+    expect(screen.getByText("Loading connectors...")).toBeVisible();
     expect(screen.getByText("GitHub account")).toBeVisible();
   });
 
@@ -941,88 +724,81 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
 
-  it.each(["source", "destination"] as const)(
-    "loads another %s workspace page only when requested",
-    async (actorKind) => {
-      mockUseAgentsProvisioningStatus.mockReturnValue({
-        is_enrolled: true,
-        is_instance_admin: false,
-        provisioning_state: "provisioned",
-        organization_id: "test-org-123",
-        organization_kind: "external_cloud",
-        external_cloud_eligible: true,
-        eligible_external_organization_id: null,
-      });
-      let workspacePages = [
-        {
-          workspaces: Array.from({ length: 25 }, (_, index) => ({
-            workspaceId: `workspace-${index + 1}`,
-            name: `Workspace ${index + 1}`,
-          })),
-        },
-      ];
-      let hasNextPage = true;
-      const fetchNextPage = jest.fn().mockImplementation(async () => {
-        workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
-        hasNextPage = false;
-        return { data: { pages: workspacePages }, hasNextPage: false };
-      });
-      mockUseListWorkspacesInOrganization.mockImplementation(
-        () =>
-          ({
-            get data() {
-              return { pages: workspacePages };
-            },
-            get hasNextPage() {
-              return hasNextPage;
-            },
-            fetchNextPage,
-            isFetchingNextPage: false,
-            isLoading: false,
-          }) as never
-      );
-      mockUseFusionWorkspaceConnectors.mockReturnValue({
-        sources: [],
-        destinations: [],
-        isLoading: false,
-        sourcesError: false,
-        destinationsError: false,
-      } as never);
+  it("loads another workspace page only when requested", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    let workspacePages = [
+      {
+        workspaces: Array.from({ length: 25 }, (_, index) => ({
+          workspaceId: `workspace-${index + 1}`,
+          name: `Workspace ${index + 1}`,
+        })),
+      },
+    ];
+    let hasNextPage = true;
+    const fetchNextPage = jest.fn().mockImplementation(async () => {
+      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-26", name: "Workspace 26" }] }];
+      hasNextPage = false;
+      return { data: { pages: workspacePages }, hasNextPage: false };
+    });
+    mockUseListWorkspacesInOrganization.mockImplementation(
+      () =>
+        ({
+          get data() {
+            return { pages: workspacePages };
+          },
+          get hasNextPage() {
+            return hasNextPage;
+          },
+          fetchNextPage,
+          isFetchingNextPage: false,
+          isLoading: false,
+        }) as never
+    );
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
 
-      const view = renderConnectorsWithIntl(actorKind);
+    const view = renderConnectorsWithIntl();
 
-      expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(
-        expect.objectContaining({ pagination: { pageSize: 25, rowOffset: 0 } })
-      );
-      expect(fetchNextPage).not.toHaveBeenCalled();
-      expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeInTheDocument();
-      expect(screen.getByTestId("context-layer-workspace-workspace-25")).toBeInTheDocument();
-      expect(screen.queryByTestId("context-layer-workspace-workspace-26")).not.toBeInTheDocument();
-      expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
-      expect(
-        screen.queryByText(actorKind === "source" ? "No sources yet" : "No destinations yet")
-      ).not.toBeInTheDocument();
+    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({ pagination: { pageSize: 25, rowOffset: 0 } })
+    );
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeInTheDocument();
+    expect(screen.getByTestId("context-layer-workspace-workspace-25")).toBeInTheDocument();
+    expect(screen.queryByTestId("context-layer-workspace-workspace-26")).not.toBeInTheDocument();
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-26", expect.anything());
+    expect(screen.queryByText("No connectors yet")).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
-      await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
-      view.rerender(
-        <MemoryRouter>
-          <IntlProvider locale="en" messages={messages}>
-            <NotificationService>
-              <ConfirmationModalService>
-                <ContextLayerConnectorsPage actorKind={actorKind} />
-              </ConfirmationModalService>
-            </NotificationService>
-          </IntlProvider>
-        </MemoryRouter>
-      );
-      expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeInTheDocument();
-      expect(screen.getByTestId("context-layer-workspace-workspace-26")).toBeInTheDocument();
-      expect(
-        await screen.findByText(actorKind === "source" ? "No sources yet" : "No destinations yet")
-      ).toBeInTheDocument();
-    }
-  );
+    fireEvent.click(screen.getByRole("button", { name: "Load more workspaces" }));
+    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
+    view.rerender(
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerConnectorsPage />
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId("context-layer-workspace-workspace-1")).toBeInTheDocument();
+    expect(screen.getByTestId("context-layer-workspace-workspace-26")).toBeInTheDocument();
+    expect(await screen.findByText("No connectors yet")).toBeInTheDocument();
+  });
 
   it("shows only 25 cached workspaces until more are requested", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
@@ -1085,7 +861,7 @@ describe("ContextLayerPage", () => {
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerConnectorsPage actorKind="source" />
+              <ContextLayerConnectorsPage />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
@@ -1144,7 +920,7 @@ describe("ContextLayerPage", () => {
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerConnectorsPage actorKind="source" />
+              <ContextLayerConnectorsPage />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
@@ -1204,7 +980,7 @@ describe("ContextLayerPage", () => {
 
     expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeDisabled();
     view.unmount();
-    renderConnectorsWithIntl("destination");
+    renderConnectorsWithIntl();
     expect(screen.getByRole("checkbox", { name: "BigQuery warehouse Agent access" })).toBeDisabled();
     expect(mutateAsync).not.toHaveBeenCalled();
   });
@@ -1230,10 +1006,8 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     });
 
-    const sourceView = renderConnectorsWithIntl();
+    renderConnectorsWithIntl();
     expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeDisabled();
-    sourceView.unmount();
-    renderConnectorsWithIntl("destination");
     const destinationSwitch = screen.getByRole("checkbox", { name: "Snowflake warehouse Agent access" });
     expect(destinationSwitch).toBeEnabled();
     fireEvent.click(destinationSwitch);
@@ -1249,58 +1023,29 @@ describe("ContextLayerPage", () => {
     expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditDestination, { workspaceId: "workspace-1" });
   });
 
-  it.each([
-    [
-      "source",
-      "Context layer sources",
-      "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
-      "Enable agent access or semantic search",
-      "Before you can control agent access to sources, you need to enable agent access or semantic search",
-    ],
-    [
-      "destination",
-      "Context layer destinations",
-      "Choose which destinations populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
-      "Enable agent access",
-      "Before you can control agent access to destinations, you need to enable agent access",
-    ],
-  ] as const)("shows the %s pre-enrollment settings action", (actorKind, pageTitle, subtitle, title, description) => {
+  it.each([true, false])("shows the shared pre-enrollment state with semantic search flag %s", (showSemanticSearch) => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": showSemanticSearch });
     mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
-
-    renderConnectorsWithIntl(actorKind);
-
-    expect(screen.getByRole("heading", { name: pageTitle })).toBeInTheDocument();
-    expect(screen.getByText(subtitle)).toBeInTheDocument();
-    expect(screen.getByText(title)).toBeInTheDocument();
-    expect(screen.getByText(description)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Go to settings" })).toBeInTheDocument();
-    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
-  });
-
-  it("shows only agent access copy before enrollment when semantic search is off", () => {
-    mockExperiments({ "platform.fusion-semantic-search-ui": false });
-    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
-
-    renderConnectorsWithIntl("source");
-
-    expect(screen.getByText(messages["cloud.contextLayer.sources.description.agentAccess"])).toBeInTheDocument();
-    expect(
-      screen.getByText(messages["cloud.contextLayer.sources.noAccess.description.agentAccess"])
-    ).toBeInTheDocument();
+    renderConnectorsWithIntl();
+    expect(screen.getByRole("heading", { name: "Agent access" })).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.agentAccess.description.disabled"])).toBeInTheDocument();
     expect(screen.getByText("Enable agent access")).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.agentAccess.noAccess.description"])).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Go to settings" })).toBeInTheDocument();
     expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
+    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
   });
 
   it("sends the pre-enrollment action to Context Layer Settings", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
 
     render(
-      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/sources"]}>
+      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/agent-access"]}>
         <IntlProvider locale="en" messages={messages}>
           <Routes>
             <Route
-              path="/organization/:organizationId/context-layer/sources"
-              element={<ContextLayerConnectorsPage actorKind="source" />}
+              path="/organization/:organizationId/context-layer/agent-access"
+              element={<ContextLayerConnectorsPage />}
             />
             <Route path="/organization/:organizationId/context-layer" element={<div>Settings destination</div>} />
           </Routes>
@@ -1313,82 +1058,42 @@ describe("ContextLayerPage", () => {
   });
 
   it.each([
-    [
-      "source",
-      true,
-      "Choose which sources populate your context layer. Backfills are free in Airbyte but incur compute costs from your destination.",
-      "No sources yet",
-      "Add sources to Airbyte to start populating your context layer.",
-      "Add your first source",
-      "/workspaces/workspace-1/source/new-source",
-    ],
-    [
-      "destination",
-      true,
-      "Choose which destinations populate your context layer. Only Snowflake and BigQuery are supported.",
-      "No destinations yet",
-      "Add destinations to Airbyte to start populating your context layer.",
-      "Add your first destination",
-      "/workspaces/workspace-1/destination/new-destination",
-    ],
-    [
-      "source",
-      false,
-      "Choose which sources agents can access directly through the Airbyte MCP.",
-      "No sources yet",
-      "Add sources to Airbyte to make them available to agents.",
-      "Add your first source",
-      "/workspaces/workspace-1/source/new-source",
-    ],
-    [
-      "destination",
-      false,
-      "Choose which destinations agents can query directly through the Airbyte MCP.",
-      "No destinations yet",
-      "Add destinations to Airbyte to make them available to agents.",
-      "Add your first destination",
-      "/workspaces/workspace-1/destination/new-destination",
-    ],
-  ] as const)(
-    "shows the %s empty state with semantic search flag %s and opens connector setup",
-    async (actorKind, showSemanticSearch, subtitle, title, description, action, path) => {
-      mockExperiments({ "platform.fusion-semantic-search-ui": showSemanticSearch });
-      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true, external_cloud_eligible: true } as never);
-      mockUseListWorkspacesInOrganization.mockReturnValue({
-        data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
-        hasNextPage: false,
-        isFetchingNextPage: false,
-        isLoading: false,
-      } as never);
+    ["Add your first source", "/workspaces/workspace-1/source/new-source"],
+    ["Add your first destination", "/workspaces/workspace-1/destination/new-destination"],
+  ])("shows the shared empty state and opens %s", async (action, path) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+    } as never);
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/agent-access"]}>
+        <IntlProvider locale="en" messages={messages}>
+          <NotificationService>
+            <ConfirmationModalService>
+              <Routes>
+                <Route
+                  path="/organization/:organizationId/context-layer/agent-access"
+                  element={<ContextLayerConnectorsPage />}
+                />
+                <Route path={path} element={<div>Connector setup</div>} />
+              </Routes>
+            </ConfirmationModalService>
+          </NotificationService>
+        </IntlProvider>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("No connectors yet")).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.agentAccess.description.enabled"])).toBeInTheDocument();
+    expect(screen.getByText(messages["cloud.contextLayer.agentAccess.empty.description"])).toBeInTheDocument();
+    expect(screen.getByTestId("context-layer-workspace-workspace-1")).not.toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: action }));
+    expect(screen.getByText("Connector setup")).toBeInTheDocument();
+  });
 
-      render(
-        <MemoryRouter initialEntries={[`/organization/test-org-123/context-layer/${actorKind}s`]}>
-          <IntlProvider locale="en" messages={messages}>
-            <NotificationService>
-              <ConfirmationModalService>
-                <Routes>
-                  <Route
-                    path="/organization/:organizationId/context-layer/:kind"
-                    element={<ContextLayerConnectorsPage actorKind={actorKind} />}
-                  />
-                  <Route path={path} element={<div>Connector setup</div>} />
-                </Routes>
-              </ConfirmationModalService>
-            </NotificationService>
-          </IntlProvider>
-        </MemoryRouter>
-      );
-
-      expect(await screen.findByText(title)).toBeInTheDocument();
-      expect(screen.getByText(subtitle)).toBeInTheDocument();
-      expect(screen.getByText(description)).toBeInTheDocument();
-      expect(screen.getByTestId("context-layer-workspace-workspace-1")).not.toBeVisible();
-      fireEvent.click(screen.getByRole("button", { name: action }));
-      expect(screen.getByText("Connector setup")).toBeInTheDocument();
-    }
-  );
-
-  it("waits for destination inventory after switching from an empty Sources page", async () => {
+  it("waits for both inventories before showing the empty state", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
     mockUseListWorkspacesInOrganization.mockReturnValue({
       data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
@@ -1406,22 +1111,8 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     });
 
-    const view = renderConnectorsWithIntl();
-    expect(await screen.findByText("No sources yet")).toBeVisible();
-
-    view.rerender(
-      <MemoryRouter>
-        <IntlProvider locale="en" messages={messages}>
-          <NotificationService>
-            <ConfirmationModalService>
-              <ContextLayerConnectorsPage actorKind="destination" />
-            </ConfirmationModalService>
-          </NotificationService>
-        </IntlProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.queryByText("No destinations yet")).not.toBeInTheDocument();
+    renderConnectorsWithIntl();
+    expect(screen.queryByText("No connectors yet")).not.toBeInTheDocument();
     expect(screen.getByText("Loading connectors...")).toBeVisible();
   });
 
@@ -1437,9 +1128,9 @@ describe("ContextLayerPage", () => {
       } as never);
       mockUseGeneratedIntent.mockReturnValue(false);
 
-      renderConnectorsWithIntl(actorKind);
+      renderConnectorsWithIntl();
 
-      expect(await screen.findByText(actorKind === "source" ? "No sources yet" : "No destinations yet")).toBeVisible();
+      expect(await screen.findByText("No connectors yet")).toBeVisible();
       expect(
         screen.queryByRole("button", {
           name: actorKind === "source" ? "Add your first source" : "Add your first destination",
@@ -1474,14 +1165,14 @@ describe("ContextLayerPage", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/sources"]}>
+      <MemoryRouter initialEntries={["/organization/test-org-123/context-layer/agent-access"]}>
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
               <Routes>
                 <Route
-                  path="/organization/:organizationId/context-layer/sources"
-                  element={<ContextLayerConnectorsPage actorKind="source" />}
+                  path="/organization/:organizationId/context-layer/agent-access"
+                  element={<ContextLayerConnectorsPage />}
                 />
                 <Route
                   path="/workspaces/workspace-2/source/new-source"
@@ -1494,51 +1185,111 @@ describe("ContextLayerPage", () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText("No sources yet")).toBeVisible();
+    expect(await screen.findByText("No connectors yet")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add your first source" }));
     expect(screen.getByText("Authorized connector setup")).toBeInTheDocument();
   });
 
-  it("shows errors only for the selected connector kind", () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({
-      is_enrolled: true,
-      is_instance_admin: false,
-      provisioning_state: "provisioned",
-      organization_id: "test-org-123",
-      organization_kind: "external_cloud",
-      external_cloud_eligible: true,
-      eligible_external_organization_id: null,
+  it.each(["source", "destination"] as const)("shows successful rows when %s inventory fails", (kind) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    const connector = { id: "connector-1", name: "Ready connector", supported: true, enabled: false };
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: kind === "destination" ? [connector] : [],
+      destinations: kind === "source" ? [connector] : [],
+      isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
+      sourcesError: kind === "source",
+      destinationsError: kind === "destination",
     });
+    renderConnectorsWithIntl();
+    expect(screen.getByTestId(`context-layer-${kind}-error`)).toHaveTextContent(
+      `Unable to load ${kind}s. Please try again.`
+    );
+    expect(screen.getByText("Ready connector")).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "Ready connector Agent access" })).toBeEnabled();
+    expect(screen.queryByText("No connectors yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading connectors...")).not.toBeInTheDocument();
+  });
+
+  it("does not treat failed empty inventories as an empty organization", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
     mockUseListWorkspacesInOrganization.mockReturnValue({
       data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
       isLoading: false,
     } as never);
     mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
-      destinations: [
-        {
-          id: "destination-1",
-          name: "BigQuery warehouse",
-          supported: true,
-          state: { enable_agent_access: false, enable_indexing: false },
-          enabled: true,
-        },
-      ],
+      destinations: [],
       isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
       sourcesError: true,
-      destinationsError: false,
+      destinationsError: true,
+    });
+    renderConnectorsWithIntl();
+    expect(screen.getByTestId("context-layer-source-error")).toBeVisible();
+    expect(screen.getByTestId("context-layer-destination-error")).toBeVisible();
+    expect(screen.queryByText("No connectors yet")).not.toBeInTheDocument();
+  });
+
+  it("keeps source and destination rows with the same ID independent while saving", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
     } as never);
-
-    const view = renderConnectorsWithIntl();
-
-    expect(screen.getByTestId("context-layer-source-error")).toHaveTextContent(
-      "Unable to load connectors. Please try again."
+    const state = { enable_agent_access: false, enable_indexing: false };
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "same-id", name: "Source account", supported: true, enabled: false, state }],
+      destinations: [{ id: "same-id", name: "Destination account", supported: true, enabled: false, state }],
+      isLoading: false,
+      sourcesLoading: false,
+      destinationsLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    let resolveSource!: (value: { enabled: boolean }) => void;
+    const mutateAsync = jest.fn().mockImplementation(({ actorKind }) =>
+      actorKind === "source"
+        ? new Promise((resolve) => {
+            resolveSource = resolve;
+          })
+        : Promise.resolve({ enabled: true })
     );
-    expect(screen.queryByText("BigQuery warehouse")).not.toBeInTheDocument();
-    view.unmount();
-    renderConnectorsWithIntl("destination");
-    expect(screen.queryByTestId("context-layer-source-error")).not.toBeInTheDocument();
-    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    renderConnectorsWithIntl();
+    const sourceSwitch = () => screen.getByRole("checkbox", { name: "Source account Agent access" });
+    const destinationSwitch = () => screen.getByRole("checkbox", { name: "Destination account Agent access" });
+    fireEvent.click(sourceSwitch());
+    expect(sourceSwitch()).toBeChecked();
+    expect(sourceSwitch()).toBeDisabled();
+    expect(destinationSwitch()).not.toBeChecked();
+    expect(destinationSwitch()).toBeEnabled();
+    fireEvent.click(destinationSwitch());
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "same-id",
+        actorKind: "destination",
+        workspaceId: "workspace-1",
+        expectedState: state,
+        enabled: true,
+      })
+    );
+    expect(mutateAsync).toHaveBeenCalledWith({
+      actorId: "same-id",
+      actorKind: "source",
+      workspaceId: "workspace-1",
+      expectedState: state,
+      enabled: true,
+    });
+    expect(sourceSwitch()).toBeDisabled();
+    resolveSource({ enabled: true });
+    await waitFor(() => expect(sourceSwitch()).toBeEnabled());
   });
 
   it("clears the optimistic connector state after a successful mutation", async () => {
@@ -1583,7 +1334,7 @@ describe("ContextLayerPage", () => {
         <IntlProvider locale="en" messages={messages}>
           <NotificationService>
             <ConfirmationModalService>
-              <ContextLayerConnectorsPage actorKind="source" />
+              <ContextLayerConnectorsPage />
             </ConfirmationModalService>
           </NotificationService>
         </IntlProvider>
@@ -1633,7 +1384,7 @@ describe("ContextLayerPage", () => {
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "GitHub account Agent access" })).toBeChecked());
     expect(registerNotification).toHaveBeenCalledWith({
-      id: "context-layer-connector-toggle-error-workspace-1:source-1",
+      id: "context-layer-connector-toggle-error-workspace-1:source:source-1",
       text: "Could not update access for GitHub account. Please try again.",
       type: "error",
     });

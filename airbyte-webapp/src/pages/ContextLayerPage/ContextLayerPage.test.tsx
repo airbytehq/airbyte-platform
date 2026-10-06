@@ -39,8 +39,7 @@ const renderAt = async (path: string) =>
         <Routes>
           <Route path="/organization/:organizationId/context-layer" element={children}>
             <Route index element={<div>Context Layer settings content</div>} />
-            <Route path="sources" element={<div>Source access content</div>} />
-            <Route path="destinations" element={<div>Destination access content</div>} />
+            <Route path="agent-access" element={<div>Agent access content</div>} />
           </Route>
           <Route path="/organization/:organizationId/workspaces" element={<div>Workspaces content</div>} />
         </Routes>
@@ -65,32 +64,28 @@ describe("ContextLayerPage", () => {
       "/organization/test-organization-id/context-layer"
     );
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Sources" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Agent access" })).toHaveAttribute(
       "href",
-      "/organization/test-organization-id/context-layer/sources"
+      "/organization/test-organization-id/context-layer/agent-access"
     );
-    expect(screen.getByRole("link", { name: "Destinations" })).toHaveAttribute(
-      "href",
-      "/organization/test-organization-id/context-layer/destinations"
-    );
+    expect(screen.getByRole("link", { name: "Agent access" }).querySelector('[data-icon="robot"]')).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sources" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Destinations" })).not.toBeInTheDocument();
     expect(screen.getByText("Context Layer settings content")).toBeInTheDocument();
     expect(screen.getByTestId("head-title")).toHaveTextContent("cloud.contextLayer.navigation.title");
   });
 
-  it.each(["sources", "destinations"])("marks %s as the active child page", async (child) => {
-    await renderAt(`/organization/test-organization-id/context-layer/${child}`);
+  it("marks Agent access as the active child page", async () => {
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
 
-    expect(screen.getByRole("link", { name: child === "sources" ? "Sources" : "Destinations" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
+    expect(screen.getByRole("link", { name: "Agent access" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Settings" })).not.toHaveAttribute("aria-current");
   });
 
   it("waits for provisioning status before showing navigation", async () => {
     mockUseAgentsProvisioningStatusQuery.mockReturnValue({ isInitialLoading: true } as never);
-    await renderAt("/organization/test-organization-id/context-layer/sources");
-    expect(screen.queryByRole("link", { name: "Sources" })).not.toBeInTheDocument();
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
+    expect(screen.queryByRole("link", { name: "Agent access" })).not.toBeInTheDocument();
   });
 
   it("keeps the navigation visible to an eligible admin after disabling the Context Layer", async () => {
@@ -102,18 +97,18 @@ describe("ContextLayerPage", () => {
       },
     } as never);
     mockUseGeneratedIntent.mockImplementation((intent) => intent === Intent.UpdateOrganizationPermissions);
-    await renderAt("/organization/test-organization-id/context-layer/sources");
-    expect(screen.getByText("Source access content")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sources" })).toHaveAttribute("aria-current", "page");
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
+    expect(screen.getByText("Agent access content")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Agent access" })).toHaveAttribute("aria-current", "page");
   });
 
   it("redirects disabled non-admin direct URLs", async () => {
     mockUseAgentsProvisioningStatusQuery.mockReturnValue({
       data: { is_enrolled: false, external_cloud_eligible: true },
     } as never);
-    await renderAt("/organization/test-organization-id/context-layer/destinations");
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
     expect(screen.getByText("Workspaces content")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Destinations" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Agent access" })).not.toBeInTheDocument();
   });
 
   it("hides secondary navigation for an ineligible admin", async () => {
@@ -121,16 +116,16 @@ describe("ContextLayerPage", () => {
       data: { is_enrolled: false, external_cloud_eligible: false },
     } as never);
     mockUseGeneratedIntent.mockReturnValue(true);
-    await renderAt("/organization/test-organization-id/context-layer/sources");
-    expect(screen.getByText("Source access content")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Sources" })).not.toBeInTheDocument();
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
+    expect(screen.getByText("Agent access content")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Agent access" })).not.toBeInTheDocument();
   });
 
   it("fails closed for a non-admin when provisioning status fails", async () => {
     mockUseAgentsProvisioningStatusQuery.mockReturnValue({ isError: true } as never);
-    await renderAt("/organization/test-organization-id/context-layer/destinations");
+    await renderAt("/organization/test-organization-id/context-layer/agent-access");
     expect(screen.getByText("Workspaces content")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Destinations" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Agent access" })).not.toBeInTheDocument();
   });
 
   it("retains the admin page for a provisioning error and retry", async () => {

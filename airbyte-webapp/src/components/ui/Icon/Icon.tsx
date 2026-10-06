@@ -116,6 +116,7 @@ import PulseIcon from "./icons/pulseIcon.svg?react";
 import QuestionIcon from "./icons/questionIcon.svg?react";
 import RecipesIcon from "./icons/recipesIcon.svg?react";
 import ResetIcon from "./icons/resetIcon.svg?react";
+import RobotIcon from "./icons/robot.svg?react";
 import RocketIcon from "./icons/rocketIcon.svg?react";
 import RotateIcon from "./icons/rotateIcon.svg?react";
 import SchemaIcon from "./icons/schemaIcon.svg?react";
@@ -290,6 +291,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   question: QuestionIcon,
   recipes: RecipesIcon,
   reset: ResetIcon,
+  robot: RobotIcon,
   rocket: RocketIcon,
   rotate: RotateIcon,
   schema: SchemaIcon,

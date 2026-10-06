@@ -14,8 +14,7 @@ export enum RoutePaths {
 }
 
 export enum ContextLayerRoutePaths {
-  Sources = "sources",
-  Destinations = "destinations",
+  AgentAccess = "agent-access",
 }
 
 export enum DestinationPaths {
