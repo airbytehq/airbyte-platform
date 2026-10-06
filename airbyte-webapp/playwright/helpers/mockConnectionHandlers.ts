@@ -1,5 +1,6 @@
 import type { ApiHandler } from "./mockApiHandlers";
 import type { MockAirbyteState } from "./mockApiState";
+import type { MockJobs } from "./mockJobs";
 import type {
   ConnectionEventList,
   ConnectionEventListMinimal,
@@ -10,6 +11,7 @@ import type {
   ConnectionState,
   ConnectionStatusesRead,
   ConnectionStatusesRequestBody,
+  ConnectionSyncProgressRead,
   StreamStatusReadList,
   WebBackendConnectionCreate,
   WebBackendConnectionListRequestBody,
@@ -21,6 +23,7 @@ import type {
   WebBackendCronExpressionDescription,
   WebBackendDescribeCronExpressionRequestBody,
   WorkspaceIdRequestBody,
+  JobReadResponse,
 } from "@src/core/api/types/AirbyteClient";
 
 import { expect } from "@playwright/test";
@@ -30,18 +33,19 @@ import { handleRequest } from "./mockApiHandlers";
 
 export function createConnectionHandlers(
   state: MockAirbyteState,
-  calls: { creations: WebBackendConnectionCreate[]; updates: WebBackendConnectionUpdate[] }
+  calls: { creations: WebBackendConnectionCreate[]; updates: WebBackendConnectionUpdate[] },
+  jobs: Pick<MockJobs, "startSync" | "latestForConnection">
 ): Record<string, ApiHandler> {
-  const { workspace, source, destination, connectionTemplate, catalogId, connections } = state;
+  const { workspace, source, destination, connectionTemplate, catalogId } = state;
 
   function requireConnection(connectionId: unknown) {
-    const saved = connections.find((connection) => connection.connectionId === connectionId);
+    const saved = state.connections.find((connection) => connection.connectionId === connectionId);
     expect(saved, `Unknown connection ID: ${connectionId}`).toBeDefined();
     return saved!;
   }
 
   function getNonDeprecatedConnections() {
-    return connections.filter(({ status }) => status !== "deprecated");
+    return state.connections.filter(({ status }) => status !== "deprecated");
   }
 
   function getConnectionStatusCounts(body: WorkspaceIdRequestBody) {
@@ -86,9 +90,39 @@ export function createConnectionHandlers(
     expect(Array.isArray(body.connectionIds)).toBe(true);
     const statuses: ConnectionStatusesRead = body.connectionIds.map((connectionId) => {
       requireConnection(connectionId);
-      return { connectionId, connectionSyncStatus: "pending" };
+      const latestJob = jobs.latestForConnection(connectionId);
+      return {
+        connectionId,
+        connectionSyncStatus: latestJob ? (latestJob.status === "cancelled" ? "incomplete" : "running") : "pending",
+        activeJob: latestJob?.status === "running" ? latestJob : undefined,
+      };
     });
     return { json: statuses };
+  }
+
+  function syncConnection(body: ConnectionIdRequestBody) {
+    const saved = requireConnection(body.connectionId);
+    expect(saved.status).toBe("active");
+    expect(saved.isSyncing).toBe(false);
+    expect(saved.syncCatalog.streams.some(({ config }) => config?.selected)).toBe(true);
+
+    const job = jobs.startSync(saved.connectionId);
+    return { json: { job } satisfies JobReadResponse };
+  }
+
+  function getSyncProgress(body: ConnectionIdRequestBody) {
+    requireConnection(body.connectionId);
+    const latestJob = jobs.latestForConnection(body.connectionId);
+    return {
+      json: {
+        connectionId: body.connectionId,
+        jobId: latestJob?.id,
+        configType: "sync",
+        streams: [],
+        recordsEmitted: 0,
+        recordsCommitted: 0,
+      } satisfies ConnectionSyncProgressRead,
+    };
   }
 
   function getStreamStatuses(body: ConnectionIdRequestBody) {
@@ -117,13 +151,13 @@ export function createConnectionHandlers(
       ...connectionTemplate,
       ...creation,
       operations: [],
-      connectionId: `a9c8e4b5-349d-4a17-bdff-${String(connections.length + 1).padStart(12, "0")}`,
+      connectionId: `a9c8e4b5-349d-4a17-bdff-${String(state.connections.length + 1).padStart(12, "0")}`,
       name: creation.name ?? `${source.name} → ${destination.name}`,
       syncCatalog: creation.syncCatalog!,
       catalogId,
     };
     calls.creations.push(creation);
-    connections.push(saved);
+    state.addConnection(saved);
     return { json: saved satisfies WebBackendConnectionRead };
   }
 
@@ -168,6 +202,8 @@ export function createConnectionHandlers(
     "POST /api/v1/web_backend/connections/get": handleRequest(getConnection),
     "POST /api/v1/web_backend/connections/list": handleRequest(listConnections),
     "POST /api/v1/connections/status": handleRequest(getConnectionStatuses),
+    "POST /api/v1/connections/sync": handleRequest(syncConnection),
+    "POST /api/v1/connections/sync_progress": handleRequest(getSyncProgress),
     "POST /api/v1/stream_statuses/latest_per_run_state": handleRequest(getStreamStatuses),
     "POST /api/v1/connections/last_job_per_stream": handleRequest(getLastJobPerStream),
     "POST /api/v1/state/get": handleRequest(getConnectionState),

@@ -30,6 +30,8 @@ import { expect } from "@playwright/test";
 
 import { createMockAirbyteState } from "./mockApiState";
 import { createConnectionHandlers } from "./mockConnectionHandlers";
+import { createJobHandlers } from "./mockJobHandlers";
+import { createMockJobs } from "./mockJobs";
 
 export type { MockAirbyteScenario } from "./mockApiState";
 
@@ -44,7 +46,6 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
     connectionTemplate,
     catalog,
     catalogId,
-    connections,
     sourceDefinition,
     destinationDefinition,
   } = state;
@@ -77,7 +78,9 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
     "POST /api/v1/commands/cancel": (body) => ({ json: { id: getCommandId(body) } satisfies CancelCommand200 }),
   };
 
-  const connectionHandlers = createConnectionHandlers(state, { creations, updates });
+  const jobs = createMockJobs({ onJobChanged: state.updateConnectionFromJob });
+  const connectionHandlers = createConnectionHandlers(state, { creations, updates }, jobs);
+  const jobHandlers = createJobHandlers(jobs);
 
   async function install(context: BrowserContext, baseURL: string) {
     const responses: Record<string, unknown> = {
@@ -203,7 +206,7 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
       "source_definitions/list_enterprise_stubs_for_workspace": { workspaceId: workspace.workspaceId },
       "destination_definitions/list_enterprise_stubs_for_workspace": { workspaceId: workspace.workspaceId },
     };
-    const handlers = { ...discoveryHandlers, ...connectionHandlers };
+    const handlers = { ...discoveryHandlers, ...connectionHandlers, ...jobHandlers };
     const baseOrigin = new URL(baseURL).origin;
     await context.route(
       (url) => url.pathname.startsWith("/api/") || url.origin !== baseOrigin,
@@ -242,7 +245,10 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
     workspace,
     source,
     destination,
-    connections,
+    get connections() {
+      return state.connections;
+    },
+    jobs,
     connectionTemplate,
     creations,
     updates,

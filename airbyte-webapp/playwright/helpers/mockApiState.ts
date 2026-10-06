@@ -12,6 +12,7 @@ import type {
   SourceDefinitionSpecification,
   DestinationDefinitionSpecification,
   DestinationSyncMode,
+  JobRead,
 } from "@src/core/api/types/AirbyteClient";
 
 import destinationIds from "@src/area/connector/utils/destinations.json";
@@ -116,9 +117,26 @@ export function createMockAirbyteState(scenario: MockAirbyteScenario) {
 
   const catalog = seed.source.catalog;
   const catalogId = "66aa3e2e-8267-48e3-b79c-78a85279069e";
-  const connections = seed.connections;
+  let connections = seed.connections;
   const sourceDefinition = seed.source.definition;
   const destinationDefinition = seed.destination.definition;
+
+  function addConnection(connection: WebBackendConnectionRead) {
+    connections = [...connections, connection];
+  }
+
+  function updateConnectionFromJob(job: Readonly<JobRead>) {
+    connections = connections.map((connection) =>
+      connection.connectionId === job.configId
+        ? {
+            ...connection,
+            isSyncing: job.status === "running",
+            latestSyncJobStatus: job.status,
+            latestSyncJobCreatedAt: job.createdAt,
+          }
+        : connection
+    );
+  }
 
   return {
     seed,
@@ -129,7 +147,11 @@ export function createMockAirbyteState(scenario: MockAirbyteScenario) {
     connectionTemplate,
     catalog,
     catalogId,
-    connections,
+    get connections() {
+      return connections;
+    },
+    addConnection,
+    updateConnectionFromJob,
     sourceDefinition,
     destinationDefinition,
   };
