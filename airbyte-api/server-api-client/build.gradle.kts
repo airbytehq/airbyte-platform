@@ -70,6 +70,7 @@ val genApiClient =
         "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchStatusResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "FusionUsageWindow" to "io.airbyte.api.model.FusionUsageWindow",
         "DestinationExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SkillDocsResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",

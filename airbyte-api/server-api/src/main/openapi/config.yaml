@@ -12312,6 +12312,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/PrivateLinkReadList"
 
+  /v1/organizations/{organizationId}/tool_calls/usage:
+    get:
+      tags:
+        - fusion_usage
+        - cloud-only
+      summary: Get organization Fusion tool-call usage
+      description: Read UTC calendar day and month enforcement counters. Requires organization membership or access to a workspace in the organization.
+      operationId: getFusionUsage
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current usage and resolved allowances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionUsageRead"
+        "401":
+          description: Authentication required
+        "403":
+          description: Organization access required
+        "409":
+          description: No active workspace exists for the organization
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Usage service unavailable
+        "504":
+          description: Usage service timed out
+
 components:
   securitySchemes:
     bearerAuth:
@@ -12319,6 +12354,44 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    FusionUsageRead:
+      type: object
+      required: [organizationId, freeCapsApplicable, day, month]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        freeCapsApplicable:
+          type: boolean
+          description: Whether free tool-call allowances apply to this organization.
+        day:
+          $ref: "#/components/schemas/FusionUsageWindow"
+        month:
+          $ref: "#/components/schemas/FusionUsageWindow"
+    FusionUsageWindow:
+      type: object
+      required: [limit, used, windowStart, resetsAt]
+      properties:
+        limit:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: Resolved allowance; null means unlimited.
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: Best-effort enforcement counter; null means unavailable. Unlimited windows do not accumulate counts.
+        windowStart:
+          type: string
+          format: date-time
+          description: Start of the UTC calendar window.
+        resetsAt:
+          type: string
+          format: date-time
+          description: Exclusive end of the UTC calendar window.
     FusionSourceEnablementState:
       type: object
       additionalProperties: false

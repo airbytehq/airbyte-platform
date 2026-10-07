@@ -96,6 +96,7 @@ val genApiServer =
         "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchStatusResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "FusionUsageWindow" to "io.airbyte.api.model.FusionUsageWindow",
         "DestinationExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SkillDocsResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
@@ -188,6 +189,7 @@ val genApiServer2 =
         "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "FusionSearchStatusResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "FusionUsageWindow" to "io.airbyte.api.model.FusionUsageWindow",
         "DestinationExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SkillDocsResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
@@ -268,6 +270,7 @@ val genApiDocs =
     invokerPackage = "io.airbyte.api.client.invoker.generated"
     modelPackage = "io.airbyte.api.client.model.generated"
 
+    // Document FusionUsageWindow from the schema; only JVM generators map its handwritten model.
     schemaMappings =
       mapOf(
         "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
