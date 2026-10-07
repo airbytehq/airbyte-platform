@@ -491,6 +491,7 @@ create table "public"."organization" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
   "is_agentic" boolean not null default false,
+  "semantic_search_enabled" boolean not null default false,
   constraint "organization_pkey" primary key ("id")
 );
 create table "public"."organization_domain_verification" (
