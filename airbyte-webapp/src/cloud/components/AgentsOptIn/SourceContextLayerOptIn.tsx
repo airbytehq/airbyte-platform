@@ -2,11 +2,9 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
-import { useExperiment } from "core/services/Experiment";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -14,15 +12,10 @@ import { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./Context
 import styles from "./SourceContextLayerOptIn.module.scss";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
-export interface SourceContextLayerOptInValue {
-  agentAccess: boolean;
-  semanticSearch: boolean;
-}
-
 interface SourceContextLayerOptInProps {
   sourceDefinitionId?: string;
-  value: SourceContextLayerOptInValue;
-  onChange: (value: SourceContextLayerOptInValue) => void;
+  value: boolean;
+  onChange: (value: boolean) => void;
 }
 
 const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = ({
@@ -32,13 +25,11 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
 }) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const isEnrolled = status?.is_enrolled === true;
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
   const agentAccessTitle = useContextLayerSettingTitle("agentAccess", "setup");
-  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch", "setup");
 
   if (!isCloudApp || !showAgentsOptIn) {
     return null;
@@ -47,20 +38,18 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
     return null;
   }
 
-  const supported = supportedSourceDefinitionIds.has(sourceDefinitionId);
-  const agentAccess = isEnrolled && supported && value.agentAccess;
-  const semanticSearch = isEnrolled && supported && value.agentAccess && value.semanticSearch;
+  if (!supportedSourceDefinitionIds.has(sourceDefinitionId)) {
+    return null;
+  }
+
+  const agentAccess = isEnrolled && value;
   const withPermissionTooltip = (control: React.ReactElement) => (
     <div className={styles.control}>
       {!isEnrolled ? (
         <Tooltip placement="bottom" control={control}>
-          <FormattedMessage id="cloud.contextLayer.sourceOptIn.notEnrolled" />
+          <FormattedMessage id="cloud.contextLayer.actor.notEnrolled" />
         </Tooltip>
-      ) : !supported ? (
-        <Tooltip placement="bottom" control={control}>
-          <FormattedMessage id="cloud.contextLayer.actor.notSupported" />
-        </Tooltip>
-      ) : supported && !canManage ? (
+      ) : !canManage ? (
         <Tooltip placement="bottom" control={control}>
           <FormattedMessage id="cloud.contextLayer.sourceOptIn.noPermission" />
         </Tooltip>
@@ -78,39 +67,12 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
           <Switch
             size="sm"
             checked={agentAccess}
-            disabled={!isEnrolled || !supported || !canManage}
-            onChange={
-              isEnrolled && supported && canManage
-                ? (event) => onChange({ ...value, agentAccess: event.target.checked })
-                : undefined
-            }
+            disabled={!isEnrolled || !canManage}
+            onChange={isEnrolled && canManage ? (event) => onChange(event.target.checked) : undefined}
             aria-label={agentAccessTitle}
           />
         )}
       </div>
-      {showSemanticSearch && (
-        <div className={styles.card} role="group" aria-label={semanticSearchTitle}>
-          <ContextLayerSettingLabel setting="semanticSearch" actorType="source" variant="setup" />
-          {withPermissionTooltip(
-            <Switch
-              size="sm"
-              checked={semanticSearch}
-              disabled={!isEnrolled || !supported || !value.agentAccess || !canManage}
-              onChange={
-                isEnrolled && supported && value.agentAccess && canManage
-                  ? (event) => onChange({ ...value, semanticSearch: event.target.checked })
-                  : undefined
-              }
-              aria-label={semanticSearchTitle}
-            />
-          )}
-        </div>
-      )}
-      {!supported && (
-        <Text className={styles.unsupported} size="xs" color="grey">
-          <FormattedMessage id="cloud.contextLayer.actor.notSupported" />
-        </Text>
-      )}
     </div>
   );
 };

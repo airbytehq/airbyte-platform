@@ -164,7 +164,13 @@ const ActorAgentAccessToggleContent: React.FC<
     </Tooltip>
   ) : !isLoading && connector && !canManage ? (
     <Tooltip placement="bottom" control={switchControl}>
-      <FormattedMessage id="cloud.contextLayer.actor.noPermission" />
+      <FormattedMessage
+        id={
+          actorType === "source"
+            ? "cloud.contextLayer.sourceOptIn.noPermission"
+            : "cloud.contextLayer.destinationOptIn.noPermission"
+        }
+      />
     </Tooltip>
   ) : (
     switchControl

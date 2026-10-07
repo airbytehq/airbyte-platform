@@ -92,8 +92,14 @@ export const DestinationSettingsPage: React.FC = () => {
           onDraftPromoted={destination.isDraft ? async () => reloadDestination() : undefined}
           onDeleteClick={onDeleteClick}
           supportLevel={destinationDefinitionVersion.supportLevel}
+          preFooterSlot={
+            <ActorContextLayerCard
+              actorId={destination.destinationId}
+              actorDefinitionId={destination.destinationDefinitionId}
+              actorType="destination"
+            />
+          }
         />
-        <ActorContextLayerCard actorId={destination.destinationId} actorType="destination" />
       </FlexContainer>
     </div>
   );

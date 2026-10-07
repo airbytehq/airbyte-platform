@@ -23,10 +23,6 @@ jest.mock("core/api", () => ({
   useFusionActorEnablement: jest.fn(),
 }));
 
-jest.mock("cloud/components/AgentsOptIn/AgentsSourceCta", () => ({
-  AgentsSourceCta: () => null,
-}));
-
 jest.mock("area/connection/components/EntityTable/components/AllConnectionsStatusCell", () => ({
   AllConnectionsStatusCell: () => null,
 }));
@@ -95,17 +91,17 @@ describe("ActorTable", () => {
     mockExperiments({ "platform.fusion-semantic-search-ui": true });
   });
 
-  it("renders read-only Agent Access and Semantic Search statuses for sources", async () => {
+  it("renders only read-only Agent Access for sources when the semantic search flag is on", async () => {
     mockUseShowActorContextLayerToggles.mockReturnValue(true);
 
     await renderActorTable(sourceReadList);
 
     expect(screen.getByRole("columnheader", { name: "Agent Access" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Semantic Search" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Semantic Search" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Sync status" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Agent Access configured" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Semantic Search configured" })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /try with agents/i })).not.toBeInTheDocument();
   });
 
   it("hides the Semantic Search column when its flag is off", async () => {
@@ -129,7 +125,7 @@ describe("ActorTable", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("shows gray unconfigured states for disabled Agent Access and Semantic Search", async () => {
+  it("shows a gray unconfigured state for disabled Agent Access", async () => {
     mockUseShowActorContextLayerToggles.mockReturnValue(true);
     mockActorEnablement.mockReturnValue({
       data: { enable_agent_access: false, enable_indexing: false },
@@ -140,10 +136,9 @@ describe("ActorTable", () => {
     await renderActorTable(sourceReadList);
 
     expect(screen.getByRole("img", { name: "Agent Access not configured" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Semantic Search not configured" })).toBeInTheDocument();
   });
 
-  it("shows each source feature's status independently", async () => {
+  it("shows configured Agent Access when source indexing is disabled", async () => {
     mockUseShowActorContextLayerToggles.mockReturnValue(true);
     mockActorEnablement.mockReturnValue({
       data: { enable_agent_access: true, enable_indexing: false },
@@ -154,7 +149,6 @@ describe("ActorTable", () => {
     await renderActorTable(sourceReadList);
 
     expect(screen.getByRole("img", { name: "Agent Access configured" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Semantic Search not configured" })).toBeInTheDocument();
   });
 
   it("shows a dash for non-agent connectors and disables the enablement query", async () => {
@@ -164,7 +158,6 @@ describe("ActorTable", () => {
     await renderActorTable(sourceReadList);
 
     expect(screen.getByRole("img", { name: "Agent Access not applicable" })).toHaveTextContent("–");
-    expect(screen.getByRole("img", { name: "Semantic Search not applicable" })).toHaveTextContent("–");
     expect(mockActorEnablement).toHaveBeenCalledWith(
       { actorId: mockSource.sourceId, actorKind: "source", workspaceId: mockSource.workspaceId },
       false
@@ -181,10 +174,9 @@ describe("ActorTable", () => {
     await renderActorTable(sourceReadList);
 
     expect(screen.getByRole("img", { name: "Agent Access status unavailable" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Semantic Search status unavailable" })).toBeInTheDocument();
   });
 
-  it("renders neither context layer column for sources when toggles are disabled", async () => {
+  it("hides Agent Access for sources when toggles are disabled", async () => {
     mockUseShowActorContextLayerToggles.mockReturnValue(false);
 
     await renderActorTable(sourceReadList);
@@ -193,7 +185,7 @@ describe("ActorTable", () => {
     expect(screen.queryByRole("columnheader", { name: "Semantic Search" })).not.toBeInTheDocument();
   });
 
-  it("renders neither context layer column for destinations when toggles are disabled", async () => {
+  it("hides Agent Access for destinations when toggles are disabled", async () => {
     mockUseShowActorContextLayerToggles.mockReturnValue(false);
 
     await renderActorTable(destinationReadList);

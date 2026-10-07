@@ -5,7 +5,13 @@ import { MemoryRouter } from "react-router-dom";
 import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useAgentsProvisioningStatus, useFusionWorkspaceConnectors, useSetFusionActorEnablement } from "core/api";
+import {
+  useAgentsProvisioningStatus,
+  useAgentsSupportedSourceDefinitionIds,
+  useAgentsSupportedDestinationDefinitionIds,
+  useFusionWorkspaceConnectors,
+  useSetFusionActorEnablement,
+} from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { NotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
@@ -20,6 +26,8 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
+  useAgentsSupportedSourceDefinitionIds: jest.fn(),
+  useAgentsSupportedDestinationDefinitionIds: jest.fn(),
   useFusionWorkspaceConnectors: jest.fn(),
   useSetFusionActorEnablement: jest.fn(),
   useFusionActorEnablement: jest.fn(() => ({
@@ -58,13 +66,11 @@ const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof 
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 
 const messages = {
-  "cloud.contextLayer.actorCard.title": "Context layer",
-  "cloud.contextLayer.agentAccess.title": "Agent Access",
-  "cloud.contextLayer.agentAccess.description":
-    "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
+  "cloud.contextLayer.agentAccess.title": "Agent access",
+  "cloud.contextLayer.setup.agentAccess.title": "Agent access",
+  "cloud.contextLayer.setup.agentAccess.description":
+    "Agents can use the Airbyte MCP to read from and write to this {actorType, select, source {source} other {destination}} directly. No sync required.",
   "cloud.contextLayer.semanticSearch.title": "Semantic Search",
-  "cloud.contextLayer.semanticSearch.description":
-    "Data will be indexed when this source is synced to an enabled Context Layer destination.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
   "cloud.contextLayer.actor.status.saving": "Saving…",
@@ -72,13 +78,13 @@ const messages = {
   "cloud.contextLayer.actor.status.failed": "Could not update agent access. Please try again.",
 };
 
-const renderCard = (actorType: "source" | "destination") =>
+const renderCard = (actorType: "source" | "destination", actorDefinitionId = `${actorType}-definition-id`) =>
   render(
     <MemoryRouter>
       <IntlProvider locale="en" messages={messages}>
         <NotificationService>
           <ConfirmationModalService>
-            <ActorContextLayerCard actorId="actor-id" actorType={actorType} />
+            <ActorContextLayerCard actorId="actor-id" actorDefinitionId={actorDefinitionId} actorType={actorType} />
           </ConfirmationModalService>
         </NotificationService>
       </IntlProvider>
@@ -88,6 +94,8 @@ const renderCard = (actorType: "source" | "destination") =>
 describe("ActorContextLayerCard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(useAgentsSupportedSourceDefinitionIds).mockReturnValue(new Set(["source-definition-id"]));
+    jest.mocked(useAgentsSupportedDestinationDefinitionIds).mockReturnValue(new Set(["destination-definition-id"]));
     mockUseCurrentWorkspaceId.mockReturnValue("workspace-id");
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
@@ -119,60 +127,75 @@ describe("ActorContextLayerCard", () => {
 
     renderCard("source");
 
-    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("renders the card labels and both switches for sources", () => {
-    renderCard("source");
+  it.each(["source", "destination"] as const)("hides the entire card for an unsupported %s", (actorType) => {
+    renderCard(actorType, "unsupported-definition-id");
 
-    expect(screen.getByText("Context layer")).toBeInTheDocument();
-    expect(screen.getByText("Agent Access")).toBeInTheDocument();
-    expect(screen.getByText("Semantic Search")).toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
-    expect(
-      screen.getByText("Data will be indexed when this source is synced to an enabled Context Layer destination.")
-    ).toBeInTheDocument();
-  });
-
-  it("hides semantic search for sources when its flag is off", () => {
-    mockExperiments({ "platform.fusion-semantic-search-ui": false });
-    renderCard("source");
-
-    expect(screen.getByText("Agent Access")).toBeInTheDocument();
-    expect(screen.queryByText("Semantic Search")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-  });
-
-  it("nests the semantic search row under agent access", () => {
-    renderCard("source");
-
-    const semanticSearchRow = screen.getByText("Semantic Search").closest("div")?.parentElement;
-
-    expect(semanticSearchRow).toHaveClass("tierTwo");
-  });
-
-  it("renders only the Agent Access switch for destinations", () => {
-    renderCard("destination");
-
-    expect(screen.getByText("Agent Access")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Allow AI agents with context layer access to query this destination directly. This does not affect data replication."
-      )
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Semantic Search")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.queryByText("Agent access")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(mockUseSetFusionActorEnablement).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["source", "source"],
-    ["destination", "destination"],
-  ] as const)("interpolates the %s actor type in descriptions", (actorType, actorTypeText) => {
+    ["source", "destination-definition-id"],
+    ["destination", "source-definition-id"],
+  ] as const)("uses the matching registry for %s support", (actorType, actorDefinitionId) => {
+    renderCard(actorType, actorDefinitionId);
+
+    expect(screen.queryByText("Agent access")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it.each(["source", "destination"] as const)("hides the card with an empty %s support registry", (actorType) => {
+    jest.mocked(useAgentsSupportedSourceDefinitionIds).mockReturnValue(new Set());
+    jest.mocked(useAgentsSupportedDestinationDefinitionIds).mockReturnValue(new Set());
+
     renderCard(actorType);
 
+    expect(screen.queryByText("Agent access")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it.each(["source", "destination"] as const)("keeps the supported %s card visible before enrollment", (actorType) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue(null);
+
+    renderCard(actorType);
+
+    expect(screen.getByText("Agent access")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
+  });
+
+  it.each(["source", "destination"] as const)(
+    "keeps the supported %s card visible without edit permission",
+    (actorType) => {
+      mockUseGeneratedIntent.mockReturnValue(false);
+
+      renderCard(actorType);
+
+      expect(screen.getByText("Agent access")).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
+    }
+  );
+
+  it.each([
+    ["source", false],
+    ["source", true],
+    ["destination", false],
+    ["destination", true],
+  ] as const)("renders only agent access for %s when the semantic search flag is %s", (actorType, enabled) => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": enabled });
+    renderCard(actorType);
+
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeInTheDocument();
+    expect(screen.getByText("Agent access")).toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        `Allow AI agents with context layer access to query this ${actorTypeText} directly. This does not affect data replication.`
+        `Agents can use the Airbyte MCP to read from and write to this ${actorType} directly. No sync required.`
       )
     ).toBeInTheDocument();
   });

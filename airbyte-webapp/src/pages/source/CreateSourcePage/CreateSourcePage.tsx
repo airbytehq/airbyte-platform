@@ -16,7 +16,6 @@ import { ConnectorDocumentationWrapper } from "area/connector/components/Connect
 import { ConnectionConfiguration } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { SourceContextLayerOptIn } from "cloud/components/AgentsOptIn";
-import type { SourceContextLayerOptInValue } from "cloud/components/AgentsOptIn/SourceContextLayerOptIn";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import {
   useAgentsProvisioningStatus,
@@ -47,7 +46,6 @@ export const CreateSourcePage: React.FC = () => {
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const [isAgentView, setIsAgentView] = useState(false);
 
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
@@ -61,13 +59,10 @@ export const CreateSourcePage: React.FC = () => {
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
-  // Users who cannot change the toggles must not be opted in by default.
-  const [contextLayerOptIn, setContextLayerOptIn] = useState<SourceContextLayerOptInValue>({
-    agentAccess: canManage,
-    semanticSearch: canManage,
-  });
+  // Users who cannot change agent access must not be opted in by default.
+  const [agentAccessEnabled, setAgentAccessEnabled] = useState(canManage);
   useEffect(() => {
-    setContextLayerOptIn({ agentAccess: canManage, semanticSearch: canManage });
+    setAgentAccessEnabled(canManage);
   }, [sourceDefinitionId, canManage]);
 
   // Disable agent for custom connectors since they don't exist in our registry
@@ -118,10 +113,7 @@ export const CreateSourcePage: React.FC = () => {
         actorId: result.sourceId,
         actorKind: "source",
         workspaceId: result.workspaceId,
-        state: {
-          enable_agent_access: contextLayerOptIn.agentAccess,
-          enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
-        },
+        enabled: agentAccessEnabled,
       }).catch(() => {
         registerNotification({
           id: "cloud.contextLayer.sourceOptIn.syncFailed",
@@ -174,10 +166,7 @@ export const CreateSourcePage: React.FC = () => {
         actorId: source.sourceId,
         actorKind: "source",
         workspaceId: source.workspaceId,
-        state: {
-          enable_agent_access: contextLayerOptIn.agentAccess,
-          enable_indexing: showSemanticSearch && contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
-        },
+        enabled: agentAccessEnabled,
       }).catch(() => {
         registerNotification({
           id: "cloud.contextLayer.sourceOptIn.syncFailed",
@@ -231,8 +220,8 @@ export const CreateSourcePage: React.FC = () => {
               contextLayerOptIn={
                 <SourceContextLayerOptIn
                   sourceDefinitionId={selectedSourceDefinition?.sourceDefinitionId}
-                  value={contextLayerOptIn}
-                  onChange={setContextLayerOptIn}
+                  value={agentAccessEnabled}
+                  onChange={setAgentAccessEnabled}
                 />
               }
               onSaveDraft={onSaveSourceDraft}
@@ -260,8 +249,8 @@ export const CreateSourcePage: React.FC = () => {
               contextLayerOptIn={
                 <SourceContextLayerOptIn
                   sourceDefinitionId={selectedSourceDefinition?.sourceDefinitionId}
-                  value={contextLayerOptIn}
-                  onChange={setContextLayerOptIn}
+                  value={agentAccessEnabled}
+                  onChange={setAgentAccessEnabled}
                 />
               }
             />

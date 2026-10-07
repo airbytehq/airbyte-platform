@@ -2,7 +2,6 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useAgentsProvisioningStatus, useAgentsSupportedDestinationDefinitionIds } from "core/api";
@@ -36,17 +35,16 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
     return null;
   }
 
-  const supported = supportedDestinationDefinitionIds.has(destinationDefinitionId ?? "");
-  const agentAccess = isEnrolled && supported && value;
+  if (!supportedDestinationDefinitionIds.has(destinationDefinitionId)) {
+    return null;
+  }
+
+  const agentAccess = isEnrolled && value;
   const withPermissionTooltip = (control: React.ReactElement) => (
     <div className={styles.control}>
       {!isEnrolled ? (
         <Tooltip placement="bottom" control={control}>
           <FormattedMessage id="cloud.contextLayer.actor.notEnrolled" />
-        </Tooltip>
-      ) : !supported ? (
-        <Tooltip placement="bottom" control={control}>
-          <FormattedMessage id="cloud.contextLayer.actor.notSupported" />
         </Tooltip>
       ) : !canManage ? (
         <Tooltip placement="bottom" control={control}>
@@ -66,17 +64,12 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
           <Switch
             size="sm"
             checked={agentAccess}
-            disabled={!isEnrolled || !supported || !canManage}
-            onChange={isEnrolled && supported && canManage ? (event) => onChange(event.target.checked) : undefined}
+            disabled={!isEnrolled || !canManage}
+            onChange={isEnrolled && canManage ? (event) => onChange(event.target.checked) : undefined}
             aria-label={agentAccessTitle}
           />
         )}
       </div>
-      {!supported && (
-        <Text className={styles.unsupported} size="xs" color="grey">
-          <FormattedMessage id="cloud.contextLayer.actor.notSupported" />
-        </Text>
-      )}
     </div>
   );
 };

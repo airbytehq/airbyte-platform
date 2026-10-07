@@ -9,7 +9,7 @@ import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } fr
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
-import { SourceContextLayerOptIn, SourceContextLayerOptInValue } from "./SourceContextLayerOptIn";
+import { SourceContextLayerOptIn } from "./SourceContextLayerOptIn";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 jest.mock("core/api", () => ({
@@ -41,25 +41,18 @@ const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof 
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 
 const messages = {
-  "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
   "cloud.contextLayer.setup.agentAccess.title": "Agent access",
   "cloud.contextLayer.setup.agentAccess.description":
     "Agents can use the Airbyte MCP to read from and write to this {actorType, select, source {source} other {destination}} directly. No sync required.",
-  "cloud.contextLayer.setup.semanticSearch.title": "Semantic search",
-  "cloud.contextLayer.setup.semanticSearch.description":
-    "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency. Only if this source syncs to a destination that is also an agent connector.",
   "cloud.contextLayer.sourceOptIn.noPermission":
     "You need edit permission for this workspace's sources to change this.",
-  "cloud.contextLayer.sourceOptIn.notEnrolled":
-    "An organization admin needs to enable the Context layer for this organization and workspace before this source can be made available.",
+  "cloud.contextLayer.actor.notEnrolled":
+    "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
 };
 
-const initialValue: SourceContextLayerOptInValue = { agentAccess: true, semanticSearch: true };
+const initialValue = true;
 
-const renderOptIn = (
-  value: SourceContextLayerOptInValue = initialValue,
-  onChange: (value: SourceContextLayerOptInValue) => void = jest.fn()
-) =>
+const renderOptIn = (value: boolean = initialValue, onChange: (value: boolean) => void = jest.fn()) =>
   render(
     <IntlProvider locale="en" messages={messages}>
       <SourceContextLayerOptIn sourceDefinitionId={ConnectorIds.Sources.GitHub} value={value} onChange={onChange} />
@@ -85,7 +78,7 @@ describe("SourceContextLayerOptIn", () => {
     mockExperiments({ "platform.fusion-semantic-search-ui": true });
   });
 
-  it("renders disabled unchecked toggles with an enrollment tooltip before enrollment", async () => {
+  it("renders a disabled unchecked toggle with an enrollment tooltip before enrollment", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue(null);
     const onChange = jest.fn();
     renderOptIn(initialValue, onChange);
@@ -99,7 +92,7 @@ describe("SourceContextLayerOptIn", () => {
     expect(onChange).not.toHaveBeenCalled();
     fireEvent.mouseOver(toggles[0]);
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "An organization admin needs to enable the Context layer for this organization and workspace before this source can be made available."
+      "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on."
     );
   });
 
@@ -123,56 +116,42 @@ describe("SourceContextLayerOptIn", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("renders both toggles checked for a supported source", () => {
+  it.each([false, true])("renders only agent access when the semantic search flag is %s", (enabled) => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": enabled });
     renderOptIn();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
-    expect(screen.getAllByRole("checkbox").every((toggle) => (toggle as HTMLInputElement).checked)).toBe(true);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeChecked();
     expect(screen.getByRole("group", { name: "Agent access" })).toContainElement(
       screen.getByRole("checkbox", { name: "Agent access" })
     );
-    expect(screen.getByRole("group", { name: "Semantic search" })).toContainElement(
-      screen.getByRole("checkbox", { name: "Semantic search" })
-    );
+    expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
     expect(
       screen.getByText(
         "Agents can use the Airbyte MCP to read from and write to this source directly. No sync required."
       )
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency. Only if this source syncs to a destination that is also an agent connector."
-      )
-    ).toBeInTheDocument();
     expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditSource);
   });
 
-  it("hides semantic search while keeping agent access in source setup", () => {
-    mockExperiments({ "platform.fusion-semantic-search-ui": false });
-    renderOptIn();
-
-    expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeChecked();
-    expect(screen.queryByText("Semantic search")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-  });
-
-  it("renders both toggles disabled and shows an unsupported tooltip for an unsupported source", async () => {
-    render(
+  it("renders nothing for an unsupported source", () => {
+    const { container } = render(
       <IntlProvider locale="en" messages={messages}>
         <SourceContextLayerOptIn sourceDefinitionId="not-supported" value={initialValue} onChange={jest.fn()} />
       </IntlProvider>
     );
 
-    screen.getAllByRole("checkbox").forEach((toggle) => {
-      expect(toggle).toBeDisabled();
-      expect(toggle).not.toBeChecked();
-    });
-    fireEvent.mouseOver(screen.getAllByRole("checkbox")[0]);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "This connector is not yet supported by the context layer."
-    );
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it("disables and unchecks semantic search when agent access is turned off", () => {
+  it("renders nothing when no source definitions are supported", () => {
+    mockUseAgentsSupportedSourceDefinitionIds.mockReturnValue(new Set());
+
+    const { container } = renderOptIn();
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("updates agent access with a boolean when toggled off and on", () => {
     const onChange = jest.fn();
     const Wrapper = () => {
       const [value, setValue] = useState(initialValue);
@@ -193,26 +172,18 @@ describe("SourceContextLayerOptIn", () => {
         <Wrapper />
       </IntlProvider>
     );
-    const [agentAccess, semanticSearch] = screen.getAllByRole("checkbox");
+    const agentAccess = screen.getByRole("checkbox", { name: "Agent access" });
 
     fireEvent.click(agentAccess);
 
-    expect(onChange).toHaveBeenCalledWith({ agentAccess: false, semanticSearch: true });
+    expect(onChange).toHaveBeenLastCalledWith(false);
     expect(agentAccess).not.toBeChecked();
-    expect(semanticSearch).toBeDisabled();
-    expect(semanticSearch).not.toBeChecked();
+    fireEvent.click(agentAccess);
+    expect(onChange).toHaveBeenLastCalledWith(true);
+    expect(agentAccess).toBeChecked();
   });
 
-  it("calls onChange when semantic search is toggled", () => {
-    const onChange = jest.fn();
-    renderOptIn(initialValue, onChange);
-
-    fireEvent.click(screen.getAllByRole("checkbox")[1]);
-
-    expect(onChange).toHaveBeenCalledWith({ agentAccess: true, semanticSearch: false });
-  });
-
-  it("disables both toggles and does not call onChange without permission", async () => {
+  it("disables the toggle and does not call onChange without permission", async () => {
     const onChange = jest.fn();
     mockUseGeneratedIntent.mockReturnValue(false);
     renderOptIn(initialValue, onChange);

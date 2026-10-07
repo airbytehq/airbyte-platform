@@ -91,8 +91,14 @@ export const SourceSettingsPage: React.FC = () => {
           onDraftPromoted={source.isDraft ? async () => reloadSource() : undefined}
           onDeleteClick={onDeleteClick}
           supportLevel={sourceDefinitionVersion.supportLevel}
+          preFooterSlot={
+            <ActorContextLayerCard
+              actorId={source.sourceId}
+              actorDefinitionId={source.sourceDefinitionId}
+              actorType="source"
+            />
+          }
         />
-        <ActorContextLayerCard actorId={source.sourceId} actorType="source" />
       </FlexContainer>
     </div>
   );

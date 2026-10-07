@@ -71,8 +71,10 @@ const messages = {
   "cloud.contextLayer.semanticSearch.description":
     "Data will be indexed when this source is synced to an enabled Context Layer destination.",
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
-  "cloud.contextLayer.actor.noPermission":
-    "You need edit permission for this workspace's sources or destinations to change this.",
+  "cloud.contextLayer.sourceOptIn.noPermission":
+    "You need edit permission for this workspace's sources to change this.",
+  "cloud.contextLayer.destinationOptIn.noPermission":
+    "You need edit permission for this workspace's destinations to change this.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
   "cloud.contextLayer.actor.loadFailed": "Context layer status could not be loaded for this workspace.",
@@ -216,35 +218,39 @@ describe("ActorContextLayerToggles", () => {
     expect(toggle).toBeDisabled();
   });
 
-  it("renders a workspace permission tooltip when the actor cannot be edited", async () => {
-    mockUseGeneratedIntent.mockReturnValue(false);
-    mockUseFusionWorkspaceConnectors.mockReturnValue({
-      sources: [
+  it.each(["source", "destination"] as const)(
+    "renders a %s permission tooltip when the actor cannot be edited",
+    async (actorType) => {
+      mockUseGeneratedIntent.mockReturnValue(false);
+      const connectors = [
         {
           id: "actor-id",
-          name: "GitHub",
+          name: "Connector",
           supported: true,
           state: { enable_agent_access: false, enable_indexing: false },
           enabled: true,
         },
-      ],
-      destinations: [],
-      isLoading: false,
-      sourcesLoading: false,
-      destinationsLoading: false,
-      sourcesError: false,
-      destinationsError: false,
-    });
+      ];
+      mockUseFusionWorkspaceConnectors.mockReturnValue({
+        sources: actorType === "source" ? connectors : [],
+        destinations: actorType === "destination" ? connectors : [],
+        isLoading: false,
+        sourcesLoading: false,
+        destinationsLoading: false,
+        sourcesError: false,
+        destinationsError: false,
+      });
 
-    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
+      renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType={actorType} />);
 
-    const toggle = screen.getByRole("checkbox", { name: "Agent Access" });
-    expect(toggle).toBeDisabled();
-    fireEvent.mouseOver(toggle);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "You need edit permission for this workspace's sources or destinations to change this."
-    );
-  });
+      const toggle = screen.getByRole("checkbox", { name: "Agent Access" });
+      expect(toggle).toBeDisabled();
+      fireEvent.mouseOver(toggle);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        `You need edit permission for this workspace's ${actorType}s to change this.`
+      );
+    }
+  );
 
   it("renders a disabled unchecked toggle with a load error tooltip when the connector query fails", async () => {
     mockUseFusionWorkspaceConnectors.mockReturnValue({

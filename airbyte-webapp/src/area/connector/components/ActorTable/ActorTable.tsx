@@ -16,7 +16,6 @@ import { EntityNameCell } from "area/connection/components/EntityTable/component
 import { LastSyncCell } from "area/connection/components/EntityTable/components/LastSyncCell";
 import { NumberOfConnectionsCell } from "area/connection/components/EntityTable/components/NumberOfConnectionsCell";
 import { useShowActorContextLayerToggles } from "cloud/components/AgentsOptIn/ActorContextLayerToggles";
-import { AgentsSourceCta } from "cloud/components/AgentsOptIn/AgentsSourceCta";
 import {
   useAgentsSupportedDestinationDefinitionIds,
   useAgentsSupportedSourceDefinitionIds,
@@ -31,7 +30,6 @@ import {
   SupportState,
 } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline, shouldDisplayBreakingChangeBanner } from "core/domain/connector";
-import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPage/ConnectionStatusMessages";
 
@@ -133,21 +131,20 @@ const columnHelper = createColumnHelper<ActorTableDataItem>();
 const ActorFeatureStatus: React.FC<{
   actor: ActorTableDataItem;
   supported: boolean;
-  field: "enable_agent_access" | "enable_indexing";
-}> = ({ actor, supported, field }) => {
+}> = ({ actor, supported }) => {
   const { formatMessage } = useIntl();
   const { data, isLoading, isError } = useFusionActorEnablement(
     { actorId: actor.id, actorKind: actor.actorType, workspaceId: actor.workspaceId },
     supported
   );
-  const label = formatMessage({ id: field === "enable_agent_access" ? "tables.agentAccess" : "tables.semanticSearch" });
+  const label = formatMessage({ id: "tables.agentAccess" });
   const state = !supported
     ? "notApplicable"
     : isLoading
     ? "loading"
     : isError
     ? "unavailable"
-    : data?.[field]
+    : data?.enable_agent_access
     ? "configured"
     : "notConfigured";
   const title = formatMessage({ id: `tables.featureStatus.${state}` }, { feature: label });
@@ -180,8 +177,6 @@ export const ActorTable: React.FC<ActorTableProps> = ({
 }) => {
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const showActorContextLayerToggles = useShowActorContextLayerToggles();
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
-  const isSourceList = isSourceReadList(actorReadList);
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
 
@@ -278,30 +273,10 @@ export const ActorTable: React.FC<ActorTableProps> = ({
               cell: (props) => (
                 <ActorFeatureStatus
                   actor={props.row.original}
-                  field="enable_agent_access"
                   supported={(props.row.original.actorType === "source"
                     ? supportedSourceDefinitionIds
                     : supportedDestinationDefinitionIds
                   ).has(props.row.original.actorDefinitionId)}
-                />
-              ),
-              enableSorting: false,
-            }),
-          ]
-        : []),
-      ...(showActorContextLayerToggles && isSourceList && showSemanticSearch
-        ? [
-            columnHelper.display({
-              header: () => <FormattedMessage id="tables.semanticSearch" />,
-              id: "semanticSearch",
-              meta: {
-                noPadding: false,
-              },
-              cell: (props) => (
-                <ActorFeatureStatus
-                  actor={props.row.original}
-                  field="enable_indexing"
-                  supported={supportedSourceDefinitionIds.has(props.row.original.actorDefinitionId)}
                 />
               ),
               enableSorting: false,
@@ -349,23 +324,10 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         },
         enableSorting: false,
       }),
-      columnHelper.display({
-        header: () => null,
-        id: "agentsCta",
-        cell: (props) => (
-          <AgentsSourceCta
-            actorType={props.row.original.actorType}
-            actorDefinitionId={props.row.original.actorDefinitionId}
-          />
-        ),
-        enableSorting: false,
-      }),
     ],
     [
       connectorBreakingChangeDeadlinesEnabled,
-      isSourceList,
       showActorContextLayerToggles,
-      showSemanticSearch,
       supportedSourceDefinitionIds,
       supportedDestinationDefinitionIds,
     ]

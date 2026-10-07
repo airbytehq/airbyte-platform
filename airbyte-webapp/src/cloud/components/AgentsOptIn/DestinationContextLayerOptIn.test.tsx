@@ -36,7 +36,6 @@ const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof 
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 
 const messages = {
-  "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
   "cloud.contextLayer.setup.agentAccess.title": "Agent access",
@@ -116,17 +115,18 @@ describe("DestinationContextLayerOptIn", () => {
     );
   });
 
-  it("renders a disabled unchecked toggle and unsupported footnote for an unsupported destination", async () => {
-    renderOptIn("unsupported-definition-id");
+  it("renders nothing for an unsupported destination", () => {
+    const { container } = renderOptIn("unsupported-definition-id");
 
-    const toggle = screen.getByRole("checkbox");
-    expect(toggle).toBeDisabled();
-    expect(toggle).not.toBeChecked();
-    expect(screen.getByText("This connector is not yet supported by the context layer.")).toBeInTheDocument();
-    fireEvent.mouseOver(toggle);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "This connector is not yet supported by the context layer."
-    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders nothing when no destination definitions are supported", () => {
+    mockUseAgentsSupportedDestinationDefinitionIds.mockReturnValue(new Set());
+
+    const { container } = renderOptIn();
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("disables the toggle and shows a permission tooltip when the destination cannot be edited", async () => {
