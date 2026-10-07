@@ -17,6 +17,10 @@ jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
 }));
 
+jest.mock("core/api/cloud", () => ({
+  useFusionUsage: () => ({ isEligible: false }),
+}));
+
 jest.mock("core/utils/app", () => ({
   useIsCloudApp: jest.fn(),
 }));

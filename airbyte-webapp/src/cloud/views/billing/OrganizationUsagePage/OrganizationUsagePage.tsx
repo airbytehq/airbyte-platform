@@ -8,6 +8,7 @@ import { Text } from "components/ui/Text";
 
 import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { DataWorkerUsage } from "area/organization/DataWorkerUsage";
+import { AgentToolCallUsage } from "cloud/area/billing/components/AgentToolCallUsage/AgentToolCallUsage";
 import { UsagePerDayGraph } from "cloud/area/billing/components/UsagePerDayGraph";
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -50,6 +51,7 @@ export const OrganizationUsagePage: React.FC = () => {
           </OrganizationCreditUsageContextProvider>
         </>
       )}
+      <AgentToolCallUsage />
     </FlexContainer>
   );
 };

@@ -9,6 +9,7 @@ import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
 
+import { FusionUsageBanner } from "./FusionUsageBanner";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 const AgentsOptInBannerContent: React.FC = () => {
@@ -42,6 +43,7 @@ const AgentsOptInBannerContent: React.FC = () => {
 export const AgentsOptInBanner: React.FC = () => {
   return (
     <React.Suspense>
+      <FusionUsageBanner />
       <AgentsOptInBannerContent />
     </React.Suspense>
   );
