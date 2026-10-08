@@ -4,6 +4,9 @@
 
 package io.airbyte.oauth.declarative
 
+import com.hubspot.jinjava.Jinjava
+import com.hubspot.jinjava.interpret.FatalTemplateErrorsException
+import com.hubspot.jinjava.interpret.TemplateError
 import io.airbyte.commons.json.Jsons
 import io.mockk.every
 import io.mockk.mockk
@@ -88,6 +91,157 @@ internal class DeclarativeOAuthSpecHandlerTest {
     val templateValues = mapOf<String?, String?>("key" to "header_key", "value" to "header_value")
     val headers = handler.renderCompleteOAuthHeaders(templateValues, userConfig)
     Assertions.assertEquals("header_value", headers["header_key"])
+  }
+
+  @Test
+  fun testConsentUrlTemplateValuesExcludeClientSecret() {
+    val consentUrlTemplate =
+      "https://example.com/cb?a={{ client_secret_value }}&b={{ client_secret }}&c={{ client_secret_param }}&d={{ app_secret }}&{{ client_id_param }}"
+    val defaultKeyConfig = Jsons.jsonNode(mapOf("client_secret" to TEST_CLIENT_SECRET))
+    val customKeyConfig =
+      Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.CLIENT_SECRET_KEY to "app_secret", "app_secret" to TEST_CLIENT_SECRET))
+
+    listOf(defaultKeyConfig, customKeyConfig).forEach { userConfig ->
+      val templateValues = handler.getConsentUrlTemplateValues(userConfig, TEST_CLIENT_ID, TEST_REDIRECT_URI, TEST_STATE)
+      val rendered = handler.renderStringTemplate(templateValues, consentUrlTemplate)
+
+      Assertions.assertFalse(rendered.contains(TEST_CLIENT_SECRET), rendered)
+      Assertions.assertTrue(rendered.endsWith("client_id=$TEST_CLIENT_ID"), rendered)
+    }
+  }
+
+  @Test
+  fun testConsentUrlTemplateValuesDoNotAliasClientSecret() {
+    // A *_key names the field its references resolve to, so none may resolve to the client secret field.
+    listOf(
+      mapOf("client_secret" to TEST_CLIENT_SECRET, DeclarativeOAuthSpecHandler.SCOPE_KEY to "client_secret") to TEST_CLIENT_ID,
+      mapOf("client_secret" to TEST_CLIENT_SECRET, DeclarativeOAuthSpecHandler.AUTH_CODE_KEY to "client_secret") to TEST_CLIENT_ID,
+      mapOf(
+        DeclarativeOAuthSpecHandler.CLIENT_SECRET_KEY to "app_secret",
+        "app_secret" to TEST_CLIENT_SECRET,
+        DeclarativeOAuthSpecHandler.SCOPE_KEY to "app_secret",
+      ) to
+        TEST_CLIENT_ID,
+      mapOf(
+        "client_secret" to TEST_CLIENT_SECRET,
+        DeclarativeOAuthSpecHandler.CLIENT_SECRET_KEY to "unused",
+        DeclarativeOAuthSpecHandler.SCOPE_KEY to "client_secret",
+      ) to
+        TEST_CLIENT_ID,
+      // the client id is read from the field client_id_key names, so here it is the client secret itself
+      mapOf(DeclarativeOAuthSpecHandler.CLIENT_ID_KEY to "client_secret") to TEST_CLIENT_SECRET,
+    ).forEach { (userConfig, clientId) ->
+      val templateValues = handler.getConsentUrlTemplateValues(Jsons.jsonNode(userConfig), clientId, TEST_REDIRECT_URI, TEST_STATE)
+
+      Assertions.assertTrue(templateValues.values.none { it?.contains(TEST_CLIENT_SECRET) == true }, templateValues.toString())
+    }
+  }
+
+  @Test
+  fun testRenderStringTemplateRejectsMethodCalls() {
+    listOf(
+      "{{ x.getClass() }}",
+      "{{ ''.getClass().forName('java.lang.Runtime') }}",
+      "{{ x.toUpperCase() }}",
+      "{{ x['filter:urlencode'].getName() }}",
+    ).forEach { template ->
+      Assertions.assertThrows(FatalTemplateErrorsException::class.java, { handler.renderStringTemplate(mapOf("x" to "a"), template) }, template)
+    }
+  }
+
+  @Test
+  fun testRenderStringTemplateDoesNotResolveBeanProperties() {
+    listOf("{{ x.class }}", "{{ x['class'] }}", "{{ x.class.classLoader }}", "{{ x.bytes }}").forEach { template ->
+      Assertions.assertEquals("", handler.renderStringTemplate(mapOf("x" to "a"), template), template)
+    }
+  }
+
+  @Test
+  fun testRenderStringTemplateRejectsDisabledFeatures() {
+    listOf("{% for i in [1] %}{{ i }}{% endfor %}", "{% set y = 'a' %}", "{{ range(3) }}", "{{ x | lower }}", "{{ x is defined }}")
+      .forEach { template ->
+        Assertions.assertThrows(FatalTemplateErrorsException::class.java, { handler.renderStringTemplate(mapOf("x" to "a"), template) }, template)
+      }
+  }
+
+  @Test
+  fun testRenderStringTemplateAllowsOnlyAllowlistedTagsAndFilters() {
+    val defaults = Jinjava().globalContext
+    val templates =
+      defaults.allTags
+        .map { it.name }
+        .filter { it !in setOf("if", "else", "endif") }
+        .map { "{% $it %}" } +
+        defaults.allFilters
+          .map { it.name }
+          .filter { it !in setOf("urlencode", "replace", "b64encode", "codechallengeS256") }
+          .map { "{{ x | $it }}" }
+
+    templates.forEach { template ->
+      val e =
+        Assertions.assertThrows(
+          FatalTemplateErrorsException::class.java,
+          { handler.renderStringTemplate(mapOf("x" to "a"), template) },
+          template,
+        )
+      Assertions.assertTrue(e.errors.any { it.reason == TemplateError.ErrorReason.DISABLED }, template)
+    }
+  }
+
+  @Test
+  fun testRenderCompleteOAuthHeadersRejectsMethodCallsInKey() {
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY to mapOf("{{ key.getClass() }}" to "value")))
+
+    Assertions.assertThrows(FatalTemplateErrorsException::class.java) { handler.renderCompleteOAuthHeaders(mapOf("key" to "a"), userConfig) }
+  }
+
+  @Test
+  fun testRenderStringTemplateDoesNotRenderTemplatesInValues() {
+    val rendered = handler.renderStringTemplate(mapOf("key" to "{{ 7*7 }}"), "{{ key }}")
+
+    Assertions.assertEquals("{{ 7*7 }}", rendered)
+  }
+
+  @Test
+  fun testRenderStringTemplateRejectsOversizedOutput() {
+    Assertions.assertThrows(FatalTemplateErrorsException::class.java) {
+      handler.renderStringTemplate(mapOf("key" to "a".repeat(20_000)), "{{ key }}")
+    }
+  }
+
+  @Test
+  fun testRenderStringTemplateHandlesEmptyAndMissingValues() {
+    Assertions.assertEquals("", handler.renderStringTemplate(emptyMap(), ""))
+    Assertions.assertEquals("a=&b=", handler.renderStringTemplate(mapOf("present" to null), "a={{ present }}&b={{ missing }}"))
+  }
+
+  /**
+   * Every template used by a declarative OAuth spec in the connector registry must render the same as with Jinjava's
+   * default configuration.
+   */
+  @Test
+  fun testRenderStringTemplateMatchesDefaultJinjavaForRegistryTemplates() {
+    val templates =
+      Jsons.deserializeToStringList(
+        Jsons.deserialize(javaClass.getResource("/declarative_oauth/registry_templates.json")!!.readText()),
+      )
+    val templateValues =
+      handler.getAccessTokenUrlTemplateValues(
+        Jsons.jsonNode(mapOf("subdomain" to "acme", "tenant_id" to "tenant", "dc_region" to "AU", "is_sandbox" to "true")),
+        TEST_CLIENT_ID,
+        TEST_CLIENT_SECRET,
+        "test_auth_code",
+        TEST_REDIRECT_URI,
+        TEST_STATE,
+      )
+    val defaultJinjava = Jinjava()
+    defaultJinjava.globalContext.registerFilter(CodeChallengeS256Filter())
+    defaultJinjava.globalContext.registerFilter(Base64EncodeFilter())
+
+    Assertions.assertFalse(templates.isEmpty())
+    templates.forEach { template ->
+      Assertions.assertEquals(defaultJinjava.render(template, templateValues), handler.renderStringTemplate(templateValues, template), template)
+    }
   }
 
   /**
@@ -298,6 +452,7 @@ internal class DeclarativeOAuthSpecHandlerTest {
     private const val REFRESH_TOKEN_TEST_VALUE = "refresh_token_value"
     private const val TEST_ACCESS_TOKEN_URL = "test_access_token_url"
     private const val TEST_CLIENT_ID = "test_client_id"
+    private const val TEST_CLIENT_SECRET = "test_client_secret"
     private const val TEST_REDIRECT_URI = "test_redirect_uri"
     private const val TEST_STATE = "test_state"
   }

@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest
 import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner
@@ -29,6 +30,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody
 import io.airbyte.api.model.generated.DeclarativeSourceManifest
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE
 import io.airbyte.commons.json.Jsons.clone
@@ -81,6 +83,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import java.net.URI
+import java.net.http.HttpClient
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -416,6 +419,40 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Mockito
       .verify(connectorBuilderService, Mockito.never())
       .deleteBuilderProjectDraft(anyOrNull())
+  }
+
+  @Test
+  fun testProjectTestingValuesEndpointsValidateWorkspace() {
+    val project = generateBuilderProject()
+    Mockito.`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false)).thenReturn(project)
+    Mockito.`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, true)).thenReturn(project)
+    val wrongWorkspaceId = UUID.randomUUID()
+
+    listOf(
+      {
+        connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(
+          ConnectorBuilderProjectStreamReadRequestBody().builderProjectId(project.builderProjectId).workspaceId(wrongWorkspaceId),
+        )
+      },
+      {
+        connectorBuilderProjectsHandler.fullResolveManifestBuilderProject(
+          ConnectorBuilderProjectFullResolveRequestBody().builderProjectId(project.builderProjectId).workspaceId(wrongWorkspaceId),
+        )
+      },
+      {
+        connectorBuilderProjectsHandler.getConnectorBuilderProjectOAuthConsent(
+          BuilderProjectOauthConsentRequest().builderProjectId(project.builderProjectId).workspaceId(wrongWorkspaceId),
+        )
+      },
+      {
+        connectorBuilderProjectsHandler.completeConnectorBuilderProjectOAuth(
+          CompleteConnectorBuilderProjectOauthRequest().builderProjectId(project.builderProjectId).workspaceId(wrongWorkspaceId),
+        )
+      },
+    ).forEach { call -> Assertions.assertThrows(ConfigNotFoundException::class.java) { call() } }
+
+    // the testing values of a project in another workspace are never hydrated
+    Mockito.verifyNoInteractions(secretsRepositoryReader)
   }
 
   @Test
@@ -1590,7 +1627,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
           eq(workspaceId),
           eq(null),
           eq(redirectUrl),
-          eq(testingValues),
+          eq(testingValuesWithSecretCoordinates),
           anyOrNull(),
           eq(testingValues),
         ),
@@ -1617,12 +1654,122 @@ internal class ConnectorBuilderProjectsHandlerTest {
         eq(workspaceId),
         eq(null),
         eq(redirectUrl),
-        eq(testingValues),
+        eq(testingValuesWithSecretCoordinates),
         anyOrNull(),
         eq(testingValues),
       )
 
     Assertions.assertEquals(consentUrl, response.getConsentUrl())
+  }
+
+  @Test
+  fun testGetConnectorBuilderProjectOAuthConsentDoesNotExposeSecrets() {
+    val consentUrlTemplate =
+      "https://provider.com/auth?{{client_id_param}}&a={{ client_secret_value }}&b={{ client_secret }}&c={{ api_key }}&s={{ subdomain }}"
+
+    val response = getOAuthConsentWithRealFlow(consentUrlTemplate)
+
+    Assertions.assertTrue(response.consentUrl.startsWith("https://provider.com/auth?client_id=the-client-id&"), response.consentUrl)
+    Assertions.assertFalse(response.consentUrl.contains("client-secret-value"), response.consentUrl)
+    Assertions.assertFalse(response.consentUrl.contains("api-key-value"), response.consentUrl)
+    Assertions.assertTrue(response.consentUrl.endsWith("&s=acme"), response.consentUrl)
+  }
+
+  @Test
+  fun testGetConnectorBuilderProjectOAuthConsentDoesNotExposeSecretsTheDraftSpecNoLongerFlags() {
+    listOf(setOf("client_id", "client_secret"), emptySet()).forEach { secretFields ->
+      val response = getOAuthConsentWithRealFlow("https://provider.com/auth?{{client_id_param}}&c={{ api_key }}", secretFields)
+
+      Assertions.assertEquals("https://provider.com/auth?client_id=the-client-id&c=", response.consentUrl)
+    }
+  }
+
+  /**
+   * The testing values are stored while client_id, client_secret and api_key are flagged as secrets; [secretFields] are the
+   * fields the draft spec flags when the consent URL is requested.
+   */
+  private fun getOAuthConsentWithRealFlow(
+    consentUrlTemplate: String,
+    secretFields: Set<String> = setOf("client_id", "client_secret", "api_key"),
+  ): OAuthConsentRead {
+    val projectId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val connectionSpecification =
+      jsonNode(
+        mapOf(
+          "type" to "object",
+          "properties" to
+            listOf("client_id", "client_secret", "api_key", "subdomain").associateWith { field ->
+              if (field in secretFields) mapOf("type" to "string", "airbyte_secret" to true) else mapOf("type" to "string")
+            },
+        ),
+      )
+    val manifest =
+      jsonNode(
+        mapOf(
+          "spec" to
+            mapOf(
+              "connection_specification" to connectionSpecification,
+              "advanced_auth" to
+                mapOf(
+                  "oauth_config_specification" to
+                    mapOf(
+                      "oauth_connector_input_specification" to mapOf("consent_url" to consentUrlTemplate),
+                      "complete_oauth_output_specification" to
+                        mapOf(
+                          "type" to "object",
+                          "properties" to
+                            mapOf(
+                              "access_token" to
+                                mapOf(
+                                  "type" to "string",
+                                  "path_in_connector_config" to listOf("access_token"),
+                                  "path_in_oauth_response" to listOf("access_token"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+      )
+    val storedTestingValues =
+      jsonNode(
+        mapOf(
+          "client_id" to mapOf("_secret" to "airbyte_workspace_123_secret_1_v1"),
+          "client_secret" to mapOf("_secret" to "airbyte_workspace_123_secret_2_v1"),
+          "api_key" to mapOf("_secret" to "airbyte_workspace_123_secret_3_v1"),
+          "subdomain" to "acme",
+        ),
+      )
+    val hydratedTestingValues =
+      jsonNode(mapOf("client_id" to "the-client-id", "client_secret" to "client-secret-value", "api_key" to "api-key-value", "subdomain" to "acme"))
+
+    Mockito
+      .`when`(connectorBuilderService.getConnectorBuilderProject(projectId, true))
+      .thenReturn(
+        ConnectorBuilderProject()
+          .withWorkspaceId(workspaceId)
+          .withManifestDraft(manifest)
+          .withTestingValues(storedTestingValues),
+      )
+    Mockito
+      .`when`(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(storedTestingValues))
+      .thenReturn(hydratedTestingValues)
+    Mockito
+      .doAnswer { JsonSecretsProcessor(true).prepareSecretsForOutput(it.getArgument(0), it.getArgument(1)) }
+      .`when`(secretsProcessor)
+      .prepareSecretsForOutput(anyOrNull(), anyOrNull())
+    Mockito
+      .`when`(oauthImplementationFactory.createDeclarativeOAuthImplementation(anyOrNull()))
+      .thenReturn(DeclarativeOAuthFlow(HttpClient.newHttpClient()))
+
+    return connectorBuilderProjectsHandler.getConnectorBuilderProjectOAuthConsent(
+      BuilderProjectOauthConsentRequest()
+        .builderProjectId(projectId)
+        .workspaceId(workspaceId)
+        .redirectUrl("https://airbyte.com/auth_flow"),
+    )
   }
 
   @Test
@@ -1742,7 +1889,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
           eq(workspaceId),
           eq(null),
           eq(redirectUrl),
-          eq(testingValues),
+          eq(testingValuesWithSecretCoordinates),
           anyOrNull(),
           eq(testingValues),
         ),
@@ -1774,7 +1921,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         eq(workspaceId),
         eq(null),
         eq(redirectUrl),
-        eq(testingValues),
+        eq(testingValuesWithSecretCoordinates),
         anyOrNull(),
         eq(testingValues),
       )

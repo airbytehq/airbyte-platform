@@ -495,6 +495,7 @@ open class ConnectorBuilderProjectsHandler
     fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead? {
       try {
         val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
+        validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
         val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
         val existingHydratedTestingValues =
           getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
@@ -539,6 +540,7 @@ open class ConnectorBuilderProjectsHandler
 
     fun fullResolveManifestBuilderProject(requestBody: ConnectorBuilderProjectFullResolveRequestBody): ConnectorBuilderResolvedManifest {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
+      validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
       val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
       val existingHydratedTestingValues =
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
@@ -697,6 +699,7 @@ open class ConnectorBuilderProjectsHandler
 
     fun getConnectorBuilderProjectOAuthConsent(requestBody: BuilderProjectOauthConsentRequest): OAuthConsentRead {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
+      validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
       val manifest = getManifestForProject(project)
 
       val spec =
@@ -738,13 +741,18 @@ open class ConnectorBuilderProjectsHandler
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
 
+      // The consent URL is returned to the caller, so its template only sees the stored testing values as masked on read-back:
+      // a stored secret stays a secret reference even if the draft spec no longer flags it.
+      // The hydrated values are passed only as the OAuth param config, which the flow reads the client id from.
+      val maskedTestingValues = maskSecrets(project.testingValues, manifest) ?: Jsons.emptyObject()
+
       val oAuthFlowImplementation = oAuthImplementationFactory.createDeclarativeOAuthImplementation(spec)
       return OAuthConsentRead().consentUrl(
         oAuthFlowImplementation.getSourceConsentUrl(
           requestBody.workspaceId,
           null,
           requestBody.redirectUrl,
-          existingHydratedTestingValues,
+          maskedTestingValues,
           oauthConfigSpecification,
           existingHydratedTestingValues,
         ),
@@ -753,6 +761,7 @@ open class ConnectorBuilderProjectsHandler
 
     fun completeConnectorBuilderProjectOAuth(requestBody: CompleteConnectorBuilderProjectOauthRequest): CompleteOAuthResponse {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
+      validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
       val manifest = getManifestForProject(project)
 
       val spec =

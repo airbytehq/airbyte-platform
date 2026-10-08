@@ -6,11 +6,18 @@ package io.airbyte.oauth.declarative
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.hubspot.jinjava.Jinjava
+import com.hubspot.jinjava.JinjavaConfig
+import com.hubspot.jinjava.interpret.Context
+import com.hubspot.jinjava.lib.filter.Filter
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import io.airbyte.oauth.SCOPES_KEY
+import jinjava.javax.el.BeanELResolver
+import jinjava.javax.el.CompositeELResolver
+import jinjava.javax.el.ELContext
+import jinjava.javax.el.MapELResolver
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -246,7 +253,12 @@ class DeclarativeOAuthSpecHandler {
     templateValues[templateValues[REDIRECT_URI_KEY]] = redirectUrl
     templateValues[templateValues[STATE_KEY]] = state
 
-    return getTemplateParametersAndValues(templateValues)
+    // The consent URL is returned to the caller, so no template may reference the client secret. It is removed before
+    // the *_key references are resolved, so that e.g. a scope_key naming the secret field cannot alias it either.
+    val clientSecretKeys = setOf(CLIENT_SECRET_VALUE, templateValues[CLIENT_SECRET_KEY], CLIENT_SECRET_PARAM, CLIENT_SECRET_VALUE_KEY)
+    templateValues -= clientSecretKeys
+
+    return getTemplateParametersAndValues(templateValues) - clientSecretKeys
   }
 
   /**
@@ -339,12 +351,12 @@ class DeclarativeOAuthSpecHandler {
    * @param templateValues a map containing the template variables and their corresponding values
    * @param templateString the string template to be rendered
    * @return the rendered string with the template variables replaced by their corresponding values
-   * @throws IOException if an I/O error occurs during rendering
+   * @throws com.hubspot.jinjava.interpret.FatalTemplateErrorsException if the template uses a disabled feature
    */
   fun renderStringTemplate(
     templateValues: Map<String?, String?>?,
     templateString: String?,
-  ): String = getInterpolator().render(templateString, templateValues)
+  ): String = INTERPOLATOR.render(templateString, templateValues)
 
   /**
    * Retrieves the configuration extract output from the provided JSON node.
@@ -570,19 +582,56 @@ class DeclarativeOAuthSpecHandler {
         else -> " "
       }
 
-    /**
-     * Creates and returns a new instance of Jinjava with a custom filter registered. The custom filter
-     * `codeChallengeS256` is registered to the Jinjava instance's global context.
-     *
-     * @return a Jinjava instance with the `codeChallengeS256` filter registered.
-     */
-    private fun getInterpolator(): Jinjava {
-      val interpolator = Jinjava()
-      // register the `codeChallengeS256` filter
-      interpolator.globalContext.registerFilter(CodeChallengeS256Filter())
-      // register the `b64encode` filter for Basic auth headers
-      interpolator.globalContext.registerFilter(Base64EncodeFilter())
+    private val CUSTOM_FILTERS: List<Filter> = listOf(CodeChallengeS256Filter(), Base64EncodeFilter())
+    private val ALLOWED_FILTERS: Set<String> = CUSTOM_FILTERS.map { it.name }.toSet() + setOf("replace", "urlencode")
+    private val ALLOWED_TAGS: Set<String> = setOf("if", "else", "endif")
 
+    // Well above any real consent URL, token URL, param or header.
+    private const val MAX_RENDERED_TEMPLATE_BYTES = 16L * 1024
+
+    private val INTERPOLATOR: Jinjava = createInterpolator()
+
+    /**
+     * Creates a Jinjava instance limited to the features OAuth templates use. OAuth templates are user-authored, so:
+     * - variables resolve from map entries only, and no Java method or property is reachable except a filter's own
+     *   invocation, which is what Jinjava sandbox escapes rely on;
+     * - every tag, filter, function and expression test outside the allowlist is disabled;
+     * - values are never re-rendered as templates, and output size is bounded.
+     */
+    private fun createInterpolator(): Jinjava {
+      val defaults = Jinjava().globalContext
+      val disabled =
+        mapOf(
+          Context.Library.TAG to
+            defaults.allTags
+              .map { it.name }
+              .filter { it !in ALLOWED_TAGS }
+              .toSet(),
+          Context.Library.FILTER to
+            defaults.allFilters
+              .map { it.name }
+              .filter { it !in ALLOWED_FILTERS }
+              .toSet(),
+          Context.Library.FUNCTION to defaults.allFunctions.map { it.name }.toSet(),
+          Context.Library.EXP_TEST to defaults.allExpTests.map { it.name }.toSet(),
+        )
+
+      val config =
+        JinjavaConfig
+          .newBuilder()
+          .withElResolver(
+            CompositeELResolver().apply {
+              add(MapELResolver(true))
+              add(FilterInvocationResolver())
+            },
+          ).withDisabled(disabled)
+          .withNestedInterpretationEnabled(false)
+          .withMaxOutputSize(MAX_RENDERED_TEMPLATE_BYTES)
+          .withMaxStringLength(MAX_RENDERED_TEMPLATE_BYTES)
+          .build()
+
+      val interpolator = Jinjava(config)
+      CUSTOM_FILTERS.forEach { interpolator.globalContext.registerFilter(it) }
       return interpolator
     }
 
@@ -605,4 +654,25 @@ class DeclarativeOAuthSpecHandler {
       }
     }
   }
+}
+
+/**
+ * Jinjava applies a filter by invoking its `filter` method through the EL resolver, so that is the one method call OAuth
+ * templates are allowed to make. Every other method call, including other methods of a filter, and every bean property
+ * read stays unresolved.
+ */
+private class FilterInvocationResolver : BeanELResolver(true) {
+  override fun getValue(
+    context: ELContext,
+    base: Any?,
+    property: Any?,
+  ): Any? = null
+
+  override fun invoke(
+    context: ELContext,
+    base: Any?,
+    method: Any?,
+    paramTypes: Array<Class<*>>?,
+    params: Array<Any?>?,
+  ): Any? = if (base is Filter && method == "filter") super.invoke(context, base, method, paramTypes, params) else null
 }
