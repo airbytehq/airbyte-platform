@@ -39,10 +39,12 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.data.exceptions.DataAccessException
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.data.services.SecretConfigService as SecretConfigRepository
 import io.airbyte.data.services.SecretReferenceService as SecretReferenceRepository
+import io.airbyte.domain.models.SecretStorage as SecretStorageModel
 
 private val logger = KotlinLogging.logger {}
 
@@ -350,6 +352,19 @@ class SecretReferenceService(
       .map { it.secretConfigId }
       .toSet()
 
+  private fun isOwnedByAgenticOrganization(secretStorageId: SecretStorageId): Boolean {
+    if (secretStorageId == SecretStorageModel.DEFAULT_SECRET_STORAGE_ID) {
+      return false
+    }
+
+    return try {
+      secretConfigRepository.findAgenticSecretStorageIds(listOf(secretStorageId.value)).isNotEmpty()
+    } catch (e: DataAccessException) {
+      logger.warn(e) { "Failed to resolve organization eligibility for secret storage $secretStorageId; falling back to feature flag" }
+      false
+    }
+  }
+
   /**
    * Deletes Airbyte-managed secrets that were previously referenced by a scope but are no longer
    * referenced after an update or deletion, both from the secret store and the secret_config table.
@@ -359,7 +374,8 @@ class SecretReferenceService(
    * the store before the config write and that write fails, the persisted config would point at a
    * deleted secret. On the happy path this reclaims orphaned secrets inline rather than waiting for
    * (or relying entirely on) the OrphanedSecretConfigCleanup cron, which remains the backstop for
-   * partial failures. Gated per storage by [CleanupDanglingSecretConfigs], matching the cron.
+   * partial failures. Agentic organizations are always eligible; other storages remain gated by
+   * [CleanupDanglingSecretConfigs], matching the cron.
    *
    * @param candidateSecretConfigIds configs referenced by the scope before the operation (see
    *   [getReferencedSecretConfigIds]); each is deleted only if no reference points at it anymore.
@@ -372,7 +388,10 @@ class SecretReferenceService(
     if (candidateSecretConfigIds.isEmpty()) {
       return
     }
-    if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretStorageId.value.toString()))) {
+
+    if (!isOwnedByAgenticOrganization(secretStorageId) &&
+      !featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretStorageId.value.toString()))
+    ) {
       return
     }
 

@@ -49,6 +49,26 @@ class OrphanedSecretConfigCleanupTest {
   fun reset() {
     clearAllMocks()
     every { secretConfigService.countOrphanedAirbyteManagedConfigs() } returns 1000L
+    every { secretConfigService.findAgenticSecretStorageIds(any()) } returns emptyList()
+  }
+
+  @Test
+  fun `cleanup enables agentic organization storage without evaluating the storage flag`() {
+    val storageId = UUID.randomUUID()
+    val orphanedConfig = createSecretConfig(secretStorageId = storageId)
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
+    every { secretConfigService.findAgenticSecretStorageIds(listOf(storageId)) } returns listOf(storageId)
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), listOf(storageId)) } returns
+      listOf(orphanedConfig)
+    every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
+    every { secretPersistence.deleteWithRecoveryWindow(any(), any()) } just runs
+    every { secretConfigService.deleteByIds(any()) } just runs
+
+    cleanup.cleanupOrphanedSecrets()
+
+    verify(exactly = 0) { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) }
+    verify(exactly = 1) { secretPersistence.deleteWithRecoveryWindow(any(), 7L) }
   }
 
   private fun createSecretConfig(

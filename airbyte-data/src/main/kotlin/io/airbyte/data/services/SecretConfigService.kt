@@ -28,6 +28,8 @@ interface SecretConfigService {
 
   fun findDistinctOrphanedStorageIds(excludeCreatedBefore: OffsetDateTime): List<UUID>
 
+  fun findAgenticSecretStorageIds(storageIds: List<UUID>): List<UUID>
+
   fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
     excludeCreatedBefore: OffsetDateTime,
     limit: Int,

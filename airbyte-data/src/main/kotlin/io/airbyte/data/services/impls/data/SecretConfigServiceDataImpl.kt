@@ -41,6 +41,8 @@ class SecretConfigServiceDataImpl(
   override fun findDistinctOrphanedStorageIds(excludeCreatedBefore: OffsetDateTime): List<UUID> =
     secretConfigRepository.findDistinctOrphanedStorageIds(excludeCreatedBefore)
 
+  override fun findAgenticSecretStorageIds(storageIds: List<UUID>): List<UUID> = secretConfigRepository.findAgenticSecretStorageIds(storageIds)
+
   override fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
     excludeCreatedBefore: OffsetDateTime,
     limit: Int,

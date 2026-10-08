@@ -23,6 +23,7 @@ import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretReferenceWithConfig
+import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
@@ -32,6 +33,7 @@ import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.kotest.matchers.shouldBe
+import io.micronaut.data.exceptions.DataAccessException
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -47,7 +49,10 @@ import java.util.UUID
 
 class SecretReferenceServiceTest {
   private val secretReferenceRepository = mockk<SecretReferenceService>()
-  private val secretConfigRepository = mockk<SecretConfigService>()
+  private val secretConfigRepository =
+    mockk<SecretConfigService> {
+      every { findAgenticSecretStorageIds(any()) } returns emptyList()
+    }
   private val workspaceHelper = mockk<WorkspaceHelper>()
   private val featureFlagClient = mockk<TestClient>()
   private val secretPersistenceService = mockk<SecretPersistenceService>()
@@ -586,6 +591,50 @@ class SecretReferenceServiceTest {
     )
 
     private fun validCoordinate(): String = SecretCoordinate.AirbyteManagedSecretCoordinate("workspace_", UUID.randomUUID(), 1L).fullCoordinate
+
+    @Test
+    fun `deletes for agentic storage without evaluating the storage flag`() {
+      val configId = SecretConfigId(UUID.randomUUID())
+      val coordinate = validCoordinate()
+      val persistence = mockk<SecretPersistence>(relaxed = true)
+      every { secretConfigRepository.findAgenticSecretStorageIds(listOf(storageId.value)) } returns listOf(storageId.value)
+      every { secretPersistenceService.getPersistenceByStorageId(storageId) } returns persistence
+      every { secretReferenceRepository.existsBySecretConfigId(configId) } returns false
+      every { secretConfigRepository.findById(configId) } returns airbyteManagedConfig(configId, coordinate)
+      every { secretConfigRepository.deleteByIds(any()) } just Runs
+
+      secretReferenceService.deleteOrphanedAirbyteManagedSecrets(listOf(configId), storageId)
+
+      verify(exactly = 0) { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any()) }
+      verify(exactly = 1) { secretConfigRepository.deleteByIds(listOf(configId)) }
+    }
+
+    @Test
+    fun `falls back to storage flag when organization eligibility lookup fails`() {
+      val configId = SecretConfigId(UUID.randomUUID())
+      every { secretConfigRepository.findAgenticSecretStorageIds(listOf(storageId.value)) } throws DataAccessException("database unavailable")
+      every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any()) } returns false
+
+      secretReferenceService.deleteOrphanedAirbyteManagedSecrets(listOf(configId), storageId)
+
+      verify(exactly = 1) { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any()) }
+      verify(exactly = 0) { secretPersistenceService.getPersistenceByStorageId(any()) }
+    }
+
+    @Test
+    fun `default storage remains controlled only by the storage flag`() {
+      val configId = SecretConfigId(UUID.randomUUID())
+      every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any()) } returns false
+
+      secretReferenceService.deleteOrphanedAirbyteManagedSecrets(
+        listOf(configId),
+        SecretStorage.DEFAULT_SECRET_STORAGE_ID,
+      )
+
+      verify(exactly = 0) { secretConfigRepository.findAgenticSecretStorageIds(any()) }
+      verify(exactly = 1) { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any()) }
+      verify(exactly = 0) { secretPersistenceService.getPersistenceByStorageId(any()) }
+    }
 
     @Test
     fun `deletes orphaned airbyte-managed secret from store and db`() {

@@ -8,6 +8,7 @@ import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.data.repositories.entities.SecretConfig
 import io.airbyte.data.repositories.entities.SecretReference
 import io.airbyte.data.repositories.entities.SecretStorage
+import io.airbyte.data.repositories.entities.Workspace
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretReferenceScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageType
@@ -57,7 +58,86 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
     secretReferenceRepository.deleteAll()
     secretConfigRepository.deleteAll()
     secretStorageRepository.deleteAll()
+    workspaceRepository.deleteAll()
     organizationRepository.deleteAll()
+  }
+
+  @Test
+  fun `finds agentic secret storages across organization and workspace scopes`() {
+    val agenticOrganization =
+      organizationRepository.save(
+        Organization(
+          name = "Agentic",
+          email = "agentic@airbyte.io",
+          isAgentic = true,
+        ),
+      )
+    val tombstonedAgenticOrganization =
+      organizationRepository.save(
+        Organization(
+          name = "Deleted agentic",
+          email = "deleted-agentic@airbyte.io",
+          tombstone = true,
+          isAgentic = true,
+        ),
+      )
+    val workspace =
+      workspaceRepository.save(
+        Workspace(
+          name = "Agentic workspace",
+          slug = "agentic-workspace-${UUID.randomUUID()}",
+          dataplaneGroupId = UUID.randomUUID(),
+          organizationId = agenticOrganization.id!!,
+        ),
+      )
+
+    fun createStorage(
+      id: UUID = UUID.randomUUID(),
+      scopeType: SecretStorageScopeType,
+      scopeId: UUID,
+    ): SecretStorage =
+      secretStorageRepository.save(
+        SecretStorage(
+          id = id,
+          scopeType = scopeType,
+          scopeId = scopeId,
+          descriptor = "eligibility-test-$id",
+          storageType = SecretStorageType.google_secret_manager,
+          configuredFromEnvironment = false,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+    val organizationStorage = createStorage(scopeType = SecretStorageScopeType.organization, scopeId = agenticOrganization.id!!)
+    val workspaceStorage = createStorage(scopeType = SecretStorageScopeType.workspace, scopeId = workspace.id!!)
+    val tombstonedOrganizationStorage =
+      createStorage(scopeType = SecretStorageScopeType.organization, scopeId = tombstonedAgenticOrganization.id!!)
+    val defaultStorage =
+      createStorage(
+        id = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+        scopeType = SecretStorageScopeType.organization,
+        scopeId = agenticOrganization.id!!,
+      )
+
+    val result =
+      secretConfigRepository.findAgenticSecretStorageIds(
+        listOf(
+          persistedSecretStorage.id!!,
+          organizationStorage.id!!,
+          workspaceStorage.id!!,
+          tombstonedOrganizationStorage.id!!,
+          defaultStorage.id!!,
+          UUID.randomUUID(),
+        ),
+      )
+
+    assertThat(result).containsExactlyInAnyOrder(
+      organizationStorage.id,
+      workspaceStorage.id,
+      tombstonedOrganizationStorage.id,
+      defaultStorage.id,
+    )
   }
 
   @Test

@@ -47,6 +47,23 @@ interface SecretConfigRepository : PageableRepository<SecretConfig, UUID> {
 
   @Query(
     """
+    SELECT ss.id FROM secret_storage ss
+    -- scope_id references workspace.id for workspace scope and organization.id for organization scope.
+    LEFT JOIN workspace w
+      ON ss.scope_type = 'workspace' AND w.id = ss.scope_id
+    LEFT JOIN organization o
+      ON o.id = CASE
+        WHEN ss.scope_type = 'organization' THEN ss.scope_id
+        WHEN ss.scope_type = 'workspace' THEN w.organization_id
+      END
+    WHERE ss.id IN (:storageIds)
+    AND o.is_agentic = true
+  """,
+  )
+  fun findAgenticSecretStorageIds(storageIds: List<UUID>): List<UUID>
+
+  @Query(
+    """
     SELECT sc.* FROM secret_config sc 
     LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id 
     WHERE sr.secret_config_id IS NULL

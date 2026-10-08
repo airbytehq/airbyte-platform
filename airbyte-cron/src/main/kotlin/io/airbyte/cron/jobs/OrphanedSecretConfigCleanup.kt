@@ -67,10 +67,13 @@ class OrphanedSecretConfigCleanup(
       return
     }
 
-    // Filter to only storage IDs where the feature flag is enabled
+    val agenticStorageIds = secretConfigService.findAgenticSecretStorageIds(orphanedStorageIds).toSet()
+
+    // Agentic organizations are always eligible. Other storages retain the feature flag rollout.
     val enabledStorageIds =
       orphanedStorageIds.filter { storageId ->
-        featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId.toString()))
+        storageId in agenticStorageIds ||
+          featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId.toString()))
       }
 
     if (enabledStorageIds.isEmpty()) {
