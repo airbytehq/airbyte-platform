@@ -33,10 +33,25 @@ const mockBaseUseDiscoverSchemaQuery = {
 
 const mockUseGetSourceFromSearchParams = jest.fn(() => mockConnection.source);
 const mockUseGetDestinationFromSearchParams = jest.fn(() => mockConnection.destination);
+const mockUseOrganizationPlan = jest.fn();
+
+const defaultOrganizationPlanFlags = {
+  isStiggPlanEnabled: false,
+  isStandardTrialPlan: false,
+  isStandardPlan: false,
+  isPlusPlan: false,
+  isFlexPlan: false,
+  isProPlan: false,
+};
 
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
   useCurrentWorkspaceLink: () => () => "/link/to/workspace",
+}));
+
+jest.mock("area/organization/utils", () => ({
+  ...jest.requireActual("area/organization/utils"),
+  useOrganizationPlan: () => mockUseOrganizationPlan(),
 }));
 
 jest.mock("core/api", () => ({
@@ -141,12 +156,54 @@ describe("CreateConnectionForm", () => {
     useMockIntersectionObserver();
     mockUseGetSourceFromSearchParams.mockReturnValue(mockConnection.source);
     mockUseGetDestinationFromSearchParams.mockReturnValue(mockConnection.destination);
+    mockUseOrganizationPlan.mockReturnValue(defaultOrganizationPlanFlags);
   });
 
   it("should render", async () => {
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
     expect(renderResult.queryByText("Please wait a little bit more…")).toBeFalsy();
+  });
+
+  it.each([
+    ["Standard", "isStandardPlan"],
+    ["Standard Trial", "isStandardTrialPlan"],
+    ["Plus", "isPlusPlan"],
+  ] as const)("shows the initial sync volume warning for %s", async (_plan, planFlag) => {
+    mockUseOrganizationPlan.mockReturnValue({
+      ...defaultOrganizationPlanFlags,
+      [planFlag]: true,
+    });
+
+    const renderResult = await render();
+
+    expect(renderResult.getByText("Initial sync will replicate all data in enabled streams")).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "Pro",
+      {
+        ...defaultOrganizationPlanFlags,
+        isStiggPlanEnabled: true,
+        isProPlan: true,
+      },
+    ],
+    [
+      "Flex",
+      {
+        ...defaultOrganizationPlanFlags,
+        isStiggPlanEnabled: true,
+        isFlexPlan: true,
+      },
+    ],
+    ["OSS/SME without a plan", defaultOrganizationPlanFlags],
+  ])("does not show the initial sync volume warning for %s", async (_plan, planFlags) => {
+    mockUseOrganizationPlan.mockReturnValue(planFlags);
+
+    const renderResult = await render();
+
+    expect(renderResult.queryByText("Initial sync will replicate all data in enabled streams")).not.toBeInTheDocument();
   });
 
   it("should render when loading", async () => {

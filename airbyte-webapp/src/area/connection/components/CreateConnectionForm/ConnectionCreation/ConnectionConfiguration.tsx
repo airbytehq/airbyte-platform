@@ -20,6 +20,7 @@ import { DESTINATION_ID_PARAM } from "area/connection/components/CreateConnectio
 import { SOURCE_ID_PARAM } from "area/connection/components/CreateConnection/DefineSource";
 import { useConnectionFormService } from "area/connection/utils/ConnectionForm/ConnectionFormService";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
+import { useOrganizationPlan } from "area/organization/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -62,6 +63,8 @@ const ConnectionCreationReplication: React.FC = () => {
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const { trackFormChange } = useFormChangeTrackerService();
+  const { isStandardPlan, isStandardTrialPlan, isPlusPlan } = useOrganizationPlan();
+  const showInitialSyncDataVolumeWarning = isStandardPlan || isStandardTrialPlan || isPlusPlan;
 
   // if the user is navigating back from the second step the form may be dirty
   useMount(() => {
@@ -77,11 +80,13 @@ const ConnectionCreationReplication: React.FC = () => {
         >
           <SchemaQuestionnaire />
         </Card>
-        <Message
-          type="warning"
-          text={formatMessage({ id: "connectionForm.initialSyncDataVolume.title" })}
-          secondaryText={formatMessage({ id: "connectionForm.initialSyncDataVolume.description" })}
-        />
+        {showInitialSyncDataVolumeWarning && (
+          <Message
+            type="warning"
+            text={formatMessage({ id: "connectionForm.initialSyncDataVolume.title" })}
+            secondaryText={formatMessage({ id: "connectionForm.initialSyncDataVolume.description" })}
+          />
+        )}
         <Card noPadding title={formatMessage({ id: "connection.schema" })}>
           <Box mb="xl">
             <SyncCatalogTable />
