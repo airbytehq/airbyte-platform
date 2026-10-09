@@ -86,6 +86,6 @@ class ActorEnablementService(
         dataplaneGroupId,
         serviceAccountId,
       )?.let {
-        SyncEnablementState(it.inputPayload, it.sourceSearchIndexing, it.destinationSearchIndexing)
+        SyncEnablementState(it.inputPayload, it.connectionSearchIndexing)
       }
 }

@@ -29,6 +29,5 @@ data class ActorEnablementState(
 
 data class SyncEnablementState(
   val inputPayload: String,
-  val sourceSearchIndexing: Boolean,
-  val destinationSearchIndexing: Boolean,
+  val connectionSearchIndexing: Boolean,
 )

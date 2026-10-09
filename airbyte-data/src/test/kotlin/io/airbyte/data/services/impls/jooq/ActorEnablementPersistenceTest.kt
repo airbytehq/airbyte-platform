@@ -183,13 +183,29 @@ class ActorEnablementPersistenceTest : BaseConfigDatabaseTest() {
       workspace,
       organization,
     )
+    val defaulted = persistence.assignedSyncInput(organization, workspace, connection, source, destination, workload, group, serviceAccount)!!
+    assertEquals(false, defaulted.connectionSearchIndexing)
+    // The connection's own flag drives the decision, not the actors': both actors stay disabled here.
+    ctx.execute("UPDATE connection SET enable_indexing = true WHERE id = ?", connection)
+    val result = persistence.assignedSyncInput(organization, workspace, connection, source, destination, workload, group, serviceAccount)!!
+    assertEquals(true, result.connectionSearchIndexing)
+    ctx.execute("UPDATE connection SET enable_indexing = false WHERE id = ?", connection)
     assertTrue(persistence.compareAndSet(organization, workspace, source, "source", ActorEnablementFlags(), ActorEnablementFlags(true, true)))
     assertTrue(
       persistence.compareAndSet(organization, workspace, destination, "destination", ActorEnablementFlags(), ActorEnablementFlags(true, true)),
     )
-    val result = persistence.assignedSyncInput(organization, workspace, connection, source, destination, workload, group, serviceAccount)!!
-    assertEquals(true, result.sourceSearchIndexing)
-    assertEquals(true, result.destinationSearchIndexing)
+    val disabledWithActorsEnabled =
+      persistence.assignedSyncInput(
+        organization,
+        workspace,
+        connection,
+        source,
+        destination,
+        workload,
+        group,
+        serviceAccount,
+      )!!
+    assertEquals(false, disabledWithActorsEnabled.connectionSearchIndexing)
     assertNull(persistence.assignedSyncInput(organization, workspace, connection, source, destination, workload, group, UUID.randomUUID()))
     assertNull(persistence.assignedSyncInput(organization, workspace, connection, source, destination, workload, UUID.randomUUID(), serviceAccount))
     assertNull(persistence.assignedSyncInput(UUID.randomUUID(), workspace, connection, source, destination, workload, group, serviceAccount))

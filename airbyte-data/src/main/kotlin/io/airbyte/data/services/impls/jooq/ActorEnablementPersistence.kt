@@ -95,7 +95,7 @@ class ActorEnablementPersistence(
       ctx
         .fetchOne(
           """
-          SELECT wl.input_payload, s.enable_indexing AS source_search_indexing, d.enable_indexing AS destination_search_indexing FROM workload wl
+          SELECT wl.input_payload, c.enable_indexing AS connection_search_indexing FROM workload wl
           JOIN dataplane dp ON dp.id::text = wl.dataplane_id
           JOIN connection c ON c.id = ?
           JOIN actor s ON s.id = c.source_id
@@ -126,8 +126,7 @@ class ActorEnablementPersistence(
         )?.let {
           AssignedSyncEnablementRecord(
             it.get("input_payload", String::class.java),
-            it.get("source_search_indexing", Boolean::class.java),
-            it.get("destination_search_indexing", Boolean::class.java),
+            it.get("connection_search_indexing", Boolean::class.java),
           )
         }
     }
@@ -141,6 +140,5 @@ data class ActorEnablementRecord(
 
 data class AssignedSyncEnablementRecord(
   val inputPayload: String,
-  val sourceSearchIndexing: Boolean,
-  val destinationSearchIndexing: Boolean,
+  val connectionSearchIndexing: Boolean,
 )
