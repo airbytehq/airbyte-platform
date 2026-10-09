@@ -183,6 +183,7 @@ object ConnectionHelpers {
     backfillPreference: SchemaChangeBackfillPreference?,
     tags: MutableList<Tag?>?,
     onDemandEnabled: Boolean = false,
+    enableIndexing: Boolean = false,
   ): ConnectionRead =
     ConnectionRead()
       .connectionId(connectionId)
@@ -211,6 +212,7 @@ object ConnectionHelpers {
       .backfillPreference(backfillPreference)
       .tags(tags)
       .onDemandEnabled(onDemandEnabled)
+      .enableIndexing(enableIndexing)
 
   @JvmStatic
   fun generateExpectedConnectionRead(standardSync: StandardSync): ConnectionRead {
@@ -231,6 +233,7 @@ object ConnectionHelpers {
           .map<Tag?> { tag: io.airbyte.config.Tag? -> apiPojoConverters.toApiTag(tag!!) }
           .toList(),
         standardSync.getOnDemandEnabled(),
+        standardSync.getEnableIndexing(),
       )
 
     if (standardSync.getSchedule() == null) {
@@ -272,6 +275,7 @@ object ConnectionHelpers {
       .notifySchemaChanges(standardSync.getNotifySchemaChanges())
       .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
       .onDemandEnabled(standardSync.getOnDemandEnabled())
+      .enableIndexing(standardSync.getEnableIndexing())
 
     if (standardSync.getNamespaceDefinition() != null) {
       connectionRead

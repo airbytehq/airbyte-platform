@@ -188,6 +188,7 @@ class ApiPojoConverters(
         .createdAt(standardSync.createdAt)
         .notifySchemaChangesByEmail(standardSync.notifySchemaChangesByEmail)
         .onDemandEnabled(standardSync.onDemandEnabled)
+        .enableIndexing(standardSync.enableIndexing)
         .tags(
           standardSync.tags
             .stream()

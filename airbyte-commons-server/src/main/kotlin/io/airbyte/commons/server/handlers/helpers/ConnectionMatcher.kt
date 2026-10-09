@@ -42,6 +42,7 @@ class ConnectionMatcher(
       notifySchemaChangesByEmail(query.notifySchemaChangesByEmail)
       backfillPreference(query.backfillPreference)
       onDemandEnabled(query.onDemandEnabled)
+      enableIndexing(query.enableIndexing)
     }
   }
 }

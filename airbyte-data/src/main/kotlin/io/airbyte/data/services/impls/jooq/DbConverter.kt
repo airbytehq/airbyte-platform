@@ -197,6 +197,8 @@ object DbConverter {
           .toEnum<StandardSync.BackfillPreference>()!!,
       ).withTags(tags)
       .withOnDemandEnabled(record.get(Tables.CONNECTION.ON_DEMAND_ENABLED) ?: false)
+      // Read-only here: enable_indexing is written exclusively through the Fusion connection enablement flow.
+      .withEnableIndexing(record.get(Tables.CONNECTION.ENABLE_INDEXING) ?: false)
   }
 
   private fun parseConfiguredAirbyteCatalog(configuredAirbyteCatalogString: String): ConfiguredAirbyteCatalog =

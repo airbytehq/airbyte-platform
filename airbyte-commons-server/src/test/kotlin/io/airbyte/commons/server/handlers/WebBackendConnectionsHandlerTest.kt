@@ -1172,6 +1172,10 @@ internal class WebBackendConnectionsHandlerTest {
         "addTagsItem",
         "removeTagsItem",
         "onDemandEnabled",
+        // Deliberately not wired into toConnectionCreate: WebBackendConnectionCreate has no
+        // equivalent field. Fusion indexing is set through connection create/update directly, or
+        // through the dedicated /connections/{id}/enablement route, not the webapp's create form.
+        "enableIndexing",
       )
 
     val methods =
@@ -1222,6 +1226,10 @@ internal class WebBackendConnectionsHandlerTest {
         "addTagsItem",
         "removeTagsItem",
         "onDemandEnabled",
+        // Deliberately not wired into toConnectionPatch: WebBackendConnectionUpdate has no
+        // equivalent field. Fusion indexing is set through connection create/update directly, or
+        // through the dedicated /connections/{id}/enablement route, not the webapp's edit form.
+        "enableIndexing",
       )
 
     val methods =

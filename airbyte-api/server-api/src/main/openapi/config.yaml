@@ -577,6 +577,147 @@ paths:
           description: Active actor of the requested kind not found
         "409":
           description: Stale expected state, conflicting initialization, or ineligible region
+  /v1/connections/{connectionId}/enablement:
+    post:
+      tags: [fusion_connection_enablement]
+      operationId: createFusionConnectionEnablement
+      summary: Create connection enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags or retries identical state,
+        otherwise returns 409. PUT requires the last-read expectedState and atomically compares all
+        flags, returning 409 on stale state. DELETE clears all flags without deleting the connection.
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionConnectionEnablementCreate"
+      responses:
+        "200":
+          description: Canonical connection enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionConnectionEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Connection permission required
+        "404":
+          description: Active connection not found
+        "409":
+          description: Stale expected state or conflicting initialization
+    get:
+      tags: [fusion_connection_enablement]
+      operationId: getFusionConnectionEnablement
+      summary: Get connection enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags or retries identical state,
+        otherwise returns 409. PUT requires the last-read expectedState and atomically compares all
+        flags, returning 409 on stale state. DELETE clears all flags without deleting the connection.
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical connection enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionConnectionEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Connection permission required
+        "404":
+          description: Active connection not found
+        "409":
+          description: Stale expected state or conflicting initialization
+    put:
+      tags: [fusion_connection_enablement]
+      operationId: updateFusionConnectionEnablement
+      summary: Update connection enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags or retries identical state,
+        otherwise returns 409. PUT requires the last-read expectedState and atomically compares all
+        flags, returning 409 on stale state. DELETE clears all flags without deleting the connection.
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionConnectionEnablementUpdate"
+      responses:
+        "200":
+          description: Canonical connection enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionConnectionEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Connection permission required
+        "404":
+          description: Active connection not found
+        "409":
+          description: Stale expected state or conflicting initialization
+    delete:
+      tags: [fusion_connection_enablement]
+      operationId: deleteFusionConnectionEnablement
+      summary: Delete connection enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags or retries identical state,
+        otherwise returns 409. PUT requires the last-read expectedState and atomically compares all
+        flags, returning 409 on stale state. DELETE clears all flags without deleting the connection.
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical connection enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionConnectionEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Connection permission required
+        "404":
+          description: Active connection not found
+        "409":
+          description: Stale expected state or conflicting initialization
   /v1/connections/resolve_enablement_for_sync:
     post:
       tags: [fusion_enablement_resolver]
@@ -12594,6 +12735,45 @@ components:
           type: string
           format: date-time
           nullable: true
+    FusionConnectionEnablementState:
+      type: object
+      additionalProperties: false
+      required: [enable_indexing]
+      properties:
+        enable_indexing:
+          type: boolean
+    FusionConnectionEnablementCreate:
+      type: object
+      additionalProperties: false
+      required: [enable_indexing]
+      properties:
+        enable_indexing:
+          type: boolean
+    FusionConnectionEnablementUpdate:
+      type: object
+      additionalProperties: false
+      required: [enable_indexing, expectedState]
+      properties:
+        enable_indexing:
+          type: boolean
+        expectedState:
+          $ref: "#/components/schemas/FusionConnectionEnablementState"
+    FusionConnectionEnablementRead:
+      type: object
+      additionalProperties: false
+      required: [organizationId, workspaceId, connectionId, enable_indexing]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
+        enable_indexing:
+          type: boolean
     FusionEnablementResolveRequest:
       type: object
       additionalProperties: false
@@ -16478,6 +16658,15 @@ components:
           type: boolean
           default: false
           description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
+        enableIndexing:
+          type: boolean
+          default: false
+          description: >-
+            Enables Fusion indexing for this connection. Defaults to false. Setting this to true is
+            validated the same way as POST /v1/connections/{connectionId}/enablement: an ineligible
+            organization is rejected before anything is created. If eligible, the connection
+            is created and indexing is then synced to Sonar/Agents; if that sync fails, the create still
+            succeeds and the error is returned, but the connection is left with indexing disabled.
     WebBackendConnectionCreate:
       type: object
       required:
@@ -16620,6 +16809,15 @@ components:
         onDemandEnabled:
           type: boolean
           description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
+        enableIndexing:
+          type: boolean
+          description: >-
+            Enables or disables Fusion indexing for this connection. Omitted or null leaves the current
+            value unchanged. A value that differs from the current one is validated and applied the same
+            way as PUT /v1/connections/{connectionId}/enablement (organization eligibility, synced to
+            Sonar/Agents); the rest of the update is applied first and stays applied even if this
+            validation or sync then fails, in which case this field's error is returned instead of the
+            update's.
     ConnectionUpdateWithReason:
       type: object
       required:
@@ -16777,6 +16975,9 @@ components:
         onDemandEnabled:
           type: boolean
           description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
+        enableIndexing:
+          type: boolean
+          description: Whether Fusion indexing is enabled for this connection.
     ConnectionStatusesRequestBody:
       type: object
       required:

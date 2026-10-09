@@ -778,6 +778,11 @@ class WebBackendConnectionsHandler(
       return operationUpdate
     }
 
+    /**
+     * Note: [ConnectionCreate.enableIndexing] is deliberately left unset here. `WebBackendConnectionCreate`
+     * has no equivalent field -- Fusion indexing is set through connection create/update directly, or
+     * through `/v1/connections/{id}/enablement`, not the webapp's create form.
+     */
     @InternalForTesting
     @JvmStatic
     fun toConnectionCreate(
@@ -818,6 +823,10 @@ class WebBackendConnectionsHandler(
      * the WebBackendConnectionUpdate itself.
      *
      * The return value is used as a patch -- a field set to null means that it should not be modified.
+     *
+     * Note: [ConnectionUpdate.enableIndexing] is deliberately left unset (null = "no change") here.
+     * `WebBackendConnectionUpdate` has no equivalent field -- Fusion indexing is set through connection
+     * create/update directly, or through `/v1/connections/{id}/enablement`, not the webapp's edit form.
      */
     @InternalForTesting
     @JvmStatic
@@ -849,6 +858,7 @@ class WebBackendConnectionsHandler(
       connectionPatch.breakingChange(breakingChange)
       connectionPatch.tags(webBackendConnectionPatch.tags)
       connectionPatch.onDemandEnabled(webBackendConnectionPatch.onDemandEnabled)
+      connectionPatch.enableIndexing(null)
 
       connectionPatch.operationIds(finalOperationIds)
 

@@ -71,6 +71,7 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -519,6 +520,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
       }
 
+      // Fusion connection indexing is Cloud-only and is applied separately from this general write path,
+      // through the same validation and sync as POST /v1/connections/{connectionId}/enablement.
+      if (connectionCreate.enableIndexing == true) {
+        throw ApiNotImplementedInOssProblem()
+      }
+
       val connectionId = uuidGenerator.get()
 
       // If not specified, default the NamespaceDefinition to 'source'
@@ -783,6 +790,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       // Ensure org is entitled to use on-demand capacity if requested
       if (connectionPatch.onDemandEnabled == true) {
         entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+      }
+
+      // Fusion connection indexing is Cloud-only and is applied separately from this general write path,
+      // through the same validation and sync as PUT /v1/connections/{connectionId}/enablement.
+      if (connectionPatch.enableIndexing == true) {
+        throw ApiNotImplementedInOssProblem()
       }
 
       if (connectionPatch.syncCatalog != null) {

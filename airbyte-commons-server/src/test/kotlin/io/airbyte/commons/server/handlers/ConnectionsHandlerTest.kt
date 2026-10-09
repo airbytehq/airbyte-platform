@@ -60,6 +60,7 @@ import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -1463,6 +1464,65 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
+      fun testCreateConnectionWithEnableIndexingTrueThrowsInOss() {
+        val catalog = generateBasicApiCatalog()
+
+        val workspace =
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+
+        val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+        connectionCreate.enableIndexing = true
+
+        assertThrows(
+          ApiNotImplementedInOssProblem::class.java,
+        ) { connectionsHandler.createConnection(connectionCreate) }
+
+        verifyNoInteractions(connectionService)
+      }
+
+      @Test
+      fun testCreateConnectionWithEnableIndexingFalseIsNoOp() {
+        val catalog = generateBasicApiCatalog()
+
+        val workspace =
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+
+        val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+        connectionCreate.enableIndexing = false
+
+        whenever(connectionService.getStandardSync(standardSync.connectionId))
+          .thenReturn(standardSync.withEnableIndexing(false))
+
+        val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
+
+        assertEquals(false, actualConnectionRead.enableIndexing)
+      }
+
+      @Test
+      fun testCreateConnectionWithEnableIndexingNullIsNoOp() {
+        val catalog = generateBasicApiCatalog()
+
+        val workspace =
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+
+        val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+        connectionCreate.enableIndexing = null
+
+        whenever(connectionService.getStandardSync(standardSync.connectionId))
+          .thenReturn(standardSync.withEnableIndexing(false))
+
+        val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
+
+        assertEquals(false, actualConnectionRead.enableIndexing)
+      }
+
+      @Test
       fun testCreateConnectionWithSelectedFields() {
         val workspace =
           StandardWorkspace()
@@ -2291,6 +2351,47 @@ internal class ConnectionsHandlerTest {
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(true, actualConnectionRead.onDemandEnabled)
+      }
+
+      @Test
+      fun testUpdateConnectionWithEnableIndexingTrueThrowsInOss() {
+        val connectionUpdate =
+          ConnectionUpdate()
+            .connectionId(standardSync.connectionId)
+            .enableIndexing(true)
+
+        assertThrows(
+          ApiNotImplementedInOssProblem::class.java,
+        ) { connectionsHandler.updateConnection(connectionUpdate, null, false) }
+      }
+
+      @Test
+      fun testUpdateConnectionWithEnableIndexingFalseIsNoOp() {
+        standardSync.withEnableIndexing(false)
+
+        val connectionUpdate =
+          ConnectionUpdate()
+            .connectionId(standardSync.connectionId)
+            .enableIndexing(false)
+
+        val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
+
+        assertEquals(false, actualConnectionRead.enableIndexing)
+      }
+
+      @Test
+      fun testUpdateConnectionWithEnableIndexingOmittedLeavesCurrentValueUnchanged() {
+        // simulate a connection that Fusion enablement already turned on
+        standardSync.withEnableIndexing(true)
+
+        val connectionUpdate =
+          ConnectionUpdate()
+            .connectionId(standardSync.connectionId)
+            .name("new name")
+
+        val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
+
+        assertEquals(true, actualConnectionRead.enableIndexing)
       }
 
       @Test
