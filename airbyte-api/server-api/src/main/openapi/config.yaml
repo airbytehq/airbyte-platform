@@ -6424,6 +6424,64 @@ paths:
                 $ref: "#/components/schemas/OrganizationRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get_semantic_search_enablement:
+    post:
+      summary: Get organization semantic search enablement
+      description: Read the saved semantic search setting. Requires access to the organization or one of its workspaces.
+      tags:
+        - organization_semantic_search
+        - cloud-only
+      operationId: getOrganizationSemanticSearchEnablement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: The saved semantic search setting, including false when disabled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationSemanticSearchEnablementRead"
+        "400":
+          description: Required request fields are missing or null, or organizationId is invalid.
+        "401":
+          description: Authentication required.
+        "403":
+          description: The caller cannot access this organization.
+        "404":
+          description: The organization does not exist or has been deleted.
+  /v1/organizations/update_semantic_search_enablement:
+    post:
+      summary: Update organization semantic search enablement
+      description: Organization admins only. Stores the setting without accepting terms, enforcing search access, or deleting indexes.
+      tags:
+        - organization_semantic_search
+        - cloud-only
+      operationId: updateOrganizationSemanticSearchEnablement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationSemanticSearchEnablementUpdateRequestBody"
+      responses:
+        "200":
+          description: The updated semantic search setting.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationSemanticSearchEnablementRead"
+        "400":
+          description: Required request fields are missing or null, or organizationId is invalid.
+        "401":
+          description: Authentication required.
+        "403":
+          description: Organization admin permission required.
+        "404":
+          description: The organization does not exist or has been deleted.
   /v1/organizations/create:
     post:
       summary: Create an organization
@@ -18000,6 +18058,28 @@ components:
         organizationId:
           type: string
           format: uuid
+    OrganizationSemanticSearchEnablementUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - semanticSearchEnabled
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        semanticSearchEnabled:
+          type: boolean
+    OrganizationSemanticSearchEnablementRead:
+      type: object
+      required:
+        - organizationId
+        - semanticSearchEnabled
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        semanticSearchEnabled:
+          type: boolean
     OrganizationUpdateRequestBody:
       type: object
       required:

@@ -17,6 +17,26 @@ import java.util.UUID
 interface OrganizationRepository : PageableRepository<Organization, UUID> {
   fun findByIdAndTombstoneFalse(id: UUID): Optional<Organization>
 
+  @Query(
+    """
+    SELECT semantic_search_enabled FROM organization
+    WHERE id = :organizationId AND tombstone = false
+    """,
+  )
+  fun findSemanticSearchEnabledById(organizationId: UUID): Optional<Boolean>
+
+  @Query(
+    """
+    UPDATE organization
+    SET semantic_search_enabled = :semanticSearchEnabled, updated_at = NOW()
+    WHERE id = :organizationId AND tombstone = false
+    """,
+  )
+  fun updateSemanticSearchEnabledById(
+    organizationId: UUID,
+    semanticSearchEnabled: Boolean,
+  ): Long
+
   /**
    * Locks the organization row for the duration of the surrounding transaction.
    *

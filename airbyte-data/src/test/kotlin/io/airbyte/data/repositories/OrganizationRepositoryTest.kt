@@ -137,6 +137,70 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `semantic search defaults false and updates only the targeted active organization`() {
+    val organization = createOrganization("Semantic search", isAgentic = true)
+    val organizationId = organization.id!!
+    val otherId = createOrganization("Other organization").id!!
+    val before = organizationRepository.findById(organizationId).get()
+    assertThat(organizationRepository.findSemanticSearchEnabledById(organizationId)).contains(false)
+    val oldTimestamp =
+      java.time.OffsetDateTime
+        .now()
+        .minusDays(1)
+    jooqDslContext
+      .update(Tables.ORGANIZATION)
+      .set(Tables.ORGANIZATION.UPDATED_AT, oldTimestamp)
+      .where(Tables.ORGANIZATION.ID.eq(organizationId))
+      .execute()
+
+    for (enabled in listOf(true, true, false, false)) {
+      assertThat(organizationRepository.updateSemanticSearchEnabledById(organizationId, enabled)).isEqualTo(1L)
+      assertThat(organizationRepository.findSemanticSearchEnabledById(organizationId)).contains(enabled)
+      assertThat(organizationRepository.findSemanticSearchEnabledById(otherId)).contains(false)
+    }
+    val after = organizationRepository.findById(organizationId).get()
+    assertThat(after).usingRecursiveComparison().ignoringFields("updatedAt").isEqualTo(before)
+    assertThat(after.updatedAt).isAfter(oldTimestamp)
+  }
+
+  @Test
+  fun `missing and tombstoned organizations have no readable or mutable semantic search state`() {
+    val deletedId = createOrganization("Deleted").id!!
+    organizationRepository.updateSemanticSearchEnabledById(deletedId, true)
+    jooqDslContext
+      .update(Tables.ORGANIZATION)
+      .set(Tables.ORGANIZATION.TOMBSTONE, true)
+      .where(Tables.ORGANIZATION.ID.eq(deletedId))
+      .execute()
+    for (id in listOf(deletedId, UUID.randomUUID())) {
+      assertThat(organizationRepository.findSemanticSearchEnabledById(id)).isEmpty
+      assertThat(organizationRepository.updateSemanticSearchEnabledById(id, false)).isZero()
+    }
+    assertThat(
+      jooqDslContext
+        .select(Tables.ORGANIZATION.SEMANTIC_SEARCH_ENABLED)
+        .from(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(deletedId))
+        .fetchOne(Tables.ORGANIZATION.SEMANTIC_SEARCH_ENABLED),
+    ).isTrue()
+  }
+
+  @Test
+  fun `ordinary organization updates preserve semantic search enablement`() {
+    val organization = createOrganization("Original")
+    val organizationId = organization.id!!
+    organizationRepository.updateSemanticSearchEnabledById(organizationId, true)
+    organization.name = "Renamed"
+    organization.email = "updated@example.com"
+    organizationRepository.update(organization)
+    assertThat(organizationRepository.findById(organizationId).get().name).isEqualTo("Renamed")
+    assertThat(organizationRepository.findById(organizationId).get().email).isEqualTo("updated@example.com")
+    assertThat(organizationRepository.findSemanticSearchEnabledById(organizationId)).contains(true)
+    organizationRepository.updateAgenticStatusById(organizationId, true)
+    assertThat(organizationRepository.findSemanticSearchEnabledById(organizationId)).contains(true)
+  }
+
+  @Test
   fun `save and retrieve organization by id`() {
     val organization =
       Organization(
