@@ -4,11 +4,31 @@ import userEvent from "@testing-library/user-event";
 import { TestWrapper } from "test-utils";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
+import { useExperiment } from "core/services/Experiment";
+import { FeatureItem } from "core/services/features";
+import { links } from "core/utils/links";
+import { useGeneratedIntent } from "core/utils/rbac";
+
 import { CapacityReachedMessage } from "./CapacityReachedMessage";
 
 const mockSetDismissedByWorkspace = jest.fn();
 let mockDismissedByWorkspace: Record<string, boolean> = {};
 let mockStatusCounts: { queued: number } | undefined;
+
+jest.mock("area/organization/utils", () => ({
+  ...jest.requireActual("area/organization/utils"),
+  useCurrentOrganizationId: () => "org-id",
+}));
+
+jest.mock("core/services/Experiment", () => ({
+  ...jest.requireActual("core/services/Experiment"),
+  useExperiment: jest.fn(),
+}));
+
+jest.mock("core/utils/rbac", () => ({
+  ...jest.requireActual("core/utils/rbac"),
+  useGeneratedIntent: jest.fn(),
+}));
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
@@ -24,11 +44,13 @@ describe("CapacityReachedMessage", () => {
     mockDismissedByWorkspace = {};
     mockStatusCounts = { queued: 0 };
     mockSetDismissedByWorkspace.mockClear();
+    jest.mocked(useExperiment).mockReturnValue(false);
+    jest.mocked(useGeneratedIntent).mockReturnValue(true);
   });
 
-  const renderComponent = () => {
+  const renderComponent = (features?: FeatureItem[]) => {
     return render(
-      <TestWrapper>
+      <TestWrapper features={features}>
         <CapacityReachedMessage />
       </TestWrapper>
     );
@@ -118,5 +140,104 @@ describe("CapacityReachedMessage", () => {
     renderComponent();
 
     expect(mockSetDismissedByWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("links admins to region allocation and on-demand capacity when both are enabled", () => {
+    mockStatusCounts = { queued: 5 };
+    jest.mocked(useExperiment).mockReturnValue(true);
+
+    renderComponent([FeatureItem.AllowDataWorkerCapacity, FeatureItem.OnDemandCapacity]);
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent(
+      "Maximum capacity reached. Additional syncs will be queued until capacity is available."
+    );
+    expect(screen.getByRole("link", { name: "allocate more capacity" })).toHaveAttribute(
+      "href",
+      "/organization/org-id/settings/organization-usage"
+    );
+    expect(screen.getByRole("link", { name: "use on-demand capacity" })).toHaveAttribute(
+      "href",
+      links.dataWorkerOnDemandCapacity
+    );
+  });
+
+  it("links admins to region allocation when on-demand capacity is disabled", () => {
+    mockStatusCounts = { queued: 5 };
+    jest.mocked(useExperiment).mockReturnValue(true);
+
+    renderComponent([FeatureItem.AllowDataWorkerCapacity]);
+
+    expect(screen.getByRole("link", { name: "allocate more capacity" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "use on-demand capacity" })).not.toBeInTheDocument();
+  });
+
+  it("asks non-admins to contact an admin and links to on-demand capacity", () => {
+    mockStatusCounts = { queued: 5 };
+    jest.mocked(useExperiment).mockReturnValue(true);
+    jest.mocked(useGeneratedIntent).mockReturnValue(false);
+
+    renderComponent([FeatureItem.AllowDataWorkerCapacity, FeatureItem.OnDemandCapacity]);
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent(
+      "Ask an organization admin to allocate more capacity to this region"
+    );
+    expect(screen.queryByRole("link", { name: "allocate more capacity" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "use on-demand capacity" })).toHaveAttribute(
+      "href",
+      links.dataWorkerOnDemandCapacity
+    );
+  });
+
+  it("asks non-admins to contact an admin when on-demand capacity is disabled", () => {
+    mockStatusCounts = { queued: 5 };
+    jest.mocked(useExperiment).mockReturnValue(true);
+    jest.mocked(useGeneratedIntent).mockReturnValue(false);
+
+    renderComponent([FeatureItem.AllowDataWorkerCapacity]);
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent(
+      "Ask an organization admin to allocate more capacity to this region."
+    );
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("links to on-demand capacity when region allocation is disabled", () => {
+    mockStatusCounts = { queued: 5 };
+
+    renderComponent([FeatureItem.OnDemandCapacity]);
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent("Set critical connections to");
+    expect(screen.queryByText(/allocate more capacity/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "use on-demand capacity" })).toHaveAttribute(
+      "href",
+      links.dataWorkerOnDemandCapacity
+    );
+  });
+
+  it("only suggests on-demand capacity when data-worker capacity is unavailable", () => {
+    mockStatusCounts = { queued: 5 };
+    jest.mocked(useExperiment).mockReturnValue(true);
+
+    renderComponent([FeatureItem.OnDemandCapacity]);
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent("Set critical connections to");
+    expect(screen.queryByText(/allocate more capacity/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "use on-demand capacity" })).toHaveAttribute(
+      "href",
+      links.dataWorkerOnDemandCapacity
+    );
+  });
+
+  it("shows only the base message when region allocation and on-demand capacity are disabled", () => {
+    mockStatusCounts = { queued: 5 };
+
+    renderComponent();
+
+    expect(screen.getByTestId("capacity-reached-banner")).toHaveTextContent(
+      "Maximum capacity reached. Additional syncs will be queued until capacity is available."
+    );
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(screen.queryByText(/allocate more capacity/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/on-demand capacity/)).not.toBeInTheDocument();
   });
 });

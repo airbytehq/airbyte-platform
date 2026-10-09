@@ -63,6 +63,7 @@ export const links = {
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/deploying-airbyte/integrations/ingress-1-7`,
   refreshes: `${BASE_DOCS_LINK}/platform/operator-guides/refreshes`,
   privateLinkDocs: `${BASE_DOCS_LINK}/platform/operating-airbyte/privatelink`,
+  dataWorkerOnDemandCapacity: `${BASE_DOCS_LINK}/platform/cloud/managing-airbyte-cloud/manage-data-workers#on-demand-capacity`,
 } as const;
 
 export type OutboundLinks = typeof links;

@@ -1,4 +1,4 @@
-import { SettingsRoutePaths } from "pages/routePaths";
+import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 
 export const CloudSettingsRoutePaths = {
   Usage: "usage",
@@ -20,3 +20,6 @@ export const CloudSettingsRoutePaths = {
   PrivateLinks: "private-links",
   Applications: SettingsRoutePaths.Applications,
 } as const;
+
+export const getOrganizationUsagePath = (organizationId: string) =>
+  `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.OrganizationUsage}`;

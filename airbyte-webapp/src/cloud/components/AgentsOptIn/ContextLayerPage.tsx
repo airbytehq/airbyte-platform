@@ -17,7 +17,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
+import { getOrganizationUsagePath } from "cloud/views/settings/routePaths";
 import {
   useAgentsProvisioningStatusQuery,
   useUnenrollOrganizationFromAgents,
@@ -614,9 +614,7 @@ const ContextLayerPageContent: React.FC = () => {
                 {canViewOrganizationSettings && canViewOrganizationUsage && (
                   <>
                     {" "}
-                    <Link
-                      to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.OrganizationUsage}`}
-                    >
+                    <Link to={getOrganizationUsagePath(organizationId)}>
                       <FormattedMessage id="cloud.contextLayer.subtitle.viewUsage" />
                     </Link>
                   </>
