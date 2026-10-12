@@ -14,6 +14,8 @@ import {
   useFusionWorkspaceConnectors,
   useListWorkspacesInOrganization,
   useSetFusionActorEnablement,
+  useOrganizationSemanticSearchEnablement,
+  useUpdateOrganizationSemanticSearchEnablement,
 } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { NotificationService, useNotificationService } from "core/services/Notification";
@@ -34,6 +36,8 @@ jest.mock("core/api", () => ({
   useFusionWorkspaceConnectors: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
   useSetFusionActorEnablement: jest.fn(),
+  useOrganizationSemanticSearchEnablement: jest.fn(),
+  useUpdateOrganizationSemanticSearchEnablement: jest.fn(),
   useEnableFusionWorkspaceActors: jest.fn(() => ({ mutateAsync: jest.fn().mockResolvedValue([]) })),
 }));
 
@@ -55,6 +59,7 @@ jest.mock("./useShowAgentsOptIn", () => ({ useShowAgentsOptIn: jest.fn() }));
 jest.mock("core/utils/links", () => ({
   links: {
     contextLayerDocs: "https://docs.airbyte.com/platform/context-layer",
+    termsLinkAgentEngine: "https://airbyte.com/company/terms-agent-engine",
   },
 }));
 
@@ -85,6 +90,13 @@ const mockUseFusionWorkspaceConnectors = useFusionWorkspaceConnectors as jest.Mo
 const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.MockedFunction<
   typeof useSetFusionActorEnablement
 >;
+const mockUseOrganizationSemanticSearchEnablement = useOrganizationSemanticSearchEnablement as jest.MockedFunction<
+  typeof useOrganizationSemanticSearchEnablement
+>;
+const mockUseUpdateOrganizationSemanticSearchEnablement =
+  useUpdateOrganizationSemanticSearchEnablement as jest.MockedFunction<
+    typeof useUpdateOrganizationSemanticSearchEnablement
+  >;
 const mockUseNotificationService = useNotificationService as jest.MockedFunction<typeof useNotificationService>;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
@@ -111,6 +123,23 @@ const messages = {
   "cloud.contextLayer.organizationAgentAccess.title": "Agent access",
   "cloud.contextLayer.organizationAgentAccess.description":
     "Agents can use the Airbyte MCP to query and write to supported sources, and query supported destinations. Agent access is controlled by the credentials used to authenticate the connector in that workspace. All supported sources are enabled when you turn this on. Destinations must be enabled individually.",
+  "cloud.contextLayer.semanticSearch.title": "Semantic search",
+  "cloud.contextLayer.semanticSearch.description":
+    "Airbyte builds a semantic index from data you sync. Both the source and destination must be an agent connector. Agents can use the Airbyte MCP to search and reason about your data faster and more effectively. Airbyte hosts this data on its own infrastructure and you must accept new terms of service. If you turn semantic search off, Airbyte deletes your semantic index. Manage individual connections on the Semantic search page.",
+  "cloud.contextLayer.semanticSearch.loading": "Loading semantic search setting...",
+  "cloud.contextLayer.semanticSearch.loadError": "Semantic search setting could not be loaded.",
+  "cloud.contextLayer.semanticSearch.updateError": "Semantic search setting could not be updated. Please try again.",
+  "cloud.contextLayer.semanticSearch.adminRequired":
+    "Only organization admins can change Semantic search for this organization.",
+  "cloud.contextLayer.semanticSearch.terms.title": "Terms of Service",
+  "cloud.contextLayer.semanticSearch.terms.text":
+    "Semantic indexing stores your data on Airbyte’s infrastructure. This is a material change in terms of service. To proceed, you must accept new terms of service.",
+  "cloud.contextLayer.semanticSearch.terms.link": "Read terms of service",
+  "cloud.contextLayer.semanticSearch.terms.accept": "Accept the terms of service",
+  "cloud.contextLayer.semanticSearch.disableConfirm.title": "Turn off semantic search",
+  "cloud.contextLayer.semanticSearch.disableConfirm.text":
+    "Turning off semantic search also deletes your semantic index. If you enable this again, you will need to backfill your data again, which will incur additional compute costs on your destination.",
+  "cloud.contextLayer.semanticSearch.disableConfirm.submit": "Delete semantic index",
   "cloud.contextLayer.status.title": "Context layer status",
   "cloud.contextLayer.status.description":
     "AI agents can access and reason about your organization's data. Only organization admins can enable or disable this feature.",
@@ -238,6 +267,16 @@ describe("ContextLayerPage", () => {
       destinationsError: false,
     });
     mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    mockUseOrganizationSemanticSearchEnablement.mockReturnValue({
+      data: { organizationId: "test-org-123", semanticSearchEnabled: false },
+      isInitialLoading: false,
+      isError: false,
+      refetch: jest.fn(),
+    } as never);
+    mockUseUpdateOrganizationSemanticSearchEnablement.mockReturnValue({
+      mutateAsync: jest.fn(),
+      isLoading: false,
+    } as never);
     mockUseGeneratedIntent.mockReturnValue(true);
     mockUseNotificationService.mockReturnValue({ registerNotification: jest.fn() } as never);
     mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync: jest.fn() } as never);
@@ -264,7 +303,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByRole("checkbox", { name: "Agent access" })).not.toBeChecked();
     expect(screen.getByText(messages["cloud.contextLayer.organizationAgentAccess.description"])).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /enable context layer/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/terms of service/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Terms of Service" })).not.toBeInTheDocument();
   });
 
   it("enables agent access from the switch across all workspace pages", async () => {
@@ -472,6 +511,241 @@ describe("ContextLayerPage", () => {
     renderWithIntl();
 
     expect(screen.getByRole("checkbox", { name: "Agent access" })).toBeDisabled();
+  });
+
+  describe("semantic search", () => {
+    const mockSemanticSearch = ({
+      enabled = false,
+      isError = false,
+      refetch = jest.fn(),
+      mutateAsync = jest.fn(),
+      isLoading = false,
+    }: {
+      enabled?: boolean;
+      isError?: boolean;
+      refetch?: jest.Mock;
+      mutateAsync?: jest.Mock;
+      isLoading?: boolean;
+    } = {}) => {
+      mockUseOrganizationSemanticSearchEnablement.mockReturnValue({
+        data: isError ? undefined : { organizationId: "test-org-123", semanticSearchEnabled: enabled },
+        isInitialLoading: false,
+        isError,
+        refetch,
+      } as never);
+      mockUseUpdateOrganizationSemanticSearchEnablement.mockReturnValue({ mutateAsync, isLoading } as never);
+    };
+
+    beforeEach(() => {
+      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: true, external_cloud_eligible: true } as never);
+    });
+
+    it.each([true, false])("renders persisted state %s independently from agent access", (enabled) => {
+      mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: true } as never);
+      mockSemanticSearch({ enabled });
+
+      renderWithIntl();
+
+      expect(screen.getByRole("checkbox", { name: "Agent access" })).not.toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Semantic search" })).toHaveProperty("checked", enabled);
+      expect(screen.getByText(messages["cloud.contextLayer.semanticSearch.description"])).toBeInTheDocument();
+    });
+
+    it("shows a read error with retry", () => {
+      const refetch = jest.fn();
+      mockSemanticSearch({ isError: true, refetch });
+
+      renderWithIntl();
+
+      expect(screen.getByRole("checkbox", { name: "Semantic search" })).toBeDisabled();
+      expect(screen.getByText("Semantic search setting could not be loaded.")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("stays read-only for viewers without organization-admin permissions", () => {
+      const mutateAsync = jest.fn();
+      mockUseGeneratedIntent.mockImplementation((intent) => intent !== Intent.UpdateOrganizationPermissions);
+      mockSemanticSearch({ mutateAsync });
+
+      renderWithIntl();
+
+      expect(screen.getByRole("checkbox", { name: "Semantic search" })).toBeDisabled();
+      expect(
+        screen.getByText("Only organization admins can change Semantic search for this organization.")
+      ).toBeInTheDocument();
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("enables only after accepting the terms modal", async () => {
+      const mutateAsync = jest.fn().mockResolvedValue({ organizationId: "test-org-123", semanticSearchEnabled: true });
+      mockSemanticSearch({ mutateAsync });
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Terms of Service")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Read terms of service" })).toHaveAttribute(
+        "href",
+        "https://airbyte.com/company/terms-agent-engine"
+      );
+      expect(mutateAsync).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Accept the terms of service" }));
+
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith(true));
+      await waitFor(() => expect(screen.queryByText("Terms of Service")).not.toBeInTheDocument());
+    });
+
+    it("does not enable when the terms modal is cancelled", async () => {
+      const mutateAsync = jest.fn();
+      mockSemanticSearch({ mutateAsync });
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Terms of Service")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByText("Terms of Service")).not.toBeInTheDocument());
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("does not enable when navigation closes the terms modal", async () => {
+      const mutateAsync = jest.fn();
+      mockSemanticSearch({ mutateAsync });
+
+      render(
+        <MemoryRouter initialEntries={["/organization/test-org-123/context-layer"]}>
+          <IntlProvider locale="en" messages={messages}>
+            <NotificationService>
+              <ConfirmationModalService>
+                <Routes>
+                  <Route path="/organization/:organizationId/context-layer" element={<ContextLayerPage />} />
+                  <Route
+                    path="/organization/:organizationId/settings/organization-usage"
+                    element={<div>Usage page</div>}
+                  />
+                </Routes>
+              </ConfirmationModalService>
+            </NotificationService>
+          </IntlProvider>
+        </MemoryRouter>
+      );
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Terms of Service")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("link", { name: "View usage →" }));
+
+      expect(await screen.findByText("Usage page")).toBeInTheDocument();
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("keeps the terms modal open and shows an error notification when enable fails", async () => {
+      const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
+      const registerNotification = jest.fn();
+      mockSemanticSearch({ mutateAsync });
+      mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Terms of Service")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Accept the terms of service" }));
+
+      await waitFor(() =>
+        expect(registerNotification).toHaveBeenCalledWith({
+          id: "context-layer-semantic-search-toggle-error",
+          text: "Semantic search setting could not be updated. Please try again.",
+          type: "error",
+        })
+      );
+      expect(screen.getByText("Terms of Service")).toBeInTheDocument();
+    });
+
+    it("prevents duplicate requests while a mutation is pending", async () => {
+      const mutateAsync = jest.fn();
+      mockSemanticSearch({ mutateAsync });
+
+      const { rerender } = renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Terms of Service")).toBeInTheDocument();
+
+      mockSemanticSearch({ mutateAsync, isLoading: true });
+      rerender(
+        <MemoryRouter>
+          <IntlProvider locale="en" messages={messages}>
+            <NotificationService>
+              <ConfirmationModalService>
+                <ContextLayerPage />
+              </ConfirmationModalService>
+            </NotificationService>
+          </IntlProvider>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByRole("checkbox", { name: "Semantic search" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+      const acceptButton = screen.getByRole("button", { name: /Accept the terms of service/ });
+      expect(acceptButton).toBeDisabled();
+      fireEvent.click(acceptButton);
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("asks for confirmation before disabling", async () => {
+      const mutateAsync = jest.fn().mockResolvedValue({ organizationId: "test-org-123", semanticSearchEnabled: false });
+      mockSemanticSearch({ enabled: true, mutateAsync });
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Turn off semantic search")).toBeInTheDocument();
+      expect(screen.getByText(messages["cloud.contextLayer.semanticSearch.disableConfirm.text"])).toBeInTheDocument();
+      expect(mutateAsync).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete semantic index" }));
+
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith(false));
+      await waitFor(() => expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument());
+    });
+
+    it("keeps the disable confirmation open and shows an error notification when disable fails", async () => {
+      const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
+      const registerNotification = jest.fn();
+      mockSemanticSearch({ enabled: true, mutateAsync });
+      mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Turn off semantic search")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Delete semantic index" }));
+
+      await waitFor(() =>
+        expect(registerNotification).toHaveBeenCalledWith({
+          id: "context-layer-semantic-search-toggle-error",
+          text: "Semantic search setting could not be updated. Please try again.",
+          type: "error",
+        })
+      );
+      expect(mutateAsync).toHaveBeenCalledWith(false);
+      expect(screen.getByTestId("confirmationModal")).toBeInTheDocument();
+    });
+
+    it("does not disable when the confirmation is cancelled", async () => {
+      const mutateAsync = jest.fn();
+      mockSemanticSearch({ enabled: true, mutateAsync });
+
+      renderWithIntl();
+
+      fireEvent.click(screen.getByRole("checkbox", { name: "Semantic search" }));
+      expect(await screen.findByText("Turn off semantic search")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument());
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
   });
 
   it("renders a mixed Name, Type, Agent access table per workspace", async () => {

@@ -10,6 +10,8 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink, Link } from "components/ui/Link";
 import { LoadingPage } from "components/ui/LoadingPage";
+import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
+import { Separator } from "components/ui/Separator";
 import { Switch } from "components/ui/Switch";
 import { Table, TableColumns } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -27,8 +29,11 @@ import {
   useSetFusionActorEnablement,
   useEnableFusionWorkspaceActors,
   FusionWorkspaceConnector,
+  useOrganizationSemanticSearchEnablement,
+  useUpdateOrganizationSemanticSearchEnablement,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
@@ -431,6 +436,141 @@ const ContextLayerToggle: React.FC<{ enabled: boolean; disabled: boolean; onClic
   );
 };
 
+const SemanticSearchTermsModal: React.FC<{
+  isSubmitting: boolean;
+  onAccept: () => void;
+  onCancel: () => void;
+}> = ({ isSubmitting, onAccept, onCancel }) => (
+  <Modal onCancel={onCancel} title={<FormattedMessage id="cloud.contextLayer.semanticSearch.terms.title" />}>
+    <ModalBody>
+      <FlexContainer direction="column" gap="md">
+        <Text>
+          <FormattedMessage id="cloud.contextLayer.semanticSearch.terms.text" />
+        </Text>
+        <ExternalLink
+          href={links.termsLinkAgentEngine}
+          opensInNewTab
+          variant="button"
+          className={styles.semanticSearchTermsLink}
+        >
+          <FormattedMessage id="cloud.contextLayer.semanticSearch.terms.link" />
+        </ExternalLink>
+      </FlexContainer>
+    </ModalBody>
+    <Separator className={styles.semanticSearchTermsDivider} />
+    <ModalFooter>
+      <div className={styles.modalFooterButtons}>
+        <Button type="button" variant="clear" disabled={isSubmitting} onClick={onCancel}>
+          <FormattedMessage id="form.cancel" />
+        </Button>
+        <Button type="button" variant="primary" isLoading={isSubmitting} onClick={onAccept}>
+          <FormattedMessage id="cloud.contextLayer.semanticSearch.terms.accept" />
+        </Button>
+      </div>
+    </ModalFooter>
+  </Modal>
+);
+
+const SemanticSearchCard: React.FC<{ isReadOnly: boolean }> = ({ isReadOnly }) => {
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const semanticSearchQuery = useOrganizationSemanticSearchEnablement();
+  const updateSemanticSearch = useUpdateOrganizationSemanticSearchEnablement();
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+
+  const enabled = semanticSearchQuery.data?.semanticSearchEnabled ?? false;
+  const isLoading = semanticSearchQuery.isInitialLoading;
+  const isError = semanticSearchQuery.isError;
+  const isSaving = updateSemanticSearch.isLoading;
+
+  const saveSemanticSearch = async (semanticSearchEnabled: boolean): Promise<boolean> => {
+    try {
+      await updateSemanticSearch.mutateAsync(semanticSearchEnabled);
+      return true;
+    } catch {
+      registerNotification({
+        id: "context-layer-semantic-search-toggle-error",
+        text: formatMessage({ id: "cloud.contextLayer.semanticSearch.updateError" }),
+        type: "error",
+      });
+      return false;
+    }
+  };
+
+  const acceptTerms = async () => {
+    if (await saveSemanticSearch(true)) {
+      setIsTermsOpen(false);
+    }
+  };
+
+  const openDisableConfirmation = () => {
+    openConfirmationModal({
+      title: "cloud.contextLayer.semanticSearch.disableConfirm.title",
+      text: "cloud.contextLayer.semanticSearch.disableConfirm.text",
+      submitButtonText: "cloud.contextLayer.semanticSearch.disableConfirm.submit",
+      submitButtonVariant: "danger",
+      submitButtonDataId: "semantic-search-disable-confirm",
+      onSubmit: async () => {
+        if (await saveSemanticSearch(false)) {
+          closeConfirmationModal();
+        }
+      },
+    });
+  };
+
+  return (
+    <>
+      <Card dataTestId="semantic-search-card">
+        <div className={styles.cardContent}>
+          <div className={styles.toggleRow}>
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="cloud.contextLayer.semanticSearch.title" />
+            </Heading>
+            <Switch
+              size="sm"
+              checked={enabled}
+              disabled={isLoading || isError || isReadOnly || isSaving}
+              onChange={enabled ? openDisableConfirmation : () => setIsTermsOpen(true)}
+              aria-label={formatMessage({ id: "cloud.contextLayer.semanticSearch.title" })}
+            />
+          </div>
+          <Text>
+            <FormattedMessage id="cloud.contextLayer.semanticSearch.description" />
+          </Text>
+          {isLoading && (
+            <Text color="grey" size="sm">
+              <FormattedMessage id="cloud.contextLayer.semanticSearch.loading" />
+            </Text>
+          )}
+          {isError && (
+            <FlexContainer alignItems="center">
+              <Text color="grey" size="sm">
+                <FormattedMessage id="cloud.contextLayer.semanticSearch.loadError" />
+              </Text>
+              <Button type="button" variant="secondary" onClick={() => semanticSearchQuery.refetch()}>
+                <FormattedMessage id="form.tryAgain" />
+              </Button>
+            </FlexContainer>
+          )}
+          {isReadOnly && !isLoading && !isError && (
+            <Text color="grey" size="sm">
+              <FormattedMessage id="cloud.contextLayer.semanticSearch.adminRequired" />
+            </Text>
+          )}
+        </div>
+      </Card>
+      {isTermsOpen && (
+        <SemanticSearchTermsModal
+          isSubmitting={isSaving}
+          onCancel={() => setIsTermsOpen(false)}
+          onAccept={() => void acceptTerms()}
+        />
+      )}
+    </>
+  );
+};
+
 const ContextLayerUnavailable: React.FC = () => {
   const { formatMessage } = useIntl();
 
@@ -501,6 +641,7 @@ const ContextLayerPageContent: React.FC = () => {
   const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
   const status = statusQuery.data;
   const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const enrollOrganization = useEnrollOrganizationInAgents();
   const enableWorkspaceActors = useEnableFusionWorkspaceActors();
   const unenrollOrganization = useUnenrollOrganizationFromAgents();
@@ -653,6 +794,7 @@ const ContextLayerPageContent: React.FC = () => {
             )}
           </div>
         </Card>
+        {showSemanticSearch && <SemanticSearchCard isReadOnly={!canManageOrganizationPermissions} />}
       </FlexContainer>
     </div>
   );

@@ -51,3 +51,4 @@ export * from "./agents";
 export * from "./agentsPlatform";
 
 export * from "./fusionEnablements";
+export * from "./organizationSemanticSearch";

@@ -104,3 +104,20 @@ $emptyStateButtonWidth: 360px;
   color: colors.$grey;
   cursor: help;
 }
+
+.modalFooterButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: variables.$spacing-sm;
+}
+
+.semanticSearchTermsLink {
+  height: variables.$button-height-sm;
+  padding: 8px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.semanticSearchTermsDivider {
+  border-bottom-color: colors.$grey-200;
+}
