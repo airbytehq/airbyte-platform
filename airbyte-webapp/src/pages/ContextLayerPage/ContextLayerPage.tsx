@@ -8,6 +8,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
 import { useAgentsProvisioningStatusQuery } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { ContextLayerRoutePaths, RoutePaths } from "pages/routePaths";
@@ -15,6 +16,7 @@ import { ContextLayerRoutePaths, RoutePaths } from "pages/routePaths";
 const ContextLayerNavigation: React.FC = () => {
   const { formatMessage } = useIntl();
   const organizationId = useCurrentOrganizationId();
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const basePath = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`;
 
   return (
@@ -27,6 +29,13 @@ const ContextLayerNavigation: React.FC = () => {
             name={formatMessage({ id: "cloud.contextLayer.agentAccess.pageTitle" })}
             to={`${basePath}/${ContextLayerRoutePaths.AgentAccess}`}
           />
+          {showSemanticSearch && (
+            <SettingsLink
+              iconType="lens"
+              name={formatMessage({ id: "cloud.contextLayer.semanticSearchPage.title" })}
+              to={`${basePath}/${ContextLayerRoutePaths.SemanticSearch}`}
+            />
+          )}
         </SettingsNavigationBlock>
       </SettingsNavigation>
       <SettingsLayoutContent>

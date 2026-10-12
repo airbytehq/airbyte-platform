@@ -21,7 +21,6 @@ import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { getOrganizationUsagePath } from "cloud/views/settings/routePaths";
 import {
-  useAgentsProvisioningStatusQuery,
   useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
   useFusionWorkspaceConnectors,
@@ -35,7 +34,6 @@ import {
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
-import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -43,7 +41,7 @@ import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 
 import styles from "./ContextLayerPage.module.scss";
 import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
-import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
+import { useContextLayerEligibility } from "./useContextLayerEligibility";
 
 interface WorkspaceConnectorData {
   workspaceId: string;
@@ -571,7 +569,7 @@ const SemanticSearchCard: React.FC<{ isReadOnly: boolean }> = ({ isReadOnly }) =
   );
 };
 
-const ContextLayerUnavailable: React.FC = () => {
+export const ContextLayerUnavailable: React.FC = () => {
   const { formatMessage } = useIntl();
 
   return (
@@ -603,7 +601,7 @@ const ContextLayerUnavailable: React.FC = () => {
   );
 };
 
-const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => {
+export const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -634,13 +632,35 @@ const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) =
   );
 };
 
+export const ContextLayerSettingsEmptyState: React.FC<{ title: React.ReactNode; description: React.ReactNode }> = ({
+  title,
+  description,
+}) => {
+  const organizationId = useCurrentOrganizationId();
+  const navigate = useNavigate();
+
+  return (
+    <EmptyState
+      icon="chart"
+      text={title}
+      description={description}
+      button={
+        <Button
+          type="button"
+          variant="primary"
+          className={styles.emptyStateButton}
+          onClick={() => navigate(`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`)}
+        >
+          <FormattedMessage id="cloud.contextLayer.noAccess.settings" />
+        </Button>
+      }
+    />
+  );
+};
+
 const ContextLayerPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
-  const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
-  const status = statusQuery.data;
-  const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
+  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
   const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const enrollOrganization = useEnrollOrganizationInAgents();
   const enableWorkspaceActors = useEnableFusionWorkspaceActors();
@@ -802,12 +822,7 @@ const ContextLayerPageContent: React.FC = () => {
 
 const ContextLayerConnectorsPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
-  const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
-  const status = statusQuery.data;
-  const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
-  const navigate = useNavigate();
+  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
   const workspacesQuery = useListWorkspacesInOrganization({
     organizationId,
     pagination: { pageSize: 25, rowOffset: 0 },
@@ -834,20 +849,9 @@ const ContextLayerConnectorsPageContent: React.FC = () => {
           <Text className={styles.workspaceDescription}>
             <FormattedMessage id="cloud.contextLayer.agentAccess.description.disabled" />
           </Text>
-          <EmptyState
-            icon="chart"
-            text={<FormattedMessage id="cloud.contextLayer.agentAccess.noAccess.title" />}
+          <ContextLayerSettingsEmptyState
+            title={<FormattedMessage id="cloud.contextLayer.agentAccess.noAccess.title" />}
             description={<FormattedMessage id="cloud.contextLayer.agentAccess.noAccess.description" />}
-            button={
-              <Button
-                type="button"
-                variant="primary"
-                className={styles.emptyStateButton}
-                onClick={() => navigate(`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`)}
-              >
-                <FormattedMessage id="cloud.contextLayer.noAccess.settings" />
-              </Button>
-            }
           />
         </div>
       </div>

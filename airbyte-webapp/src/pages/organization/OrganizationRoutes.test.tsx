@@ -115,6 +115,11 @@ jest.mock("pages/ContextLayerPage/OrganizationContextLayerConnectorsPage", () =>
   default: () => <div data-testid="organization-context-layer-agent-access-page" />,
 }));
 
+jest.mock("pages/ContextLayerPage/OrganizationContextLayerSemanticSearchPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="organization-context-layer-semantic-search-page" />,
+}));
+
 jest.mock("pages/SettingsPage/pages/OrganizationInstallMcpPage", () => ({
   __esModule: true,
   default: () => <div data-testid="organization-install-mcp-page" />,
@@ -191,6 +196,43 @@ describe("OrganizationRoutes", () => {
 
     await waitFor(() => expect(screen.getByTestId("organization-context-layer-agent-access-page")).toBeInTheDocument());
     expect(screen.getByTestId("location")).toHaveTextContent(`/organization/test-org/context-layer/${child}`);
+  });
+
+  it("registers the Context Layer Semantic search child route when the feature flag is on", async () => {
+    mockUseExperiment.mockImplementation((experiment) => experiment === "platform.fusion-semantic-search-ui");
+
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org/context-layer/semantic-search"]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("organization-context-layer-semantic-search-page")).toBeInTheDocument()
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer/semantic-search");
+  });
+
+  it("redirects the Semantic search URL to Context Layer settings when the feature flag is off", async () => {
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org/context-layer/semantic-search"]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument());
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/organization\/test-org\/context-layer$/);
+    expect(screen.queryByTestId("organization-context-layer-semantic-search-page")).not.toBeInTheDocument();
   });
 
   it("does not register the first-class context layer route outside cloud", async () => {

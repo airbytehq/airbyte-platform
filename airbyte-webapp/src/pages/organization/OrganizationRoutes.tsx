@@ -28,6 +28,9 @@ const OrganizationContextLayerPage = React.lazy(() => import("pages/ContextLayer
 const OrganizationContextLayerConnectorsPage = React.lazy(
   () => import("pages/ContextLayerPage/OrganizationContextLayerConnectorsPage")
 );
+const OrganizationContextLayerSemanticSearchPage = React.lazy(
+  () => import("pages/ContextLayerPage/OrganizationContextLayerSemanticSearchPage")
+);
 const OrganizationInstallMcpPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationInstallMcpPage"));
 
 export const OrganizationRoutes: React.FC = () => {
@@ -41,6 +44,7 @@ export const OrganizationRoutes: React.FC = () => {
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
   const isCloudApp = useIsCloudApp();
   const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
+  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
   // security on all eight group endpoints. No group-specific intent exists.
@@ -61,6 +65,12 @@ export const OrganizationRoutes: React.FC = () => {
           <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
             <Route index element={<OrganizationContextLayerPage />} />
             <Route path={ContextLayerRoutePaths.AgentAccess} element={<OrganizationContextLayerConnectorsPage />} />
+            {showSemanticSearch && (
+              <Route
+                path={ContextLayerRoutePaths.SemanticSearch}
+                element={<OrganizationContextLayerSemanticSearchPage />}
+              />
+            )}
             <Route
               path="*"
               element={

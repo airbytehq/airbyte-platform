@@ -15,6 +15,7 @@ export enum RoutePaths {
 
 export enum ContextLayerRoutePaths {
   AgentAccess = "agent-access",
+  SemanticSearch = "semantic-search",
 }
 
 export enum DestinationPaths {

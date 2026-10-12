@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 
 import { render, TestWrapper } from "test-utils";
+import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useAgentsProvisioningStatusQuery } from "core/api";
@@ -40,6 +41,7 @@ const renderAt = async (path: string) =>
           <Route path="/organization/:organizationId/context-layer" element={children}>
             <Route index element={<div>Context Layer settings content</div>} />
             <Route path="agent-access" element={<div>Agent access content</div>} />
+            <Route path="semantic-search" element={<div>Semantic search content</div>} />
           </Route>
           <Route path="/organization/:organizationId/workspaces" element={<div>Workspaces content</div>} />
         </Routes>
@@ -53,6 +55,7 @@ describe("ContextLayerPage", () => {
     mockUseCurrentOrganizationId.mockReturnValue("test-organization-id");
     mockUseAgentsProvisioningStatusQuery.mockReturnValue({ data: { is_enrolled: true } } as never);
     mockUseGeneratedIntent.mockReturnValue(false);
+    mockExperiments({ "platform.fusion-semantic-search-ui": false });
   });
 
   it("owns the Context Layer secondary navigation and renders its content", async () => {
@@ -73,6 +76,28 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByRole("link", { name: "Destinations" })).not.toBeInTheDocument();
     expect(screen.getByText("Context Layer settings content")).toBeInTheDocument();
     expect(screen.getByTestId("head-title")).toHaveTextContent("cloud.contextLayer.navigation.title");
+  });
+
+  it("hides Semantic search when the feature flag is off", async () => {
+    await renderAt("/organization/test-organization-id/context-layer");
+
+    expect(screen.getByRole("link", { name: "Agent access" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Semantic search" })).not.toBeInTheDocument();
+  });
+
+  it("shows Semantic search when the feature flag is on", async () => {
+    mockExperiments({ "platform.fusion-semantic-search-ui": true });
+    await renderAt("/organization/test-organization-id/context-layer/semantic-search");
+
+    expect(screen.getByRole("link", { name: "Semantic search" })).toHaveAttribute(
+      "href",
+      "/organization/test-organization-id/context-layer/semantic-search"
+    );
+    expect(screen.getByRole("link", { name: "Semantic search" })).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getByRole("link", { name: "Semantic search" }).querySelector('[data-icon="lens"]')
+    ).toBeInTheDocument();
+    expect(screen.getByText("Semantic search content")).toBeInTheDocument();
   });
 
   it("marks Agent access as the active child page", async () => {
