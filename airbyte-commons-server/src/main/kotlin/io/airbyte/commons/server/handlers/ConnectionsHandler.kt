@@ -69,6 +69,7 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData
 import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
@@ -83,6 +84,7 @@ import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingPrim
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequiredFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.annotation.InternalForTesting
@@ -491,9 +493,23 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       // Validate source and destination
 
       val sourceConnection = sourceService.getSourceConnection(connectionCreate.sourceId)
+      when {
+        sourceConnection.tombstone == true ->
+          throw ResourceNotFoundProblem(
+            "Source ${sourceConnection.sourceId} has been deleted.",
+            ProblemResourceData().resourceType("source").resourceId(sourceConnection.sourceId.toString()),
+          )
+        sourceConnection.isDraft == true -> throw ActorNotReadyProblem()
+      }
+
       val destinationConnection = destinationService.getDestinationConnection(connectionCreate.destinationId)
-      if (sourceConnection.isDraft == true || destinationConnection.isDraft == true) {
-        throw ActorNotReadyProblem()
+      when {
+        destinationConnection.tombstone == true ->
+          throw ResourceNotFoundProblem(
+            "Destination ${destinationConnection.destinationId} has been deleted.",
+            ProblemResourceData().resourceType("destination").resourceId(destinationConnection.destinationId.toString()),
+          )
+        destinationConnection.isDraft == true -> throw ActorNotReadyProblem()
       }
 
       // Set this as default name if connectionCreate doesn't have it

@@ -73,6 +73,7 @@ import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequ
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
@@ -248,6 +249,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -1379,6 +1381,30 @@ internal class ConnectionsHandlerTest {
         source.withIsDraft(false)
         destination.withIsDraft(true)
         assertThrows(ActorNotReadyProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
+      }
+
+      @Test
+      fun `tombstoned source cannot be used to create a connection`() {
+        val connectionCreate = buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+
+        source.withTombstone(true)
+
+        val problem =
+          assertThrows(ResourceNotFoundProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
+        assertEquals("Source ${connectionCreate.sourceId} has been deleted.", problem.problem.getDetail())
+        verify(connectionService, never()).writeStandardSync(anyOrNull())
+      }
+
+      @Test
+      fun `tombstoned destination cannot be used to create a connection`() {
+        val connectionCreate = buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+
+        destination.withTombstone(true)
+
+        val problem =
+          assertThrows(ResourceNotFoundProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
+        assertEquals("Destination ${connectionCreate.destinationId} has been deleted.", problem.problem.getDetail())
+        verify(connectionService, never()).writeStandardSync(anyOrNull())
       }
 
       @ParameterizedTest
