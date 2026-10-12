@@ -133,6 +133,7 @@ open class BaseConfigDatabaseTest {
               actor_definition_workspace_grant,
               actor_oauth_parameter,
               auth_user,
+              billing_notification_settings,
               commands,
               connection,
               connection_operation,

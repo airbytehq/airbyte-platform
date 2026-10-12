@@ -174,6 +174,15 @@ create table "public"."auth_user" (
   constraint "auth_user_pkey" primary key ("id"),
   constraint "auth_user_auth_user_id_auth_provider_key" unique ("auth_user_id", "auth_provider")
 );
+create table "public"."billing_notification_settings" (
+  "organization_id" uuid not null,
+  "recipient_email" varchar(256),
+  "sync_credit_threshold" numeric not null default 0,
+  "invoice_amount_threshold" numeric not null default 0,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "billing_notification_settings_pkey" primary key ("organization_id")
+);
 create table "public"."commands" (
   "id" varchar(2147483647) not null,
   "workload_id" varchar(2147483647) not null,
@@ -978,6 +987,7 @@ alter table "public"."actor_definition_config_injection" add constraint "actor_d
 alter table "public"."actor_definition_version" add constraint "actor_definition_version_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_workspace_grant" add constraint "actor_definition_workspace_grant_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."auth_user" add constraint "auth_user_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
+alter table "public"."billing_notification_settings" add constraint "billing_notification_settings_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."commands" add constraint "commands_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."commands" add constraint "commands_workload_id_fkey" foreign key ("workload_id") references "public"."workload" ("id");
 alter table "public"."commands" add constraint "commands_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
