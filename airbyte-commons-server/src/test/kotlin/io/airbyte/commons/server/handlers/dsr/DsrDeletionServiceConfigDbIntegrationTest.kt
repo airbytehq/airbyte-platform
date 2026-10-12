@@ -316,6 +316,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertDeletedLong("observability_jobs_stats", "job_id", observabilityJobId)
     assertDeletedLong("observability_stream_stats", "job_id", observabilityJobId)
     assertDeletedUuidField("data_worker_usage", "organization_id", organizationId)
+    assertDeletedUuidField("billing_notification_settings", "organization_id", organizationId)
     assertDeletedLong("data_worker_usage_reservation", "job_id", dataWorkerUsageReservationJobId)
     assertDeletedString("workload", "id", legacySyncWorkloadId)
     assertDeletedString("workload_queue", "workload_id", legacySyncWorkloadId)
@@ -340,6 +341,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertPresentLong("observability_jobs_stats", "job_id", unrelatedObservabilityJobId)
     assertPresentLong("observability_stream_stats", "job_id", unrelatedObservabilityJobId)
     assertPresentUuidField("data_worker_usage", "organization_id", unrelatedOrganizationId)
+    assertPresentUuidField("billing_notification_settings", "organization_id", unrelatedOrganizationId)
     assertPresentLong("data_worker_usage_reservation", "job_id", unrelatedDataWorkerUsageReservationJobId)
     assertPresentString("workload", "id", unrelatedWorkloadId)
     assertPresentString("workload", "id", unrelatedActorDefinitionDiscoverWorkloadId)
@@ -924,11 +926,13 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
 
       insertObservabilityJobStats(ctx, observabilityJobId, connectionId, workspaceId, organizationId)
       insertObservabilityStreamStats(ctx, observabilityJobId)
+      insertBillingNotificationSettings(ctx, organizationId)
       insertDataWorkerUsage(ctx, organizationId, workspaceId, dataplaneGroupId)
       insertDataWorkerUsageReservation(ctx, dataWorkerUsageReservationJobId, organizationId, workspaceId, dataplaneGroupId)
 
       insertObservabilityJobStats(ctx, unrelatedObservabilityJobId, UUID.randomUUID(), unrelatedWorkspaceId, unrelatedOrganizationId)
       insertObservabilityStreamStats(ctx, unrelatedObservabilityJobId)
+      insertBillingNotificationSettings(ctx, unrelatedOrganizationId)
       insertDataWorkerUsage(ctx, unrelatedOrganizationId, unrelatedWorkspaceId, unrelatedDataplaneGroupId)
       insertDataWorkerUsageReservation(
         ctx,
@@ -1239,6 +1243,17 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       """.trimIndent(),
       jobId,
       "users_$jobId",
+    )
+  }
+
+  private fun insertBillingNotificationSettings(
+    ctx: DSLContext,
+    organizationId: UUID,
+  ) {
+    ctx.execute(
+      "INSERT INTO billing_notification_settings (organization_id, recipient_email, sync_credit_threshold, invoice_amount_threshold) VALUES (?, ?, 2.5, 99.99)",
+      organizationId,
+      "billing@example.com",
     )
   }
 

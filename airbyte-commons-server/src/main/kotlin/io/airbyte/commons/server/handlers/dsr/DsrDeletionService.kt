@@ -1837,6 +1837,7 @@ open class DsrDeletionService(
     deleteByUuidField(ctx, "organization_domain_verification", "created_by", listOf(manifest.userId))
     deleteByUuidField(ctx, "organization_email_domain", "organization_id", organizationIds)
     deleteByUuidField(ctx, "organization_payment_config", "organization_id", organizationIds)
+    deleteByUuidField(ctx, "billing_notification_settings", "organization_id", organizationIds)
     deleteByUuidField(ctx, "sso_config", "organization_id", organizationIds)
 
     deleteByStringField(ctx, "application", "auth_user_id", currentAuthUserIds)
