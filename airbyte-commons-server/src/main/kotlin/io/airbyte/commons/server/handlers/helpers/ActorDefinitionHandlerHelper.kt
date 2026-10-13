@@ -268,12 +268,6 @@ class ActorDefinitionHandlerHelper(
       throw IllegalStateException("Get Spec Job failed (imageName=$imageName, isCustomConnector=$isCustomConnector, workspaceId=$workspaceId)")
     }
 
-    if (response.output == null) {
-      throw NullPointerException(
-        "Get Spec job return null spec (imageName=$imageName, isCustomConnector=$isCustomConnector, workspaceId=$workspaceId)",
-      )
-    }
-
     return response.output
   }
 

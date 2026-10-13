@@ -347,7 +347,7 @@ class ReplicationInputHydrator(
     val connectionState =
       airbyteApiClient.stateApi.getState(ConnectionIdRequestBody(replicationActivityInput.connectionId!!))
     val state =
-      if (connectionState != null && ConnectionStateType.NOT_SET != connectionState.stateType) {
+      if (ConnectionStateType.NOT_SET != connectionState.stateType) {
         getState(toInternal(fromClientToApi(connectionState)))
       } else {
         null

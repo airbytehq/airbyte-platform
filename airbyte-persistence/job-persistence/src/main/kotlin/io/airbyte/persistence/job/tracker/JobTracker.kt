@@ -415,10 +415,8 @@ class JobTracker
       val operationUsage: MutableMap<String, Any?> = hashMapOf()
       for (operationId in standardSync.operationIds) {
         val operation = operationService.getStandardSyncOperation(operationId)
-        if (operation != null) {
-          val usageCount = operationUsage.getOrDefault(OPERATION + operation.operatorType, 0) as Int?
-          operationUsage[OPERATION + operation.operatorType] = usageCount!! + 1
-        }
+        val usageCount = operationUsage.getOrDefault(OPERATION + operation.operatorType, 0) as Int?
+        operationUsage[OPERATION + operation.operatorType] = usageCount!! + 1
       }
 
       val streamCountData: MutableMap<String, Any?> = hashMapOf()

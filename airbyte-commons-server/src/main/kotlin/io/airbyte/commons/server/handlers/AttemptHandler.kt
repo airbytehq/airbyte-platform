@@ -206,9 +206,6 @@ open class AttemptHandler(
     id: Long,
     excludeResumableStreams: Boolean,
   ): Set<StreamDescriptor> {
-    if (catalog == null) {
-      throw BadRequestException("Missing configured catalog for job: $id")
-    }
     val configuredStreams =
       catalog.streams
         ?: throw BadRequestException("Missing configured catalog stream for job: $id")

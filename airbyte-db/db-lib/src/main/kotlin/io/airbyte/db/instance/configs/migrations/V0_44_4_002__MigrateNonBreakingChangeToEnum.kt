@@ -48,7 +48,7 @@ class V0_44_4_002__MigrateNonBreakingChangeToEnum : BaseJavaMigration() {
     propagate_fully(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY.value()),
     ;
 
-    override fun getCatalog(): Catalog? = if (schema == null) null else schema.catalog
+    override fun getCatalog(): Catalog? = schema.catalog
 
     override fun getSchema(): Schema = SchemaImpl(DSL.name("public"), null)
 

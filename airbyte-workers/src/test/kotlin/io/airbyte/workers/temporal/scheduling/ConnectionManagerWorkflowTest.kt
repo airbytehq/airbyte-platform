@@ -2613,7 +2613,8 @@ internal class ConnectionManagerWorkflowTest {
 
       while (!isReady) {
         try {
-          isReady = workflow.getState() != null
+          workflow.getState()
+          isReady = true
         } catch (_: Exception) {
           log.info("retrying...")
           Thread.sleep(100)
@@ -2626,7 +2627,7 @@ internal class ConnectionManagerWorkflowTest {
 
       while (!isDeleted) {
         try {
-          isDeleted = workflow.getState() != null && workflow.getState().isDeleted
+          isDeleted = workflow.getState().isDeleted
         } catch (_: Exception) {
           log.info("retrying...")
           Thread.sleep(100)

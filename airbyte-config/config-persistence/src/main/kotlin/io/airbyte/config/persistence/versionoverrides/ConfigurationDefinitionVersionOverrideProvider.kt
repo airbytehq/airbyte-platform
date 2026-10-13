@@ -49,12 +49,8 @@ class ConfigurationDefinitionVersionOverrideProvider(
   ): Optional<ScopedConfiguration> {
     val organizationId = getOrganizationId(workspaceId)
 
-    val scopes: MutableMap<ConfigScopeType, UUID> = EnumMap(mapOf(ConfigScopeType.WORKSPACE to workspaceId))
-
-    // TODO: This should always be true now. We should probably warn in a log line if this is not null.
-    if (organizationId != null) {
-      scopes[ConfigScopeType.ORGANIZATION] = organizationId
-    }
+    val scopes: MutableMap<ConfigScopeType, UUID> =
+      EnumMap(mapOf(ConfigScopeType.WORKSPACE to workspaceId, ConfigScopeType.ORGANIZATION to organizationId))
 
     if (actorId != null) {
       scopes[ConfigScopeType.ACTOR] = actorId

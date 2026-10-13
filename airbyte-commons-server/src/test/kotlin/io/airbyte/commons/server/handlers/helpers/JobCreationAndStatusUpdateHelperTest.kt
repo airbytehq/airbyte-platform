@@ -150,6 +150,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
       ).thenReturn(listOf(runningJob, pendingJob))
     Mockito.`when`(mJobPersistence.getJob(runningJob.id)).thenReturn(runningJob)
     Mockito.`when`(mJobPersistence.getJob(pendingJob.id)).thenReturn(pendingJob)
+    Mockito.`when`(mConnectionService.getDataplaneGroupNameForConnection(anyOrNull())).thenReturn("us-west")
 
     helper.failNonTerminalJobs(Fixtures.CONNECTION_ID)
 

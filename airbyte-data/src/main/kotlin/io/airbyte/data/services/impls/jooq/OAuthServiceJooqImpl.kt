@@ -402,7 +402,7 @@ class OAuthServiceJooqImpl(
     organizationId: UUID,
   ): JsonNode? {
     // TODO: this can probably be later replaced with a ConnectorSecretsHydrator
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {
+    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {
       val secretPersistenceConfig =
         secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
       return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(

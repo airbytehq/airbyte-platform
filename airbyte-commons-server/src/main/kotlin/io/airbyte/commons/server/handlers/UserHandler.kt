@@ -1275,7 +1275,7 @@ open class UserHandler
 
       val initialEmailFromConfig = initialUserConfig.get().email
 
-      if (initialEmailFromConfig == null || initialEmailFromConfig.isEmpty()) {
+      if (initialEmailFromConfig.isEmpty()) {
         // do nothing if there is no initial_user email configured.
         return
       }

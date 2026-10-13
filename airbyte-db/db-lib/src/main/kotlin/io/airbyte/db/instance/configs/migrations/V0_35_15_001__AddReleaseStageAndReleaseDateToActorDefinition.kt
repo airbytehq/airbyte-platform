@@ -41,7 +41,7 @@ class V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition : BaseJavaMig
     custom("custom"),
     ;
 
-    override fun getCatalog(): Catalog? = if (schema == null) null else schema.catalog
+    override fun getCatalog(): Catalog? = schema.catalog
 
     override fun getSchema(): Schema = SchemaImpl(DSL.name("public"), null)
 

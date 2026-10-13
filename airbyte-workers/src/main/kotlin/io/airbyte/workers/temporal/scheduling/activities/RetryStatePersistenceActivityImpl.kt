@@ -44,8 +44,8 @@ class RetryStatePersistenceActivityImpl(
 
   override fun persistRetryState(input: PersistInput): PersistOutput {
     try {
-      val success = client.persistRetryState(input.jobId!!, input.connectionId!!, input.manager!!)
-      return PersistOutput(success)
+      client.persistRetryState(input.jobId!!, input.connectionId!!, input.manager!!)
+      return PersistOutput(true)
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.code) {
         throw e

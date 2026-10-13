@@ -1017,7 +1017,7 @@ class ConnectionServiceJooqImpl
                       )
                     },
                   ).and(
-                    if (standardSyncsQueryPaginated.tagIds == null || standardSyncsQueryPaginated.tagIds.isEmpty()) {
+                    if (standardSyncsQueryPaginated.tagIds.isEmpty()) {
                       DSL.noCondition()
                     } else {
                       Tables.CONNECTION_TAG.TAG_ID.`in`(standardSyncsQueryPaginated.tagIds)

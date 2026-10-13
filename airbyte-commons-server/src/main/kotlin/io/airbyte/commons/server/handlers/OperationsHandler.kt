@@ -17,7 +17,6 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.OperationsConverter.operationReadFromPersistedOperation
 import io.airbyte.commons.server.converters.OperationsConverter.populateOperatorConfigFromApi
-import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
@@ -169,21 +168,13 @@ open class OperationsHandler
 
     private fun removeOperation(operationId: UUID) {
       val standardSyncOperation = operationService.getStandardSyncOperation(operationId)
-      if (standardSyncOperation != null) {
-        standardSyncOperation.withTombstone(true)
-        persistOperation(standardSyncOperation)
-      } else {
-        throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC_OPERATION, operationId.toString())
-      }
+      standardSyncOperation.withTombstone(true)
+      persistOperation(standardSyncOperation)
     }
 
     private fun buildOperationRead(operationId: UUID): OperationRead {
       val standardSyncOperation = operationService.getStandardSyncOperation(operationId)
-      if (standardSyncOperation != null) {
-        return buildOperationRead(standardSyncOperation)
-      } else {
-        throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC_OPERATION, operationId.toString())
-      }
+      return buildOperationRead(standardSyncOperation)
     }
 
     companion object {

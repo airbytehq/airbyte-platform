@@ -499,19 +499,7 @@ class JobInputService(
     destinationId: UUID,
     sourceType: StandardSourceDefinition.SourceType?,
   ): Context {
-    val contexts: MutableList<Context> = mutableListOf()
-    if (workspaceId != null) {
-      contexts.add(Workspace(workspaceId))
-    }
-    if (connectionId != null) {
-      contexts.add(Connection(connectionId))
-    }
-    if (sourceId != null) {
-      contexts.add(Source(sourceId))
-    }
-    if (destinationId != null) {
-      contexts.add(Destination(destinationId))
-    }
+    val contexts: MutableList<Context> = mutableListOf(Workspace(workspaceId), Connection(connectionId), Source(sourceId), Destination(destinationId))
     if (sourceType != null) {
       contexts.add(SourceType(sourceType.value()))
     }

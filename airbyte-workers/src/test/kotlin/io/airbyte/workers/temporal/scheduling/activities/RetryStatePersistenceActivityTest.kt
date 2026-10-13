@@ -79,17 +79,16 @@ internal class RetryStatePersistenceActivityTest {
     jobId: Long,
     connectionId: UUID,
   ) {
-    val success = true
     val manager = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
     val activity = RetryStatePersistenceActivityImpl(mAirbyteApiClient, mRetryStateClient)
-    every { mRetryStateClient.persistRetryState(jobId, connectionId, manager) } returns success
+    every { mRetryStateClient.persistRetryState(jobId, connectionId, manager) } returns Unit
 
     val input = PersistInput(jobId, connectionId, manager)
     val result = activity.persistRetryState(input)
 
     verify(exactly = 1) { mRetryStateClient.persistRetryState(jobId, connectionId, manager) }
 
-    Assertions.assertEquals(success, result.success)
+    Assertions.assertEquals(true, result.success)
   }
 
   companion object {

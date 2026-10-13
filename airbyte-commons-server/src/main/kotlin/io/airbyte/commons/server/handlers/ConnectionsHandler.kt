@@ -658,7 +658,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       } else {
         populateSyncFromLegacySchedule(standardSync, connectionCreate)
       }
-      if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog, Workspace(workspaceId))) {
+      if (featureFlagClient.boolVariation(CheckWithCatalog, Workspace(workspaceId))) {
         // TODO this is the hook for future check with catalog work
         log.info { "Entered into Dark Launch Code for Check with Catalog for connectionId $connectionId" }
       }

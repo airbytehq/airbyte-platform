@@ -119,9 +119,7 @@ class StreamStatsService(
 
       // Sum additional stats
       stat.additionalStats?.forEach { (key, value) ->
-        if (value != null) {
-          aggregatedAdditionalStats[key] = aggregatedAdditionalStats.getOrDefault(key, BigDecimal.ZERO) + value
-        }
+        aggregatedAdditionalStats[key] = aggregatedAdditionalStats.getOrDefault(key, BigDecimal.ZERO) + value
       }
     }
 

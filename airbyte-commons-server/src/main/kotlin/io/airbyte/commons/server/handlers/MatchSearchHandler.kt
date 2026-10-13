@@ -53,7 +53,7 @@ open class MatchSearchHandler
       val connectionMatcher = ConnectionMatcher(connectionSearch)
       val connectionReadFromSearch = connectionMatcher.match(connectionRead)
 
-      return (connectionReadFromSearch == null || connectionReadFromSearch == connectionRead) &&
+      return connectionReadFromSearch == connectionRead &&
         matchSearch(connectionSearch?.source, sourceRead) &&
         matchSearch(connectionSearch?.destination, destinationRead)
     }
@@ -80,7 +80,7 @@ open class MatchSearchHandler
         val sourceMatcher = SourceMatcher(sourceSearch)
         val sourceReadFromSearch = sourceMatcher.match(sourceRead)
 
-        return (sourceReadFromSearch == null || sourceReadFromSearch == sourceRead)
+        return sourceReadFromSearch == sourceRead
       }
 
       fun matchSearch(
@@ -90,7 +90,7 @@ open class MatchSearchHandler
         val destinationMatcher = DestinationMatcher(destinationSearch)
         val destinationReadFromSearch = destinationMatcher.match(destinationRead)
 
-        return (destinationReadFromSearch == null || destinationReadFromSearch == destinationRead)
+        return destinationReadFromSearch == destinationRead
       }
     }
   }

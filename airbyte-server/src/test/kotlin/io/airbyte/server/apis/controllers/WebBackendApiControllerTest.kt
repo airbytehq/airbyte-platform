@@ -122,8 +122,6 @@ internal class WebBackendApiControllerTest {
 
   @Test
   fun `test config`() {
-    val result = controller.getWebappConfig()
-
-    assert(result != null)
+    controller.getWebappConfig()
   }
 }

@@ -9,7 +9,6 @@ import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.JobStatus
-import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Attempt
 import io.airbyte.config.Attempt.Companion.isAttemptInTerminalState
 import io.airbyte.config.AttemptFailureSummary
@@ -123,7 +122,7 @@ class JobCreationAndStatusUpdateHelper(
   }
 
   private fun parseIsJobRunningOnCustomConnectorForMetrics(job: Job): String {
-    if (job.config == null || job.config.sync == null) {
+    if (job.config.sync == null) {
       return "null"
     }
     if (job.config.sync.isSourceCustomConnector == null ||
@@ -146,10 +145,7 @@ class JobCreationAndStatusUpdateHelper(
     val dataplaneGroupName = connectionService.getDataplaneGroupNameForConnection(connectionId)
     val parsedAttemptNumber = parseAttemptNumberOrNull(attemptNumber)
 
-    val baseMetricAttributes: MutableList<MetricAttribute> = ArrayList()
-    if (dataplaneGroupName != null) {
-      baseMetricAttributes.add(MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName))
-    }
+    val baseMetricAttributes = mutableListOf(MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName))
     if (parsedAttemptNumber != null) {
       baseMetricAttributes.add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, parsedAttemptNumber))
     }
@@ -280,9 +276,7 @@ class JobCreationAndStatusUpdateHelper(
       attrs.add(MetricAttribute(MetricTags.WORKSPACE_ID, config.workspaceId.toString()))
     }
 
-    if (job.scope != null) {
-      attrs.add(MetricAttribute(MetricTags.CONNECTION_ID, job.scope))
-    }
+    attrs.add(MetricAttribute(MetricTags.CONNECTION_ID, job.scope))
 
     return attrs
   }
@@ -332,9 +326,7 @@ class JobCreationAndStatusUpdateHelper(
 
     return actorDefinitionService
       .getActorDefinitionVersions(actorDefVersionIds)
-      .stream()
-      .map { obj: ActorDefinitionVersion -> obj.releaseStage }
-      .toList()
+      .mapNotNull { it.releaseStage }
   }
 
   fun emitJobToReleaseStagesMetric(
@@ -409,14 +401,12 @@ class JobCreationAndStatusUpdateHelper(
     }
 
     for (stage in releaseStages) {
-      if (stage != null) {
-        val attributes: List<MetricAttribute> =
-          buildList {
-            add(MetricAttribute(MetricTags.RELEASE_STAGE, getReleaseStage(stage)))
-            addAll(additionalAttributes)
-          }
-        metricClient.count(metric, 1L, *attributes.toTypedArray<MetricAttribute>())
-      }
+      val attributes: List<MetricAttribute> =
+        buildList {
+          add(MetricAttribute(MetricTags.RELEASE_STAGE, getReleaseStage(stage)))
+          addAll(additionalAttributes)
+        }
+      metricClient.count(metric, 1L, *attributes.toTypedArray<MetricAttribute>())
     }
   }
 
@@ -591,10 +581,7 @@ class JobCreationAndStatusUpdateHelper(
 
     @JvmStatic
     @InternalForTesting
-    fun orderByReleaseStageAsc(releaseStages: List<ReleaseStage>): List<ReleaseStage> =
-      releaseStages
-        .filter { stage: ReleaseStage? -> stage != null }
-        .sortedWith(RELEASE_STAGE_COMPARATOR)
+    fun orderByReleaseStageAsc(releaseStages: List<ReleaseStage>): List<ReleaseStage> = releaseStages.sortedWith(RELEASE_STAGE_COMPARATOR)
 
     /**
      * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some

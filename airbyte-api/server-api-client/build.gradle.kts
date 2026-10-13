@@ -140,9 +140,21 @@ private fun updateApiClientWithFailsafe(clientPath: String) {
    * UPDATE ApiClient.kt to use Failsafe.
    */
   val apiClientFile = file(clientPath)
+  val generatedText = apiClientFile.readText()
+
+  // OkHttp 5 made Response.body non-null; the generator still null-checks it and the
+  // SENSELESS_COMPARISON compiler guard rejects the dead branch.
+  val nullBodyCheck =
+    """        val body = response.body
+        if(body == null) {
+            return null
+        } else if (T::class.java == Unit::class.java) {"""
+  check(generatedText.contains(nullBodyCheck)) {
+    "Generated ApiClient.kt no longer contains the OkHttp body null check; update the replacement in server-api-client/build.gradle.kts"
+  }
+
   var apiClientFileText =
-    apiClientFile
-      .readText()
+    generatedText
       // replace class declaration
       .replace(
         "open class ApiClient(val baseUrl: String, val client: Call.Factory = defaultClient) {",
@@ -154,6 +166,11 @@ private fun updateApiClientWithFailsafe(clientPath: String) {
         """val call = client.newCall(request)
         val failsafeCall = FailsafeCall.with(policy).compose(call)
         val response: Response = failsafeCall.execute()""",
+      )
+      .replace(
+        nullBodyCheck,
+        """        val body = response.body
+        if (T::class.java == Unit::class.java) {""",
       )
 
   // add imports if not exist

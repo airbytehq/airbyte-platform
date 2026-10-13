@@ -361,7 +361,7 @@ class JobHistoryHandler(
   ): ConnectionSyncProgressRead {
     hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)), jobPersistence)
 
-    if (jobReads.isEmpty() || jobReads.first() == null) {
+    if (jobReads.isEmpty()) {
       return ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.connectionId)
         .streams(emptyList<@Valid StreamSyncProgressReadItem?>())

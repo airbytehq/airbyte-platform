@@ -51,7 +51,7 @@ class V0_50_33_014__AddScopedConfigurationTable : BaseJavaMigration() {
     ACTOR("actor"),
     ;
 
-    override fun getCatalog(): Catalog? = if (schema == null) null else schema.catalog
+    override fun getCatalog(): Catalog? = schema.catalog
 
     override fun getSchema(): Schema = SchemaImpl(DSL.name("public"), null)
 

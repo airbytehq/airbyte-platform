@@ -27,7 +27,6 @@ import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.runtime.AirbyteWorkerRetryConfig
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
-import org.openapitools.client.infrastructure.ApiResponse
 import org.openapitools.client.infrastructure.ClientException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -171,13 +170,12 @@ class RetryStateClient(
    * @param jobId — the job in question.
    * @param connectionId — the connection in question.
    * @param manager — the RetryManager we want to persist.
-   * @return true if successful, otherwise false.
    */
   fun persistRetryState(
     jobId: Long,
     connectionId: UUID,
     manager: RetryManager,
-  ): Boolean {
+  ) {
     val req =
       JobRetryStateRequestBody(
         connectionId,
@@ -189,10 +187,7 @@ class RetryStateClient(
         null,
       )
 
-    val result: ApiResponse<Unit?> = airbyteApiClient.jobRetryStatesApi.createOrUpdateWithHttpInfo(req)
-
-    // retryWithJitter returns null if unsuccessful
-    return result != null
+    airbyteApiClient.jobRetryStatesApi.createOrUpdateWithHttpInfo(req)
   }
 
   companion object {

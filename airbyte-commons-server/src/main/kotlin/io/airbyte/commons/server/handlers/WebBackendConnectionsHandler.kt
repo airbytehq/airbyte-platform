@@ -288,7 +288,7 @@ class WebBackendConnectionsHandler(
     val source = sourceReadById[connectionWithJobInfo.connection().sourceId]
     val destination = destinationReadById[connectionWithJobInfo.connection().destinationId]
     val connectionRead = apiPojoConverters.internalToConnectionRead(connectionWithJobInfo.connection())
-    val currentCatalogId = if (connectionRead == null) Optional.empty() else Optional.ofNullable(connectionRead.sourceCatalogId)
+    val currentCatalogId = Optional.ofNullable(connectionRead.sourceCatalogId)
 
     val schemaChange = getSchemaChange(connectionRead, currentCatalogId, latestFetchEvent)
 
