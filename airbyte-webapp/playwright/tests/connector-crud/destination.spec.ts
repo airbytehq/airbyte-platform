@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { destinationUI, e2eDestinationAPI } from "../../helpers/connectors";
 import { mockHelpers } from "../../helpers/mocks";
@@ -72,7 +73,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can update configured destination", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
+    const destination = (await e2eDestinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
     createdDestinationIds.push(destination.destinationId); // Track for cleanup
 
     await destinationUI.updateDestination(
@@ -88,7 +89,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can edit destination again without leaving the page", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
+    const destination = (await e2eDestinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
     createdDestinationIds.push(destination.destinationId); // Track for cleanup
 
     await destinationUI.updateDestination(
@@ -107,7 +108,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can delete configured destination", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
+    const destination = (await e2eDestinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
     createdDestinationIds.push(destination.destinationId); // Track for cleanup initially
 
     // Delete via UI
@@ -123,7 +124,7 @@ test.describe("Destination CRUD operations", () => {
     await expect(page).toHaveURL(/.*\/destination(\/new-destination)?$/, { timeout: 15000 });
 
     // Verify deletion was successful via API (works regardless of UI state)
-    const remainingDestinations = await e2eDestinationAPI.list(request, workspaceId);
+    const remainingDestinations = (await e2eDestinationAPI.list(request, workspaceId)) as DestinationRead[];
     const stillExists = remainingDestinations.some(
       (d: { name: string; destinationId: string }) => d.destinationId === destination.destinationId
     );

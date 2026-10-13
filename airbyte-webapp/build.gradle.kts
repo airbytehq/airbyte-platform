@@ -204,6 +204,25 @@ tasks.register<PnpmTask>("prettier") {
     outputs.upToDateWhen { true }
 }
 
+tasks.register<PnpmTask>("playwrightPnpmInstall") {
+    dependsOn("pnpmInstall")
+
+    workingDir.set(file("playwright"))
+    args = listOf("install", "--frozen-lockfile")
+
+    doNotTrackState("gradle is slower at caching than pnpm install")
+}
+
+tasks.register<PnpmTask>("playwrightTypeCheck") {
+    dependsOn("pnpmInstall", "playwrightPnpmInstall")
+
+    args = listOf("run", "typecheck:playwright")
+
+    inputs.files(allFiles, outsideWebappDependencies)
+
+    outputs.upToDateWhen { true }
+}
+
 tasks.register<PnpmTask>("buildStorybook") {
     dependsOn("pnpmInstall")
 

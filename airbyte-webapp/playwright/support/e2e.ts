@@ -1,6 +1,6 @@
 import { Page } from "@playwright/test";
+import { Experiments } from "@src/core/services/Experiment/experiments";
 import { FeatureItem, FeatureSet } from "@src/core/services/features/types";
-import { Experiments } from "@src/hooks/services/Experiment/experiments";
 
 export const featureFlags: Partial<Experiments> = {};
 export const featureServiceOverrides: FeatureSet = {};
