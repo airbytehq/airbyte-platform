@@ -941,7 +941,8 @@ class UserHandlerTest {
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
           .thenReturn(Optional.empty<AuthenticatedUser>())
 
-        val defaultUser = User().withUserId(DEFAULT_USER_ID).withEmail(email)
+        // A separate UUID object, like one loaded from the database.
+        val defaultUser = User().withUserId(UUID.fromString(DEFAULT_USER_ID.toString())).withEmail(email)
         whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of(defaultUser))
 
         val newUser =
@@ -1015,6 +1016,8 @@ class UserHandlerTest {
         // Verify the incoming identity is staged before the old identity is removed.
         Mockito.verify(userPersistence).writeAuthUser(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
         Mockito.verify(userPersistence).replaceAuthUserForUserId(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
+        // Only the default user's email gets cleared on first login.
+        Mockito.verify(userPersistence, Mockito.never()).writeUser(argThat { user: User? -> user?.email == "" })
       }
 
       @Test

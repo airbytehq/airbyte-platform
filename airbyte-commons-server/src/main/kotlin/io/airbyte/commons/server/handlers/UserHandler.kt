@@ -972,7 +972,7 @@ open class UserHandler
       if (existingUserWithEmail.isPresent && scimFirstLoginService.isScimManagedUser(existingUserWithEmail.get().userId)) {
         throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
       }
-      if (existingUserWithEmail.isPresent && existingUserWithEmail.get().userId === DEFAULT_USER_ID) {
+      if (existingUserWithEmail.isPresent && existingUserWithEmail.get().userId == DEFAULT_USER_ID) {
         // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
         // real user can be created
         persistUser(existingUserWithEmail.get().withEmail(""))
