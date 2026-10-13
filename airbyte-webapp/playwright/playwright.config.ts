@@ -3,6 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
+  // Writes the route table of the mock backend. It runs after the dev server has generated the API client.
+  globalSetup: "./scripts/generate-mock-routes.js",
   globalTeardown: "./global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

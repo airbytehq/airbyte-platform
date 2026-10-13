@@ -63,6 +63,9 @@ cypress.env.json
 /playwright/playwright/.cache/
 /playwright/tests/cloud/embedded/.embedded-env.json
 
+# Route table of the Playwright mock backend, generated from the API client
+/playwright/mock/generated/
+
 # Local IDEs
 .cursor/
 .vscode/

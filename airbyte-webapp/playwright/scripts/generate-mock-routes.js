@@ -1,0 +1,185 @@
+#!/usr/bin/env node
+
+/**
+ * Generates the route table of the Playwright mock backend (playwright/mock/generated/routes.ts).
+ *
+ * Source: src/core/api/generated/AirbyteClient.ts, the generated API client (`pnpm generate-client` creates it).
+ * One entry per generated client function. The key is the operationId, which is also the function name.
+ *
+ * The mock cannot import AirbyteClient.ts directly: its imports use webapp-only path aliases. So this
+ * script reads the function signatures as text and writes:
+ *   - `routes`: method and path of each operation (runtime data, used to match requests);
+ *   - `RouteTypes`: request body, path params and response type of each operation (typing only).
+ *
+ * Runs before `pnpm typecheck:playwright` and as the Playwright global setup (after the web server has
+ * generated the client). The output is gitignored.
+ */
+
+const fs = require("node:fs");
+const path = require("node:path");
+
+const WEBAPP_DIR = path.resolve(__dirname, "../..");
+const CLIENT_FILE = path.join(WEBAPP_DIR, "src/core/api/generated/AirbyteClient.ts");
+const OUTPUT_FILE = path.join(WEBAPP_DIR, "playwright/mock/generated/routes.ts");
+// apiCall in src/core/api/apis.ts prefixes every generated URL with `${apiUrl}/api`.
+const API_PREFIX = "/api";
+
+/** Splits "a: A, b: B<C, D>" at top-level commas only. */
+function splitTopLevel(text) {
+  const parts = [];
+  let depth = 0;
+  let current = "";
+  for (const char of text) {
+    if ("<({[".includes(char)) {
+      depth++;
+    } else if (">)}]".includes(char)) {
+      depth--;
+    }
+    if (char === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  parts.push(current);
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+/** Reads the text between the bracket at `openIndex` and its matching closing bracket. */
+function readBalanced(text, openIndex, open, close) {
+  let depth = 0;
+  for (let i = openIndex; i < text.length; i++) {
+    if (text[i] === open) {
+      depth++;
+    } else if (text[i] === close) {
+      depth--;
+      if (depth === 0) {
+        return text.slice(openIndex + 1, i);
+      }
+    }
+  }
+  throw new Error(`Unbalanced "${open}" at index ${openIndex}`);
+}
+
+function parseOperation(name, chunk) {
+  const callIndex = chunk.indexOf("apiCall<");
+  if (callIndex === -1) {
+    return undefined;
+  }
+
+  const args = splitTopLevel(readBalanced(chunk, chunk.indexOf("("), "(", ")"))
+    .map((arg) => {
+      const separator = arg.indexOf(":");
+      return { name: arg.slice(0, separator).trim(), type: arg.slice(separator + 1).trim() };
+    })
+    .filter((arg) => arg.name !== "options");
+  const response = readBalanced(chunk, callIndex + "apiCall".length, "<", ">").trim();
+  const request = chunk.slice(callIndex);
+
+  const url = request.match(/url: `([^`]+)`/);
+  const method = request.match(/method: "([A-Z]+)"/);
+  if (!url || !method) {
+    throw new Error(`Cannot read url or method of ${name}`);
+  }
+
+  const pathParams = [...url[1].matchAll(/\$\{(\w+)\}/g)].map((match) => match[1]);
+
+  return {
+    name,
+    method: method[1],
+    path: `${API_PREFIX}${url[1].replace(/\$\{(\w+)\}/g, "{$1}")}`,
+    pathParams,
+    body: bodyType(request, args),
+    response,
+  };
+}
+
+/** The TypeScript type of the request body that an operation sends. */
+function bodyType(request, args) {
+  const data = request.match(/data: (\w+)/);
+  if (!data) {
+    return "undefined";
+  }
+  const bodyArg = args.find((arg) => arg.name === data[1]);
+  if (bodyArg) {
+    return bodyArg.type;
+  }
+  // The request sends a value that is not a function argument, so the script cannot read its type.
+  // No operation does this today. This case keeps the script from failing if one does.
+  return "unknown";
+}
+
+function readSchemaImports(source) {
+  const block = source.match(/import type \{([^}]+)\} from "\.\/AirbyteClient\.schemas";/);
+  if (!block) {
+    throw new Error("Cannot find the schema import block in AirbyteClient.ts");
+  }
+  return new Set(splitTopLevel(block[1]));
+}
+
+function render(operations, schemaNames) {
+  const usedTypes = new Set();
+  for (const { body, response } of operations) {
+    for (const identifier of `${body} ${response}`.match(/[A-Za-z_]\w*/g) ?? []) {
+      if (schemaNames.has(identifier)) {
+        usedTypes.add(identifier);
+      }
+    }
+  }
+
+  const routeLines = operations.map(
+    ({ name, method, path: routePath, pathParams }) =>
+      `  ${name}: { method: "${method}", path: "${routePath}", pathParams: [${pathParams
+        .map((param) => `"${param}"`)
+        .join(", ")}] },`
+  );
+  const typeLines = operations.map(({ name, body, response, pathParams }) => {
+    const params = pathParams.length ? `{ ${pathParams.map((param) => `${param}: string`).join("; ")} }` : "{}";
+    return `  ${name}: { body: ${body}; params: ${params}; response: ${response} };`;
+  });
+
+  return [
+    "/* eslint-disable */",
+    "// Generated by playwright/scripts/generate-mock-routes.js from src/core/api/generated/AirbyteClient.ts.",
+    "// Do not edit. Regenerate with `node playwright/scripts/generate-mock-routes.js`.",
+    `import type {\n${[...usedTypes]
+      .sort()
+      .map((type) => `  ${type},`)
+      .join("\n")}\n} from "@src/core/api/types/AirbyteClient";`,
+    "",
+    "export const routes = {",
+    ...routeLines,
+    "} as const;",
+    "",
+    "export interface RouteTypes {",
+    ...typeLines,
+    "}",
+    "",
+  ].join("\n");
+}
+
+function generateMockRoutes() {
+  if (!fs.existsSync(CLIENT_FILE)) {
+    throw new Error(`${CLIENT_FILE} does not exist. Run "pnpm generate-client" in oss/airbyte-webapp first.`);
+  }
+  const source = fs.readFileSync(CLIENT_FILE, "utf-8");
+
+  const operations = source
+    .split(/^export const /m)
+    .slice(1)
+    .map((chunk) => parseOperation(chunk.match(/^(\w+)/)[1], chunk))
+    .filter(Boolean);
+
+  fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
+  fs.writeFileSync(OUTPUT_FILE, render(operations, readSchemaImports(source)));
+  console.log(
+    `[generate-mock-routes] Wrote ${operations.length} operations to ${path.relative(WEBAPP_DIR, OUTPUT_FILE)}`
+  );
+}
+
+// Playwright calls the default export as global setup; `node generate-mock-routes.js` runs it directly.
+module.exports = generateMockRoutes;
+if (require.main === module) {
+  generateMockRoutes();
+}

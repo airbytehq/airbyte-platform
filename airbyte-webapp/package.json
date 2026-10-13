@@ -26,7 +26,7 @@
     "format": "prettier --write 'src/**/*.{ts,tsx,css,scss,md,json}'",
     "prettier:ci": "prettier --check  'src/**/*.{css,scss,md,json}'",
     "lint": "eslint --ext .js,.ts,.tsx --ignore-path .gitignore .",
-    "pretypecheck:playwright": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
+    "pretypecheck:playwright": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client && node playwright/scripts/generate-mock-routes.js",
     "typecheck:playwright": "tsc --noEmit -p playwright",
     "stylelint": "stylelint 'src/**/*.{css,scss}'",
     "stylelint-check": "stylelint-config-prettier-scss-check",
