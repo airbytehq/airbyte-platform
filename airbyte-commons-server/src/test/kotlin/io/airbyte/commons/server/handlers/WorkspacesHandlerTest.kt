@@ -32,6 +32,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
@@ -58,6 +59,7 @@ import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import io.airbyte.config.persistence.WorkspacePersistence
+import io.airbyte.config.persistence.WorkspaceTombstoneResult
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
@@ -982,12 +984,96 @@ internal class WorkspacesHandlerTest {
           ),
         ),
       ).thenReturn(SourceReadList().sources(mutableListOf<@Valid SourceRead?>(source)))
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    stubTombstone(WorkspaceTombstoneResult.TOMBSTONED, allowLastWorkspace = false)
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).deleteWorkspace(workspaceIdRequestBody)
 
+    Mockito.verify(workspacePersistence).tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, false)
     Mockito.verify(connectionsHandler).deleteConnection(connection.connectionId)
     Mockito.verify(destinationHandler).deleteDestination(destination)
     Mockito.verify(sourceHandler).deleteSource(source)
+  }
+
+  @Test
+  fun `deleteWorkspace rejects the last workspace before deleting anything`() {
+    val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
+
+    val problem =
+      assertThrows<StateConflictProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).deleteWorkspace(workspaceIdRequestBody)
+      }
+
+    assertEquals(LAST_WORKSPACE_DELETE_MESSAGE, problem.problem.getDetail())
+    Mockito.verifyNoInteractions(connectionsHandler, destinationHandler, sourceHandler)
+    Mockito.verify(workspacePersistence, Mockito.never()).tombstoneWorkspace(any(), any(), any())
+  }
+
+  @Test
+  fun `deleteWorkspace returns 409 when a concurrent delete took the second-to-last workspace`() {
+    val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    stubTombstone(WorkspaceTombstoneResult.LAST_WORKSPACE, allowLastWorkspace = false)
+
+    val problem =
+      assertThrows<StateConflictProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).deleteWorkspace(workspaceIdRequestBody)
+      }
+
+    assertEquals(LAST_WORKSPACE_DELETE_MESSAGE, problem.problem.getDetail())
+  }
+
+  @Test
+  fun `deleteWorkspace returns 409 when the workspace changed during deletion`() {
+    val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    stubTombstone(WorkspaceTombstoneResult.NOT_FOUND, allowLastWorkspace = false)
+
+    val problem =
+      assertThrows<StateConflictProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).deleteWorkspace(workspaceIdRequestBody)
+      }
+
+    assertEquals(WORKSPACE_DELETE_CONFLICT_MESSAGE, problem.problem.getDetail())
+  }
+
+  @Test
+  fun `deleteWorkspace allows an instance admin to delete the last workspace`() {
+    val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
+    Mockito.`when`(roleRequest.roles()).thenReturn(setOf(AuthRoleConstants.ADMIN))
+    stubTombstone(WorkspaceTombstoneResult.TOMBSTONED, allowLastWorkspace = true)
+
+    getWorkspacesHandler(AirbyteEdition.CLOUD).deleteWorkspace(workspaceIdRequestBody)
+
+    Mockito.verify(workspacePersistence).tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, true)
+  }
+
+  private fun stubTombstone(
+    result: WorkspaceTombstoneResult,
+    allowLastWorkspace: Boolean,
+  ) {
+    Mockito
+      .`when`(workspacePersistence.tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, allowLastWorkspace))
+      .thenReturn(result)
+  }
+
+  private fun stubEmptyWorkspaceForDeletion(): WorkspaceIdRequestBody {
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
+    Mockito
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
+      .thenReturn(workspace)
+    Mockito
+      .`when`(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody))
+      .thenReturn(ConnectionReadList().connections(mutableListOf()))
+    Mockito
+      .`when`(destinationHandler.listDestinationsForWorkspace(any()))
+      .thenReturn(DestinationReadList().destinations(mutableListOf()))
+    Mockito
+      .`when`(sourceHandler.listSourcesForWorkspace(any()))
+      .thenReturn(SourceReadList().sources(mutableListOf()))
+    return workspaceIdRequestBody
   }
 
   @Test

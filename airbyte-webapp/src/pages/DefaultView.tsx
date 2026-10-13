@@ -1,4 +1,10 @@
+import { FormattedMessage } from "react-intl";
 import { Navigate } from "react-router-dom";
+
+import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId, useLastVisitedOrganizationId } from "area/organization/utils";
 import { useListWorkspacesInfinite } from "core/api";
@@ -33,6 +39,23 @@ export const DefaultView: React.FC = () => {
     isNewSignup && (!onboardingStatus || (onboardingStatus !== "completed" && onboardingStatus !== "skipped"));
   if (isSurveyEnabled && needsOnboarding && workspaces[0]?.workspaceId) {
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}/onboarding`} replace />;
+  }
+
+  // A user can end up with no workspace and no organization, e.g. when the only workspace they had access to was
+  // deleted. There is nowhere to redirect them; /organization/undefined would crash the app.
+  if (workspaces.length === 0 && !organizationId) {
+    return (
+      <FlexContainer direction="column" alignItems="center" justifyContent="center" style={{ minHeight: "100vh" }}>
+        <Box mb="md">
+          <Heading as="h1" size="md">
+            <FormattedMessage id="defaultView.noOrganization.title" />
+          </Heading>
+        </Box>
+        <Text size="md" color="grey" align="center">
+          <FormattedMessage id="defaultView.noOrganization.description" />
+        </Text>
+      </FlexContainer>
+    );
   }
 
   const getNavigationPath = () => {

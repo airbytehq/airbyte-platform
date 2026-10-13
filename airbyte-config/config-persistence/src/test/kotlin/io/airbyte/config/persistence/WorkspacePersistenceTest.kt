@@ -11,6 +11,7 @@ import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.ReleaseStage
 import io.airbyte.config.SourceConnection
@@ -48,6 +49,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -55,6 +58,10 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var workspacePersistence: WorkspacePersistence
@@ -1655,6 +1662,122 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
       )
     }
     return permissionId
+  }
+
+  @Test
+  fun `tombstoneWorkspace keeps an organization's last workspace`() {
+    val organizationId = createOrganization()
+    val first = createWorkspace(organizationId)
+    val second = createWorkspace(organizationId)
+
+    assertEquals(WorkspaceTombstoneResult.TOMBSTONED, workspacePersistence.tombstoneWorkspace(first, organizationId))
+    assertEquals(WorkspaceTombstoneResult.NOT_FOUND, workspacePersistence.tombstoneWorkspace(first, organizationId))
+    assertEquals(WorkspaceTombstoneResult.LAST_WORKSPACE, workspacePersistence.tombstoneWorkspace(second, organizationId))
+    assertEquals(1L, workspacePersistence.countWorkspacesByOrganizationId(organizationId))
+
+    assertEquals(WorkspaceTombstoneResult.TOMBSTONED, workspacePersistence.tombstoneWorkspace(second, organizationId, allowLastWorkspace = true))
+    assertEquals(0L, workspacePersistence.countWorkspacesByOrganizationId(organizationId))
+  }
+
+  @Test
+  fun `tombstoneWorkspace does not delete a workspace in another organization`() {
+    val organizationId = createOrganization()
+    val otherOrganizationId = createOrganization()
+    val workspaceId = createWorkspace(otherOrganizationId)
+    createWorkspace(otherOrganizationId)
+
+    assertEquals(WorkspaceTombstoneResult.NOT_FOUND, workspacePersistence.tombstoneWorkspace(workspaceId, organizationId))
+    assertEquals(2L, workspacePersistence.countWorkspacesByOrganizationId(otherOrganizationId))
+  }
+
+  @Test
+  fun `tombstoneWorkspace waits for a concurrent delete in the same organization`() {
+    val organizationId = createOrganization()
+    val first = createWorkspace(organizationId)
+    val second = createWorkspace(organizationId)
+    val firstHoldsLock = CountDownLatch(1)
+    val allowFirstCommit = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      // A delete of the first workspace that has tombstoned it but not committed yet.
+      executor.submit {
+        database!!.transaction { ctx ->
+          ctx
+            .selectOne()
+            .from(Tables.ORGANIZATION)
+            .where(Tables.ORGANIZATION.ID.eq(organizationId))
+            .forUpdate()
+            .fetch()
+          ctx
+            .update(Tables.WORKSPACE)
+            .set(Tables.WORKSPACE.TOMBSTONE, true)
+            .where(Tables.WORKSPACE.ID.eq(first))
+            .execute()
+          firstHoldsLock.countDown()
+          allowFirstCommit.await(10, TimeUnit.SECONDS)
+        }
+      }
+      assertTrue(firstHoldsLock.await(10, TimeUnit.SECONDS))
+
+      val secondDelete = executor.submit<WorkspaceTombstoneResult> { workspacePersistence.tombstoneWorkspace(second, organizationId) }
+      assertThrows(TimeoutException::class.java) { secondDelete.get(300, TimeUnit.MILLISECONDS) }
+
+      allowFirstCommit.countDown()
+      assertEquals(WorkspaceTombstoneResult.LAST_WORKSPACE, secondDelete.get(10, TimeUnit.SECONDS))
+      assertEquals(1L, workspacePersistence.countWorkspacesByOrganizationId(organizationId))
+    } finally {
+      allowFirstCommit.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `concurrent deletes of an organization's last two workspaces leave one`() {
+    val organizations = (1..20).map { createOrganization().let { it to listOf(createWorkspace(it), createWorkspace(it)) } }
+    val start = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(40)
+
+    try {
+      val results =
+        organizations.map { (organizationId, workspaceIds) ->
+          organizationId to
+            workspaceIds.map { workspaceId ->
+              executor.submit<WorkspaceTombstoneResult> {
+                start.await()
+                workspacePersistence.tombstoneWorkspace(workspaceId, organizationId)
+              }
+            }
+        }
+      start.countDown()
+
+      results.forEach { (organizationId, deletes) ->
+        assertEquals(
+          setOf(WorkspaceTombstoneResult.TOMBSTONED, WorkspaceTombstoneResult.LAST_WORKSPACE),
+          deletes.map { it.get(30, TimeUnit.SECONDS) }.toSet(),
+        )
+        assertEquals(1L, workspacePersistence.countWorkspacesByOrganizationId(organizationId))
+      }
+    } finally {
+      executor.shutdownNow()
+    }
+  }
+
+  private fun createOrganization(): UUID {
+    val organizationId = UUID.randomUUID()
+    organizationService.writeOrganization(Organization().withOrganizationId(organizationId).withName("org").withEmail("org@example.com"))
+    return organizationId
+  }
+
+  private fun createWorkspace(organizationId: UUID): UUID {
+    val workspaceId = UUID.randomUUID()
+    workspaceService.writeStandardWorkspaceNoSecrets(
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withSlug("workspace-$workspaceId")
+        .withOrganizationId(organizationId),
+    )
+    return workspaceId
   }
 
   companion object {

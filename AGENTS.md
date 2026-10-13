@@ -88,8 +88,11 @@ error mapping: it predates the Problems rule below and throws
 
 **Existing code.** A change to an existing feature can go in the
 handler or service that already owns it. Don't restructure that code
-into the three layers unless the task asks for it. New endpoints and
-new features always use the three layers.
+into the three layers unless the task asks for it. If the change needs
+a transaction, put that step in the persistence class the handler
+already uses (for example `WorkspacePersistence`) rather than adding a
+domain service for it. New endpoints and new features always use the
+three layers.
 
 ## Dependency injection
 

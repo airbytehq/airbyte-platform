@@ -4,6 +4,7 @@
 
 package io.airbyte.data.repositories
 
+import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.data.repositories.entities.OrganizationEmailDomain
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -31,7 +32,19 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
   @AfterEach
   fun tearDown() {
     organizationEmailDomainRepository.deleteAll()
+    organizationRepository.deleteAll()
   }
+
+  private fun createOrganizationId(tombstone: Boolean = false): UUID =
+    organizationRepository
+      .save(
+        Organization(
+          name = "Test Organization",
+          email = "test-${UUID.randomUUID()}@example.com",
+          userId = UUID.randomUUID(),
+          tombstone = tombstone,
+        ),
+      ).id!!
 
   @Test
   fun `test db insertion`() {
@@ -58,7 +71,7 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
   fun `test find by email domain`() {
     assert(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
 
-    val organizationId = UUID.randomUUID()
+    val organizationId = createOrganizationId()
     val orgEmailDomain =
       OrganizationEmailDomain(
         organizationId = organizationId,
@@ -67,7 +80,7 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
 
     organizationEmailDomainRepository.save(orgEmailDomain)
 
-    val otherOrgId = UUID.randomUUID()
+    val otherOrgId = createOrganizationId()
     val otherOrgEmailDomain =
       OrganizationEmailDomain(
         organizationId = otherOrgId,
@@ -83,7 +96,7 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
 
   @Test
   fun `test find by email domain is case insensitive`() {
-    val organizationId = UUID.randomUUID()
+    val organizationId = createOrganizationId()
     val orgEmailDomain =
       OrganizationEmailDomain(
         organizationId = organizationId,
@@ -112,8 +125,33 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
   }
 
   @Test
+  fun `test find by email domain excludes tombstoned organizations`() {
+    val tombstonedOrganizationId = createOrganizationId(tombstone = true)
+    organizationEmailDomainRepository.save(
+      OrganizationEmailDomain(
+        organizationId = tombstonedOrganizationId,
+        emailDomain = "airbyte.io",
+      ),
+    )
+
+    assert(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
+
+    val activeOrganizationId = createOrganizationId()
+    organizationEmailDomainRepository.save(
+      OrganizationEmailDomain(
+        organizationId = activeOrganizationId,
+        emailDomain = "airbyte.io",
+      ),
+    )
+
+    val result = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io")
+    assert(result.size == 1)
+    assert(result[0].organizationId == activeOrganizationId)
+  }
+
+  @Test
   fun `delete by organization id removes all related rows`() {
-    val organizationId = UUID.randomUUID()
+    val organizationId = createOrganizationId()
     val orgEmailDomain1 =
       OrganizationEmailDomain(
         organizationId = organizationId,

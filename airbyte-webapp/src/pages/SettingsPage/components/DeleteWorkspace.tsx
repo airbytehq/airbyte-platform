@@ -1,108 +1,36 @@
-import dayjs from "dayjs";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import {
-  useCurrentWorkspace,
-  useDeleteWorkspace,
-  useIsLastWorkspaceInOrganization,
-  useGetOrganizationSubscriptionInfo,
-  useCancelSubscription,
-} from "core/api";
-import { OrganizationPaymentConfigReadSubscriptionStatus } from "core/api/types/AirbyteClient";
+import { useCurrentWorkspace, useDeleteWorkspace, useIsLastWorkspaceInOrganization } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useNotificationService } from "core/services/Notification";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { RoutePaths } from "pages/routePaths";
-
-import styles from "./DeleteWorkspace.module.scss";
 
 export const DeleteWorkspace: React.FC = () => {
   const workspace = useCurrentWorkspace();
   const organizationId = useCurrentOrganizationId();
-  const { mutateAsync: cancelSubscription, isLoading: isCancellingSubscription } = useCancelSubscription(
-    organizationId || ""
-  );
   const { registerNotification } = useNotificationService();
   const navigate = useNavigate();
-  const { formatMessage, formatDate } = useIntl();
+  const { formatMessage } = useIntl();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const redirectPathAfterDeletion = `/${RoutePaths.Organization}/${workspace.organizationId}`;
-  const { subscriptionStatus } = useOrganizationSubscriptionStatus();
 
-  // Check if this is the last workspace in the organization
+  // An organization must keep at least one workspace; the server rejects deleting the last one.
   const { isLastWorkspace, isLoading: isCheckingLastWorkspace } = useIsLastWorkspaceInOrganization(
     organizationId,
     workspace.workspaceId
   );
 
-  // Fetch subscription info only if this is the last workspace
-  const { data: subscriptionInfo, isLoading: isSubscriptionInfoLoading } = useGetOrganizationSubscriptionInfo(
-    organizationId || "",
-    isLastWorkspace
-  );
-  const hasActiveSubscription = subscriptionStatus === OrganizationPaymentConfigReadSubscriptionStatus.subscribed;
-  const shouldShowCancelSubscriptionWarning =
-    isLastWorkspace && hasActiveSubscription && subscriptionInfo?.selfServeSubscription === true;
-
-  // Handle subscription cancellation after workspace deletion
-  const handleCancelSubscription = async () => {
-    if (organizationId && shouldShowCancelSubscriptionWarning) {
-      try {
-        await cancelSubscription();
-        registerNotification({
-          id: "settings.workspace.delete.success",
-          text: formatMessage({
-            id: "settings.workspaceSettings.delete.success.withSubscriptionCancellation",
-          }),
-          type: "success",
-        });
-      } catch (subscriptionError) {
-        registerNotification({
-          id: "settings.workspace.delete.subscription.cancellation.failed",
-          text: formatMessage({
-            id: "settings.workspaceSettings.delete.warning.subscriptionCancellationFailed",
-          }),
-          type: "warning",
-        });
-      }
-    } else {
-      registerNotification({
-        id: "settings.workspace.delete.success",
-        text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
-        type: "success",
-      });
-    }
-  };
-
   const { mutateAsync: deleteWorkspace, isLoading: isDeletingWorkspace } = useDeleteWorkspace();
 
-  const cancellationDate = subscriptionInfo?.upcomingInvoice?.invoiceDate
-    ? formatDate(dayjs(subscriptionInfo.upcomingInvoice.invoiceDate).toDate(), { dateStyle: "medium" })
-    : "";
-
   const onRemoveWorkspaceClick = () => {
-    const modalText = shouldShowCancelSubscriptionWarning ? (
-      <Box className={styles.warningBox}>
-        <Box pb="md">
-          <FormattedMessage id="settings.workspaceSettings.deleteWorkspace.confirmation.text" />
-        </Box>
-
-        <FormattedMessage
-          id="settings.workspaceSettings.deleteLastWorkspace.confirmation"
-          values={{ planName: subscriptionInfo?.name ?? "", date: cancellationDate }}
-        />
-      </Box>
-    ) : (
-      "settings.workspaceSettings.deleteWorkspace.confirmation.text"
-    );
-
     openConfirmationModal({
-      text: modalText,
+      text: "settings.workspaceSettings.deleteWorkspace.confirmation.text",
       title: (
         <FormattedMessage
           id="settings.workspaceSettings.deleteWorkspace.confirmation.title"
@@ -113,7 +41,11 @@ export const DeleteWorkspace: React.FC = () => {
       confirmationText: workspace.name,
       onSubmit: async () => {
         await deleteWorkspace(workspace.workspaceId);
-        await handleCancelSubscription();
+        registerNotification({
+          id: "settings.workspace.delete.success",
+          text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
+          type: "success",
+        });
         navigate(redirectPathAfterDeletion);
         closeConfirmationModal();
       },
@@ -122,17 +54,20 @@ export const DeleteWorkspace: React.FC = () => {
   };
 
   return (
-    <Button
-      isLoading={
-        isCheckingLastWorkspace ||
-        (isLastWorkspace && isSubscriptionInfoLoading) ||
-        isDeletingWorkspace ||
-        isCancellingSubscription
-      }
-      variant="danger"
-      onClick={onRemoveWorkspaceClick}
-    >
-      <FormattedMessage id="settings.workspaceSettings.deleteLabel" />
-    </Button>
+    <FlexContainer direction="column" gap="sm">
+      <Button
+        isLoading={isCheckingLastWorkspace || isDeletingWorkspace}
+        disabled={isLastWorkspace}
+        variant="danger"
+        onClick={onRemoveWorkspaceClick}
+      >
+        <FormattedMessage id="settings.workspaceSettings.deleteLabel" />
+      </Button>
+      {isLastWorkspace && (
+        <Text size="sm" color="grey">
+          <FormattedMessage id="settings.workspaceSettings.deleteLastWorkspace.disabled" />
+        </Text>
+      )}
+    </FlexContainer>
   );
 };

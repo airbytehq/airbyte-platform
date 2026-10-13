@@ -473,6 +473,22 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `findBySsoConfigRealm returns empty when organization is tombstoned`() {
+    val organization = createOrganization("Deleted Org", tombstone = true)
+    ssoConfigRepository.save(
+      SsoConfig(
+        id = UUID.randomUUID(),
+        organizationId = organization.id!!,
+        keycloakRealm = "deleted-org-realm",
+        status = SsoConfigStatus.active,
+      ),
+    )
+
+    val result: Optional<Organization> = organizationRepository.findBySsoConfigRealm("deleted-org-realm")
+    assertTrue(result.isEmpty)
+  }
+
+  @Test
   fun `findByUserIdWithSsoRealm returns organizations with direct organization permissions`() {
     val userId = UUID.randomUUID()
     val org1 = createOrganizationWithSso("Org 1", "test-realm")
@@ -683,6 +699,46 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
     val result = organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, false)
 
     assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `user org lookups ignore permissions on tombstoned workspaces`() {
+    // A permission left on a deleted workspace must not list the org: the org access check
+    // ignores tombstoned workspaces, so the listed org would 403 on get_organization_info.
+    val userId = UUID.randomUUID()
+    val staleOrg = createOrganization("A Stale Org")
+    val activeOrg = createOrganization("B Active Org")
+    val deletedWorkspace =
+      workspaceRepository.save(
+        Workspace(
+          name = "deleted",
+          slug = "deleted-${UUID.randomUUID()}",
+          organizationId = staleOrg.id!!,
+          dataplaneGroupId = UUID.randomUUID(),
+          tombstone = true,
+        ),
+      )
+    val activeWorkspace =
+      workspaceRepository.save(
+        Workspace(
+          name = "active",
+          slug = "active-${UUID.randomUUID()}",
+          organizationId = activeOrg.id!!,
+          dataplaneGroupId = UUID.randomUUID(),
+        ),
+      )
+    grantWorkspacePermission(userId, deletedWorkspace.id!!)
+    grantWorkspacePermission(userId, activeWorkspace.id!!)
+
+    val expected = listOf("B Active Org")
+    assertEquals(expected, organizationRepository.findByUserIdWithSsoRealm(userId, null, false).map { it.name })
+    assertEquals(expected, organizationRepository.findByUserIdPaginatedWithSsoRealm(userId, null, false, 10, 0).map { it.name })
+    assertEquals(expected, organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, false).map { it.name })
+    assertEquals(expected, organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(userId, null, false, 10, 0).map { it.name })
+
+    val withDeleted = listOf("A Stale Org", "B Active Org")
+    assertEquals(withDeleted, organizationRepository.findByUserIdWithSsoRealm(userId, null, true).map { it.name })
+    assertEquals(withDeleted, organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, true).map { it.name })
   }
 
   @Test

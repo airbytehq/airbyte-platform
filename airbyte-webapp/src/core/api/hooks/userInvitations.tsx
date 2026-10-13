@@ -5,6 +5,7 @@ import { MessageType } from "components/ui/Message";
 
 import { Notification, useNotificationService } from "core/services/Notification";
 
+import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";
 import {
   acceptUserInvitation,
@@ -32,13 +33,17 @@ export const useAcceptUserInvitation = (inviteCode?: string | null): UserInvitat
     [SCOPE_USER, "userInvitation", inviteCode],
     () =>
       acceptUserInvitation({ inviteCode: inviteCode ?? "" }, requestOptions)
-        .then((response) => {
+        .then(async (response) => {
           registerNotification({
             type: "success",
             text: formatMessage({ id: "userInvitations.accept.success" }),
             id: "userInvitations.accept.success",
           });
-          queryClient.invalidateQueries(workspaceKeys.lists());
+          // The user may have just joined their first organization; refresh before redirecting.
+          await Promise.all([
+            queryClient.invalidateQueries(workspaceKeys.lists()),
+            queryClient.invalidateQueries(organizationKeys.all),
+          ]);
           return response;
         })
         .catch((err: { response: { message: string }; status?: number }) => {

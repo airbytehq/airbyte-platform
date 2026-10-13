@@ -26,6 +26,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.annotation.InternalForTesting
@@ -55,6 +56,7 @@ import io.airbyte.config.SlackNotificationConfiguration
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import io.airbyte.config.persistence.WorkspacePersistence
+import io.airbyte.config.persistence.WorkspaceTombstoneResult
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
@@ -84,6 +86,13 @@ import java.util.stream.Collectors
 
 /** Workspaces allowed to an organization whose plan grants no workspace entitlement. */
 private const val DEFAULT_WORKSPACE_LIMIT = 1L
+
+internal const val LAST_WORKSPACE_DELETE_MESSAGE =
+  "This workspace can't be deleted because it is the only workspace in your organization, and an organization " +
+    "must keep at least one. Create another workspace first, or contact Airbyte support if your plan allows only one workspace."
+
+internal const val WORKSPACE_DELETE_CONFLICT_MESSAGE =
+  "This workspace changed while it was being deleted (it was already deleted or moved to another organization). Refresh and try again."
 
 /**
  * WorkspacesHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -290,6 +299,13 @@ class WorkspacesHandler
       // get existing implementation
       val persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.workspaceId, false)
 
+      // An organization must keep at least one workspace (oncall#13652); instance admins are exempt.
+      // Reject the common case before deleting anything.
+      val allowLastWorkspace = isCallerInstanceAdmin()
+      if (!allowLastWorkspace && workspacePersistence.countWorkspacesByOrganizationId(persistedWorkspace.organizationId) <= 1) {
+        throw StateConflictProblem(LAST_WORKSPACE_DELETE_MESSAGE, ProblemMessageData().message(LAST_WORKSPACE_DELETE_MESSAGE))
+      }
+
       // disable all connections associated with this workspace
       for (connectionRead in connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody).connections) {
         connectionsHandler.deleteConnection(connectionRead.connectionId)
@@ -310,8 +326,16 @@ class WorkspacesHandler
         ).sources) {
         sourceHandler.deleteSource(sourceRead)
       }
-      persistedWorkspace.withTombstone(true)
-      persistStandardWorkspace(persistedWorkspace)
+
+      // The final check runs under the organization lock, so two concurrent deletes can't remove an organization's
+      // last two workspaces. The losing request has already deleted its workspace's resources, but the workspace is kept.
+      when (workspacePersistence.tombstoneWorkspace(persistedWorkspace.workspaceId, persistedWorkspace.organizationId, allowLastWorkspace)) {
+        WorkspaceTombstoneResult.TOMBSTONED -> Unit
+        WorkspaceTombstoneResult.LAST_WORKSPACE ->
+          throw StateConflictProblem(LAST_WORKSPACE_DELETE_MESSAGE, ProblemMessageData().message(LAST_WORKSPACE_DELETE_MESSAGE))
+        WorkspaceTombstoneResult.NOT_FOUND ->
+          throw StateConflictProblem(WORKSPACE_DELETE_CONFLICT_MESSAGE, ProblemMessageData().message(WORKSPACE_DELETE_CONFLICT_MESSAGE))
+      }
     }
 
     fun listWorkspaces(): WorkspaceReadList {

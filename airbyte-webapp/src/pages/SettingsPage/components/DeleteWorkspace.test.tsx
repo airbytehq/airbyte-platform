@@ -3,14 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { mocked, render } from "test-utils";
 
-import {
-  useCancelSubscription,
-  useCurrentWorkspace,
-  useDeleteWorkspace,
-  useGetOrganizationSubscriptionInfo,
-  useIsLastWorkspaceInOrganization,
-} from "core/api";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useCurrentWorkspace, useDeleteWorkspace, useIsLastWorkspaceInOrganization } from "core/api";
 
 import { DeleteWorkspace } from "./DeleteWorkspace";
 
@@ -29,10 +22,8 @@ jest.mock("area/organization/utils", () => ({
 }));
 
 jest.mock("core/api", () => ({
-  useCancelSubscription: jest.fn(),
   useCurrentWorkspace: jest.fn(),
   useDeleteWorkspace: jest.fn(),
-  useGetOrganizationSubscriptionInfo: jest.fn(),
   useIsLastWorkspaceInOrganization: jest.fn(),
 }));
 
@@ -44,13 +35,11 @@ jest.mock("core/services/ConfirmationModal", () => ({
   }),
 }));
 
-jest.mock("core/utils/useOrganizationSubscriptionStatus", () => ({
-  useOrganizationSubscriptionStatus: jest.fn(),
-}));
-
 describe("DeleteWorkspace", () => {
   const mockDeleteWorkspace = jest.fn();
-  const mockCancelSubscription = jest.fn();
+
+  const mockIsLastWorkspace = (isLastWorkspace: boolean) =>
+    mocked(useIsLastWorkspaceInOrganization).mockReturnValue({ isLastWorkspace, isLoading: false, error: null });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,7 +48,6 @@ describe("DeleteWorkspace", () => {
       mockConfirmationSubmit = options.onSubmit;
     });
     mockDeleteWorkspace.mockResolvedValue(undefined);
-    mockCancelSubscription.mockResolvedValue(undefined);
     mocked(useCurrentWorkspace).mockReturnValue({
       workspaceId: "test-workspace-id",
       organizationId: "test-organization-id",
@@ -69,31 +57,10 @@ describe("DeleteWorkspace", () => {
       mutateAsync: mockDeleteWorkspace,
       isLoading: false,
     } as unknown as ReturnType<typeof useDeleteWorkspace>);
-    mocked(useCancelSubscription).mockReturnValue({
-      mutateAsync: mockCancelSubscription,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useCancelSubscription>);
-    mocked(useIsLastWorkspaceInOrganization).mockReturnValue({
-      isLastWorkspace: true,
-      isLoading: false,
-      error: null,
-    });
-    mocked(useOrganizationSubscriptionStatus).mockReturnValue({
-      subscriptionStatus: "subscribed",
-    } as ReturnType<typeof useOrganizationSubscriptionStatus>);
   });
 
-  it("cancels the subscription when deleting the last workspace for a self-serve subscription", async () => {
-    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue({
-      data: {
-        name: "Airbyte Plus",
-        selfServeSubscription: true,
-        upcomingInvoice: {
-          invoiceDate: "2026-06-01",
-        },
-      },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetOrganizationSubscriptionInfo>);
+  it("deletes the workspace and returns to the organization when other workspaces exist", async () => {
+    mockIsLastWorkspace(false);
 
     const wrapper = await render(<DeleteWorkspace />);
     await userEvent.click(wrapper.getByRole("button", { name: "Delete your workspace" }));
@@ -104,27 +71,19 @@ describe("DeleteWorkspace", () => {
     });
 
     expect(mockDeleteWorkspace).toHaveBeenCalledWith("test-workspace-id");
-    expect(mockCancelSubscription).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith("/organization/test-organization-id");
   });
 
-  it("does not cancel the subscription when deleting the last workspace for a non-self-serve subscription", async () => {
-    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue({
-      data: {
-        name: "Enterprise",
-        selfServeSubscription: false,
-      },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetOrganizationSubscriptionInfo>);
+  it("disables deletion of the organization's last workspace", async () => {
+    mockIsLastWorkspace(true);
 
     const wrapper = await render(<DeleteWorkspace />);
+
+    expect(wrapper.getByRole("button", { name: "Delete your workspace" })).toBeDisabled();
+    expect(wrapper.getByText(/only workspace/)).toBeInTheDocument();
+
     await userEvent.click(wrapper.getByRole("button", { name: "Delete your workspace" }));
-
-    await act(async () => {
-      await mockConfirmationSubmit?.();
-    });
-
-    expect(mockDeleteWorkspace).toHaveBeenCalledWith("test-workspace-id");
-    expect(mockCancelSubscription).not.toHaveBeenCalled();
+    expect(mockOpenConfirmationModal).not.toHaveBeenCalled();
+    expect(mockDeleteWorkspace).not.toHaveBeenCalled();
   });
 });

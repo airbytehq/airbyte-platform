@@ -109,6 +109,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
     INNER JOIN sso_config
     ON organization.id = sso_config.organization_id
     WHERE sso_config.keycloak_realm = :ssoConfigRealm
+    AND organization.tombstone = false
     """,
   )
   fun findBySsoConfigRealm(ssoConfigRealm: String): Optional<Organization>
@@ -140,6 +141,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
         INNER JOIN permission ON workspace.id = permission.workspace_id
         WHERE permission.user_id = :userId
         AND workspace.organization_id = organization.id
+        AND (:includeDeleted = true OR workspace.tombstone = false)
     ) OR EXISTS (
         SELECT 1 FROM permission
         WHERE permission.user_id = :userId
@@ -183,6 +185,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
         INNER JOIN permission ON workspace.id = permission.workspace_id
         WHERE permission.user_id = :userId
         AND workspace.organization_id = organization.id
+        AND (:includeDeleted = true OR workspace.tombstone = false)
     ) OR EXISTS (
         SELECT 1 FROM permission
         WHERE permission.user_id = :userId
@@ -235,6 +238,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
         INNER JOIN permission ON workspace.id = permission.workspace_id
         WHERE permission.user_id = :userId
         AND workspace.organization_id = organization.id
+        AND (:includeDeleted = true OR workspace.tombstone = false)
     ))
     AND organization.is_agentic = false
     AND (:includeDeleted = true OR organization.tombstone = false)
@@ -281,6 +285,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
         INNER JOIN permission ON workspace.id = permission.workspace_id
         WHERE permission.user_id = :userId
         AND workspace.organization_id = organization.id
+        AND (:includeDeleted = true OR workspace.tombstone = false)
     ))
     AND organization.is_agentic = false
     AND (:includeDeleted = true OR organization.tombstone = false)

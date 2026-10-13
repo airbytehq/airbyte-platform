@@ -209,8 +209,8 @@ export const useWorkspaceCount = () => {
 };
 
 /**
- * Hook to check if a workspace is the last active workspace in an organization.
- * This is useful for billing-related operations like subscription cancellation.
+ * Hook to check if a workspace is the last active workspace in an organization. Uses the server's
+ * org-wide workspace count, not the page of workspaces the current user can see.
  */
 export const useIsLastWorkspaceInOrganization = (
   organizationId: string | undefined,
@@ -218,7 +218,6 @@ export const useIsLastWorkspaceInOrganization = (
 ): { isLastWorkspace: boolean; isLoading: boolean; error: Error | null } => {
   const requestOptions = useRequestOptions();
 
-  // We'll use a query to get all workspaces in the organization and check if the given workspace is the only one
   const queryKey = [SCOPE_ORGANIZATION, "checkLastWorkspace", organizationId, workspaceId];
 
   const { data, isLoading, error } = useQuery<boolean, Error>(
@@ -228,18 +227,15 @@ export const useIsLastWorkspaceInOrganization = (
         return false;
       }
 
-      const { workspaces } = await listWorkspacesInOrganization(
+      const { total_workspace_count: totalWorkspaceCount } = await listWorkspacesInOrganization(
         {
           organizationId,
-          pagination: { pageSize: 100, rowOffset: 0 },
+          pagination: { pageSize: 1, rowOffset: 0 },
         },
         requestOptions
       );
 
-      // Count active workspaces (those that are not the one being deleted)
-      const activeWorkspaces = workspaces.filter((ws) => ws.workspaceId !== workspaceId);
-
-      return activeWorkspaces.length === 0;
+      return totalWorkspaceCount !== undefined && totalWorkspaceCount <= 1;
     },
     {
       enabled: Boolean(organizationId && workspaceId),

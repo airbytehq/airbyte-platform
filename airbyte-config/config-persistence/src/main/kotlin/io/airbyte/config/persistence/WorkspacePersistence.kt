@@ -321,6 +321,45 @@ class WorkspacePersistence(
       }
 
   /**
+   * Tombstones a live workspace unless it is its organization's last one. The organization row is
+   * locked for the check and the write, so concurrent deletes in the same organization serialize and
+   * can't both remove the last two workspaces.
+   */
+  fun tombstoneWorkspace(
+    workspaceId: UUID,
+    organizationId: UUID,
+    allowLastWorkspace: Boolean = false,
+  ): WorkspaceTombstoneResult =
+    database.transaction { ctx: DSLContext ->
+      ctx
+        .selectOne()
+        .from(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(organizationId))
+        .forUpdate()
+        .fetch()
+
+      val liveWorkspaces =
+        Tables.WORKSPACE.ORGANIZATION_ID
+          .eq(organizationId)
+          .and(Tables.WORKSPACE.TOMBSTONE.notEqual(true))
+      when {
+        !ctx.fetchExists(Tables.WORKSPACE, liveWorkspaces.and(Tables.WORKSPACE.ID.eq(workspaceId))) ->
+          WorkspaceTombstoneResult.NOT_FOUND
+        !allowLastWorkspace && ctx.fetchCount(Tables.WORKSPACE, liveWorkspaces) <= 1 ->
+          WorkspaceTombstoneResult.LAST_WORKSPACE
+        else -> {
+          ctx
+            .update(Tables.WORKSPACE)
+            .set(Tables.WORKSPACE.TOMBSTONE, true)
+            .set(Tables.WORKSPACE.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(Tables.WORKSPACE.ID.eq(workspaceId))
+            .execute()
+          WorkspaceTombstoneResult.TOMBSTONED
+        }
+      }
+    }
+
+  /**
    * Check if any workspace exists with initialSetupComplete: true, tombstoned or not.
    */
   fun getInitialSetupComplete(): Boolean =
@@ -334,4 +373,14 @@ class WorkspacePersistence(
   companion object {
     const val DEFAULT_WORKSPACE_NAME: String = "Default Workspace"
   }
+}
+
+enum class WorkspaceTombstoneResult {
+  TOMBSTONED,
+
+  /** The workspace is its organization's last live workspace. */
+  LAST_WORKSPACE,
+
+  /** The workspace does not exist, is already deleted, or belongs to another organization. */
+  NOT_FOUND,
 }
