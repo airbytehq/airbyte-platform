@@ -189,6 +189,7 @@ const messages = {
   "cloud.contextLayer.workspace.loadMore": "Load more workspaces",
   "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
   "cloud.contextLayer.workspace.loadMoreError": "Some workspaces could not be loaded.",
+  "cloud.contextLayer.workspace.loadError": "Unable to load workspaces. Please try again.",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
   "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
   "cloud.contextLayer.workspace.noKindConnectors":
@@ -1307,7 +1308,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByText(messages["cloud.contextLayer.agentAccess.noAccess.description"])).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Go to settings" })).toBeInTheDocument();
     expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
-    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+    expect(mockUseListWorkspacesInOrganization).not.toHaveBeenCalled();
   });
 
   it("sends the pre-enrollment action to Context Layer Settings", () => {
@@ -1682,6 +1683,26 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByText("No workspaces found in this organization.")).not.toBeInTheDocument();
   });
 
+  it("shows a retry when the first workspace page fails", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const refetch = jest.fn();
+    mockUseListWorkspacesInOrganization.mockReturnValue({ isLoading: false, isError: true, refetch } as never);
+
+    renderConnectorsWithIntl();
+
+    expect(screen.getByText("Unable to load workspaces. Please try again.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the not-available state when the organization is not eligible", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
@@ -1783,7 +1804,7 @@ describe("ContextLayerPage", () => {
 
     expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add your first source" })).not.toBeInTheDocument();
-    expect(mockUseListWorkspacesInOrganization).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }));
+    expect(mockUseListWorkspacesInOrganization).not.toHaveBeenCalled();
     expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalled();
   });
 

@@ -1,3 +1,73 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+
+$emptyStateButtonWidth: 360px;
+
 .page {
   width: 100%;
+}
+
+.emptyStateButton {
+  width: $emptyStateButtonWidth;
+  max-width: 100%;
+  margin-top: variables.$spacing-sm;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-xs;
+  background: colors.$foreground;
+}
+
+.connectionTable {
+  min-width: variables.$min-width-wide-table-container;
+
+  th {
+    height: 40px;
+    padding: 8px 16px;
+    border-bottom: 1px solid colors.$grey-200;
+    color: colors.$grey-500;
+    font-size: variables.$font-size-sm;
+    line-height: 20px;
+    text-transform: none;
+  }
+
+  td {
+    height: 58px;
+    padding: 8px 16px;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+// Control columns shrink to their content. The Connection column takes the remaining width.
+.controlColumn {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.backfillDateColumn {
+  width: 20%;
+}
+
+.connectionCell {
+  min-width: 0;
+}
+
+.connectorName {
+  @include mixins.overflow-ellipsis;
+}
+
+.visuallyHidden {
+  @include mixins.visually-hidden;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: variables.$spacing-xs;
 }

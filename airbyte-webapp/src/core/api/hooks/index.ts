@@ -6,6 +6,7 @@ export * from "./billing";
 export * from "./catalogs";
 export * from "./commands";
 export * from "./connections";
+export * from "./connectionSemanticSearch";
 export * from "./connectorBuilderAssist";
 export * from "./connectorBuilderProject";
 export * from "./connectorDefinitionSpecification";

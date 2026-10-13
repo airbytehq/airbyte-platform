@@ -656,6 +656,20 @@ interface ConnectionListFilters {
   onDemandEnabled?: boolean | null;
 }
 
+/**
+ * Returns the cursor for the next page of a connection list: the last connection ID of a full page. Returns
+ * undefined when the page is empty or shorter than its page size, because no more pages exist.
+ */
+export const getNextConnectionListCursor = (lastPage: WebBackendConnectionReadList) => {
+  if (
+    (lastPage.page_size !== undefined && lastPage.connections.length < lastPage.page_size) ||
+    lastPage.connections.length === 0
+  ) {
+    return undefined;
+  }
+  return lastPage.connections.at(-1)?.connectionId;
+};
+
 export const useConnectionList = ({
   sourceId,
   destinationId,
@@ -709,15 +723,7 @@ export const useConnectionList = ({
         requestOptions
       ),
     {
-      getNextPageParam: (lastPage) => {
-        if (
-          (lastPage.page_size !== undefined && lastPage.connections.length < lastPage.page_size) ||
-          lastPage.connections.length === 0
-        ) {
-          return undefined;
-        }
-        return lastPage.connections.at(-1)?.connectionId;
-      },
+      getNextPageParam: getNextConnectionListCursor,
     }
   );
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -42,11 +42,7 @@ import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 import styles from "./ContextLayerPage.module.scss";
 import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 import { useContextLayerEligibility } from "./useContextLayerEligibility";
-
-interface WorkspaceConnectorData {
-  workspaceId: string;
-  workspaceName: string;
-}
+import { ContextLayerWorkspace, useContextLayerWorkspaces } from "./useContextLayerWorkspaces";
 
 type ActorKind = "source" | "destination";
 type AgentAccessConnector = FusionWorkspaceConnector & { kind: ActorKind };
@@ -58,7 +54,7 @@ interface WorkspaceConnectorInventory {
 }
 
 const WorkspaceConnectorTable: React.FC<{
-  workspace: WorkspaceConnectorData;
+  workspace: ContextLayerWorkspace;
   enabledConnectors: Record<string, boolean>;
   onToggle: (key: string, enabled: boolean) => void;
   onClearOptimistic: (key: string) => void;
@@ -261,15 +257,13 @@ const AddConnectorButton: React.FC<AddConnectorButtonProps> = ({ kind, workspace
   );
 };
 
-const WorkspaceConnectorAccess: React.FC<{
-  workspacesQuery: ReturnType<typeof useListWorkspacesInOrganization>;
-}> = ({ workspacesQuery }) => {
+const WorkspaceConnectorAccess: React.FC = () => {
   const [enabledConnectors, setEnabledConnectors] = useState<Record<string, boolean>>({});
   const [connectorInventories, setConnectorInventories] = useState<Record<string, WorkspaceConnectorInventory>>({});
-  const [visibleWorkspaceCount, setVisibleWorkspaceCount] = useState(25);
   const organizationId = useCurrentOrganizationId();
   const [organizationWorkspaceMap] = useLocalStorage("airbyte_organization-workspace-map", {});
-  const { fetchNextPage, hasNextPage, isFetchingNextPage, isError } = workspacesQuery;
+  const { workspacesQuery, workspaces, hasMoreWorkspaces, loadMoreWorkspaces } = useContextLayerWorkspaces();
+  const { hasNextPage, isFetchingNextPage, isError } = workspacesQuery;
   const onInventoryChanged = useCallback((workspaceId: string, inventory: WorkspaceConnectorInventory) => {
     setConnectorInventories((current) => {
       const previous = current[workspaceId];
@@ -282,24 +276,6 @@ const WorkspaceConnectorAccess: React.FC<{
     });
   }, []);
 
-  const allWorkspaces = useMemo<WorkspaceConnectorData[]>(() => {
-    const apiWorkspaces = workspacesQuery.data?.pages.flatMap((page) => page.workspaces ?? []) ?? [];
-    return apiWorkspaces.map((workspace) => ({
-      workspaceId: workspace.workspaceId,
-      workspaceName: workspace.name,
-    }));
-  }, [workspacesQuery.data?.pages]);
-  const workspaces = allWorkspaces.slice(0, visibleWorkspaceCount);
-  const hasMoreWorkspaces = allWorkspaces.length > visibleWorkspaceCount || hasNextPage;
-  const loadMoreWorkspaces = async () => {
-    if (allWorkspaces.length <= visibleWorkspaceCount && hasNextPage) {
-      const nextPage = await fetchNextPage();
-      if (nextPage.isError) {
-        return;
-      }
-    }
-    setVisibleWorkspaceCount((count) => count + 25);
-  };
   const inventoriesLoaded =
     workspaces.length > 0 &&
     workspaces.every(
@@ -313,7 +289,7 @@ const WorkspaceConnectorAccess: React.FC<{
     workspaces.every((workspace) => connectorInventories[workspace.workspaceId].count === 0);
   const storedWorkspaceId = organizationWorkspaceMap[organizationId];
   const targetWorkspaceId = (kind: ActorKind) => {
-    const canManage = (workspace: WorkspaceConnectorData) =>
+    const canManage = (workspace: ContextLayerWorkspace) =>
       kind === "source"
         ? connectorInventories[workspace.workspaceId]?.canManageSources
         : connectorInventories[workspace.workspaceId]?.canManageDestinations;
@@ -335,6 +311,15 @@ const WorkspaceConnectorAccess: React.FC<{
         <Text color="grey">
           <FormattedMessage id="cloud.contextLayer.workspace.loading" />
         </Text>
+      ) : isError && workspaces.length === 0 ? (
+        <FlexContainer alignItems="center">
+          <Text color="grey">
+            <FormattedMessage id="cloud.contextLayer.workspace.loadError" />
+          </Text>
+          <Button type="button" variant="secondary" onClick={() => workspacesQuery.refetch()}>
+            <FormattedMessage id="form.tryAgain" />
+          </Button>
+        </FlexContainer>
       ) : workspaces.length === 0 ? (
         <Text color="grey">
           <FormattedMessage id="cloud.contextLayer.workspace.empty" />
@@ -566,6 +551,25 @@ const SemanticSearchCard: React.FC<{ isReadOnly: boolean }> = ({ isReadOnly }) =
         />
       )}
     </>
+  );
+};
+
+export const ColumnHeader: React.FC<{ titleId: string; tooltipId: string }> = ({ titleId, tooltipId }) => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <FlexContainer alignItems="center" gap="sm">
+      <FormattedMessage id={titleId} />
+      <Tooltip
+        control={
+          <button type="button" className={styles.infoTooltipButton} aria-label={formatMessage({ id: tooltipId })}>
+            <Icon type="infoOutline" size="xs" />
+          </button>
+        }
+      >
+        <FormattedMessage id={tooltipId} />
+      </Tooltip>
+    </FlexContainer>
   );
 };
 
@@ -823,11 +827,6 @@ const ContextLayerPageContent: React.FC = () => {
 const ContextLayerConnectorsPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
-  const workspacesQuery = useListWorkspacesInOrganization({
-    organizationId,
-    pagination: { pageSize: 25, rowOffset: 0 },
-    enabled: Boolean(status?.is_enrolled),
-  });
 
   if (isCloudApp && statusQuery.isInitialLoading) {
     return <LoadingPage />;
@@ -860,7 +859,7 @@ const ContextLayerConnectorsPageContent: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <WorkspaceConnectorAccess key={organizationId} workspacesQuery={workspacesQuery} />
+      <WorkspaceConnectorAccess key={organizationId} />
     </div>
   );
 };
