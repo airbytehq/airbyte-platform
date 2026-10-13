@@ -6,9 +6,11 @@ import { TestWrapper } from "test-utils";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
   useAgentsProvisioningStatusQuery,
+  useConnectionSemanticSearchEnablement,
   useListWorkspacesInOrganization,
   useOrganizationSemanticSearchEnablement,
   useSemanticSearchConnections,
+  useUpdateConnectionSemanticSearchEnablement,
 } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -22,9 +24,11 @@ jest.mock("area/organization/utils", () => ({
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatusQuery: jest.fn(),
+  useConnectionSemanticSearchEnablement: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
   useOrganizationSemanticSearchEnablement: jest.fn(),
   useSemanticSearchConnections: jest.fn(),
+  useUpdateConnectionSemanticSearchEnablement: jest.fn(),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -55,6 +59,13 @@ const mockUseOrganizationSemanticSearchEnablement = useOrganizationSemanticSearc
 const mockUseSemanticSearchConnections = useSemanticSearchConnections as jest.MockedFunction<
   typeof useSemanticSearchConnections
 >;
+const mockUseConnectionSemanticSearchEnablement = useConnectionSemanticSearchEnablement as jest.MockedFunction<
+  typeof useConnectionSemanticSearchEnablement
+>;
+const mockUseUpdateConnectionSemanticSearchEnablement =
+  useUpdateConnectionSemanticSearchEnablement as jest.MockedFunction<
+    typeof useUpdateConnectionSemanticSearchEnablement
+  >;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
@@ -77,6 +88,20 @@ const connectionsResult = (connections: WebBackendConnectionListItem[], override
     refetch: jest.fn(),
     ...overrides,
   }) as never;
+
+const enablementResult = (enabled: boolean, overrides: Record<string, unknown> = {}) =>
+  ({
+    data: { connectionId: "connection", enable_indexing: enabled },
+    isLoading: false,
+    isError: false,
+    ...overrides,
+  }) as never;
+
+const mockUpdateEnablement = (overrides: Record<string, unknown> = {}) => {
+  const update = { mutateAsync: jest.fn().mockResolvedValue(undefined), isLoading: false, ...overrides };
+  mockUseUpdateConnectionSemanticSearchEnablement.mockReturnValue(update as never);
+  return update;
+};
 
 const workspace = (index: number) => ({ workspaceId: `workspace-${index}`, name: `Workspace ${index}` });
 
@@ -128,6 +153,8 @@ describe("SemanticSearchPage", () => {
     mockUseListWorkspacesInOrganization.mockReturnValue(workspacesResult([workspace(1)]));
     mockUseSemanticSearchConnections.mockReturnValue(connectionsResult([]));
     mockUseGeneratedIntent.mockReturnValue(true);
+    mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(false));
+    mockUpdateEnablement();
   });
 
   describe("gating", () => {
@@ -413,17 +440,93 @@ describe("SemanticSearchPage", () => {
       );
     });
 
-    it("renders every control disabled and every status as Backfill off", () => {
+    it("renders the saved semantic search value and keeps the backfill controls disabled", () => {
+      mockUseConnectionSemanticSearchEnablement.mockImplementation((connectionId) =>
+        enablementResult(connectionId === "connection-1")
+      );
+
       renderPage();
 
+      expect(screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "HubSpot to BigQuery semantic search" })).not.toBeChecked();
       ["HubSpot to Snowflake", "HubSpot to BigQuery"].forEach((name) => {
-        const semanticSearchSwitch = screen.getByRole("checkbox", { name: `${name} semantic search` });
-        expect(semanticSearchSwitch).toBeDisabled();
-        expect(semanticSearchSwitch).not.toBeChecked();
+        expect(screen.getByRole("checkbox", { name: `${name} semantic search` })).toBeEnabled();
         expect(screen.getByRole("textbox", { name: `${name} backfill date` })).toBeDisabled();
         expect(screen.getByRole("button", { name: `Start backfill for ${name}` })).toBeDisabled();
       });
       expect(screen.getAllByText("Backfill off")).toHaveLength(2);
+    });
+
+    it("turns semantic search on without a confirmation", async () => {
+      const update = mockUpdateEnablement();
+
+      renderPage();
+      fireEvent.click(screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" }));
+
+      await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledWith({ enabled: true, expectedEnabled: false }));
+      expect(screen.queryByText("Turn off semantic search")).not.toBeInTheDocument();
+    });
+
+    it("turns semantic search off after the confirmation", async () => {
+      mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(true));
+      const update = mockUpdateEnablement();
+
+      renderPage();
+      fireEvent.click(screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" }));
+
+      expect(await screen.findByText("Turn off semantic search")).toBeInTheDocument();
+      expect(update.mutateAsync).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Delete semantic index" }));
+
+      await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledWith({ enabled: false, expectedEnabled: true }));
+      await waitFor(() => expect(screen.queryByText("Turn off semantic search")).not.toBeInTheDocument());
+    });
+
+    it("shows an error and closes the confirmation when turning off fails", async () => {
+      mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(true));
+      mockUpdateEnablement({ mutateAsync: jest.fn().mockRejectedValue(new Error("conflict")) });
+
+      renderPage();
+      fireEvent.click(screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Delete semantic index" }));
+
+      expect(
+        await screen.findByText("Semantic search setting could not be updated. Please try again.")
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Turn off semantic search")).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ["the viewer cannot edit connections", () => mockUseGeneratedIntent.mockReturnValue(false)],
+      [
+        "the saved value is loading",
+        () =>
+          mockUseConnectionSemanticSearchEnablement.mockReturnValue(
+            enablementResult(false, { data: undefined, isLoading: true })
+          ),
+      ],
+      ["an update is saving", () => mockUpdateEnablement({ isLoading: true })],
+    ])("disables the switch when %s", (_, arrange) => {
+      arrange();
+
+      renderPage();
+
+      screen
+        .getAllByRole("checkbox", { name: /semantic search$/ })
+        .forEach((control) => expect(control).toBeDisabled());
+    });
+
+    it("shows a retry in place of the switch when the saved value cannot be read", () => {
+      const refetch = jest.fn();
+      mockUseConnectionSemanticSearchEnablement.mockReturnValue(
+        enablementResult(false, { data: undefined, isError: true, refetch })
+      );
+
+      renderPage();
+
+      expect(screen.queryByRole("checkbox", { name: /semantic search$/ })).not.toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole("button", { name: "Try again" })[0]);
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
 
     it("loads more connections in a workspace on request", () => {

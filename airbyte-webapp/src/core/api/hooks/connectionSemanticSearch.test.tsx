@@ -3,8 +3,17 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { ReactNode } from "react";
 
 import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitionIds } from "./agentsPlatform";
-import { useSemanticSearchConnections } from "./connectionSemanticSearch";
-import { webBackendListConnectionsForWorkspace } from "../generated/AirbyteClient";
+import {
+  connectionSemanticSearchKeys,
+  useConnectionSemanticSearchEnablement,
+  useSemanticSearchConnections,
+  useUpdateConnectionSemanticSearchEnablement,
+} from "./connectionSemanticSearch";
+import {
+  getFusionConnectionEnablement,
+  updateFusionConnectionEnablement,
+  webBackendListConnectionsForWorkspace,
+} from "../generated/AirbyteClient";
 import { WebBackendConnectionListItem } from "../types/AirbyteClient";
 
 jest.mock("./agentsPlatform", () => ({
@@ -13,6 +22,8 @@ jest.mock("./agentsPlatform", () => ({
 }));
 
 jest.mock("../generated/AirbyteClient", () => ({
+  getFusionConnectionEnablement: jest.fn(),
+  updateFusionConnectionEnablement: jest.fn(),
   webBackendListConnectionsForWorkspace: jest.fn(),
 }));
 
@@ -22,6 +33,12 @@ jest.mock("../useRequestOptions", () => ({
 
 const mockWebBackendListConnectionsForWorkspace = webBackendListConnectionsForWorkspace as jest.MockedFunction<
   typeof webBackendListConnectionsForWorkspace
+>;
+const mockGetFusionConnectionEnablement = getFusionConnectionEnablement as jest.MockedFunction<
+  typeof getFusionConnectionEnablement
+>;
+const mockUpdateFusionConnectionEnablement = updateFusionConnectionEnablement as jest.MockedFunction<
+  typeof updateFusionConnectionEnablement
 >;
 const mockUseAgentsSupportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds as jest.MockedFunction<
   typeof useAgentsSupportedSourceDefinitionIds
@@ -117,5 +134,100 @@ describe("useSemanticSearchConnections", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toEqual(new Error("list failed"));
     expect(result.current.data).toBeUndefined();
+  });
+});
+
+const enablement = (connectionId: string, enabled: boolean) => ({
+  organizationId: "organization-1",
+  workspaceId: "workspace-1",
+  connectionId,
+  enable_indexing: enabled,
+});
+
+describe("connection semantic search enablement", () => {
+  let queryClient: QueryClient;
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  it("reads the saved value for one connection", async () => {
+    mockGetFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
+
+    const { result } = renderHook(() => useConnectionSemanticSearchEnablement("connection-1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockGetFusionConnectionEnablement).toHaveBeenCalledWith("connection-1", { signal: "request-options" });
+    expect(result.current.data?.enable_indexing).toBe(true);
+  });
+
+  it("returns read failures to the caller without retrying", async () => {
+    mockGetFusionConnectionEnablement.mockRejectedValue(new Error("read failed"));
+
+    const { result } = renderHook(() => useConnectionSemanticSearchEnablement("connection-1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error("read failed"));
+    expect(mockGetFusionConnectionEnablement).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the new value with the shown value as the expected state", async () => {
+    mockUpdateFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
+
+    const { result } = renderHook(() => useUpdateConnectionSemanticSearchEnablement("connection-1"), { wrapper });
+    await act(() => result.current.mutateAsync({ enabled: true, expectedEnabled: false }));
+
+    expect(mockUpdateFusionConnectionEnablement).toHaveBeenCalledWith(
+      "connection-1",
+      { enable_indexing: true, expectedState: { enable_indexing: false } },
+      { signal: "request-options" }
+    );
+  });
+
+  it("writes the saved value to the connection cache", async () => {
+    queryClient.setQueryData(
+      connectionSemanticSearchKeys.enablement("connection-1"),
+      enablement("connection-1", false)
+    );
+    mockUpdateFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
+
+    const { result } = renderHook(() => useUpdateConnectionSemanticSearchEnablement("connection-1"), { wrapper });
+    await act(() => result.current.mutateAsync({ enabled: true, expectedEnabled: false }));
+
+    expect(queryClient.getQueryData(connectionSemanticSearchKeys.enablement("connection-1"))).toEqual(
+      enablement("connection-1", true)
+    );
+  });
+
+  it("reads the saved value again after a failed update", async () => {
+    mockGetFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
+    mockUpdateFusionConnectionEnablement.mockRejectedValue(new Error("conflict"));
+    const { result } = renderHook(
+      () => ({
+        query: useConnectionSemanticSearchEnablement("connection-1"),
+        mutation: useUpdateConnectionSemanticSearchEnablement("connection-1"),
+      }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
+    mockGetFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", false));
+
+    await act(async () => {
+      await expect(result.current.mutation.mutateAsync({ enabled: false, expectedEnabled: true })).rejects.toEqual(
+        new Error("conflict")
+      );
+    });
+
+    await waitFor(() => expect(result.current.query.data?.enable_indexing).toBe(false));
+    expect(mockGetFusionConnectionEnablement).toHaveBeenCalledTimes(2);
   });
 });

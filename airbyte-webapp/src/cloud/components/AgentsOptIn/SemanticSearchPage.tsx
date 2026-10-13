@@ -16,8 +16,15 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useOrganizationSemanticSearchEnablement, useSemanticSearchConnections } from "core/api";
+import {
+  useConnectionSemanticSearchEnablement,
+  useOrganizationSemanticSearchEnablement,
+  useSemanticSearchConnections,
+  useUpdateConnectionSemanticSearchEnablement,
+} from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -39,12 +46,75 @@ interface WorkspaceConnectionInventory {
   canCreateOrEditConnections: boolean;
 }
 
-// The semantic search switch stays off and disabled until it is wired to the connection setting. The backfill
-// controls stay disabled until the connection backfill endpoint exists.
-const SemanticSearchConnectionTable: React.FC<{ connections: WebBackendConnectionListItem[] }> = ({ connections }) => {
+const SemanticSearchSwitch: React.FC<{
+  connection: WebBackendConnectionListItem;
+  canCreateOrEditConnections: boolean;
+}> = ({ connection, canCreateOrEditConnections }) => {
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const enablementQuery = useConnectionSemanticSearchEnablement(connection.connectionId);
+  const updateEnablement = useUpdateConnectionSemanticSearchEnablement(connection.connectionId);
+  const enabled = enablementQuery.data?.enable_indexing ?? false;
+
+  const saveEnablement = async (nextEnabled: boolean) => {
+    try {
+      await updateEnablement.mutateAsync({ enabled: nextEnabled, expectedEnabled: enabled });
+    } catch {
+      registerNotification({
+        id: "semantic-search-connection-toggle-error",
+        text: formatMessage({ id: "cloud.contextLayer.semanticSearch.updateError" }),
+        type: "error",
+      });
+    }
+  };
+
+  const openDisableConfirmation = () => {
+    openConfirmationModal({
+      title: "cloud.contextLayer.semanticSearch.disableConfirm.title",
+      text: "cloud.contextLayer.semanticSearch.disableConfirm.text",
+      submitButtonText: "cloud.contextLayer.semanticSearch.disableConfirm.submit",
+      submitButtonVariant: "danger",
+      submitButtonDataId: "semantic-search-connection-disable-confirm",
+      onSubmit: async () => {
+        await saveEnablement(false);
+        // Close the dialog even when the save fails. The update hook reads the saved value again, so the dialog
+        // may no longer match it.
+        closeConfirmationModal();
+      },
+    });
+  };
+
+  if (enablementQuery.isError) {
+    return (
+      <Button type="button" size="xs" variant="secondary" onClick={() => enablementQuery.refetch()}>
+        <FormattedMessage id="form.tryAgain" />
+      </Button>
+    );
+  }
+
+  return (
+    <Switch
+      size="sm"
+      checked={enabled}
+      disabled={!canCreateOrEditConnections || enablementQuery.isLoading || updateEnablement.isLoading}
+      onChange={enabled ? openDisableConfirmation : () => void saveEnablement(true)}
+      aria-label={formatMessage(
+        { id: "cloud.contextLayer.semanticSearchPage.semanticSearchControlLabel" },
+        { name: connection.name }
+      )}
+    />
+  );
+};
+
+// The backfill controls stay disabled until the connection backfill endpoint exists.
+const SemanticSearchConnectionTable: React.FC<{
+  connections: WebBackendConnectionListItem[];
+  canCreateOrEditConnections: boolean;
+}> = ({ connections, canCreateOrEditConnections }) => {
   const { formatMessage } = useIntl();
   // Memoized because the table renders each cell function as a component: new functions would remount every
-  // cell on each render.
+  // switch on each render and drop its pending update.
   const columns = useMemo<TableColumns<WebBackendConnectionListItem>>(
     () => [
       {
@@ -75,15 +145,7 @@ const SemanticSearchConnectionTable: React.FC<{ connections: WebBackendConnectio
         ),
         meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
         cell: ({ row: { original: connection } }) => (
-          <Switch
-            size="sm"
-            checked={false}
-            disabled
-            aria-label={formatMessage(
-              { id: "cloud.contextLayer.semanticSearchPage.semanticSearchControlLabel" },
-              { name: connection.name }
-            )}
-          />
+          <SemanticSearchSwitch connection={connection} canCreateOrEditConnections={canCreateOrEditConnections} />
         ),
       },
       {
@@ -151,7 +213,7 @@ const SemanticSearchConnectionTable: React.FC<{ connections: WebBackendConnectio
         ),
       },
     ],
-    [formatMessage]
+    [canCreateOrEditConnections, formatMessage]
   );
 
   return (
@@ -208,7 +270,12 @@ const SemanticSearchWorkspaceConnections: React.FC<{
           )}
         </FlexContainer>
       )}
-      {connections.length > 0 && <SemanticSearchConnectionTable connections={connections} />}
+      {connections.length > 0 && (
+        <SemanticSearchConnectionTable
+          connections={connections}
+          canCreateOrEditConnections={canCreateOrEditConnections}
+        />
+      )}
       {hasNextPage && (
         <FlexContainer>
           <Button type="button" variant="secondary" isLoading={isFetchingNextPage} onClick={() => void fetchNextPage()}>
