@@ -9,7 +9,6 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException
@@ -114,17 +113,13 @@ open class DeclarativeSourceDefinitionsHandler
         airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(imageVersionForManifest)
 
       if (!isNewConnectorVersionSupported.isValid) {
-        val message =
-          if (isNewConnectorVersionSupported.message != null) {
-            isNewConnectorVersionSupported.message
-          } else {
-            String.format(
-              "Declarative manifest can't be updated to version %s because the version " +
-                "is not supported by current platform version",
-              imageVersionForManifest,
+        val detail =
+          isNewConnectorVersionSupported.message
+            ?: (
+              "The declarative manifest cannot be updated to version $imageVersionForManifest because " +
+                "that version is not supported by the current Airbyte version."
             )
-          }
-        throw BadRequestProblem(message, ProblemMessageData().message(message))
+        throw BadRequestProblem(detail, null)
       }
 
       val configInjectionsToCreate =

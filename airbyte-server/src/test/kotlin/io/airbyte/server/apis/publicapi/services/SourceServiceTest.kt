@@ -4,8 +4,13 @@
 
 package io.airbyte.server.apis.publicapi.services
 
+import io.airbyte.api.model.generated.FailureReason
 import io.airbyte.api.model.generated.PartialSourceUpdate
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.model.generated.SynchronousJobRead
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -16,8 +21,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class SourceServiceTest {
@@ -110,5 +118,29 @@ class SourceServiceTest {
 
   private companion object {
     private const val LWA_APP_ID_FIELD = "lwa_app_id"
+  }
+
+  @Test
+  fun `schema discovery hides internal failure messages including absent failure reason`() {
+    for (failureReason in listOf(null, FailureReason().internalMessage("internal connector stack trace"))) {
+      every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns
+        SourceDiscoverSchemaRead().jobInfo(SynchronousJobRead().succeeded(false).failureReason(failureReason))
+
+      val error = assertThrows<UnexpectedProblem> { sourceService.getSourceSchema(sourceId, false) }
+      assertNull(error.problem.getData())
+      assertEquals("The source connector failed while discovering its schema. Check the source configuration and retry.", error.problem.getDetail())
+    }
+  }
+
+  @Test
+  fun `schema discovery preserves connector user-facing failure messages`() {
+    val externalMessage = "The configured account cannot read this table."
+    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns
+      SourceDiscoverSchemaRead().jobInfo(
+        SynchronousJobRead().succeeded(false).failureReason(FailureReason().internalMessage("secret internal text").externalMessage(externalMessage)),
+      )
+
+    val error = assertThrows<UnexpectedProblem> { sourceService.getSourceSchema(sourceId, false) }
+    assertEquals(externalMessage, (error.problem.getData() as ProblemMessageData).message)
   }
 }

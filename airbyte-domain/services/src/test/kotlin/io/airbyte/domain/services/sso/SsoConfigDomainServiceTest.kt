@@ -4,10 +4,12 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
+import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.config.Organization
@@ -1577,5 +1579,20 @@ class SsoConfigDomainServiceTest {
 
     verify(exactly = 0) { permissionService.createPermission(any()) }
     verify(exactly = 0) { airbyteKeycloakClient.createOidcSsoConfig(any()) }
+  }
+
+  @Test
+  fun `token realm mismatch does not expose realm names`() {
+    val organizationId = UUID.randomUUID()
+    every { ssoConfigService.getSsoConfig(organizationId) } returns
+      ConfigSsoConfig().withOrganizationId(organizationId).withKeycloakRealm("private-expected-realm")
+    for (realm in listOf(null, "private-actual-realm")) {
+      every { airbyteKeycloakClient.extractRealmFromToken("token") } returns realm
+      val error = assertThrows<SSOTokenValidationProblem> { ssoConfigDomainService.validateToken(organizationId, "token") }
+      val data = error.problem.getData() as ProblemSSOTokenValidationData
+      assertEquals("The access token was issued for a different organization.", data.errorMessage)
+      assertEquals(organizationId, data.organizationId)
+    }
+    verify(exactly = 0) { airbyteKeycloakClient.validateTokenWithRealm(any(), any()) }
   }
 }

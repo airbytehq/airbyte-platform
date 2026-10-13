@@ -46,7 +46,7 @@ components:
               default: invalid-api-key
             detail:
               type: string
-              default: The API key in the Authorization header is invalid.
+              default: The request is not authenticated. Provide a valid, unexpired API key or access token in the Authorization header and retry.
     ForbiddenProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -65,7 +65,7 @@ components:
               default: forbidden
             detail:
               type: string
-              default: The request is forbidden.
+              default: You do not have permission to perform this action on this resource. Check the credentials and access permissions for this request.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     SSORequiredProblemResponse:
@@ -105,7 +105,7 @@ components:
               default: Airbyte Embedded Endpoint Moved
             detail:
               type: string
-              default: This endpoint for Airbyte Embedded has moved.  Please see https://api.airbyte.ai/api/v1/redoc for the latest Airbyte Embedded API documentation and update your configuration.
+              default: This Airbyte Embedded endpoint has moved to the Airbyte Embedded API. Update your integration to use the new API.
             documentationUrl:
               type: string
               default: "https://api.airbyte.ai/api/v1/redoc"
@@ -167,7 +167,7 @@ components:
               default: Failed Precondition
             detail:
               type: string
-              default: A condition required for this endpoint was not met.
+              default: A condition required for this request is not met. Resolve the reported condition, then retry.
             data:
               $ref: "#/components/schemas/FailedPreconditionData"
     OAuthCallbackFailureProblemResponse:
@@ -188,7 +188,7 @@ components:
               default: oauth-callback-failure
             detail:
               type: string
-              default: Unexpected problem completing OAuth
+              default: The OAuth authorization could not be completed with the provider. Start the OAuth flow again; if it keeps failing, check the connector's OAuth credentials.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     InvalidConsentUrlProblemResponse:
@@ -209,7 +209,7 @@ components:
               default: invalid-consent-url
             detail:
               type: string
-              default: Unexpected problem generating consent URL
+              default: The OAuth consent URL could not be generated for this connector. Start the OAuth flow again; if it keeps failing, contact support.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     InvalidRedirectUrlProblemResponse:
@@ -251,7 +251,7 @@ components:
               default: unprocessable-entity
             detail:
               type: string
-              default: The body of the request was not understood
+              default: The request could not be processed. Check the supplied information; if the problem persists, contact support.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     UnknownValueProblemResponse:
@@ -272,7 +272,7 @@ components:
               default: value-not-found
             detail:
               type: string
-              default: The submitted value could not be found.
+              default: The submitted value is not one of the supported values. Check the value, for example the connector name, and retry.
             data:
               $ref: "#/components/schemas/ProblemValueData"
     StateConflictProblemResponse:
@@ -293,7 +293,7 @@ components:
               default: state-conflict
             detail:
               type: string
-              default: State conflict
+              default: The request conflicts with the current state of the resource. Resolve the conflict before retrying.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ActorNotReadyProblemResponse:
@@ -314,7 +314,7 @@ components:
               default: actor-not-ready
             detail:
               type: string
-              default: The source or destination is not ready. Complete connector setup first.
+              default: The source or destination is still a draft and cannot be used yet. Finish its setup with a successful connection check, then retry.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ConnectionLockedProblemResponse:
@@ -335,7 +335,7 @@ components:
               default: Connection is locked
             detail:
               type: string
-              default: The connection is locked and cannot be modified.
+              default: The connection is locked and cannot be modified right now. Resolve the condition that locked it, then retry.
             data:
               $ref: "#/components/schemas/ProblemConnectionLockedData"
     TryAgainLaterConflictProblemResponse:
@@ -356,7 +356,7 @@ components:
               default: try-again-later
             detail:
               type: string
-              default: Please try again later.
+              default: The request conflicts with an operation that is still in progress or with an existing value. Wait a moment and retry; if the conflict persists, change the conflicting value.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     UnexpectedProblemResponse:
@@ -377,7 +377,7 @@ components:
               default: unexpected-problem
             detail:
               type: string
-              default: An unexpected problem has occurred. If this is an error that needs to be addressed, please submit a pull request or github issue.
+              default: An unexpected error occurred while processing the request. Retry; if it keeps failing, contact support and include the time of the request.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     BadRequestProblemResponse:
@@ -398,7 +398,7 @@ components:
               default: bad-request
             detail:
               type: string
-              default: The request could not be understood by the server due to malformed syntax.
+              default: The request could not be completed. Check the request parameters and resource configuration; if the problem persists, contact support.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ApiNotImplementedInOssProblemResponse:
@@ -438,7 +438,7 @@ components:
               default: Incorrect integration credentials
             detail:
               type: string
-              default: The integration service denied access.
+              default: The dbt Cloud credentials could not be verified. Check the access token and host; if the problem persists, retry later.
             data:
               $ref: "#/components/schemas/DbtCloudIntegrationData"
     DbtCloudPaidPlanRequiredProblemResponse:
@@ -541,7 +541,7 @@ components:
               default: Unsupported cron timezone
             detail:
               type: string
-              default: Etc/ timezones are not supported
+              default: Time zones in the Etc/ family are not supported. Use a region time zone such as America/New_York.
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
     CronValidationInvalidExpressionProblemResponse:
@@ -562,7 +562,7 @@ components:
               default: Invalid cron expression
             detail:
               type: string
-              default: The cron expression is invalid
+              default: The cron expression is invalid or runs too frequently. Use a valid Quartz cron expression that runs at most once per minute.
             data:
               $ref: "#/components/schemas/ProblemCronExpressionData"
     CronValidationInvalidTimezoneProblemResponse:
@@ -583,7 +583,7 @@ components:
               default: Invalid cron timezone
             detail:
               type: string
-              default: The specified cron timezone is invalid
+              default: The cron time zone is not a recognized time zone or uses the unsupported Etc/ family. Use a region time zone such as America/New_York.
             data:
               $ref: "#/components/schemas/ProblemCronTimezoneData"
     CronValidationUnderOneHourNotAllowedProblemResponse:
@@ -604,7 +604,7 @@ components:
               default: Cron sync schedules more frequent than once per hour are not allowed
             detail:
               type: string
-              default: Syncs
+              default: This cron schedule runs more often than your plan allows. Increase the interval between syncs or upgrade your plan.
             data:
               $ref: "#/components/schemas/ProblemCronExpressionData"
     BasicScheduleValidationUnderOneHourNotAllowedProblemResponse:
@@ -625,7 +625,7 @@ components:
               default: Basic sync schedules more frequent than once per hour are not allowed
             detail:
               type: string
-              default: Syncs more frequent than once per hour require an entitlement
+              default: This schedule runs more often than your plan allows. Increase the interval between syncs or upgrade your plan.
             data:
               $ref: "#/components/schemas/ProblemBasicScheduleData"
     MapperValidationProblemResponse:
@@ -646,7 +646,7 @@ components:
               default: Mapper validation failed
             detail:
               type: string
-              default: The mapper configuration is invalid
+              default: One or more mappers on this connection have invalid configuration. Fix the reported mapper errors and retry.
             data:
               $ref: "#/components/schemas/ProblemMapperErrorsData"
     MapperValidationMissingRequiredParamProblemResponse:
@@ -667,7 +667,7 @@ components:
               default: Mapper configuration missing required parameter
             detail:
               type: string
-              default: The mapper configuration is missing a required parameter
+              default: The mapper configuration is missing a required parameter. Add the missing parameter to the affected mapper and retry.
             data:
               $ref: "#/components/schemas/ProblemMapperIdData"
     MapperValidationInvalidConfigProblemResponse:
@@ -688,7 +688,7 @@ components:
               default: Invalid Mapper Configuration
             detail:
               type: string
-              default: The mapper configuration is invalid and cannot be parsed
+              default: The mapper configuration could not be parsed for its mapper type. Check the mapper's fields against the mapper schema and retry.
             data:
               $ref: "#/components/schemas/ProblemMapperIdData"
     MapperSecretNotFoundProblemResponse:
@@ -772,7 +772,7 @@ components:
               default: Connection contains conflicting stream(s).
             detail:
               type: string
-              default: This connection contains stream(s) that conflict with existing connection(s).
+              default: One or more streams in this connection write to a destination location that another connection already uses. Choose a different namespace or stream prefix for the conflicting streams.
             documentationUrl:
               type: string
               default: "https://docs.airbyte.com/using-airbyte/configuring-schema#stream-uniqueness"
@@ -815,7 +815,7 @@ components:
               default: service-unavailable
             detail:
               type: string
-              default: The server is currently unable to handle the request.
+              default: The service is temporarily unavailable. Retry after a short wait.
     ResourceNotFoundProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -834,7 +834,7 @@ components:
               default: resource-not-found
             detail:
               type: string
-              default: The requested resource could not be found.
+              default: The requested resource does not exist or is not accessible with these credentials. Check the ID and that you have access to the resource.
             data:
               $ref: "#/components/schemas/ProblemResourceData"
     ConnectorImageNameInUseProblemResponse:
@@ -853,6 +853,9 @@ components:
             title:
               type: string
               default: The image name provided is already in use.
+            detail:
+              type: string
+              default: A connector with this image name already exists. Choose a different connector name.
     InvalidGithubTokenProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -869,6 +872,9 @@ components:
             title:
               type: string
               default: Invalid GitHub token provided.
+            detail:
+              type: string
+              default: The GitHub token is invalid or expired. Provide a valid GitHub personal access token and retry.
     InsufficientGithubTokenPermissionsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -904,6 +910,9 @@ components:
             title:
               type: string
               default: An unexpected error occurred when creating your GitHub contribution.
+            detail:
+              type: string
+              default: GitHub returned an error while creating the contribution. Retry; if it keeps failing, check the GitHub token and the connector name.
             data:
               $ref: "#/components/schemas/GithubContributionProblemData"
     BillingSubscriptionRequiredProblemResponse:
@@ -922,6 +931,9 @@ components:
             title:
               type: string
               default: A subscription is required for this operation to succeed.
+            detail:
+              type: string
+              default: This operation requires an active subscription. Set up a subscription for the organization, then retry.
     BillingInvalidStatusProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -938,6 +950,9 @@ components:
             title:
               type: string
               default: The payment status of the associated Organization is insufficient.
+            detail:
+              type: string
+              default: The organization's payment or subscription status does not allow this operation. Update billing details for the organization, then retry.
             data:
               $ref: "#/components/schemas/BillingInvalidStatusProblemData"
     BillingInsufficientCreditBalanceProblemResponse:
@@ -956,6 +971,9 @@ components:
             title:
               type: string
               default: The credit balance of the associated Workspace or Organization is insufficient.
+            detail:
+              type: string
+              default: There are not enough credits for this operation. Add credits or update billing, then retry.
             data:
               $ref: "#/components/schemas/BillingInsufficientCreditBalanceProblemData"
     BillingNoActiveSubscriptionProblemResponse:
@@ -974,6 +992,9 @@ components:
             title:
               type: string
               default: The organization doesn't have an active subscription.
+            detail:
+              type: string
+              default: The organization has no active subscription.
     BillingNoCancelableSubscriptionProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -990,6 +1011,9 @@ components:
             title:
               type: string
               default: The organization doesn't have any active cancelable subscription.
+            detail:
+              type: string
+              default: The organization has no active subscription that can be canceled.
     BillingNoScheduledCancellationSubscriptionProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1006,6 +1030,9 @@ components:
             title:
               type: string
               default: The organization doesn't have any cancelable subscription with a scheduled cancellation.
+            detail:
+              type: string
+              default: The organization has no scheduled subscription cancellation that can be undone through this operation.
     BillingNoScheduledPlanChangeProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1022,6 +1049,9 @@ components:
             title:
               type: string
               default: The organization doesn't have any self-serve subscription with a scheduled plan change.
+            detail:
+              type: string
+              default: The organization has no scheduled subscription plan change that can be undone through this operation.
     ConnectorRolloutInvalidRequestProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1040,7 +1070,7 @@ components:
               default: Invalid Connector Rollout request
             detail:
               type: string
-              default: Invalid connector rollout request.
+              default: The connector rollout request is not valid. Check the request fields and rollout state, then retry.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse:
@@ -1061,7 +1091,7 @@ components:
               default: Max rollout percentage already reached
             detail:
               type: string
-              default: Cannot pin more actors; the maximum rollout percentage was already reached
+              default: No more actors can be pinned because the rollout has already reached its maximum rollout percentage.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     ConnectorRolloutNotEnoughActorsProblemResponse:
@@ -1250,7 +1280,7 @@ components:
               default: Invalid hex color
             detail:
               type: string
-              default: The hex color provided is invalid.
+              default: The tag color must be a 6-character hexadecimal color code.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     TagNameTooLongProblemResponse:
@@ -1271,7 +1301,7 @@ components:
               default: Tag name too long
             detail:
               type: string
-              default: The tag name can be maximum 30 characters.
+              default: The tag name must be 30 characters or fewer.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
     TagLimitForWorkspaceReachedProblemResponse:
@@ -1689,7 +1719,7 @@ components:
               default: Destination catalog not found
             detail:
               type: string
-              default: This connection has not been configured with a destination catalog.
+              default: No destination catalog is available for this connection or destination. Check the destination configuration and retry schema discovery.
             data:
               $ref: "#/components/schemas/ProblemDestinationCatalogNotFoundData"
     ProblemDestinationCatalogNotFoundData:
@@ -1739,7 +1769,7 @@ components:
               default: Invalid destination operation configuration
             detail:
               type: string
-              default: Configured stream's destination object name and sync mode does not match any destination operation.
+              default: The configured stream's destination object name and sync mode do not match any operation supported by the destination.
             data:
               $ref: "#/components/schemas/ProblemDestinationCatalogOperationData"
     DestinationCatalogMissingRequiredFieldProblemResponse:
@@ -1968,7 +1998,7 @@ components:
               default: SSO config retrieval error
             detail:
               type: string
-              default: An error occurred when attempting to retrieve sso config data
+              default: The SSO configuration for this organization could not be retrieved. Retry; if it keeps failing, contact support.
             data:
               $ref: "#/components/schemas/ProblemSSOConfigRetrievalData"
     ProblemSSOConfigRetrievalData:
@@ -1998,7 +2028,7 @@ components:
               default: SSO setup configuration error
             detail:
               type: string
-              default: An error occurred when performing a SSO setup
+              default: The SSO configuration could not be created or updated. Check the organization's existing SSO configuration and the settings in the request.
             data:
               $ref: "#/components/schemas/ProblemSSOSetupData"
     ProblemSSOSetupData:
@@ -2028,7 +2058,7 @@ components:
               default: SSO deletion failed
             detail:
               type: string
-              default: An error occurred when performing an SSO config delete
+              default: The SSO configuration could not be deleted. Check that the organization has an SSO configuration and that the request identifies it correctly.
             data:
               $ref: "#/components/schemas/ProblemSSODeletionData"
     ProblemSSODeletionData:
@@ -2062,7 +2092,7 @@ components:
               default: SSO credential update failed
             detail:
               type: string
-              default: An error occurred when performing an SSO IDP credentials update
+              default: The SSO identity provider credentials could not be updated. Check the organization's SSO configuration; if the problem persists, contact support.
             data:
               $ref: "#/components/schemas/ProblemSSOCredentialUpdateData"
     ProblemSSOCredentialUpdateData:
@@ -2092,7 +2122,7 @@ components:
               default: SSO Activation Error
             detail:
               type: string
-              default: An error occurred during SSO activation operation
+              default: The SSO configuration could not be activated. Resolve the reported condition and retry.
             data:
               $ref: "#/components/schemas/ProblemSSOActivationData"
     ProblemSSOActivationData:
@@ -2123,7 +2153,7 @@ components:
               default: SSO Token Validation Failed
             detail:
               type: string
-              default: The provided SSO access token is invalid or expired
+              default: The SSO access token could not be validated. Check the organization's SSO configuration and use a valid access token.
             data:
               $ref: "#/components/schemas/ProblemSSOTokenValidationData"
     ProblemSSOTokenValidationData:
@@ -2152,7 +2182,7 @@ components:
               default: entitlement-service-error-adding-organization
             detail:
               type: string
-              default: There was a problem adding the organization ot the entitlement service. Organization functionality may be limited.
+              default: The organization could not be registered with the entitlement service, so some features may be unavailable. Retry later or contact support.
             data:
               $ref: "#/components/schemas/ProblemEntitlementServiceData"
     EntitlementServiceInvalidOrganizationStateProblemResponse:
@@ -2173,7 +2203,7 @@ components:
               default: entitlement-service-invalid-organization-state
             detail:
               type: string
-              default: The organization is in an invalid state in the entitlement service.
+              default: The organization's plan data is in an inconsistent state. Contact support to resolve it.
             data:
               $ref: "#/components/schemas/ProblemEntitlementServiceData"
     ProblemEntitlementServiceData:

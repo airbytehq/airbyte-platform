@@ -16,7 +16,6 @@ import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
-import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.AttributeName
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -432,20 +431,13 @@ open class ConnectorRolloutHandlerManual
       e: WorkflowUpdateException,
     ): Throwable {
       if (isAirbyteApiClientException(e)) {
+        logger.error { "AirbyteApiClientException: ${getAirbyteApiClientException(e)}" }
         throw ConnectorRolloutInvalidRequestProblem(
-          extractAirbyteApiClientException(e),
-          ProblemMessageData().message("An error occurred in the `$handlerName` update handler."),
+          ProblemMessageData().message("The rollout workflow rejected the `$handlerName` update. Check the rollout state and retry."),
         )
       } else {
         throw e
       }
-    }
-
-    @InternalForTesting
-    fun extractAirbyteApiClientException(e: WorkflowUpdateException): String {
-      val exc = getAirbyteApiClientException(e) as ApplicationFailure
-      logger.error { "AirbyteApiClientException: $exc" }
-      return exc.originalMessage
     }
 
     private fun isAirbyteApiClientException(e: WorkflowUpdateException): Boolean {

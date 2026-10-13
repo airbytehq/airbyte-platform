@@ -46,6 +46,9 @@ import io.airbyte.config.mapper.configs.Operation
 import io.airbyte.config.mapper.configs.RowFilteringConfig
 import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val mapperLog = KotlinLogging.logger {}
 
 private fun MethodEnum.toInternal(): HashingMethods =
   when (this) {
@@ -205,18 +208,18 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
       }
     }
   } catch (e: IllegalArgumentException) {
+    mapperLog.error(e) { "Invalid mapper configuration for mapper ${this.id}" }
     throw MapperValidationInvalidConfigProblem(
       ProblemMapperIdData()
         .mapperId(this.id)
-        .mapperType(this.type.toString())
-        .message(e.message),
+        .mapperType(this.type.toString()),
     )
   } catch (e: NullPointerException) {
+    mapperLog.error(e) { "Missing required configuration for mapper ${this.id}" }
     throw MapperValidationMissingRequiredParamProblem(
       ProblemMapperIdData()
         .mapperId(this.id)
-        .mapperType(this.type.toString())
-        .message(e.message),
+        .mapperType(this.type.toString()),
     )
   }
 

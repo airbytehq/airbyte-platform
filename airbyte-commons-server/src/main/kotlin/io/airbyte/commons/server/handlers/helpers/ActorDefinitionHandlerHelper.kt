@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.DeadlineAction
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.server.ServerConstants
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -67,13 +66,13 @@ class ActorDefinitionHandlerHelper(
         connectorVersion = connectorVersion,
       )
     if (!isNewConnectorVersionSupported.isValid) {
-      val message =
-        if (isNewConnectorVersionSupported.message != null) {
-          isNewConnectorVersionSupported.message
-        } else {
-          "$actorType $actorDefinitionId can't be updated to version $connectorVersion because the version is not supported by current platform version"
-        }
-      throw BadRequestProblem(message, ProblemMessageData().message(message))
+      val detail =
+        isNewConnectorVersionSupported.message
+          ?: (
+            "The ${actorType.name.lowercase()} connector cannot be updated to version $connectorVersion because " +
+              "that version is not supported by the current Airbyte version."
+          )
+      throw BadRequestProblem(detail, null)
     }
   }
 

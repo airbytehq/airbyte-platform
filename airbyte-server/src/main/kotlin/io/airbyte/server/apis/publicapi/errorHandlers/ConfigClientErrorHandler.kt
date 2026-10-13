@@ -7,7 +7,6 @@
 package io.airbyte.server.apis.publicapi.errorHandlers
 
 import io.airbyte.api.problems.AbstractThrowableProblem
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.InvalidApiKeyProblem
@@ -24,15 +23,30 @@ import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.constants.MESSAGE
 import io.airbyte.server.apis.publicapi.exceptions.OAuthCallbackException
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import java.io.IOException
 
-const val DEFAULT_CONFLICT_MESSAGE = "Could not fulfill request"
-const val DEFAULT_INTERNAL_SERVER_ERROR_MESSAGE =
-  "An unexpected problem has occurred. If this is an error that needs to be addressed, please submit a pull request or github issue."
-const val DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE = "The body of the request was not understood"
-const val JOB_NOT_RUNNING_MESSAGE = "Job is not currently running"
+private val log = KotlinLogging.logger {}
+
+const val JOB_NOT_RUNNING_DETAIL = "The job is not running or could not be found."
+
+private const val JSON_SCHEMA_VALIDATION_PREFIX = "json schema validation failed when comparing the data to the json schema."
+
+/** Formats platform-authored validation text, omitting the schema dump and preserving the default for empty messages. */
+internal fun toDetail(message: String?): String? {
+  val text = message?.substringBefore("\nSchema")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+  val errors =
+    text
+      .removePrefix(JSON_SCHEMA_VALIDATION_PREFIX)
+      .trim()
+      .removePrefix("Errors:")
+      .trim()
+  if (errors.isEmpty()) return null
+  val sentence = if (errors != text) "The request body failed validation: $errors" else text
+  return if (sentence.endsWith(".")) sentence else "$sentence."
+}
 
 /**
  * Maps config API client response statuses to problems.
@@ -50,30 +64,9 @@ object ConfigClientErrorHandler {
   ) {
     when (response.status) {
       HttpStatus.NOT_FOUND -> throw ResourceNotFoundProblem(ProblemResourceData().resourceId(resourceId))
-      HttpStatus.CONFLICT -> {
-        val message: String =
-          response
-            .getBody(MutableMap::class.java)
-            .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_CONFLICT_MESSAGE)) }
-            .getOrDefault(MESSAGE, DEFAULT_CONFLICT_MESSAGE)
-            .toString()
-        throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
-      }
-
+      HttpStatus.CONFLICT -> throw TryAgainLaterConflictProblem(toDetail(upstreamMessage(response)), null)
       HttpStatus.UNAUTHORIZED -> throw InvalidApiKeyProblem()
-      HttpStatus.UNPROCESSABLE_ENTITY -> {
-        val message: String =
-          response
-            .getBody(MutableMap::class.java)
-            .orElseGet { mutableMapOf(Pair(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)) }
-            .getOrDefault(MESSAGE, DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE)
-            .toString()
-        // Exclude the part of a schema validation message that's ugly if it's there
-        throw UnprocessableEntityProblem(
-          ProblemMessageData()
-            .message(message.split("\nSchema".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]),
-        )
-      }
+      HttpStatus.UNPROCESSABLE_ENTITY -> throw UnprocessableEntityProblem(toDetail(upstreamMessage(response)), null)
 
       else -> passThroughBadStatusCode(response)
     }
@@ -91,52 +84,36 @@ object ConfigClientErrorHandler {
         ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId),
       )
 
-      is ValueConflictKnownException -> {
-        val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
-        throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
-      }
-
-      is ConflictException -> {
-        val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
-        throw StateConflictProblem(ProblemMessageData().message(message))
-      }
+      is ValueConflictKnownException -> throw TryAgainLaterConflictProblem(toDetail(throwable.message), null)
+      is ConflictException -> throw StateConflictProblem(toDetail(throwable.message), null)
 
       is IllegalStateException -> {
-        // Many of the job failures share this exception type.
-        // If a job has already been canceled it throws this exception with a cryptic message.
-        val isFailedCancellation = throwable.message?.contains("Failed to cancel")
-        val message =
-          if (isFailedCancellation == true) {
-            JOB_NOT_RUNNING_MESSAGE
-          } else {
-            DEFAULT_CONFLICT_MESSAGE
-          }
-        throw StateConflictProblem(ProblemMessageData().message(message))
+        if (throwable.message?.contains("Failed to cancel") == true) {
+          throw StateConflictProblem(JOB_NOT_RUNNING_DETAIL, null)
+        }
+        throw StateConflictProblem()
       }
 
-      is JsonValidationException -> {
-        val error = throwable.message?.substringBefore("\nSchema:") ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE
-        throw UnprocessableEntityProblem(ProblemMessageData().message(error))
-      }
+      is JsonValidationException -> throw UnprocessableEntityProblem(toDetail(throwable.message), null)
 
       is IOException -> {
-        val message = throwable.message ?: DEFAULT_UNPROCESSABLE_ENTITY_MESSAGE
-        throw UnprocessableEntityProblem(ProblemMessageData().message(message))
+        log.error(throwable) { "I/O failure while handling a Public API request" }
+        throw UnprocessableEntityProblem()
       }
 
       is OAuthCallbackException -> {
-        throw OAuthCallbackFailureProblem(ProblemMessageData().message(throwable.message))
+        log.error(throwable) { "OAuth callback failed" }
+        throw OAuthCallbackFailureProblem()
       }
 
       is AbstractThrowableProblem -> throw throwable
 
       else -> {
-        val message = throwable.message ?: DEFAULT_INTERNAL_SERVER_ERROR_MESSAGE
-        if (message.contains("Could not find job with id")) {
-          throw StateConflictProblem(ProblemMessageData().message(JOB_NOT_RUNNING_MESSAGE))
-        } else {
-          throw UnexpectedProblem(ProblemMessageData().message(message))
+        if (throwable.message?.contains("Could not find job with id") == true) {
+          throw StateConflictProblem(JOB_NOT_RUNNING_DETAIL, null)
         }
+        log.error(throwable) { "Unexpected failure while handling a Public API request" }
+        throw UnexpectedProblem()
       }
     }
   }
@@ -152,8 +129,14 @@ object ConfigClientErrorHandler {
     connectionCreate: ConnectionCreateRequest,
   ): AbstractThrowableProblem =
     when (throwable) {
-      is JsonValidationException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
-      is IOException -> UnexpectedProblem(ProblemMessageData().message(throwable.message))
+      is JsonValidationException -> {
+        log.error(throwable) { "Failed to create connection" }
+        UnexpectedProblem(toDetail(throwable.message), null)
+      }
+      is IOException -> {
+        log.error(throwable) { "Failed to create connection" }
+        UnexpectedProblem()
+      }
       is ConfigNotFoundException ->
         if (throwable.toString().contains(connectionCreate.sourceId.toString())) {
           ResourceNotFoundProblem(ProblemResourceData().resourceType("source").resourceId(connectionCreate.sourceId.toString()))
@@ -176,11 +159,18 @@ object ConfigClientErrorHandler {
    */
   private fun passThroughBadStatusCode(response: HttpResponse<*>) {
     if (response.status.code >= HttpStatus.INTERNAL_SERVER_ERROR.code) {
-      // TODO pass status
-      throw UnexpectedProblem(ProblemMessageData().message(response.body.toString()))
-//      throw UnexpectedProblem(response.status, response.body()?.toString())
+      log.error { "Upstream call failed with status ${response.status.code}: ${response.body}" }
+      throw UnexpectedProblem()
     } else if (response.status.code >= HttpStatus.BAD_REQUEST.code) {
-      throw BadRequestProblem(ProblemMessageData().message("${response.status.reason}: ${response.body}"))
+      log.warn { "Upstream call rejected with status ${response.status.code}: ${response.body}" }
+      throw BadRequestProblem()
     }
   }
+
+  private fun upstreamMessage(response: HttpResponse<*>): String? =
+    response
+      .getBody(MutableMap::class.java)
+      .orElse(null)
+      ?.get(MESSAGE)
+      ?.toString()
 }

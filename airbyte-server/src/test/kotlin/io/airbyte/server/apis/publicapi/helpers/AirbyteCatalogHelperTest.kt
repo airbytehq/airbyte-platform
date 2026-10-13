@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
@@ -26,6 +25,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -119,8 +119,9 @@ internal class AirbyteCatalogHelperTest {
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.getValidConfiguredStreams(referenceCatalog = referenceCatalog, streamConfigurations = streamConfigurations, emptyList())
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("No streams found"))
+    assertNull(throwable.problem.getData())
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals(true, detail.contains("No streams found"))
   }
 
   @Test
@@ -134,8 +135,8 @@ internal class AirbyteCatalogHelperTest {
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.getValidConfiguredStreams(referenceCatalog = referenceCatalog, streamConfigurations = streamConfigurations, emptyList())
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Duplicate stream found"))
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals(true, detail.contains("Duplicate stream found"))
   }
 
   @Test
@@ -239,8 +240,8 @@ internal class AirbyteCatalogHelperTest {
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Missing cron expression in the schedule."))
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals(true, detail.contains("Missing cron expression in the schedule."))
   }
 
   @Test
@@ -255,10 +256,10 @@ internal class AirbyteCatalogHelperTest {
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
-      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
-      problemData.message,
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'.",
+      detail,
     )
   }
 
@@ -274,10 +275,10 @@ internal class AirbyteCatalogHelperTest {
       assertThrows(BadRequestProblem::class.java) {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
-      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
-      problemData.message,
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'.",
+      detail,
     )
   }
 
@@ -293,8 +294,8 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", detail)
   }
 
   @Test
@@ -310,8 +311,8 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", detail)
   }
 
   @Test
@@ -327,10 +328,10 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
-      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
-      problemData.message,
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'.",
+      detail,
     )
   }
 
@@ -346,10 +347,10 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
-      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
-      problemData.message,
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'.",
+      detail,
     )
   }
 
@@ -366,8 +367,8 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", detail)
   }
 
   @Test
@@ -383,8 +384,8 @@ internal class AirbyteCatalogHelperTest {
         )
       }
 
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", detail)
   }
 
   @Test
@@ -497,8 +498,8 @@ internal class AirbyteCatalogHelperTest {
           airbyteStream = airbyteStream,
         )
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Cannot set sync mode to ${streamConfiguration.syncMode} for stream"))
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals(true, detail.contains("Cannot set sync mode to ${streamConfiguration.syncMode} for stream"))
   }
 
   @Test
@@ -608,8 +609,8 @@ internal class AirbyteCatalogHelperTest {
           listOf(DestinationSyncMode.APPEND),
         )
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Do not include a cursor field configuration for this stream"))
+    val detail = requireNotNull(throwable.problem.getDetail())
+    assertEquals(true, detail.contains("Do not include a cursor field configuration for this stream"))
   }
 
   @Test
@@ -671,10 +672,10 @@ internal class AirbyteCatalogHelperTest {
           airbyteStream = airbyteStream,
         )
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
       true,
-      problemData.message.contains(
+      detail.contains(
         "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid cursor fields include: [[$otherCursorField]]",
       ),
     )
@@ -704,10 +705,10 @@ internal class AirbyteCatalogHelperTest {
           airbyteStream = airbyteStream,
         )
       }
-    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    val detail = requireNotNull(throwable.problem.getDetail())
     assertEquals(
       true,
-      problemData.message.contains(
+      detail.contains(
         "No default cursor field for stream: ${airbyteStream.name}. Please include a cursor field configuration for this stream.",
       ),
     )
@@ -1047,8 +1048,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("No fields selected"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("No fields selected"))
     }
 
     @Test
@@ -1070,8 +1071,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Selected field path cannot be empty"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Selected field path cannot be empty"))
     }
 
     @Test
@@ -1092,8 +1093,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Nested field selection not supported"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Nested field selection not supported"))
     }
 
     @Test
@@ -1118,8 +1119,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Duplicate fields selected"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Duplicate fields selected"))
     }
 
     @Test
@@ -1144,8 +1145,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Invalid fields selected"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Invalid fields selected"))
     }
 
     @Test
@@ -1167,8 +1168,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Primary key fields are not selected properly"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Primary key fields are not selected properly"))
     }
 
     @Test
@@ -1190,8 +1191,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Primary key fields are not selected properly"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Primary key fields are not selected properly"))
     }
 
     @Test
@@ -1215,8 +1216,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Cursor field is not selected properly"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Cursor field is not selected properly"))
     }
 
     @Test
@@ -1240,8 +1241,8 @@ internal class AirbyteCatalogHelperTest {
         assertThrows(BadRequestProblem::class.java) {
           AirbyteCatalogHelper.validateFieldSelection(streamConfiguration, sourceStream)
         }
-      val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-      assertEquals(true, problemData.message.contains("Cursor field is not selected properly"))
+      val detail = requireNotNull(throwable.problem.getDetail())
+      assertEquals(true, detail.contains("Cursor field is not selected properly"))
     }
   }
 

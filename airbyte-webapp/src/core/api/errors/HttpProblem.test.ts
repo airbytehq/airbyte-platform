@@ -155,7 +155,8 @@ describe("HttpProblem", () => {
       const error = new HttpProblem(request, 409, {
         type: "https://reference.airbyte.com/reference/errors#409-actor-not-ready",
         title: "actor-not-ready",
-        detail: "The source or destination is not ready. Complete connector setup first.",
+        detail:
+          "The source or destination is still a draft and cannot be used yet. Finish its setup with a successful connection check, then retry.",
       });
 
       expect(error).toHaveProperty("i18nType", "exact");

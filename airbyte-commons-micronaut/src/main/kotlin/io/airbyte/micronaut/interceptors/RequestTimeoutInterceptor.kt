@@ -40,7 +40,7 @@ class RequestTimeoutInterceptor : MethodInterceptor<Any, Any> {
       Failsafe.with(timeout).get(context::proceed)
     } catch (e: FailsafeException) {
       when (e) {
-        is TimeoutExceededException -> throw RequestTimeoutExceededProblem(detail = e.message, data = mapOf("timeout" to timeoutValue))
+        is TimeoutExceededException -> throw RequestTimeoutExceededProblem(detail = null, data = mapOf("timeout" to timeoutValue))
         // Unwrap the failsafe exception if not due to timeout
         else -> throw e.cause ?: e
       }

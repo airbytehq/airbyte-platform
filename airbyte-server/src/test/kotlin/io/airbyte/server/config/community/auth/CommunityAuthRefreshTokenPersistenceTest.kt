@@ -16,6 +16,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.reactivestreams.Publisher
@@ -67,7 +69,24 @@ class CommunityAuthRefreshTokenPersistenceTest {
 
     StepVerifier
       .create(result)
-      .expectError(ForbiddenProblem::class.java)
-      .verify()
+      .expectErrorSatisfies {
+        val problem = (it as ForbiddenProblem).problem
+        assertFalse(problem.getDetail()!!.contains(refreshToken))
+        assertNull(problem.getData())
+      }.verify()
+  }
+
+  @Test
+  fun `missing refresh token is not exposed`() {
+    val refreshToken = "missing-secret-token"
+    every { authRefreshTokenService.getAuthRefreshToken(refreshToken) } returns null
+
+    StepVerifier
+      .create(refreshTokenPersistence.getAuthentication(refreshToken))
+      .expectErrorSatisfies {
+        val problem = (it as ForbiddenProblem).problem
+        assertFalse(problem.getDetail()!!.contains(refreshToken))
+        assertNull(problem.getData())
+      }.verify()
   }
 }

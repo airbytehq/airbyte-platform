@@ -157,8 +157,9 @@ open class ConnectorRolloutHandler
           connectorRollout.id,
         )
       } catch (e: InvalidRequestException) {
+        logger.error(e) { "Failed to create release candidate pins" }
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message("Failed to create release candidate pins: ${e.message}"),
+          ProblemMessageData().message("The release candidate pins could not be created."),
         )
       }
     }

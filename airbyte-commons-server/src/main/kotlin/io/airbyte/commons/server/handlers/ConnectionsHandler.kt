@@ -68,7 +68,6 @@ import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogStreamDa
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
@@ -2176,7 +2175,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       try {
         jobs = jobPersistence.listJobsLight(HashSet(streamToLastJobIdWithStats.values))
       } catch (e: IOException) {
-        throw UnexpectedProblem("Failed to retrieve the latest job per stream", ProblemMessageData().message(e.message))
+        log.error(e) { "Failed to retrieve the latest job per stream for connection ${req.connectionId}" }
+        throw UnexpectedProblem("The latest job for each stream could not be loaded. Retry; if it keeps failing, contact support.", null)
       }
 
       // hydrate those jobs with their aggregated stats

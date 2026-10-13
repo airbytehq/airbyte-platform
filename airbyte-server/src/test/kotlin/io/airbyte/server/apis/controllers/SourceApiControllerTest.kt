@@ -137,7 +137,10 @@ internal class SourceApiControllerTest {
     assertEquals(409, body.path("status").asInt())
     assertEquals("actor-not-ready", body.path("title").asText())
     assertEquals("https://reference.airbyte.com/reference/errors#409-actor-not-ready", body.path("type").asText())
-    assertEquals("The source or destination is not ready. Complete connector setup first.", body.path("detail").asText())
+    assertEquals(
+      "The source or destination is still a draft and cannot be used yet. Finish its setup with a successful connection check, then retry.",
+      body.path("detail").asText(),
+    )
   }
 
   @Test

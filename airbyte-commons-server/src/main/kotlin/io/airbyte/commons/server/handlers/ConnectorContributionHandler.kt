@@ -147,8 +147,11 @@ class ConnectorContributionHandler(
   private fun convertGithubExceptionToContributionException(e: HttpException): Exception =
     when (e.responseCode) {
       401 -> InvalidGithubTokenProblem()
-      409 -> InsufficientGithubTokenPermissionsProblem(e)
-      else -> GithubContributionFailedProblem(GithubContributionProblemData().status(e.responseCode).message(e.message))
+      409 -> InsufficientGithubTokenPermissionsProblem()
+      else ->
+        GithubContributionFailedProblem(
+          GithubContributionProblemData().status(e.responseCode).message("GitHub returned status ${e.responseCode}."),
+        )
     }
 
   private fun convertToContributionException(e: Exception): Exception {
@@ -156,7 +159,7 @@ class ConnectorContributionHandler(
     return when (e) {
       is HttpException -> convertGithubExceptionToContributionException(e)
       // GHFileNotFoundException is encountered when the GitHub token has insufficient permissions to fork the airbyte repo
-      is GHFileNotFoundException -> InsufficientGithubTokenPermissionsProblem(e)
+      is GHFileNotFoundException -> InsufficientGithubTokenPermissionsProblem()
       else -> e
     }
   }

@@ -18,7 +18,6 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.annotation.InternalForTesting
@@ -49,10 +48,8 @@ object AirbyteCatalogHelper {
   private val parser: CronParser = CronParser(cronDefinition)
   private const val MAX_LENGTH_OF_CRON = 7
   private const val DEFAULT_CRON_TIME_ZONE = "UTC"
-  private const val QUARTZ_CRON_DOCUMENTATION =
-    "https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html"
   private const val INVALID_CRON_EXPRESSION_MESSAGE =
-    "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See $QUARTZ_CRON_DOCUMENTATION."
+    "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'."
   private const val INVALID_CRON_TIMEZONE_MESSAGE =
     "Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'."
   private val IANA_TIMEZONE_PATTERN = Regex("^[A-Za-z]+(?:/[A-Za-z0-9_+-]+)+$")
@@ -125,9 +122,8 @@ object AirbyteCatalogHelper {
     if (streamConfiguration.selectedFields!!.isEmpty()) {
       // User puts an empty list of selected fields to sync, which is a bad request.
       throw BadRequestProblem(
-        ProblemMessageData().message(
-          "No fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
-        ),
+        "No fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
+        null,
       )
     }
     // Validate input selected fields.
@@ -135,17 +131,15 @@ object AirbyteCatalogHelper {
       streamConfiguration.selectedFields!!.map {
         if (it.fieldPath.isNullOrEmpty()) {
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Selected field path cannot be empty for stream:  ${sourceStream.name}.",
-            ),
+            "Selected field path cannot be empty for stream: ${sourceStream.name}.",
+            null,
           )
         }
         if (it.fieldPath!!.size > 1) {
           // We do not support nested field selection. Only top level properties can be selected.
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Nested field selection not supported for stream ${sourceStream.name}.",
-            ),
+            "Nested field selection not supported for stream ${sourceStream.name}.",
+            null,
           )
         }
         it.fieldPath!!.first()
@@ -154,17 +148,15 @@ object AirbyteCatalogHelper {
     val allSelectedFieldsSet = allSelectedFields.toSet()
     if (allSelectedFields.size != allSelectedFieldsSet.size) {
       throw BadRequestProblem(
-        ProblemMessageData().message(
-          "Duplicate fields selected in configuration for stream: ${sourceStream.name}.",
-        ),
+        "Duplicate fields selected in configuration for stream: ${sourceStream.name}.",
+        null,
       )
     }
     // 2. Avoid non-existing fields selection.
     require(allSelectedFields.all { it in allTopLevelStreamFields }) {
       throw BadRequestProblem(
-        ProblemMessageData().message(
-          "Invalid fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
-        ),
+        "Invalid fields selected for stream ${sourceStream.name}. The list of valid field names includes: $allTopLevelStreamFields.",
+        null,
       )
     }
 
@@ -181,10 +173,9 @@ object AirbyteCatalogHelper {
       val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
       require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
         throw BadRequestProblem(
-          ProblemMessageData().message(
-            "Primary key fields are not selected properly for stream: ${sourceStream.name}. " +
-              "Please include primary key(s) in the configuration for this stream.",
-          ),
+          "Primary key fields are not selected properly for stream: ${sourceStream.name}. " +
+            "Please include primary key(s) in the configuration for this stream.",
+          null,
         )
       }
     }
@@ -202,10 +193,9 @@ object AirbyteCatalogHelper {
       if (!cursorField.isNullOrEmpty() && !allSelectedFieldsSet.contains(cursorField.first())) {
         // first element is the top level field, and it has to be present in selected fields
         throw BadRequestProblem(
-          ProblemMessageData().message(
-            "Cursor field is not selected properly for stream: ${sourceStream.name}. " +
-              "Please include the cursor field in selected fields for this stream.",
-          ),
+          "Cursor field is not selected properly for stream: ${sourceStream.name}. " +
+            "Please include the cursor field in selected fields for this stream.",
+          null,
         )
       }
     }
@@ -221,7 +211,8 @@ object AirbyteCatalogHelper {
     if (connectionSchedule.scheduleType === ScheduleTypeEnum.CRON) {
       if (connectionSchedule.cronExpression == null) {
         throw BadRequestProblem(
-          ProblemMessageData().message("Missing cron expression in the schedule."),
+          "Missing cron expression in the schedule.",
+          null,
         )
       }
       val originalCronExpression = connectionSchedule.cronExpression!!.trim()
@@ -244,17 +235,15 @@ object AirbyteCatalogHelper {
         log.debug { "Invalid cron expression: $cronExpression" }
         log.debug { "NumberFormatException: $e" }
         throw BadRequestProblem(
-          ProblemMessageData().message(
-            INVALID_CRON_EXPRESSION_MESSAGE,
-          ),
+          INVALID_CRON_EXPRESSION_MESSAGE,
+          null,
         )
       } catch (e: IllegalArgumentException) {
         log.debug { "Invalid cron expression: $cronExpression" }
         log.debug { "IllegalArgumentException: $e" }
         throw BadRequestProblem(
-          ProblemMessageData().message(
-            INVALID_CRON_EXPRESSION_MESSAGE,
-          ),
+          INVALID_CRON_EXPRESSION_MESSAGE,
+          null,
         )
       }
     }
@@ -306,12 +295,12 @@ object AirbyteCatalogHelper {
 
   private fun validateCronTimeZone(cronTimeZone: String) {
     if (cronTimeZone.lowercase(Locale.ROOT).startsWith("etc")) {
-      throw BadRequestProblem(ProblemMessageData().message(INVALID_CRON_TIMEZONE_MESSAGE))
+      throw BadRequestProblem(INVALID_CRON_TIMEZONE_MESSAGE, null)
     }
     try {
       DateTimeZone.forID(cronTimeZone)
     } catch (e: IllegalArgumentException) {
-      throw BadRequestProblem(ProblemMessageData().message(INVALID_CRON_TIMEZONE_MESSAGE))
+      throw BadRequestProblem(INVALID_CRON_TIMEZONE_MESSAGE, null)
     }
   }
 
@@ -380,10 +369,9 @@ object AirbyteCatalogHelper {
     val validCombinedSyncModes: Set<ConnectionSyncModeEnum> = validCombinedSyncModes(airbyteStream.supportedSyncModes, validDestinationSyncModes)
     if (!validCombinedSyncModes.contains(streamConfiguration.syncMode)) {
       throw BadRequestProblem(
-        ProblemMessageData().message(
-          "Cannot set sync mode to ${streamConfiguration.syncMode} for stream ${streamConfiguration.name}. " +
-            "Valid sync modes are: $validCombinedSyncModes",
-        ),
+        "Cannot set sync mode to ${streamConfiguration.syncMode} for stream ${streamConfiguration.name}. " +
+          "Valid sync modes are: $validCombinedSyncModes.",
+        null,
       )
     }
 
@@ -415,10 +403,9 @@ object AirbyteCatalogHelper {
         // if cursor given is not empty and is NOT the same as the default, throw error
         if (java.util.Set.copyOf(cursorField) != java.util.Set.copyOf(airbyteStream.defaultCursorField)) {
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Cursor Field " + cursorField + " is already defined by source for stream: " + airbyteStream.name +
-                ". Do not include a cursor field configuration for this stream.",
-            ),
+            "Cursor Field " + cursorField + " is already defined by source for stream: " + airbyteStream.name +
+              ". Do not include a cursor field configuration for this stream.",
+            null,
           )
         }
       }
@@ -428,18 +415,16 @@ object AirbyteCatalogHelper {
         val validCursorFields: List<List<String>> = getStreamFields(airbyteStream.jsonSchema ?: Jsons.emptyObject())
         if (!validCursorFields.contains(cursorField)) {
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid cursor fields include: $validCursorFields.",
-            ),
+            "Invalid cursor field for stream: ${airbyteStream.name}. The list of valid cursor fields include: $validCursorFields.",
+            null,
           )
         }
       } else {
         // no default or given cursor field
         if (airbyteStream.defaultCursorField == null || airbyteStream.defaultCursorField!!.isEmpty()) {
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "No default cursor field for stream: ${airbyteStream.name}. Please include a cursor field configuration for this stream.",
-            ),
+            "No default cursor field for stream: ${airbyteStream.name}. Please include a cursor field configuration for this stream.",
+            null,
           )
         }
       }
@@ -458,10 +443,9 @@ object AirbyteCatalogHelper {
     if (sourceDefinedPrimaryKeyExists && configuredPrimaryKeyExists) {
       if (airbyteStream.sourceDefinedPrimaryKey != primaryKey) {
         throw BadRequestProblem(
-          ProblemMessageData().message(
-            "Primary key for stream: ${airbyteStream.name} is already pre-defined. " +
-              "Please remove the primaryKey or provide the value as ${airbyteStream.sourceDefinedPrimaryKey}.",
-          ),
+          "Primary key for stream: ${airbyteStream.name} is already pre-defined. " +
+            "Please remove the primaryKey or provide the value as ${airbyteStream.sourceDefinedPrimaryKey}.",
+          null,
         )
       }
     }
@@ -470,9 +454,8 @@ object AirbyteCatalogHelper {
     val noPrimaryKey = !configuredPrimaryKeyExists && !sourceDefinedPrimaryKeyExists
     if (noPrimaryKey) {
       throw BadRequestProblem(
-        ProblemMessageData().message(
-          "No default primary key for stream: ${airbyteStream.name}. Please include a primary key configuration for this stream.",
-        ),
+        "No default primary key for stream: ${airbyteStream.name}. Please include a primary key configuration for this stream.",
+        null,
       )
     }
 
@@ -483,17 +466,15 @@ object AirbyteCatalogHelper {
       for (singlePrimaryKey in primaryKey) {
         if (!validPrimaryKey.contains(singlePrimaryKey)) { // todo double check if the .contains() for list of strings works as intended
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Invalid primary key for stream: ${airbyteStream.name}. The list of valid primary keys fields: $validPrimaryKey.",
-            ),
+            "Invalid primary key for stream: ${airbyteStream.name}. The list of valid primary keys fields: $validPrimaryKey.",
+            null,
           )
         }
         if (singlePrimaryKey.distinct() != singlePrimaryKey) {
           throw BadRequestProblem(
-            ProblemMessageData().message(
-              "Duplicate primary key detected for stream: ${airbyteStream.name}, " +
-                "please don't provide the same column more than once. Key: $primaryKey",
-            ),
+            "Duplicate primary key detected for stream: ${airbyteStream.name}, " +
+              "please don't provide the same column more than once. Key: $primaryKey",
+            null,
           )
         }
       }
@@ -709,8 +690,8 @@ object AirbyteCatalogHelper {
         }
       if (!alreadyConfiguredStreams.add(Pair(it.name, it.namespace))) {
         throw BadRequestProblem(
-          ProblemMessageData()
-            .message("Duplicate stream found in configuration for stream name [${it.name}] in namespace [${it.namespace}]."),
+          "Duplicate stream found in configuration for stream name [${it.name}] in namespace [${it.namespace}].",
+          null,
         )
       }
       return@map configuredStreamAndConfig
@@ -743,18 +724,14 @@ object AirbyteCatalogHelper {
       return streamAndConfigs.first()
     } else if (streamAndConfigs.size > 1) {
       throw BadRequestProblem(
-        ProblemMessageData()
-          .message(
-            "Multiple streams found with name [$streamName] and namespace [$streamNamespace]. Please call the https://reference.airbyte.com/reference/getstreamproperties endpoint to see the valid stream name and namespace combinations.",
-          ),
+        "Multiple streams found with name [$streamName] and namespace [$streamNamespace]. Use the stream properties endpoint to see the valid stream name and namespace combinations.",
+        null,
       )
     } else {
       // If we have no matches with stream name && namespace, throw a BadRequestProblem
       throw BadRequestProblem(
-        ProblemMessageData()
-          .message(
-            "No streams found with name [$streamName] and namespace [$streamNamespace]. Please call the https://reference.airbyte.com/reference/getstreamproperties endpoint to see the valid stream name and namespace combinations.",
-          ),
+        "No streams found with name [$streamName] and namespace [$streamNamespace]. Use the stream properties endpoint to see the valid stream name and namespace combinations.",
+        null,
       )
     }
   }

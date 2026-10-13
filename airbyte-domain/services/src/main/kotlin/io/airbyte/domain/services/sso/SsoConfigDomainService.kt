@@ -538,11 +538,12 @@ open class SsoConfigDomainService internal constructor(
 
     // Verify the token's realm matches the organization's configured realm
     if (tokenRealm == null || tokenRealm != ssoConfig.keycloakRealm) {
+      logger.warn { "SSO token realm mismatch: expected ${ssoConfig.keycloakRealm}, actual ${tokenRealm ?: "unknown"}" }
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
           .errorMessage(
-            "The access token was issued by a different realm than expected. Expected: ${ssoConfig.keycloakRealm}, Actual: ${tokenRealm ?: "unknown"}",
+            "The access token was issued for a different organization.",
           ),
       )
     }

@@ -218,13 +218,12 @@ open class SourceServiceImpl(
     val sourceDefinitionSpecificationRead = result.getOrNull()!!
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     if (sourceDefinitionSpecificationRead.jobInfo?.succeeded == false) {
-      var errorMessage = "Something went wrong in the connector."
-      if (sourceDefinitionSpecificationRead.jobInfo?.failureReason!!.externalMessage != null) {
-        errorMessage += " logs:" + sourceDefinitionSpecificationRead.jobInfo!!.failureReason!!.externalMessage
-      } else if (sourceDefinitionSpecificationRead.jobInfo?.failureReason!!.internalMessage != null) {
-        errorMessage += " logs:" + sourceDefinitionSpecificationRead.jobInfo!!.failureReason!!.internalMessage
-      }
-      throw UnexpectedProblem(ProblemMessageData().message(errorMessage))
+      val failureReason = sourceDefinitionSpecificationRead.jobInfo?.failureReason
+      log.error { "Schema discovery failed for source $sourceId: ${failureReason?.internalMessage}" }
+      throw UnexpectedProblem(
+        "The source connector failed while discovering its schema. Check the source configuration and retry.",
+        failureReason?.externalMessage?.let { ProblemMessageData().message(it) },
+      )
     }
     return result.getOrNull()!!
   }

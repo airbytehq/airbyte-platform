@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutTierFilter
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
+import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ActorDefinitionVersion
@@ -27,6 +28,7 @@ import io.airbyte.config.Operator
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
+import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTION
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
@@ -41,6 +43,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifyAll
+import io.temporal.client.WorkflowUpdateException
+import io.temporal.failure.ApplicationFailure
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -862,4 +866,33 @@ internal class ConnectorRolloutHandlerManualTest {
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
+
+  @Test
+  fun `rollout update failures do not expose Temporal exception text`() {
+    val rolloutId = UUID.randomUUID()
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns createMockConnectorRollout(rolloutId)
+    val failure = mockk<WorkflowUpdateException>()
+    every { failure.cause } returns RuntimeException(ApplicationFailure.newFailure("private upstream response", AIRBYTE_API_CLIENT_EXCEPTION))
+    every { connectorRolloutClient.doRollout(any(), any(), any(), any(), any(), any(), any(), any()) } throws failure
+
+    val problem =
+      assertThrows<ConnectorRolloutInvalidRequestProblem> {
+        connectorRolloutHandler.manualDoConnectorRollout(
+          ConnectorRolloutManualRolloutRequestBody()
+            .id(rolloutId)
+            .dockerRepository(DOCKER_REPOSITORY)
+            .dockerImageTag(DOCKER_IMAGE_TAG)
+            .actorDefinitionId(ACTOR_DEFINITION_ID)
+            .actorIds(listOf(UUID.randomUUID())),
+        )
+      }
+    assertEquals(
+      "The connector rollout request is not valid. Check the request fields and rollout state, then retry.",
+      problem.problem.getDetail(),
+    )
+    assertEquals(
+      "The rollout workflow rejected the `doRollout` update. Check the rollout state and retry.",
+      (problem.problem.getData() as ProblemMessageData).message,
+    )
+  }
 }

@@ -16,7 +16,6 @@ import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
-import io.airbyte.server.apis.publicapi.errorHandlers.JOB_NOT_RUNNING_MESSAGE
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.mockk.every
 import io.mockk.mockk
@@ -121,17 +120,19 @@ class JobServiceTest {
   }
 
   @Test
-  fun `test cancel non-running sync`() {
+  fun `test sync reports missing or non-running jobs`() {
     // This is a real error message that we can get.
     // Happens because after canceling a job we go to the job persistence to fetch it but have no ID
 
     val couldNotFindJobMessage = "Could not find job with id: -1"
     every { schedulerHandler.syncConnection(any(), null, false) } throws RuntimeException(couldNotFindJobMessage)
-    assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) { jobService.sync(connectionId) }
+    val missingJob = assertThrows<StateConflictProblem> { jobService.sync(connectionId) }
+    assertEquals("The job is not running or could not be found.", missingJob.problem.getDetail())
 
     val failureReason = "Failed to cancel job with id: -1"
     every { schedulerHandler.syncConnection(any(), null, false) } throws IllegalStateException(failureReason)
-    assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) { jobService.sync(connectionId) }
+    val nonRunningJob = assertThrows<StateConflictProblem> { jobService.sync(connectionId) }
+    assertEquals("The job is not running or could not be found.", nonRunningJob.problem.getDetail())
   }
 
   @Test

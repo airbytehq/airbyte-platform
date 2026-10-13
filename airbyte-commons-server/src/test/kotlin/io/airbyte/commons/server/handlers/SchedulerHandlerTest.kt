@@ -2729,4 +2729,11 @@ internal class SchedulerHandlerTest {
         Arguments.of(Optional.of<String?>("failed"), true, jobFailedWithFailureReason),
       )
   }
+
+  @Test
+  fun `deleted workflow conflicts do not expose workflow internals`() {
+    val result = ManualOperationResult("ConnectionManagerWorkflow internal failure", null, ErrorCode.WORKFLOW_DELETED)
+    val error = assertThrows<ValueConflictKnownException> { schedulerHandler.readJobFromResult(result) }
+    assertEquals("The connection has been deleted, so this operation cannot be completed.", error.message)
+  }
 }

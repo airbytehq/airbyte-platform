@@ -737,7 +737,14 @@ open class SchedulerHandler
     fun readJobFromResult(manualOperationResult: ManualOperationResult): JobInfoRead {
       if (manualOperationResult.failingReason != null) {
         if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.errorCode)) {
-          throw ValueConflictKnownException(manualOperationResult.failingReason)
+          val detail =
+            if (manualOperationResult.errorCode == ErrorCode.WORKFLOW_DELETED) {
+              log.warn { "Cannot perform an operation on a deleted connection: ${manualOperationResult.failingReason}" }
+              "The connection has been deleted, so this operation cannot be completed."
+            } else {
+              manualOperationResult.failingReason
+            }
+          throw ValueConflictKnownException(detail)
         } else {
           throw IllegalStateException(manualOperationResult.failingReason)
         }

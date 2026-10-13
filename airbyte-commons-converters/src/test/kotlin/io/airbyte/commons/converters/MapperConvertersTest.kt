@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.RowFilteringMapperConfiguration
 import io.airbyte.api.model.generated.RowFilteringOperation
 import io.airbyte.api.model.generated.RowFilteringOperationType
 import io.airbyte.api.model.generated.StreamMapperType
+import io.airbyte.api.problems.model.generated.ProblemMapperIdData
 import io.airbyte.api.problems.throwable.generated.MapperValidationInvalidConfigProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationMissingRequiredParamProblem
 import io.airbyte.commons.json.Jsons
@@ -38,6 +39,7 @@ import io.airbyte.config.mapper.configs.RowFilteringConfig
 import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
@@ -268,24 +270,30 @@ class MapperConvertersTest {
   @Test
   fun testMissingRequiredFields() {
     val invalidJson = Jsons.jsonNode(mapOf("config_key" to "config_value"))
-    assertThrows<MapperValidationMissingRequiredParamProblem> {
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.HASHING)
-        .mapperConfiguration(invalidJson)
-        .toInternal()
-    }
+    val problem =
+      assertThrows<MapperValidationMissingRequiredParamProblem> {
+        ConfiguredStreamMapper()
+          .id(MAPPER_ID)
+          .type(StreamMapperType.HASHING)
+          .mapperConfiguration(invalidJson)
+          .toInternal()
+      }
+    assertNull((problem.problem.getData() as ProblemMapperIdData).message)
   }
 
   @Test
   fun testInvalidValues() {
     val invalidJson = Jsons.jsonNode(mapOf("method" to "some_invalid_method"))
-    assertThrows<MapperValidationInvalidConfigProblem> {
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.HASHING)
-        .mapperConfiguration(invalidJson)
-        .toInternal()
-    }
+    val problem =
+      assertThrows<MapperValidationInvalidConfigProblem> {
+        ConfiguredStreamMapper()
+          .id(MAPPER_ID)
+          .type(StreamMapperType.HASHING)
+          .mapperConfiguration(invalidJson)
+          .toInternal()
+      }
+    val data = problem.problem.getData() as ProblemMapperIdData
+    assertNull(data.message)
+    assertEquals(MAPPER_ID, data.mapperId)
   }
 }

@@ -4,7 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.model.generated.GithubContributionProblemData
+import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
+import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.commons.server.builder.contributions.BuilderContributionInfo
+import io.airbyte.commons.server.builder.contributions.ContributionCreate
 import io.airbyte.commons.server.builder.contributions.ContributionTemplates
 import io.airbyte.commons.server.builder.contributions.GithubContributionService
 import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
@@ -15,6 +19,8 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.kohsuke.github.GHFileNotFoundException
+import org.kohsuke.github.HttpException
 
 class ConnectorContributionHandlerTest {
   private var testConnectorImageName = "source-test-connector"
@@ -103,5 +109,33 @@ class ConnectorContributionHandlerTest {
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
     Assertions.assertEquals(2, filesToCommit.size)
     Assertions.assertEquals(setOf("manifestPath", "customComponentsPath"), filesToCommit.keys)
+  }
+
+  @Test
+  fun `contribution permission errors do not serialize exceptions`() {
+    for (error in listOf(
+      HttpException("private upstream body", 409, "Forbidden", "https://github.com"),
+      GHFileNotFoundException("private upstream body"),
+    )) {
+      every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } throws error
+      val problem =
+        assertThrows<InsufficientGithubTokenPermissionsProblem> {
+          connectorContributionHandler.generateContribution(mockk<ContributionCreate>(relaxed = true))
+        }
+      Assertions.assertNull(problem.problem.getData())
+    }
+  }
+
+  @Test
+  fun `contribution failures include only safe status text`() {
+    every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } throws
+      HttpException("private upstream body", 500, "Internal error", "https://github.com")
+    val problem =
+      assertThrows<GithubContributionFailedProblem> {
+        connectorContributionHandler.generateContribution(mockk<ContributionCreate>(relaxed = true))
+      }
+    val data = problem.problem.getData() as GithubContributionProblemData
+    Assertions.assertEquals(500, data.status)
+    Assertions.assertEquals("GitHub returned status 500.", data.message)
   }
 }

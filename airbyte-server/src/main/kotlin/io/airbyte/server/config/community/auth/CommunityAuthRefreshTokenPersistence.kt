@@ -47,9 +47,9 @@ class CommunityAuthRefreshTokenPersistence(
     Flux.create {
       val token = authRefreshTokenService.getAuthRefreshToken(refreshToken)
       if (token == null) {
-        it.error(ForbiddenProblem(ProblemMessageData().message("Refresh token not found: $refreshToken")))
+        it.error(ForbiddenProblem("The refresh token is not valid. Sign in again.", null))
       } else if (token.revoked) {
-        it.error(ForbiddenProblem(ProblemMessageData().message("Refresh token revoked: $refreshToken")))
+        it.error(ForbiddenProblem("The refresh token has been revoked. Sign in again.", null))
       } else {
         it
           .next(
