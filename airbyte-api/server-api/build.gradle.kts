@@ -1,4 +1,10 @@
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.Constructor
+import org.yaml.snakeyaml.nodes.Tag
+import org.yaml.snakeyaml.representer.Representer
+import org.yaml.snakeyaml.resolver.Resolver
 
 plugins {
   id("io.airbyte.gradle.jvm.lib")
@@ -149,16 +155,58 @@ val genApiServer =
     }
   }
 
+// The kotlin-server generator copies an operation into the API interface of every tag it carries,
+// while jaxrs-spec only uses the first tag. Generate the Kotlin flavor from a copy of the spec that
+// keeps only the first tag, so both flavors have the same interfaces and a controller can switch
+// flavors without inheriting operations it does not serve.
+val firstTagSpecFile = layout.buildDirectory.file("openapi/config-first-tag.yaml")
+val genFirstTagSpec =
+  tasks.register("genFirstTagSpec") {
+    inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(firstTagSpecFile)
+
+    doLast {
+      // leave unquoted dates (in examples) as strings, so the copy differs from the spec only in tags
+      val resolver =
+        object : Resolver() {
+          override fun addImplicitResolvers() {
+            addImplicitResolver(Tag.BOOL, BOOL, "yYnNtTfFoO")
+            addImplicitResolver(Tag.INT, INT, "-+0123456789")
+            addImplicitResolver(Tag.FLOAT, FLOAT, "-+0123456789.")
+            addImplicitResolver(Tag.MERGE, MERGE, "<")
+            addImplicitResolver(Tag.NULL, NULL, "~nN\u0000")
+            addImplicitResolver(Tag.NULL, EMPTY, null)
+            addImplicitResolver(Tag.YAML, YAML, "!&*")
+          }
+        }
+      val yaml = Yaml(Constructor(), Representer(), DumperOptions().apply { defaultFlowStyle = DumperOptions.FlowStyle.BLOCK }, resolver)
+      val spec = file(specFile).reader().use { yaml.load<MutableMap<String, Any?>>(it) }
+      @Suppress("UNCHECKED_CAST")
+      val paths = spec["paths"] as Map<String, Map<String, Any?>>
+      paths.values.flatMap { it.values }.filterIsInstance<MutableMap<String, Any?>>().forEach { operation ->
+        (operation["tags"] as? List<*>)?.let { tags -> operation["tags"] = tags.take(1) }
+      }
+      firstTagSpecFile.get().asFile.writer().use { yaml.dump(spec, it) }
+    }
+  }
+
 val genApiServer2 =
   tasks.register<GenerateTask>("genApiServer2") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server2"
 
-    inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
+    dependsOn(genFirstTagSpec)
+    inputs.file(firstTagSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(serverOutputDir)
 
     generatorName = "kotlin-server"
-    inputSpec = specFile
+    inputSpec = firstTagSpecFile.get().asFile.path
     outputDir = serverOutputDir
+    // the generator never deletes files, so interfaces dropped from the spec would otherwise linger
+    cleanupOutput = true
+    // templates/kotlin-server is shared with the SCIM generator. This flag turns on the template
+    // behavior that matches the Java models (empty collection defaults, enum toString), which the
+    // Config API models need while both flavors exist and SCIM does not.
+    additionalProperties = mapOf("javaModelParity" to true)
     templateDir.set("$projectDir/src/main/resources/templates/kotlin-server")
 
     packageName = "io.airbyte.api.server.generated"

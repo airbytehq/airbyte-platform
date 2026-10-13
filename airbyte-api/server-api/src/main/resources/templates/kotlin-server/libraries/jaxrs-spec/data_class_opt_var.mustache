@@ -3,4 +3,5 @@
 {{/description}}
 
     @JsonProperty("{{#vendorExtensions.x-scim-dollar-ref}}\$ref{{/vendorExtensions.x-scim-dollar-ref}}{{^vendorExtensions.x-scim-dollar-ref}}{{{baseName}}}{{/vendorExtensions.x-scim-dollar-ref}}")
-{{#useBeanValidation}}{{>beanValidation}}{{>beanValidationModel}}{{/useBeanValidation}}    {{>modelMutable}} {{{name}}}: {{#isEnum}}{{classname}}.{{nameInPascalCase}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}? = {{{defaultValue}}}{{^defaultValue}}null{{/defaultValue}}
+{{#vendorExtensions.x-field-extra-annotation}}    {{{.}}}
+{{/vendorExtensions.x-field-extra-annotation}}{{#useBeanValidation}}{{>beanValidation}}{{>beanValidationModel}}{{/useBeanValidation}}    {{>modelMutable}} {{{name}}}: {{#isArray}}{{{dataType}}}{{/isArray}}{{^isArray}}{{#isEnum}}{{classname}}.{{nameInPascalCase}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{/isArray}}? = {{{defaultValue}}}{{^defaultValue}}{{#javaModelParity}}{{#isNullable}}null{{/isNullable}}{{^isNullable}}{{#isArray}}{{#uniqueItems}}emptySet(){{/uniqueItems}}{{^uniqueItems}}emptyList(){{/uniqueItems}}{{/isArray}}{{#isMap}}emptyMap(){{/isMap}}{{^isArray}}{{^isMap}}null{{/isMap}}{{/isArray}}{{/isNullable}}{{/javaModelParity}}{{^javaModelParity}}null{{/javaModelParity}}{{/defaultValue}}
