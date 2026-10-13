@@ -57,7 +57,8 @@ class ServiceAccountsServiceTest : AbstractConfigRepositoryTest() {
     val parsed = JWTParser.parse(tok)
 
     assertEquals(a.id.toString(), parsed.jwtClaimsSet.subject)
-    assertEquals(TokenType.SERVICE_ACCOUNT.toString(), parsed.jwtClaimsSet.getClaimAsString("typ"))
+    assertEquals("io.airbyte.auth.service_account", parsed.jwtClaimsSet.getClaimAsString("typ"))
+    assertEquals(TokenType.SERVICE_ACCOUNT, TokenType.fromClaims(parsed.jwtClaimsSet.claims))
     assertEquals(clock.instant().plus(15, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.SECONDS), parsed.jwtClaimsSet.expirationTime.toInstant())
   }
 

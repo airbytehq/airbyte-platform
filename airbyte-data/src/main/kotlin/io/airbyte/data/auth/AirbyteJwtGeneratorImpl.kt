@@ -35,7 +35,7 @@ class AirbyteJwtGeneratorImpl(
         "iss" to airbyteAuthConfig.tokenIssuer,
         "aud" to AIRBYTE_SERVER_AUDIENCE,
         "sub" to tokenSubject,
-        "typ" to tokenType,
+        tokenType.toClaim(),
         "exp" to clock.instant().plus(tokenExpirationLength, ChronoUnit.MINUTES).epochSecond,
       )
 

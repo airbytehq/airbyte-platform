@@ -26,7 +26,7 @@ class AirbyteJwtGeneratorNoAuthImpl : AirbyteJwtGenerator {
     val claims =
       mutableMapOf<String, Any>(
         "sub" to tokenSubject,
-        "typ" to tokenType,
+        tokenType.toClaim(),
         "exp" to clock.instant().plus(tokenExpirationLength, ChronoUnit.MINUTES).epochSecond,
       )
 
