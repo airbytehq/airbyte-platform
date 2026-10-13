@@ -2703,7 +2703,7 @@
   "cloud.inTrial": "Trial",
   "cloud.cloudForTeams": "Pro",
   "cloud.adpOrganization.banner": "This is an Airbyte Agents organization. <lnk>Manage the Context Layer</lnk>.",
-  "cloud.agentsOptIn.banner": "Your organization can now use Airbyte Agents. <lnk>Get started</lnk>",
+  "cloud.agentsOptIn.banner": "Your organization can now use Airbyte Cloud's Context Layer. <lnk>Get started</lnk>.",
   "cloud.contextLayer.title": "Context layer settings",
   "cloud.contextLayer.subtitle": "AI agents can use the Airbyte MCP to access and reason about your organization's data. Only organization admins can enable or disable context layer features.",
   "cloud.contextLayer.subtitle.enabled": "The context layer is how AI agents access and reason about your organization's data. Only organization admins can enable or disable this feature. The context layer is currently free to use. Limits apply.",

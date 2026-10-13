@@ -37,7 +37,7 @@ const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloud
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
 const messages = {
-  "cloud.agentsOptIn.banner": "Your organization can now use Airbyte Agents. <lnk>Get started</lnk>",
+  "cloud.agentsOptIn.banner": "Your organization can now use Airbyte Cloud's Context Layer. <lnk>Get started</lnk>.",
 };
 
 describe("AgentsOptInBanner", () => {
