@@ -441,13 +441,6 @@ create table "public"."notification_configuration" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "notification_configuration_pkey" primary key ("id")
 );
-create table "public"."oauth_state" (
-  "id" varchar(2147483647) not null,
-  "state" varchar(2147483647) not null,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "oauth_state_pkey" primary key ("id")
-);
 create table "public"."observability_jobs_stats" (
   "job_id" bigint not null,
   "connection_id" uuid not null,
@@ -848,16 +841,6 @@ create table "public"."workspace" (
   "dataplane_group_id" uuid not null,
   constraint "workspace_pkey" primary key ("id")
 );
-create table "public"."workspace_service_account" (
-  "workspace_id" uuid not null,
-  "service_account_id" varchar(31) not null,
-  "service_account_email" varchar(256) not null,
-  "json_credential" jsonb not null,
-  "hmac_key" jsonb not null,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "workspace_service_account_pkey" primary key ("workspace_id", "service_account_id")
-);
 create index "actor_actor_definition_id_idx" on "public"."actor"("actor_definition_id" asc);
 create index "actor_workspace_id_idx" on "public"."actor"("workspace_id" asc);
 create index "actor_catalog_catalog_hash_id_idx" on "public"."actor_catalog"("catalog_hash" asc);
@@ -1048,5 +1031,4 @@ alter table "public"."user" add constraint "user_default_workspace_id_fkey" fore
 alter table "public"."user_invitation" add constraint "user_invitation_accepted_by_user_id_fkey" foreign key ("accepted_by_user_id") references "public"."user" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_inviter_user_id_fkey" foreign key ("inviter_user_id") references "public"."user" ("id");
 alter table "public"."workspace" add constraint "workspace_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
-alter table "public"."workspace_service_account" add constraint "workspace_service_account_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 comment on column "public"."actor_definition"."max_seconds_between_messages" is 'Define the number of seconds allowed between 2 messages emitted by the connector before timing out';

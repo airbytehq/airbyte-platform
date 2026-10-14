@@ -46,7 +46,6 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SuggestedStreams
 import io.airbyte.config.SupportLevel
 import io.airbyte.config.Tag
-import io.airbyte.config.WorkspaceServiceAccount
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference
@@ -526,31 +525,6 @@ object DbConverter {
             Tables.ACTOR_CATALOG_FETCH_EVENT.CREATED_AT,
             LocalDateTime::class.java,
           ).toEpochSecond(ZoneOffset.UTC),
-      )
-
-  /**
-   * Build workspace service account from db record.
-   *
-   * @param record db record
-   * @return workspace service account
-   */
-  fun buildWorkspaceServiceAccount(record: Record): WorkspaceServiceAccount =
-    WorkspaceServiceAccount()
-      .withWorkspaceId(record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID))
-      .withServiceAccountId(record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_ID))
-      .withServiceAccountEmail(record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_EMAIL))
-      .withJsonCredential(
-        if (record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL) == null) {
-          null
-        } else {
-          Jsons.deserialize(record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL).data())
-        },
-      ).withHmacKey(
-        if (record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY) == null) {
-          null
-        } else {
-          Jsons.deserialize(record.get(Tables.WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY).data())
-        },
       )
 
   /**

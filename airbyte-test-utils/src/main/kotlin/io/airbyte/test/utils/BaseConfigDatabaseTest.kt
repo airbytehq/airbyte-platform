@@ -174,8 +174,7 @@ open class BaseConfigDatabaseTest {
               user_invitation,
               workload,
               workload_queue,
-              workspace,
-              workspace_service_account
+              workspace
             
             """.trimIndent(),
           )

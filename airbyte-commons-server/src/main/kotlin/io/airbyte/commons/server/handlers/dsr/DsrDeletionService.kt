@@ -1813,7 +1813,6 @@ open class DsrDeletionService(
 
     deleteByUuidField(ctx, "group", "id", groupIds)
 
-    deleteByUuidField(ctx, "workspace_service_account", "workspace_id", workspaceIds)
     deleteByUuidField(ctx, "tag", "workspace_id", workspaceIds)
     deleteByUuidField(ctx, "operation", "workspace_id", workspaceIds)
     deleteByUuidField(ctx, "private_link", "workspace_id", workspaceIds)
