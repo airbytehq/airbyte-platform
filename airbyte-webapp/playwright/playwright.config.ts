@@ -31,6 +31,8 @@ export default defineConfig({
     stdout: "pipe",
     stderr: "pipe",
     timeout: 120 * 1000, // 2 minutes timeout for webServer startup
+    // CI loads the Datadog test tracer with NODE_OPTIONS. Only the tests need it, not the dev server.
+    env: { NODE_OPTIONS: "" },
   },
 
   /* Configure projects for major browsers */

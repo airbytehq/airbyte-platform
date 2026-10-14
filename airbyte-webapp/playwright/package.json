@@ -15,6 +15,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.3",
+    "dd-trace": "5.132.0",
     "optionator": "^0.9.3",
     "uuid": "^11.1.0"
   }
