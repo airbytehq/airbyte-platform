@@ -3,7 +3,6 @@ import type { Page } from "@playwright/test";
 
 import {
   customNamespaceScenario,
-  deletionScenario,
   deletedConnectionScenario,
   disabledConnectionScenario,
   fakerExistingConnectionScenario,
@@ -15,6 +14,8 @@ import {
 import { connectionForm } from "../../helpers/connection";
 import { connectionSettings, connectionDeletion } from "../../helpers/connectionConfiguration";
 import { test, expect } from "../../helpers/frontendTest";
+// `mockTest` runs against the new mock backend. `test` uses the old helpers. Tests in this file move to `mockTest` one at a time.
+import { catalogs, connection, defs, destination, scenario, source, test as mockTest } from "../../mock";
 
 async function openSettings(page: Page, airbyte: MockAirbyte, advanced = false) {
   const connection = airbyte.connections[0];
@@ -172,19 +173,23 @@ test.describe("Connection Configuration - mocked API", () => {
     });
   });
 
-  test.describe("Settings page", () => {
-    test.use({ airbyteScenario: deletionScenario });
-    test("should delete connection", async ({ page, airbyte }) => {
-      const connection = airbyte.connections[0];
-      await connectionDeletion.deleteConnection(page, airbyte.workspace.workspaceId, connection);
-      expect(airbyte.requests.filter(({ key }) => key === "POST /api/v1/connections/delete")).toEqual([
-        { key: "POST /api/v1/connections/delete", body: { connectionId: connection.connectionId } },
-      ]);
-      expect(connection.status).toBe("deprecated");
+  mockTest.describe("Settings page", () => {
+    const pokeConnection = connection({
+      source: source({ def: defs.pokeApiSource, name: "PokeAPI source" }),
+      destination: destination({ def: defs.e2eTestingDestination, name: "E2E Testing destination" }),
+      catalog: catalogs.pokeApi({ selected: true }),
+    });
+    const anotherConnection = pokeConnection.copy({ name: "Another connection" });
+    mockTest.use({ airbyteScenario: scenario({ connections: [pokeConnection, anotherConnection] }) });
+
+    mockTest("should delete connection", async ({ page, airbyte }) => {
+      const deleted = airbyte.store.connections.get(pokeConnection);
+      await connectionDeletion.deleteConnection(page, airbyte.workspaceId, deleted);
+      expect(airbyte.calls("deleteConnection")).toEqual([{ connectionId: deleted.connectionId }]);
       await page.reload();
       await expect(page.getByTestId("new-connection-button")).toBeVisible();
       await expect(page.locator("td").filter({ hasText: "Another connection" })).toBeVisible();
-      await expect(page.locator("td").filter({ hasText: connection.name })).not.toBeVisible();
+      await expect(page.locator("td").filter({ hasText: deleted.name })).not.toBeVisible();
     });
   });
 
