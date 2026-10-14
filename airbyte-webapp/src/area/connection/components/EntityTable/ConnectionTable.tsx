@@ -1,4 +1,5 @@
 import { CellContext, ColumnDefTemplate, ColumnSort, createColumnHelper } from "@tanstack/react-table";
+import classNames from "classnames";
 import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -7,14 +8,17 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { useConnectionSemanticSearchAvailability } from "cloud/components/AgentsOptIn";
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
-import { ConnectionStatus } from "./components/ConnectionStatus";
+import { ConnectionStatus, ConnectionStatusIcon } from "./components/ConnectionStatus";
 import { ConnectorName } from "./components/ConnectorName";
+import { EntityNameCell as ConnectionNameText } from "./components/EntityNameCell";
 import { EntityWarningsCell } from "./components/EntityWarningsCell";
 import { FrequencyCell } from "./components/FrequencyCell";
 import { LastSyncCell } from "./components/LastSyncCell";
+import { SemanticSearchCell, useOrganizationSemanticSearchState } from "./components/SemanticSearchCell";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { TagsCell } from "./components/TagsCell";
 import styles from "./ConnectionTable.module.scss";
@@ -28,6 +32,7 @@ interface ConnectionTableProps {
   setSortKey?: (sortState: WebBackendConnectionListSortKey) => void;
   hasNextPage?: boolean;
   fetchNextPage?: () => void;
+  isConnectionsListPage?: boolean;
 }
 
 const ConnectionTable: React.FC<ConnectionTableProps> = ({
@@ -38,8 +43,13 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
   fetchNextPage,
   setSortKey,
   sortKey,
+  isConnectionsListPage = false,
 }) => {
   const createLink = useCurrentWorkspaceLink();
+  const isSemanticSearchAvailable = useConnectionSemanticSearchAvailability() === "available";
+  const showSemanticSearchColumn = isConnectionsListPage && isSemanticSearchAvailable;
+  // Read once for all rows, so rows that scroll into view do not read it again.
+  const organizationSemanticSearch = useOrganizationSemanticSearchState({ enabled: showSemanticSearchColumn });
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
 
@@ -66,6 +76,26 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
     [createLink, entity]
   );
 
+  const SemanticSearchCellWithLink = useMemo<ColumnDefTemplate<CellContext<ConnectionTableDataItem, unknown>>>(
+    () =>
+      // eslint-disable-next-line react/function-component-definition -- using function as it provides the component's DisplayName
+      function SemanticSearchCellWithLink(props) {
+        return (
+          <Link
+            to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+            variant="primary"
+            className={styles.cellContent}
+          >
+            <SemanticSearchCell
+              connection={props.row.original.connection}
+              organizationSemanticSearch={organizationSemanticSearch}
+            />
+          </Link>
+        );
+      },
+    [createLink, organizationSemanticSearch]
+  );
+
   const columns = React.useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -75,7 +105,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
           responsive: true,
           noPadding: true,
         },
-        cell: NameCell,
+        cell: isConnectionsListPage ? NameWithoutStatusCell : NameCell,
       }),
       columnHelper.accessor("entityName", {
         header: () => (
@@ -126,6 +156,33 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
           noPadding: true,
         },
       }),
+      ...(isConnectionsListPage
+        ? [
+            columnHelper.accessor("lastSyncStatus", {
+              header: () => <FormattedMessage id="tables.syncStatus" />,
+              enableSorting: false,
+              meta: {
+                thClassName: styles.iconColumn,
+                noPadding: true,
+              },
+              cell: SyncStatusCell,
+            }),
+          ]
+        : []),
+      ...(showSemanticSearchColumn
+        ? [
+            columnHelper.display({
+              id: "semanticSearch",
+              header: () => <FormattedMessage id="tables.semanticSearch" />,
+              enableSorting: false,
+              meta: {
+                thClassName: styles.iconColumn,
+                noPadding: true,
+              },
+              cell: SemanticSearchCellWithLink,
+            }),
+          ]
+        : []),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
         meta: {
@@ -143,7 +200,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
         enableSorting: false,
       }),
     ],
-    [columnHelper, EntityNameCell, entity]
+    [columnHelper, EntityNameCell, SemanticSearchCellWithLink, entity, isConnectionsListPage, showSemanticSearchColumn]
   );
 
   const sortingKeyToColumnId: Record<WebBackendConnectionListSortKey, ColumnSort> = {
@@ -172,7 +229,9 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({
       columns={columns}
       data={data}
       testId="connectionsTable"
-      className={styles.connectionsTable}
+      className={classNames(styles.connectionsTable, {
+        [styles.nameWithStatusIcon]: !isConnectionsListPage,
+      })}
       manualSorting
       sortingState={sortKey ? [sortingKeyToColumnId[sortKey]] : []}
       onSortingChange={(sortingUpdater) => {
@@ -215,6 +274,32 @@ const NameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>> 
         value={props.cell.getValue()}
         enabled={props.row.original.enabled}
       />
+    </Link>
+  );
+};
+
+const NameWithoutStatusCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>> = (props) => {
+  const createLink = useCurrentWorkspaceLink();
+  return (
+    <Link
+      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+      variant="primary"
+      className={styles.cellContent}
+    >
+      <ConnectionNameText value={props.cell.getValue()} enabled={props.row.original.enabled} />
+    </Link>
+  );
+};
+
+const SyncStatusCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string | null>> = (props) => {
+  const createLink = useCurrentWorkspaceLink();
+  return (
+    <Link
+      to={createLink(`/${RoutePaths.Connections}/${props.row.original.connectionId}`)}
+      variant="primary"
+      className={styles.cellContent}
+    >
+      <ConnectionStatusIcon status={props.cell.getValue()} />
     </Link>
   );
 };

@@ -16,3 +16,5 @@ export { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./Context
 export { SourceContextLayerOptIn } from "./SourceContextLayerOptIn";
 export { useConnectionSemanticSearchAccess } from "./useConnectionSemanticSearchAccess";
 export type { ConnectionSemanticSearchAccess } from "./useConnectionSemanticSearchAccess";
+export { useConnectionSemanticSearchAvailability } from "./useConnectionSemanticSearchAvailability";
+export type { ConnectionSemanticSearchAvailability } from "./useConnectionSemanticSearchAvailability";

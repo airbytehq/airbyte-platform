@@ -32,6 +32,7 @@ const ConnectionsTable: React.FC<ConnectionsTableProps> = React.memo(
         setSortKey={setSortKey}
         hasNextPage={hasNextPage}
         fetchNextPage={fetchNextPage}
+        isConnectionsListPage
       />
     );
   }

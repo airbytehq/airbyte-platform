@@ -14,7 +14,7 @@ interface ConnectionStatusProps {
   enabled: boolean;
 }
 
-const ConnectionStatusIcon: React.FC<Pick<ConnectionStatusProps, "status">> = ({ status }) => {
+export const ConnectionStatusIcon: React.FC<Pick<ConnectionStatusProps, "status">> = ({ status }) => {
   const { formatMessage } = useIntl();
   const statusIconStatus = useMemo<StatusIconStatus | undefined>(
     () =>

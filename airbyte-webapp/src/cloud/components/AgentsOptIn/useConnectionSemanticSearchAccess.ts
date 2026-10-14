@@ -4,11 +4,9 @@ import {
   useAgentsSupportedSourceDefinitionIds,
   useOrganizationSemanticSearchEnablement,
 } from "core/api";
-import { useExperiment } from "core/services/Experiment";
-import { useIsCloudApp } from "core/utils/app";
 import { useIntent } from "core/utils/rbac";
 
-import { useContextLayerEligibility } from "./useContextLayerEligibility";
+import { useConnectionSemanticSearchAvailability } from "./useConnectionSemanticSearchAvailability";
 
 export type ConnectionSemanticSearchAccess = "loading" | "hidden" | "orgOff" | "noPermission" | "editable";
 
@@ -30,9 +28,9 @@ interface ConnectionSemanticSearchAccessParams {
  *
  * The Cloud, flag, and connector checks run first, so those connections are never "loading".
  *
- * The organization read and the Context Layer provisioning read are the same reads that the sidebar and the
- * create-source page already make. Only the organization semantic search setting is gated: it is read only after the
- * Cloud, flag, connector, and Context Layer checks pass, because OSS does not implement that endpoint. The reads are shared queries, so many rows can
+ * The Cloud, flag, and Context Layer checks come from useConnectionSemanticSearchAvailability, which the Connections
+ * list also uses. Only the organization semantic search setting is gated: it is read only after those checks and the
+ * connector check pass, because OSS does not implement that endpoint. The reads are shared queries, so many rows can
  * call the hook at little cost.
  *
  * The organization read (useOrganization, for the ADP check) is a suspense query: it suspends while it loads and throws
@@ -42,8 +40,7 @@ export const useConnectionSemanticSearchAccess = ({
   sourceDefinitionId,
   destinationDefinitionId,
 }: ConnectionSemanticSearchAccessParams): ConnectionSemanticSearchAccess => {
-  const isCloudApp = useIsCloudApp();
-  const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
+  const availability = useConnectionSemanticSearchAvailability();
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
   const isAgentConnection =
@@ -51,24 +48,22 @@ export const useConnectionSemanticSearchAccess = ({
     !!destinationDefinitionId &&
     supportedSourceDefinitionIds.has(sourceDefinitionId) &&
     supportedDestinationDefinitionIds.has(destinationDefinitionId);
-  const canShow = isCloudApp && showSemanticSearch && isAgentConnection;
 
-  const { statusQuery, isEligible: isContextLayerAvailable } = useContextLayerEligibility();
   const organizationSettingQuery = useOrganizationSemanticSearchEnablement({
-    enabled: canShow && isContextLayerAvailable,
+    enabled: isAgentConnection && availability === "available",
   });
 
   const workspaceId = useCurrentWorkspaceId();
   const canEdit = useIntent("EditConnectionSemanticSearch", { workspaceId });
 
-  if (!canShow) {
+  if (!isAgentConnection || availability === "unavailable") {
     return "hidden";
   }
-  if (statusQuery.isInitialLoading || organizationSettingQuery.isInitialLoading) {
+  if (availability === "loading" || organizationSettingQuery.isInitialLoading) {
     return "loading";
   }
   const organizationSetting = organizationSettingQuery.isError ? undefined : organizationSettingQuery.data;
-  if (!isContextLayerAvailable || !organizationSetting) {
+  if (!organizationSetting) {
     return "hidden";
   }
   if (!organizationSetting.semanticSearchEnabled) {

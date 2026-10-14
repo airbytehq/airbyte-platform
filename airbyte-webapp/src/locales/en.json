@@ -1226,6 +1226,7 @@
   "tables.enabled": "Enabled",
   "tables.disabled": "Disabled",
   "tables.agentAccess": "Agent Access",
+  "tables.semanticSearch": "Semantic search",
   "tables.featureStatus.configured": "{feature} configured",
   "tables.featureStatus.notConfigured": "{feature} not configured",
   "tables.featureStatus.notApplicable": "{feature} not applicable",

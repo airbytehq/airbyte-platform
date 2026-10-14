@@ -24,9 +24,16 @@
   width: 20%;
 }
 
+.iconColumn {
+  width: 1%;
+}
+
 .connectionsTable {
   min-width: variables.$min-width-wide-table-container;
+}
 
+// The Name header lines up with the name, which follows the sync status icon.
+.nameWithStatusIcon {
   th:nth-child(1) {
     padding-left: 45px;
   }
