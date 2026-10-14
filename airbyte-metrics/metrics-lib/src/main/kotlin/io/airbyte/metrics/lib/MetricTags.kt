@@ -79,6 +79,8 @@ object MetricTags {
   const val NOTIFICATION_TRIGGER: String = "notification_trigger"
   const val NOTIFICATION_CLIENT: String = "notification_client"
   const val ORGANIZATION_ID: String = "organization_id"
+  const val BILLING_ALERT_TYPE: String = "alert_type"
+  const val ENABLED: String = "enabled"
   const val RELEASE_STAGE: String = "release_stage"
   const val ROUTE: String = "route"
   const val SECRET_COORDINATES_UPDATED: String = "secret_coordinates_updated"

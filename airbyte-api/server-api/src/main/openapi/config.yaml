@@ -85,6 +85,8 @@ tags:
     description: Interactions with organizations.
   - name: organization_payment_config
     description: Interactions with organization payment configs
+  - name: billing_notification_settings
+    description: Billing notification settings for an organization
   - name: deployment_metadata
     description: Metadata about the Airbyte deployment
   - name: applications
@@ -6476,6 +6478,56 @@ paths:
       responses:
         "200":
           description: Success
+  /v1/billing/notification_settings/get:
+    post:
+      summary: Get the billing notification settings for an organization
+      tags:
+        - billing_notification_settings
+        - billing
+        - cloud-only
+      operationId: getBillingNotificationSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingNotificationSettingsRead"
+        "400":
+          description: The organization id is missing or malformed
+        "403":
+          description: The caller is not an admin of the organization
+  /v1/billing/notification_settings/update:
+    post:
+      summary: Create or update the billing notification settings for an organization
+      tags:
+        - billing_notification_settings
+        - billing
+        - cloud-only
+      operationId: updateBillingNotificationSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingNotificationSettingsUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingNotificationSettingsRead"
+        "400":
+          description: A required field is missing, a threshold is below zero, or the recipient email is malformed or longer than 256 characters
+        "403":
+          description: The caller is not an admin of the organization
   /v1/organization_payment_config/{organizationId}:
     get:
       summary: Get an organization payment config
@@ -18141,6 +18193,58 @@ components:
           $ref: "#/components/schemas/ISO8601DateTime"
         newGracePeriodReason:
           type: string
+
+    BillingNotificationSettingsRead:
+      type: object
+      required:
+        - organizationId
+        - configured
+        - syncCreditThreshold
+        - invoiceAmountThreshold
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        configured:
+          type: boolean
+          description: True when the organization has saved settings. False means the thresholds are the defaults and every alert is off.
+        recipientEmail:
+          type: string
+          format: email
+          nullable: true
+          description: Address that receives billing alerts. Null means the payment provider email is used.
+        syncCreditThreshold:
+          type: number
+          description: Estimated credits consumed by a single sync. 0 disables the alert.
+        invoiceAmountThreshold:
+          type: number
+          description: Billing period amount in USD. 0 disables the alert.
+    BillingNotificationSettingsUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - syncCreditThreshold
+        - invoiceAmountThreshold
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        recipientEmail:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 256
+          description: >-
+            Address that receives billing alerts. Null or empty means the payment provider email is used.
+            The update replaces every field, so omit it or send null to clear a stored address.
+        syncCreditThreshold:
+          type: number
+          minimum: 0
+          description: Estimated credits consumed by a single sync. 0 disables the alert.
+        invoiceAmountThreshold:
+          type: number
+          minimum: 0
+          description: Billing period amount in USD. 0 disables the alert.
 
     AuditLogListRequestBody:
       type: object
