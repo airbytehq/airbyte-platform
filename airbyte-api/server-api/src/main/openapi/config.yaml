@@ -748,6 +748,52 @@ paths:
           description: Active sync identity not found
         "409":
           description: Enabled sync has invalid routing, connector image, or runtime configuration
+  /v1/connections/{connectionId}/backfill:
+    post:
+      tags: [fusion_connection_backfill]
+      operationId: requestFusionConnectionBackfill
+      summary: Request a Fusion backfill for a connection (Cloud only)
+      description: >-
+        Forwards to Agents, which queues one backfill run per named stream, or one all-streams
+        run when streams is omitted, and reports each stream's outcome. A stream whose current
+        run is still queued or running keeps it and comes back as running, so retrying is safe.
+        Requires the connection to be enabled for Fusion indexing.
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionConnectionBackfillRequest"
+      responses:
+        "200":
+          description: Per-stream backfill outcomes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionConnectionBackfillResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient workspace permission
+        "404":
+          description: Connection not found
+        "409":
+          description: Connection is not enabled for Fusion backfill, or the request conflicts with the current resource state
+        "422":
+          description: Invalid backfill request
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Upstream unavailable
+        "504":
+          description: Upstream timed out
   /v1/workspaces/create:
     post:
       tags:
@@ -22980,6 +23026,104 @@ components:
         storage_size_mb:
           type: number
           format: double
+    FusionConnectionBackfillRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        streams:
+          description: Distinct stream names to backfill, one run each. Omitted means every stream the connection's catalog selects.
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+        start_time:
+          description: Backfill only rows extracted at or after this time. Omitted or null backfills the whole history.
+          type: string
+          format: date-time
+          nullable: true
+    FusionConnectionBackfillResponse:
+      type: object
+      required: [streams]
+      properties:
+        streams:
+          description: Per-stream outcome.
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionConnectionBackfillStreamOutcome"
+    FusionConnectionBackfillStreamOutcome:
+      type: object
+      required: [stream_name, outcome, backfill]
+      properties:
+        stream_name:
+          type: string
+        outcome:
+          type: string
+          enum: [requested, running, failed]
+        run_id:
+          type: string
+          format: uuid
+          nullable: true
+        backfill:
+          $ref: "#/components/schemas/FusionConnectionBackfillRun"
+    FusionConnectionBackfillRun:
+      description: >-
+        Allowlisted fields from Agents' backfill coordinator record. job_id, async_job_id, and the
+        previous_run_* coordinator internals are never exposed, and error is reduced to its code
+        (the text before ": ", or null), so free-form worker error text never reaches the caller.
+      type: object
+      required: [id, stream_name, source_id, workspace_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        stream_name:
+          type: string
+        connection_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_id:
+          type: string
+          format: uuid
+        destination_id:
+          type: string
+          format: uuid
+          nullable: true
+        workspace_id:
+          type: string
+          format: uuid
+        requested_at:
+          type: string
+          format: date-time
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancel_requested_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        expected_total_rows:
+          type: integer
+          format: int64
+          nullable: true
+        error:
+          type: string
+          nullable: true
     SourceExecuteRequest:
       type: object
       additionalProperties: false
