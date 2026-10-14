@@ -559,16 +559,14 @@ class JobInputService(
   )
 
   private fun getConnectionAndActors(connectionId: UUID): ConnectionAndActors {
-    val connection = connectionService.getStandardSync(connectionId) ?: throw NotFoundException()
-    val source = sourceService.getSourceConnection(connection.sourceId) ?: throw NotFoundException()
-    val sourceDefinition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId) ?: throw NotFoundException()
-    val sourceDefinitionVersion =
-      actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) ?: throw NotFoundException()
-    val destination = destinationService.getDestinationConnection(connection.destinationId) ?: throw NotFoundException()
-    val destinationDefinition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) ?: throw NotFoundException()
+    val connection = connectionService.getStandardSync(connectionId)
+    val source = sourceService.getSourceConnection(connection.sourceId)
+    val sourceDefinition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
+    val sourceDefinitionVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
+    val destination = destinationService.getDestinationConnection(connection.destinationId)
+    val destinationDefinition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)
     val destinationDefinitionVersion =
       actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId)
-        ?: throw NotFoundException()
     return ConnectionAndActors(
       connection,
       source,

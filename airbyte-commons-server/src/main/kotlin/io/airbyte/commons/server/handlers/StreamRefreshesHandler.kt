@@ -64,7 +64,7 @@ class StreamRefreshesHandler(
 
     // Store connection timeline event (start a refresh).
     val manualSyncResult = eventRunner.startNewManualSync(connectionId)
-    val job = manualSyncResult?.jobId?.let { jobPersistence.getJob(it) }
+    val job = manualSyncResult.jobId?.let { jobPersistence.getJob(it) }
     job?.let {
       val userId = connectionTimelineEventHelper.currentUserIdIfExist
       val refreshStartedEvent =

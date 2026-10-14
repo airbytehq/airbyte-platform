@@ -236,16 +236,16 @@ class ActorServicePaginationHelper(
           $actorDefinitionField ILIKE ?
         )
         """.trimIndent()
-      params += "%${filters?.searchTerm}%"
-      params += "%${filters?.searchTerm}%"
+      params += "%${filters.searchTerm}%"
+      params += "%${filters.searchTerm}%"
     }
 
     if (!filters?.states.isNullOrEmpty()) {
-      val activeStates = filters?.states?.filter { it == ActorStatus.ACTIVE }
-      val inactiveStates = filters?.states?.filter { it == ActorStatus.INACTIVE }
+      val activeStates = filters.states.filter { it == ActorStatus.ACTIVE }
+      val inactiveStates = filters.states.filter { it == ActorStatus.INACTIVE }
 
       when {
-        activeStates!!.isNotEmpty() && inactiveStates!!.isNotEmpty() -> {
+        activeStates.isNotEmpty() && inactiveStates.isNotEmpty() -> {
           // no filter
         }
         activeStates.isNotEmpty() -> {
@@ -260,7 +260,7 @@ class ActorServicePaginationHelper(
             )
             """.trimIndent()
         }
-        inactiveStates!!.isNotEmpty() -> {
+        inactiveStates.isNotEmpty() -> {
           conditions +=
             """
             NOT EXISTS (

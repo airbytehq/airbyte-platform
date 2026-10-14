@@ -81,7 +81,7 @@ open class ActorDefinitionVersionHandler
     fun resolveActorDefinitionVersionByTag(resolveVersionReq: ResolveActorDefinitionVersionRequestBody): ResolveActorDefinitionVersionResponse {
       val actorDefinitionId = resolveVersionReq.actorDefinitionId
       val actorType = apiPojoConverters.toInternalActorType(resolveVersionReq.actorType)
-      val defaultVersion = getDefaultVersion(actorType!!, actorDefinitionId)
+      val defaultVersion = getDefaultVersion(actorType, actorDefinitionId)
 
       val optResolvedVersion =
         actorDefinitionVersionResolver.resolveVersionForTag(

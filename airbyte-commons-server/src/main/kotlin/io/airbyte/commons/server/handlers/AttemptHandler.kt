@@ -140,7 +140,6 @@ open class AttemptHandler(
     val stateToClear =
       getFullRefreshStreamsToClear(
         JobConfigProxy(job.config).configuredCatalog!!,
-        job.id,
         evaluateResumableFlag,
       )
 
@@ -203,14 +202,9 @@ open class AttemptHandler(
   @InternalForTesting
   fun getFullRefreshStreamsToClear(
     catalog: ConfiguredAirbyteCatalog,
-    id: Long,
     excludeResumableStreams: Boolean,
-  ): Set<StreamDescriptor> {
-    val configuredStreams =
-      catalog.streams
-        ?: throw BadRequestException("Missing configured catalog stream for job: $id")
-
-    return configuredStreams
+  ): Set<StreamDescriptor> =
+    catalog.streams
       .stream()
       .filter { s: ConfiguredAirbyteStream ->
         if (s.syncMode == SyncMode.FULL_REFRESH) {
@@ -224,7 +218,6 @@ open class AttemptHandler(
         }
       }.map { s: ConfiguredAirbyteStream -> StreamDescriptor().withName(s.stream.name).withNamespace(s.stream.namespace) }
       .collect(Collectors.toSet())
-  }
 
   fun getAttemptForJob(
     jobId: Long,

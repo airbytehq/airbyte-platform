@@ -242,9 +242,9 @@ open class GroupServiceDataImpl(
         val configuration = scimConfigurationRepository.findByOrganizationId(organizationId.value)
         if (
           mapping?.userId != userId.value ||
-          mapping?.userActive != true ||
+          mapping.userActive != true ||
           configuration?.id != source.configurationId ||
-          configuration?.enabled != true
+          configuration.enabled != true
         ) {
           throw InactiveUserAccessException("SCIM Group members must reference an active User mapping")
         }

@@ -840,7 +840,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
           if (hasDestinationCatalog) {
             val destinationCatalog =
-              actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(destCatalogId!!)).catalog
+              actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(destCatalogId)).catalog
             validateCatalogWithDestinationCatalog(connectionPatch.syncCatalog, destinationCatalog)
           }
         }

@@ -529,7 +529,7 @@ open class ConnectorBuilderProjectsHandler
           connectorBuilderService.updateBuilderProjectTestingValues(project.builderProjectId, updatedTestingValuesWithSecretCoordinates)
           val updatedTestingValuesWithObfuscatedSecrets =
             secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, spec)
-          builderProjectStreamRead?.latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets
+          builderProjectStreamRead.latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets
         }
 
         return builderProjectStreamRead

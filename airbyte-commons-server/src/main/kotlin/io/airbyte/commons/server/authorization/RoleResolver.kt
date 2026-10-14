@@ -358,8 +358,7 @@ private fun determineWorkspaceRole(
       .minByOrNull {
         it.permissionType
           .convertTo<WorkspaceAuthRole>()
-          ?.getAuthority()
-          ?: Integer.MAX_VALUE
+          .getAuthority()
       }?.permissionType
   }
 
@@ -435,8 +434,7 @@ private fun determineOrganizationRole(
       .minByOrNull {
         it.permissionType
           .convertTo<OrganizationAuthRole>()
-          ?.getAuthority()
-          ?: Integer.MAX_VALUE
+          .getAuthority()
       }?.permissionType
   }
 
@@ -455,16 +453,16 @@ private fun determineOrganizationRole(
   return organizationIds
     .map { highestOrgPermsByOrganizationId.getValue(it) }
     .minByOrNull {
-      organizationAuthority(it.permissionType) ?: Integer.MAX_VALUE
+      organizationAuthority(it.permissionType)
     }?.permissionType
 }
 
 private fun highestOrganizationPermission(perms: List<Permission>): Permission =
   perms.maxBy {
-    organizationAuthority(it.permissionType) ?: Integer.MIN_VALUE
+    organizationAuthority(it.permissionType)
   }
 
 private fun workspaceAuthority(permissionType: PermissionType): Int? =
   WorkspaceAuthRole.entries.firstOrNull { it.name == permissionType.name }?.getAuthority()
 
-private fun organizationAuthority(permissionType: PermissionType): Int? = permissionType.convertTo<OrganizationAuthRole>()?.getAuthority()
+private fun organizationAuthority(permissionType: PermissionType): Int = permissionType.convertTo<OrganizationAuthRole>().getAuthority()

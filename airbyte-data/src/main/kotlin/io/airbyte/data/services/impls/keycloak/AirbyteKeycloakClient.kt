@@ -558,8 +558,8 @@ class AirbyteKeycloakClient(
             throw InvalidTokenException("Token validation failed with status ${response.code}")
           }
           else -> {
-            val responseBody = response.body?.string()
-            if (responseBody.isNullOrEmpty()) {
+            val responseBody = response.body.string()
+            if (responseBody.isEmpty()) {
               logger.debug { "Received null or empty userinfo response" }
               throw MalformedTokenResponseException("Empty response from Keycloak userinfo endpoint")
             }

@@ -45,7 +45,6 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobConfigProxy
-import io.airbyte.config.RefreshStream
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.micronaut.core.util.CollectionUtils
@@ -246,8 +245,7 @@ class JobConverter(
       if (job.configType == ConfigType.REFRESH) {
         val refreshedStreams =
           job.config.refresh.streamsToRefresh
-            .flatMap { refreshStream: RefreshStream -> listOf(refreshStream.streamDescriptor) }
-            .mapNotNull { obj: io.airbyte.config.StreamDescriptor -> obj?.toApi() }
+            .mapNotNull { refreshStream -> refreshStream.streamDescriptor?.toApi() }
         if (refreshedStreams.isEmpty()) {
           return Optional.empty()
         }
@@ -265,7 +263,7 @@ class JobConverter(
     fun getAttemptRead(attempt: Attempt): AttemptRead =
       AttemptRead()
         .id(attempt.attemptNumber.toLong())
-        .status(attempt.status?.convertTo<AttemptStatus>())
+        .status(attempt.status.convertTo<AttemptStatus>())
         .bytesSynced(
           // TODO (parker) remove after frontend switches to totalStats
           attempt.output

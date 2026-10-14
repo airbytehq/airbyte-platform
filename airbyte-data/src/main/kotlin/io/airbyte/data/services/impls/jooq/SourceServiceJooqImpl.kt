@@ -255,13 +255,13 @@ class SourceServiceJooqImpl(
       ScopeType.workspace,
       JoinType.LEFT_OUTER_JOIN,
       ActorType.source,
-      { record: Record -> this.mapRecordToSourceDefinitionWithGrantStatus(record!!) },
+      { record: Record -> this.mapRecordToSourceDefinitionWithGrantStatus(record) },
       Tables.ACTOR_DEFINITION.CUSTOM.eq(false),
       includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstones),
     )
 
   private fun mapRecordToSourceDefinitionWithGrantStatus(record: Record): MutableMap.MutableEntry<StandardSourceDefinition, Boolean> =
-    actorDefinitionWithGrantStatus(record, { rec: Record -> buildStandardSourceDefinition(rec!!) })
+    actorDefinitionWithGrantStatus(record, { rec: Record -> buildStandardSourceDefinition(rec) })
 
   private fun buildStandardSourceDefinition(record: Record): StandardSourceDefinition {
     // Extract the StandardSourceDefinition from the record using the default max seconds logic.

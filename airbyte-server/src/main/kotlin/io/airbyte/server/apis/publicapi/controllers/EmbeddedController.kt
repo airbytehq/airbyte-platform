@@ -38,7 +38,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.time.Clock
 import java.time.temporal.ChronoUnit
 import java.util.Base64
-import java.util.UUID
 
 // Airbyte Embedded and token generation requires auth,
 // so if auth isn't enabled, then this controller is not available.
@@ -151,7 +150,7 @@ class EmbeddedController(
     )
 
     val currentUser = currentUserService.getCurrentUser()
-    val externalUserId = req.externalUserId ?: UUID.randomUUID().toString()
+    val externalUserId = req.externalUserId
 
     val workspaceId =
       embeddedWorkspacesHandler.getOrCreate(

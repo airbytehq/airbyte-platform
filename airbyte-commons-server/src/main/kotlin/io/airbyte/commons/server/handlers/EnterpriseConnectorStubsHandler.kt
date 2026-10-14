@@ -59,7 +59,7 @@ open class EnterpriseConnectorStubsHandler(
       okHttpClient.newCall(request).execute().use { response ->
         if (!response.isSuccessful) throw IOException("Unexpected code ${response.code}")
 
-        val jsonResponse = response.body?.string() ?: throw IOException("Empty response body")
+        val jsonResponse = response.body.string()
 
         val objectMapper = jacksonObjectMapper()
         val typeReference = object : TypeReference<List<RegistryEnterpriseStub>>() {}

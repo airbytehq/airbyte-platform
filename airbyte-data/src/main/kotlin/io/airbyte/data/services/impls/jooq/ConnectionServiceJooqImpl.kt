@@ -709,9 +709,7 @@ class ConnectionServiceJooqImpl
       }
 
       // Cursor provided - find the connection and extract the sort key value
-      val cursorConnection =
-        getWorkspaceStandardSyncWithJobInfo(cursor)
-          ?: throw ConfigNotFoundException("Connection", cursor.toString())
+      val cursorConnection = getWorkspaceStandardSyncWithJobInfo(cursor)
 
       // Extract cursor values based on sort key
       val connectionName = cursorConnection.connection().name

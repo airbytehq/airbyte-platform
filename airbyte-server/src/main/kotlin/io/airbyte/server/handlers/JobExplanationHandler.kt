@@ -131,7 +131,7 @@ class JobExplanationHandler(
   }
 
   private fun getFinalAttemptForJob(jobId: Long): Attempt {
-    val info = jobHistoryHandler.getJobInfoWithoutLogs(jobId) ?: throw RuntimeException("Could not find job with id $jobId")
+    val info = jobHistoryHandler.getJobInfoWithoutLogs(jobId)
     return attemptHandler
       .getAttemptForJob(
         jobId,

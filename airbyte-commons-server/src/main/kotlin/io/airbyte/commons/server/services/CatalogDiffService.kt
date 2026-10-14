@@ -156,9 +156,7 @@ class CatalogDiffService(
     originalConfiguredCatalog: ConfiguredAirbyteCatalog?,
   ) {
     // Get the current connection
-    val connection =
-      connectionService.getStandardSync(connectionId)
-        ?: throw IllegalArgumentException("Connection not found: $connectionId")
+    val connection = connectionService.getStandardSync(connectionId)
 
     // Determine if there's a breaking change
     val hasBreakingChange = schemaChange == SchemaChange.BREAKING

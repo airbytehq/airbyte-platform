@@ -34,7 +34,7 @@ class ApiExceptionHandler : ExceptionHandler<ApiException, HttpResponse<*>> {
     log.error {
       "API exception [errorId: $errorId]: ${KnownException.infoFromThrowableWithMessageAndStackTrace(
         exception,
-        exception.message ?: "API exception",
+        exception.message,
       )}"
     }
 

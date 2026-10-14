@@ -90,9 +90,7 @@ class CatalogApiController(
       workspaceId = resolveWorkspaceIdFromConnection(connectionId)
 
       // Validate both catalogs belong to the connection's source
-      val connection =
-        connectionService.getStandardSync(connectionId)
-          ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
+      val connection = connectionService.getStandardSync(connectionId)
 
       validateCatalogBelongsToSource(currentCatalogId, connection.sourceId)
       validateCatalogBelongsToSource(newCatalogId, connection.sourceId)
@@ -121,13 +119,8 @@ class CatalogApiController(
 
   @InternalForTesting
   internal fun resolveWorkspaceIdFromConnection(connectionId: UUID): UUID {
-    val connection =
-      connectionService.getStandardSync(connectionId)
-        ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
-
-    val source =
-      sourceService.getSourceConnection(connection.sourceId)
-        ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
+    val connection = connectionService.getStandardSync(connectionId)
+    val source = sourceService.getSourceConnection(connection.sourceId)
 
     return source.workspaceId
   }
@@ -140,9 +133,7 @@ class CatalogApiController(
         ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
       }
 
-    val source =
-      sourceService.getSourceConnection(actorId)
-        ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
+    val source = sourceService.getSourceConnection(actorId)
 
     return source.workspaceId
   }

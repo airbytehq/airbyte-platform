@@ -180,7 +180,7 @@ class WebBackendConnectionsHandler(
       )
 
     val connectionsWithJobInfo =
-      connectionService.listWorkspaceStandardSyncsCursorPaginated(query, cursorPagination!!)
+      connectionService.listWorkspaceStandardSyncsCursorPaginated(query, cursorPagination)
     val sourceIds = connectionsWithJobInfo.stream().map { conn: ConnectionWithJobInfo -> conn.connection().sourceId }.toList()
     val destinationIds = connectionsWithJobInfo.stream().map { conn: ConnectionWithJobInfo -> conn.connection().destinationId }.toList()
 

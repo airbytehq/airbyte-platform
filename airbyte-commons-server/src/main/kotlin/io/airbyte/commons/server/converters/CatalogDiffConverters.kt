@@ -28,7 +28,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .StreamTransform()
       .transformType(
-        transform.transformType?.convertTo<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum>(),
+        transform.transformType.convertTo<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum>(),
       ).streamDescriptor(transform.streamDescriptor.toApi())
       .updateStream(updateStreamToApi(transform).orElse(null))
 
@@ -58,7 +58,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .StreamAttributeTransform()
       .transformType(
-        transform.transformType?.convertTo<io.airbyte.api.model.generated.StreamAttributeTransform.TransformTypeEnum>(),
+        transform.transformType.convertTo<io.airbyte.api.model.generated.StreamAttributeTransform.TransformTypeEnum>(),
       ).breaking(transform.breaking)
       .updatePrimaryKey(updatePrimaryKeyToApi(transform).orElse(null))
 
@@ -66,7 +66,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .FieldTransform()
       .transformType(
-        transform.transformType?.convertTo<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum>(),
+        transform.transformType.convertTo<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum>(),
       ).fieldName(transform.fieldName)
       .breaking(transform.breaking())
       .addField(addFieldToApi(transform).orElse(null))

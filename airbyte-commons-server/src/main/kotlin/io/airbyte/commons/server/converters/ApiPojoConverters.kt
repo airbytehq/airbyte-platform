@@ -205,10 +205,10 @@ class ApiPojoConverters(
     return connectionRead
   }
 
-  fun toApiJobType(jobType: io.airbyte.config.JobTypeResourceLimit.JobType): JobType? = jobType?.convertTo<JobType>()
+  fun toApiJobType(jobType: io.airbyte.config.JobTypeResourceLimit.JobType): JobType = jobType.convertTo<JobType>()
 
-  fun toInternalJobType(jobType: JobType): io.airbyte.config.JobTypeResourceLimit.JobType? =
-    jobType?.convertTo<io.airbyte.config.JobTypeResourceLimit.JobType>()
+  fun toInternalJobType(jobType: JobType): io.airbyte.config.JobTypeResourceLimit.JobType =
+    jobType.convertTo<io.airbyte.config.JobTypeResourceLimit.JobType>()
 
   fun toApiTag(tag: Tag): io.airbyte.api.model.generated.Tag =
     io.airbyte.api.model.generated
@@ -225,7 +225,7 @@ class ApiPojoConverters(
       .withWorkspaceId(tag.workspaceId)
       .withColor(tag.color)
 
-  fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType? = actorType?.convertTo<io.airbyte.config.ActorType>()
+  fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType = actorType.convertTo<io.airbyte.config.ActorType>()
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
   fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? = apiTimeUnit?.convertTo<ConnectionSchedule.TimeUnitEnum>()

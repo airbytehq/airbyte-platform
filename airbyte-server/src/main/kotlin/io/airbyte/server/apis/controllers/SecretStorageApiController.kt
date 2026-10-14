@@ -155,7 +155,7 @@ class SecretStorageApiController(
 
 private fun SecretStorageWithConfig.toApiModel(): SecretStorageRead {
   val secretStorageRead = SecretStorageRead()
-  secretStorageRead.id(this.secretStorage.id?.value)
+  secretStorageRead.id(this.secretStorage.id.value)
   secretStorageRead.isConfiguredFromEnvironment(this.secretStorage.configuredFromEnvironment)
   secretStorageRead.config(this.config)
   secretStorageRead.scopeId(this.secretStorage.scopeId)

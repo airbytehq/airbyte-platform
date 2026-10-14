@@ -574,7 +574,7 @@ internal class AttemptHandlerTest {
         )
       Mockito.`when`(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
 
-      val streams = handler.getFullRefreshStreamsToClear(mCatalog, 1, enableResumableFullRefresh)
+      val streams = handler.getFullRefreshStreamsToClear(mCatalog, enableResumableFullRefresh)
       val exp =
         if (enableResumableFullRefresh) {
           setOf(StreamDescriptor().withName("full").withNamespace("name"))
