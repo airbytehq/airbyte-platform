@@ -1,0 +1,103 @@
+/**
+ * Self-tests of the mock backend's store (playwright/mock/store.ts). They need no browser page.
+ */
+import { test, expect } from "@playwright/test";
+import destinationIds from "@src/area/connector/utils/destinations.json";
+import sourceIds from "@src/area/connector/utils/sources.json";
+
+import { catalogs, connection, defs, destination, scenario, source } from "../../mock";
+import { createStore } from "../../mock/store";
+
+const hostSpecification = { type: "object", properties: { host: { type: "string" } } };
+const pokeSource = source({ def: defs.pokeApiSource });
+const pokeConnection = connection({
+  source: pokeSource,
+  destination: destination({ def: defs.e2eTestingDestination }),
+  catalog: catalogs.pokeApi({ selected: true }),
+});
+
+test.describe("Mock backend store", () => {
+  test("reads are frozen snapshots that a later write does not change", () => {
+    const store = createStore(scenario({ connections: [pokeConnection] }));
+    const before = store.connections.get(pokeConnection);
+
+    store.connections.update(pokeConnection, { status: "deprecated" });
+
+    expect(Object.isFrozen(before.syncCatalog.streams[0])).toBe(true);
+    expect(before.status).toBe("active");
+    expect(store.connections.get(pokeConnection).status).toBe("deprecated");
+  });
+
+  test("with() keeps the entity and its ID, copy() makes a new entity with the next ID", () => {
+    const renamed = pokeConnection.with({ name: "Renamed" });
+    const second = pokeConnection.copy({ name: "Second" });
+    const store = createStore(scenario({ connections: [renamed, second] }));
+
+    expect(store.connections.get(pokeConnection)).toMatchObject({
+      connectionId: "c0000000-0000-4000-8000-000000000001",
+      name: "Renamed",
+    });
+    expect(store.connections.get(second)).toMatchObject({
+      connectionId: "c0000000-0000-4000-8000-000000000002",
+      name: "Second",
+    });
+  });
+
+  test("fails when a scenario uses two with() variants of one entity", () => {
+    const renamedSource = pokeSource.with({ name: "Renamed source" });
+    const otherConnection = pokeConnection.copy({ source: renamedSource });
+
+    expect(() => createStore(scenario({ connections: [pokeConnection, otherConnection] }))).toThrow(
+      `The scenario uses two different with() variants of ${pokeSource.key}. Use one variant per entity.`
+    );
+  });
+
+  test("fails when a scenario uses a with() variant of a source definition", () => {
+    const postgresWithSpec = defs.postgresSource.with({ specification: hostSpecification });
+    const first = pokeConnection.copy({ source: source({ def: defs.postgresSource }) });
+    const second = pokeConnection.copy({ source: source({ def: postgresWithSpec }) });
+
+    expect(() => createStore(scenario({ connections: [first, second] }))).toThrow(
+      `The scenario uses two different versions of the Postgres source definition (${sourceIds.Postgres}). ` +
+        "Use one definition handle per connector definition."
+    );
+  });
+
+  test("fails when a scenario uses a copy() of a source definition", () => {
+    const postgresCopy = defs.postgresSource.copy({ specification: hostSpecification });
+    const first = pokeConnection.copy({ source: source({ def: defs.postgresSource }) });
+    const second = pokeConnection.copy({ source: source({ def: postgresCopy }) });
+
+    expect(() => createStore(scenario({ connections: [first, second] }))).toThrow(
+      `The scenario uses two different versions of the Postgres source definition (${sourceIds.Postgres}). ` +
+        "Use one definition handle per connector definition."
+    );
+  });
+
+  test("fails when a scenario uses two versions of a destination definition", () => {
+    const postgresWithSpec = defs.postgresDestination.with({ specification: hostSpecification });
+    const first = pokeConnection.copy({ destination: destination({ def: defs.postgresDestination }) });
+    const second = pokeConnection.copy({ destination: destination({ def: postgresWithSpec }) });
+
+    expect(() => createStore(scenario({ connections: [first, second] }))).toThrow(
+      `The scenario uses two different versions of the Postgres destination definition (${destinationIds.Postgres}). ` +
+        "Use one definition handle per connector definition."
+    );
+  });
+
+  test("allows two sources that use the same definition handle", () => {
+    const first = pokeConnection.copy({ source: source({ def: defs.postgresSource }) });
+    const second = pokeConnection.copy({ source: source({ def: defs.postgresSource }) });
+    const store = createStore(scenario({ connections: [first, second] }));
+
+    expect(store.sources.all()).toHaveLength(2);
+    expect(store.definitions.allSources()).toHaveLength(1);
+  });
+
+  test("fails on a read of an entity that is not in the scenario", () => {
+    const store = createStore(scenario({ connections: [pokeConnection] }));
+
+    expect(store.connections.find(pokeConnection.copy())).toBeUndefined();
+    expect(() => store.connections.get("no-such-id")).toThrow("The mock store has no connection with ID no-such-id");
+  });
+});
