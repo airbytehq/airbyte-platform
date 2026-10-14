@@ -1,5 +1,5 @@
 import type { HandlerMap } from "./handler";
-import type { Store } from "../store";
+import type { Store, StoredConnection } from "../store";
 import type {
   WebBackendConnectionListItem,
   WebBackendConnectionListRequestBody,
@@ -58,7 +58,7 @@ function toListItem(connection: Readonly<WebBackendConnectionRead>): WebBackendC
   };
 }
 
-/** Connection reads, lists, and deletes. The mock has no jobs, so every connection is idle. */
+/** Connection reads, lists, updates, and deletes. The mock has no jobs, so every connection is idle. */
 export const connectionHandlers: HandlerMap = {
   webBackendGetConnection: ({ body, store }) => store.connections.find(body.connectionId) ?? notFound(),
 
@@ -99,6 +99,20 @@ export const connectionHandlers: HandlerMap = {
     isOtherWorkspace(store, body.workspaceId) ? notFound() : { events: [] },
   getStreamStatusesByRunState: ({ body, store }) =>
     store.connections.find(body.connectionId) ? { streamStatuses: [] } : notFound(),
+
+  /**
+   * Saves every field the webapp sent, so the next read shows the saved values. A null field means "no change", as
+   * on the server. Not saved: `skipReset` and `sourceCatalogId`, which only control this request, and `operations`,
+   * because the server adds IDs to operations when it saves them.
+   */
+  webBackendUpdateConnection: ({ body, store }) => {
+    if (!store.connections.find(body.connectionId)) {
+      return notFound();
+    }
+    const { connectionId, skipReset, sourceCatalogId, operations, ...fields } = body;
+    const sent = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== null));
+    return store.connections.update(connectionId, sent as Partial<StoredConnection>);
+  },
 
   /** The server does not remove a deleted connection. It sets the status to "deprecated" and answers 204. */
   deleteConnection: ({ body, store }) => {

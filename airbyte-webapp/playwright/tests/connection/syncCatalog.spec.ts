@@ -5,6 +5,8 @@
  * - Stream and field selection
  */
 
+import type { CatalogOptions, MockAirbyte } from "../../mock";
+
 import { test, expect, Page, BrowserContext, APIRequestContext } from "@playwright/test";
 import { SyncMode, DestinationSyncMode } from "@src/core/api/types/AirbyteClient";
 
@@ -13,6 +15,8 @@ import { postgresSourceAPI, postgresDestinationAPI } from "../../helpers/connect
 import { streamsTable, replicationForm, navigateToReplicationPage } from "../../helpers/replication";
 import { streamRow } from "../../helpers/streamRow";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+// `mockTest` runs against the new mock backend. `test` uses the old helpers. Tests in this file move to `mockTest` one at a time.
+import { catalogs, connection, defs, destination, scenario, source, test as mockTest } from "../../mock";
 import { setFeatureFlags, setFeatureServiceFlags, injectFeatureFlagsAndStyle } from "../../support/e2e";
 
 // Extended test data type that includes shared browser resources for serial tests
@@ -22,17 +26,15 @@ interface SerialTestData extends ConnectionTestData {
   request: APIRequestContext;
 }
 
-// Global workspace ID setup
+// Workspace of the deployed backend. Each live describe sets it in its beforeAll, so the mocked tests in this
+// file do not call the deployed backend.
 let workspaceId: string;
-
-test.beforeAll(async () => {
-  workspaceId = await setupWorkspaceForTests();
-});
 
 test.describe.serial("Sync Catalog - Stream state tests", () => {
   let testData: SerialTestData;
 
   test.beforeAll(async ({ browser }) => {
+    workspaceId = await setupWorkspaceForTests();
     // Create connection once for all tests in this block
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -304,6 +306,7 @@ test.describe.serial("Sync Catalog - Feature flag tests", () => {
   let testData: SerialTestData;
 
   test.beforeAll(async ({ browser }) => {
+    workspaceId = await setupWorkspaceForTests();
     // Set feature flags to disable columnSelection
     setFeatureFlags({ "connection.columnSelection": false });
     setFeatureServiceFlags({});
@@ -377,532 +380,476 @@ test.describe.serial("Sync Catalog - Feature flag tests", () => {
 });
 
 /**
- * Sync Modes Tests
+ * Sync Modes Tests - mocked API
  *
- * Tests all combinations of sync modes (Full Refresh, Incremental) with destination modes
- * (Append, Overwrite, Overwrite+Deduped, Append+Deduped). Each test suite:
+ * Tests the combinations of sync modes (Full refresh, Incremental) with destination modes (Append, Overwrite,
+ * Overwrite + Deduped, Append + Deduped). Each test:
  * 1. Configures a stream with the sync mode
- * 2. Verifies PK/Cursor controls visibility and error states
+ * 2. Checks the primary key (PK) and cursor controls and their errors
  * 3. Saves the configuration
- * 4. Reloads the page to verify persistence
+ * 4. Reloads the page and checks the saved configuration
  *
- * Uses 2 streams: users (with source-defined PK) and cities (without source-defined PK)
+ * Uses 2 streams: users (with a source-defined PK) and cities (without a source-defined PK).
+ *
+ * The tests are independent. Each test sets its own start state in its scenario. Most tests start from the
+ * default scenario: every stream is selected as Full refresh | Overwrite, with no PKs that the user selected.
  */
-test.describe.serial("Sync Catalog - Sync Modes", () => {
-  let testData: SerialTestData;
+const postgresConnection = connection({
+  source: source({ def: defs.postgresSource, name: "Postgres source" }),
+  destination: destination({ def: defs.postgresDestination, name: "Postgres destination" }),
+  catalog: catalogs.postgres({ selected: true }),
+});
 
-  test.beforeAll(async ({ browser }) => {
-    // Create connection once for all sync mode tests
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    const request = context.request;
-
-    // Create Postgres → Postgres connection (no streams enabled by default)
-    const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
-      useMockSchemaDiscovery: true,
-    });
-
-    // Navigate to replication page
-    await navigateToReplicationPage(page, workspaceId, baseTestData.connection.connectionId);
-
-    // Combine base test data with browser resources
-    testData = { ...baseTestData, page, context, request };
+/** A scenario with the Postgres connection. Every stream is selected. `streams` changes the config of some streams. */
+function syncModesScenario(streams: CatalogOptions["streams"] = {}) {
+  return scenario({
+    connections: [postgresConnection.with({ catalog: catalogs.postgres({ selected: true, streams }) })],
   });
+}
 
-  test.afterAll(async () => {
-    // Cleanup connection and close browser context
-    await connectionTestScaffold.cleanupConnection(testData.request, testData);
-    await testData.page.close();
-    await testData.context.close();
-  });
+/** cities as Full refresh | Overwrite + Deduped, with two PKs that the user selected. */
+const citiesWithTwoPKs = {
+  destinationSyncMode: DestinationSyncMode.overwrite_dedup,
+  primaryKey: [["city_code"], ["city"]],
+};
 
-  test.describe("Full refresh | Append", () => {
-    test("should select the sync mode", async () => {
-      // No reload needed - page already loaded in beforeAll
-      // Enable users stream and select Full Refresh | Append
-      await streamRow.toggleStreamSync(testData.page, "public", "users", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
+/** The config of one stream in the last connection update that the webapp sent. */
+function lastSavedStreamConfig(airbyte: MockAirbyte, streamName: string) {
+  return catalogs.find(airbyte.calls.last("webBackendUpdateConnection")?.syncCatalog, "public", streamName).config;
+}
 
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.append
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.append
-      );
-    });
+mockTest.describe("Sync Catalog - Sync Modes - mocked API", () => {
+  mockTest.describe(() => {
+    mockTest.use({ airbyteScenario: syncModesScenario() });
 
-    test("should not display the PK and Cursor combobox buttons", async () => {
-      // Full Refresh | Append doesn't require PK or cursor
-      const isPKDisplayed = await streamRow.isPKComboboxDisplayed(testData.page, "public", "users");
-      expect(isPKDisplayed).toBe(false);
+    mockTest("Full refresh | Append", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "users");
-      expect(hasPKError).toBe(false);
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "users", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
 
-      const isCursorDisplayed = await streamRow.isCursorComboboxDisplayed(testData.page, "public", "users");
-      expect(isCursorDisplayed).toBe(false);
+        await streamRow.selectSyncMode(page, "public", "users", SyncMode.full_refresh, DestinationSyncMode.append);
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.append
+        );
+      });
 
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "users");
-      expect(hasCursorError).toBe(false);
-    });
+      await mockTest.step("should not display the PK and Cursor combobox buttons", async () => {
+        expect(await streamRow.isPKComboboxDisplayed(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingPKError(page, "public", "users")).toBe(false);
+        expect(await streamRow.isCursorComboboxDisplayed(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingCursorError(page, "public", "users")).toBe(false);
+      });
 
-    test("should allow to save changes", async () => {
-      // Verify no error state and save
-      const hasNoStreamsError = await streamsTable.hasNoStreamsSelectedError(testData.page);
-      expect(hasNoStreamsError).toBe(false);
+      await mockTest.step("should allow to save changes", async () => {
+        expect(await streamsTable.hasNoStreamsSelectedError(page)).toBe(false);
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
 
-      await streamsTable.clickSaveChangesButton(testData.page);
+        const updates = airbyte.calls("webBackendUpdateConnection");
+        expect(updates).toHaveLength(1);
+        expect(updates[0]).toMatchObject({
+          connectionId: initial.connectionId,
+          sourceCatalogId: initial.catalogId,
+          skipReset: true,
+        });
+        expect(lastSavedStreamConfig(airbyte, "users")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+        });
+        // Streams the test did not touch are sent unchanged.
+        expect(lastSavedStreamConfig(airbyte, "cars")).toMatchObject({
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.overwrite,
+        });
+      });
 
-      // Wait for success notification
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
 
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
-
-      // Verify stream is still enabled with correct sync mode
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.append
-      );
-    });
-  });
-
-  test.describe("Full refresh | Overwrite", () => {
-    test("should select the sync mode", async () => {
-      // No reload needed - previous test already verified persistence
-      // Just select new sync mode (stream already enabled from previous test)
-      await streamRow.toggleStreamSync(testData.page, "public", "users", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
-    });
-
-    test("should not display the PK and Cursor combobox buttons", async () => {
-      // Full Refresh | Overwrite doesn't require PK or cursor
-      const isPKDisplayed = await streamRow.isPKComboboxDisplayed(testData.page, "public", "users");
-      expect(isPKDisplayed).toBe(false);
-
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "users");
-      expect(hasPKError).toBe(false);
-
-      const isCursorDisplayed = await streamRow.isCursorComboboxDisplayed(testData.page, "public", "users");
-      expect(isCursorDisplayed).toBe(false);
-
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "users");
-      expect(hasCursorError).toBe(false);
-    });
-
-    test("should allow to save changes", async () => {
-      // Verify no error state and save
-      const hasNoStreamsError = await streamsTable.hasNoStreamsSelectedError(testData.page);
-      expect(hasNoStreamsError).toBe(false);
-
-      await streamsTable.clickSaveChangesButton(testData.page);
-
-      // Wait for success notification
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
-
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
-
-      // Verify stream is still enabled with correct sync mode
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.append
+        );
+        expect(airbyte.calls.last("webBackendGetConnection")).toEqual({
+          connectionId: initial.connectionId,
+          withRefreshedCatalog: false,
+        });
+      });
     });
   });
 
-  test.describe("Full refresh | Overwrite + Deduped", () => {
-    test("should select the sync mode", async () => {
-      // No reload needed - previous test already verified persistence
-      // Enable cities stream (different stream from previous tests)
-      await streamRow.toggleStreamSync(testData.page, "public", "cities", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "cities");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite_dedup
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite_dedup
-      );
+  mockTest.describe(() => {
+    // users starts as Full refresh | Append, so selecting Overwrite changes the form.
+    mockTest.use({
+      airbyteScenario: syncModesScenario({ users: { destinationSyncMode: DestinationSyncMode.append } }),
     });
 
-    test("should show missing PK error", async () => {
-      // Overwrite + Deduped requires PK but not cursor
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "cities");
-      expect(hasPKError).toBe(true);
+    mockTest("Full refresh | Overwrite", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "cities");
-      expect(hasCursorError).toBe(false);
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "users", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
 
-      // Save button should be disabled due to missing PK
-      const isSaveEnabled = await streamsTable.isSaveChangesButtonEnabled(testData.page);
-      expect(isSaveEnabled).toBe(false);
-    });
+        await streamRow.selectSyncMode(page, "public", "users", SyncMode.full_refresh, DestinationSyncMode.overwrite);
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite
+        );
+      });
 
-    test("should select PK", async () => {
-      // Select city_code as PK
-      await streamRow.selectPKs(testData.page, "public", "cities", ["city_code"]);
-      await streamRow.verifySelectedPK(testData.page, "public", "cities", "city_code");
+      await mockTest.step("should not display the PK and Cursor combobox buttons", async () => {
+        expect(await streamRow.isPKComboboxDisplayed(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingPKError(page, "public", "users")).toBe(false);
+        expect(await streamRow.isCursorComboboxDisplayed(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingCursorError(page, "public", "users")).toBe(false);
+      });
 
-      // Verify PK error is gone
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "cities");
-      expect(hasPKError).toBe(false);
+      await mockTest.step("should allow to save changes", async () => {
+        expect(await streamsTable.hasNoStreamsSelectedError(page)).toBe(false);
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
 
-      // Expand stream to verify PK label on field
-      await streamRow.toggleExpandCollapse(testData.page, "public", "cities");
-      const isFieldPK = await streamRow.isFieldPK(testData.page, "public", "cities", "city_code");
-      expect(isFieldPK).toBe(true);
-    });
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(1);
+        expect(lastSavedStreamConfig(airbyte, "users")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.overwrite,
+        });
+      });
 
-    test("should allow to save changes", async () => {
-      await streamsTable.clickSaveChangesButton(testData.page);
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
 
-      // Wait for success notification
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
-
-    test("should select multiple PKs", async () => {
-      // Reload page to verify persisted state before adding another PK
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
-
-      // Add city as additional PK (city_code is already selected from previous save)
-      await streamRow.selectPKs(testData.page, "public", "cities", ["city"]);
-      await streamRow.verifySelectedPK(testData.page, "public", "cities", "2 items selected");
-
-      // Expand stream to verify both PK labels
-      await streamRow.toggleExpandCollapse(testData.page, "public", "cities");
-      const isCityCodePK = await streamRow.isFieldPK(testData.page, "public", "cities", "city_code");
-      expect(isCityCodePK).toBe(true);
-      const isCityPK = await streamRow.isFieldPK(testData.page, "public", "cities", "city");
-      expect(isCityPK).toBe(true);
-
-      await streamsTable.clickSaveChangesButton(testData.page);
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
-
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
-
-      // Verify stream is still enabled with correct sync mode and PKs
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "cities");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.verifySelectedPK(testData.page, "public", "cities", "2 items selected");
-
-      // Note: Sync mode display changes from overwrite_dedup to overwrite after save
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite
+        );
+      });
     });
   });
 
-  test.describe("Full refresh | Overwrite + Deduped (source-defined PK)", () => {
-    test("should select the sync mode", async () => {
-      // No reload needed - previous test already verified persistence
-      // Switch to users stream and select Full Refresh | Overwrite + Deduped
-      await streamRow.toggleStreamSync(testData.page, "public", "users", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
+  mockTest.describe(() => {
+    mockTest.use({ airbyteScenario: syncModesScenario() });
 
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite_dedup
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite_dedup
-      );
-    });
+    mockTest("Full refresh | Overwrite + Deduped", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-    test("should NOT show missing PK and Cursor error", async () => {
-      // Source-defined PK is automatically used, no error
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "users");
-      expect(hasPKError).toBe(false);
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "cities", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "cities")).toBe(true);
 
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "users");
-      expect(hasCursorError).toBe(false);
+        await streamRow.selectSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+      });
 
-      // Save button should be enabled
-      const isSaveEnabled = await streamsTable.isSaveChangesButtonEnabled(testData.page);
-      expect(isSaveEnabled).toBe(true);
-    });
+      await mockTest.step("should show missing PK error", async () => {
+        expect(await streamRow.hasMissingPKError(page, "public", "cities")).toBe(true);
+        expect(await streamRow.hasMissingCursorError(page, "public", "cities")).toBe(false);
+        expect(await streamsTable.isSaveChangesButtonEnabled(page)).toBe(false);
+      });
 
-    test("should show non-editable selected PK", async () => {
-      // Verify source-defined PK is shown and not editable
-      await streamRow.verifySelectedPK(testData.page, "public", "users", "id");
+      await mockTest.step("should select PK", async () => {
+        await streamRow.selectPKs(page, "public", "cities", ["city_code"]);
+        await streamRow.verifySelectedPK(page, "public", "cities", "city_code");
+        expect(await streamRow.hasMissingPKError(page, "public", "cities")).toBe(false);
 
-      const isPKDisabled = await streamRow.isPKComboboxDisabled(testData.page, "public", "users");
-      expect(isPKDisabled).toBe(true);
+        await streamRow.toggleExpandCollapse(page, "public", "cities");
+        expect(await streamRow.isFieldPK(page, "public", "cities", "city_code")).toBe(true);
+      });
 
-      // Expand stream to verify PK label on field
-      await streamRow.toggleExpandCollapse(testData.page, "public", "users");
-      const isFieldPK = await streamRow.isFieldPK(testData.page, "public", "users", "id");
-      expect(isFieldPK).toBe(true);
-    });
+      await mockTest.step("should allow to save changes", async () => {
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
 
-    test("should allow to save changes", async () => {
-      await streamsTable.clickSaveChangesButton(testData.page);
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(1);
+        expect(lastSavedStreamConfig(airbyte, "cities")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.overwrite_dedup,
+          primaryKey: [["city_code"]],
+        });
+      });
 
-      // Wait for success notification
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
+      await mockTest.step("should select multiple PKs", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
 
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
+        // city_code is already a PK from the save above.
+        await streamRow.selectPKs(page, "public", "cities", ["city"]);
+        await streamRow.verifySelectedPK(page, "public", "cities", "2 items selected");
 
-      // Verify stream is still enabled with correct sync mode and PK
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
+        await streamRow.toggleExpandCollapse(page, "public", "cities");
+        expect(await streamRow.isFieldPK(page, "public", "cities", "city_code")).toBe(true);
+        expect(await streamRow.isFieldPK(page, "public", "cities", "city")).toBe(true);
 
-      await streamRow.verifySelectedPK(testData.page, "public", "users", "id");
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
 
-      // Note: Sync mode display changes from overwrite_dedup to overwrite after save
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
-    });
-  });
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(2);
+        expect(lastSavedStreamConfig(airbyte, "cities")).toMatchObject(citiesWithTwoPKs);
+      });
 
-  test.describe("Incremental | Append", () => {
-    test("should select the sync mode", async () => {
-      // No reload needed - previous test already verified persistence
-      // Just select new sync mode (stream already enabled)
-      await streamRow.toggleStreamSync(testData.page, "public", "users", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
 
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.incremental,
-        DestinationSyncMode.append
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.incremental,
-        DestinationSyncMode.append
-      );
-    });
-
-    test("should show missing Cursor error", async () => {
-      // Incremental requires cursor but not PK
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "users");
-      expect(hasPKError).toBe(false);
-
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "users");
-      expect(hasCursorError).toBe(true);
-
-      // Save button should be disabled due to missing cursor
-      const isSaveEnabled = await streamsTable.isSaveChangesButtonEnabled(testData.page);
-      expect(isSaveEnabled).toBe(false);
-    });
-
-    test("should select Cursor", async () => {
-      // Select email as cursor
-      await streamRow.selectCursor(testData.page, "public", "users", "email");
-      await streamRow.verifySelectedCursor(testData.page, "public", "users", "email");
-
-      // Expand stream to verify cursor label on field
-      await streamRow.toggleExpandCollapse(testData.page, "public", "users");
-      const isFieldCursor = await streamRow.isFieldCursor(testData.page, "public", "users", "email");
-      expect(isFieldCursor).toBe(true);
-    });
-
-    test("should allow to save changes", async () => {
-      await streamsTable.clickSaveChangesButton(testData.page);
-
-      // Wait for success notification
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
-    });
-
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
-
-      // Verify stream is still enabled with correct sync mode and cursor
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "users");
-      expect(isEnabled).toBe(true);
-
-      await streamRow.verifySelectedCursor(testData.page, "public", "users", "email");
-
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "users",
-        SyncMode.incremental,
-        DestinationSyncMode.append
-      );
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "cities")).toBe(true);
+        await streamRow.verifySelectedPK(page, "public", "cities", "2 items selected");
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+      });
     });
   });
 
-  test.describe("Incremental | Append + Deduped", () => {
-    test("should select the sync mode", async () => {
-      // Trick to unset PKs from previous tests (cities has 2 PKs from "Full refresh | Overwrite + Deduped" test)
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
+  mockTest.describe(() => {
+    mockTest.use({ airbyteScenario: syncModesScenario() });
 
-      // Deselect the existing PKs by re-selecting them (toggles them off)
-      await streamRow.selectPKs(testData.page, "public", "cities", ["city_code", "city"]);
+    mockTest("Full refresh | Overwrite + Deduped (source-defined PK)", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-      // Change to a sync mode that doesn't require PKs
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.full_refresh,
-        DestinationSyncMode.overwrite
-      );
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "users", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
 
-      // Save to persist the cleared PKs
-      await streamsTable.clickSaveChangesButton(testData.page);
-      await expect(testData.page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
+        await streamRow.selectSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+      });
 
-      // Reload page to get clean state with no PKs
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
+      await mockTest.step("should NOT show missing PK and Cursor error", async () => {
+        expect(await streamRow.hasMissingPKError(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingCursorError(page, "public", "users")).toBe(false);
+        expect(await streamsTable.isSaveChangesButtonEnabled(page)).toBe(true);
+      });
 
-      // Now enable cities stream and configure Incremental | Append + Deduped
-      await streamRow.toggleStreamSync(testData.page, "public", "cities", true);
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "cities");
-      expect(isEnabled).toBe(true);
+      await mockTest.step("should show non-editable selected PK", async () => {
+        await streamRow.verifySelectedPK(page, "public", "users", "id");
+        expect(await streamRow.isPKComboboxDisabled(page, "public", "users")).toBe(true);
 
-      await streamRow.selectSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.incremental,
-        DestinationSyncMode.append_dedup
-      );
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.incremental,
-        DestinationSyncMode.append_dedup
-      );
+        await streamRow.toggleExpandCollapse(page, "public", "users");
+        expect(await streamRow.isFieldPK(page, "public", "users", "id")).toBe(true);
+      });
+
+      await mockTest.step("should allow to save changes", async () => {
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
+
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(1);
+        expect(lastSavedStreamConfig(airbyte, "users")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.overwrite_dedup,
+          primaryKey: [["id"]],
+        });
+      });
+
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
+        await streamRow.verifySelectedPK(page, "public", "users", "id");
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.full_refresh,
+          DestinationSyncMode.overwrite_dedup
+        );
+      });
+    });
+  });
+
+  mockTest.describe(() => {
+    // users starts as Full refresh | Append. From Full refresh | Overwrite, a change to Incremental opens a refresh
+    // modal on save.
+    mockTest.use({
+      airbyteScenario: syncModesScenario({ users: { destinationSyncMode: DestinationSyncMode.append } }),
     });
 
-    test("should show missing PK and Cursor errors", async () => {
-      // Incremental | Append + Deduped requires both PK and cursor
-      const hasPKError = await streamRow.hasMissingPKError(testData.page, "public", "cities");
-      expect(hasPKError).toBe(true);
+    mockTest("Incremental | Append", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-      const hasCursorError = await streamRow.hasMissingCursorError(testData.page, "public", "cities");
-      expect(hasCursorError).toBe(true);
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "users", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
 
-      // Save button should be disabled
-      const isSaveEnabled = await streamsTable.isSaveChangesButtonEnabled(testData.page);
-      expect(isSaveEnabled).toBe(false);
+        await streamRow.selectSyncMode(page, "public", "users", SyncMode.incremental, DestinationSyncMode.append);
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.incremental,
+          DestinationSyncMode.append
+        );
+      });
+
+      await mockTest.step("should show missing Cursor error", async () => {
+        expect(await streamRow.hasMissingPKError(page, "public", "users")).toBe(false);
+        expect(await streamRow.hasMissingCursorError(page, "public", "users")).toBe(true);
+        expect(await streamsTable.isSaveChangesButtonEnabled(page)).toBe(false);
+      });
+
+      await mockTest.step("should select Cursor", async () => {
+        await streamRow.selectCursor(page, "public", "users", "email");
+        await streamRow.verifySelectedCursor(page, "public", "users", "email");
+
+        await streamRow.toggleExpandCollapse(page, "public", "users");
+        expect(await streamRow.isFieldCursor(page, "public", "users", "email")).toBe(true);
+      });
+
+      await mockTest.step("should allow to save changes", async () => {
+        await streamsTable.clickSaveChangesButton(page);
+        await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
+
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(1);
+        expect(lastSavedStreamConfig(airbyte, "users")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append,
+          cursorField: ["email"],
+        });
+      });
+
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "users")).toBe(true);
+        await streamRow.verifySelectedCursor(page, "public", "users", "email");
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "users",
+          SyncMode.incremental,
+          DestinationSyncMode.append
+        );
+      });
     });
+  });
 
-    test("should select PK and Cursor", async () => {
-      // Select PK and cursor
-      await streamRow.selectPKs(testData.page, "public", "cities", ["city_code"]);
-      await streamRow.verifySelectedPK(testData.page, "public", "cities", "city_code");
+  mockTest.describe(() => {
+    mockTest.use({ airbyteScenario: syncModesScenario() });
 
-      await streamRow.selectCursor(testData.page, "public", "cities", "city");
-      await streamRow.verifySelectedCursor(testData.page, "public", "cities", "city");
+    mockTest("Incremental | Append + Deduped", async ({ page, airbyte }) => {
+      const initial = airbyte.store.connections.get(postgresConnection);
 
-      // Expand stream to verify labels
-      await streamRow.toggleExpandCollapse(testData.page, "public", "cities");
-      const isFieldPK = await streamRow.isFieldPK(testData.page, "public", "cities", "city_code");
-      expect(isFieldPK).toBe(true);
-      const isFieldCursor = await streamRow.isFieldCursor(testData.page, "public", "cities", "city");
-      expect(isFieldCursor).toBe(true);
-    });
+      await mockTest.step("should select the sync mode", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+        await streamRow.toggleStreamSync(page, "public", "cities", true);
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "cities")).toBe(true);
 
-    test("should allow to save changes and discard refresh streams", async () => {
-      // Use replicationForm.saveChanges helper to handle reset/refresh modal
-      // This modal appears when changing to Incremental | Append + Deduped
-      // Unlike other tests that just save, this requires modal interaction
-      await replicationForm.saveChanges(testData.page, true);
-    });
+        await streamRow.selectSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.incremental,
+          DestinationSyncMode.append_dedup
+        );
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.incremental,
+          DestinationSyncMode.append_dedup
+        );
+      });
 
-    test("should verify that changes are applied", async () => {
-      // Reload page to verify persistence
-      await navigateToReplicationPage(testData.page, workspaceId, testData.connection.connectionId);
+      await mockTest.step("should show missing PK and Cursor errors", async () => {
+        expect(await streamRow.hasMissingPKError(page, "public", "cities")).toBe(true);
+        expect(await streamRow.hasMissingCursorError(page, "public", "cities")).toBe(true);
+        expect(await streamsTable.isSaveChangesButtonEnabled(page)).toBe(false);
+      });
 
-      // Verify stream is still enabled with correct sync mode, PK, and cursor
-      const isEnabled = await streamRow.isStreamSyncEnabled(testData.page, "public", "cities");
-      expect(isEnabled).toBe(true);
+      await mockTest.step("should select PK and Cursor", async () => {
+        await streamRow.selectPKs(page, "public", "cities", ["city_code"]);
+        await streamRow.verifySelectedPK(page, "public", "cities", "city_code");
 
-      await streamRow.verifySelectedPK(testData.page, "public", "cities", "city_code");
-      await streamRow.verifySelectedCursor(testData.page, "public", "cities", "city");
+        await streamRow.selectCursor(page, "public", "cities", "city");
+        await streamRow.verifySelectedCursor(page, "public", "cities", "city");
 
-      await streamRow.verifySelectedSyncMode(
-        testData.page,
-        "public",
-        "cities",
-        SyncMode.incremental,
-        DestinationSyncMode.append_dedup
-      );
+        await streamRow.toggleExpandCollapse(page, "public", "cities");
+        expect(await streamRow.isFieldPK(page, "public", "cities", "city_code")).toBe(true);
+        expect(await streamRow.isFieldCursor(page, "public", "cities", "city")).toBe(true);
+      });
+
+      await mockTest.step("should allow to save changes and discard refresh streams", async () => {
+        // The change to Incremental | Append + Deduped opens a modal that offers a refresh. Save without one.
+        await replicationForm.saveChanges(page, true);
+
+        expect(airbyte.calls.count("webBackendUpdateConnection")).toBe(1);
+        expect(airbyte.calls.last("webBackendUpdateConnection")).toMatchObject({ skipReset: true });
+        expect(lastSavedStreamConfig(airbyte, "cities")).toMatchObject({
+          selected: true,
+          syncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
+          primaryKey: [["city_code"]],
+          cursorField: ["city"],
+        });
+      });
+
+      await mockTest.step("should verify that changes are applied", async () => {
+        await navigateToReplicationPage(page, airbyte.workspaceId, initial.connectionId);
+
+        expect(await streamRow.isStreamSyncEnabled(page, "public", "cities")).toBe(true);
+        await streamRow.verifySelectedPK(page, "public", "cities", "city_code");
+        await streamRow.verifySelectedCursor(page, "public", "cities", "city");
+        await streamRow.verifySelectedSyncMode(
+          page,
+          "public",
+          "cities",
+          SyncMode.incremental,
+          DestinationSyncMode.append_dedup
+        );
+      });
     });
   });
 });
@@ -923,6 +870,7 @@ test.describe.serial("Sync Catalog - Diff Styles", () => {
   let testData: SerialTestData;
 
   test.beforeAll(async ({ browser }) => {
+    workspaceId = await setupWorkspaceForTests();
     // Create connection once for all diff style tests
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -1208,6 +1156,7 @@ test.describe.serial("Sync Catalog - Deleted Connection", () => {
   let testData: SerialTestData;
 
   test.beforeAll(async ({ browser }) => {
+    workspaceId = await setupWorkspaceForTests();
     const context = await browser.newContext();
     const page = await context.newPage();
     const request = context.request;
@@ -1379,6 +1328,7 @@ test.describe.serial("Sync Catalog - Tab Filters", () => {
   let testData: SerialTestData;
 
   test.beforeAll(async ({ browser }) => {
+    workspaceId = await setupWorkspaceForTests();
     const context = await browser.newContext();
     const page = await context.newPage();
     const request = context.request;
