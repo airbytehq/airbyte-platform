@@ -22984,9 +22984,17 @@ components:
           type: string
           format: date-time
           nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
         status:
           type: string
-          enum: [starting, running, finalizing, complete]
+          enum: [starting, running, finalizing, complete, failed, cancelled]
     FusionSearchStatusIndex:
       type: object
       required:
