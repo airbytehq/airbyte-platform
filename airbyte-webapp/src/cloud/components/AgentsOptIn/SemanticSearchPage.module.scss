@@ -14,7 +14,10 @@ $emptyStateButtonWidth: 360px;
   margin-top: variables.$spacing-sm;
 }
 
+// The positioning keeps the absolutely positioned hidden labels inside this scroll container.
+// Without it, they extend the scroll height of the main layout.
 .tableWrapper {
+  position: relative;
   overflow-x: auto;
   border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-xs;
