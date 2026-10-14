@@ -10,4 +10,7 @@ export const intentToRbacQuery = {
   DownloadDiagnostics: { resourceType: "ORGANIZATION", role: "READER" },
   ViewOrganizationWorkspaces: { resourceType: "ORGANIZATION", role: "READER" },
   CreateOrganizationWorkspaces: { resourceType: "ORGANIZATION", role: "EDITOR" },
+
+  // workspace
+  EditConnectionSemanticSearch: { resourceType: "WORKSPACE", role: "EDITOR" }, // matches the WORKSPACE_EDITOR check on the connection enablement endpoints
 } as const;

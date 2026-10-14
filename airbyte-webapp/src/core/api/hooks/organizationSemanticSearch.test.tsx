@@ -71,6 +71,13 @@ describe("organization semantic search hooks", () => {
     );
   });
 
+  it("does not read the setting when the caller disables the query", () => {
+    const { result } = renderHook(() => useOrganizationSemanticSearchEnablement({ enabled: false }), { wrapper });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockGetOrganizationSemanticSearchEnablement).not.toHaveBeenCalled();
+  });
+
   it("returns read failures to the caller", async () => {
     mockGetOrganizationSemanticSearchEnablement.mockRejectedValue(new Error("read failed"));
 

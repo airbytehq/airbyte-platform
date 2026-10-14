@@ -22,6 +22,7 @@ import { DestinationStreamPrefixNameFormField } from "./DestinationStreamPrefixN
 import { RunOnDemandFormField } from "./RunOnDemandFormField";
 import { SchemaChangeNotificationFormField } from "./SchemaChangeNotificationFormField";
 import { SchemaChangesFormField } from "./SchemaChangesFormField";
+import { SemanticSearchFormField } from "./SemanticSearchFormField";
 
 interface ConnectionsSettingsCardProps {
   title: string;
@@ -51,6 +52,13 @@ export const ConnectionsSettingsCard: React.FC<ConnectionsSettingsCardProps> = (
 
         <ConnectionTagsFormField />
         <ConnectionScheduleFormField disabled={isDeprecated} />
+        {/* Create step: a form field. Settings tab: saves on toggle, outside "Save changes". */}
+        <SemanticSearchFormField
+          isCreating={isCreating}
+          sourceDefinitionId={source.sourceDefinitionId}
+          destinationDefinitionId={destination.destinationDefinitionId}
+          disabled={isDeprecated}
+        />
         {isOnDemandCapacityEnabled && <RunOnDemandFormField disabled={isDeprecated} />}
         {isCreating && (
           <DestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />

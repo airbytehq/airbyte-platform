@@ -10,21 +10,13 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { LoadingPage } from "components/ui/LoadingPage";
-import { Switch } from "components/ui/Switch";
 import { Table, TableColumns } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
-import {
-  useConnectionSemanticSearchEnablement,
-  useOrganizationSemanticSearchEnablement,
-  useSemanticSearchConnections,
-  useUpdateConnectionSemanticSearchEnablement,
-} from "core/api";
+import { useOrganizationSemanticSearchEnablement, useSemanticSearchConnections } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-import { useConfirmationModalService } from "core/services/ConfirmationModal";
-import { useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
@@ -36,6 +28,7 @@ import {
   ContextLayerUnavailable,
 } from "./ContextLayerPage";
 import styles from "./SemanticSearchPage.module.scss";
+import { SemanticSearchSwitch } from "./SemanticSearchSwitch";
 import { useContextLayerEligibility } from "./useContextLayerEligibility";
 import { ContextLayerWorkspace, useContextLayerWorkspaces } from "./useContextLayerWorkspaces";
 
@@ -46,72 +39,11 @@ interface WorkspaceConnectionInventory {
   canCreateOrEditConnections: boolean;
 }
 
-const SemanticSearchSwitch: React.FC<{
-  connection: WebBackendConnectionListItem;
-  canCreateOrEditConnections: boolean;
-}> = ({ connection, canCreateOrEditConnections }) => {
-  const { formatMessage } = useIntl();
-  const { registerNotification } = useNotificationService();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const enablementQuery = useConnectionSemanticSearchEnablement(connection.connectionId);
-  const updateEnablement = useUpdateConnectionSemanticSearchEnablement(connection.connectionId);
-  const enabled = enablementQuery.data?.enable_indexing ?? false;
-
-  const saveEnablement = async (nextEnabled: boolean) => {
-    try {
-      await updateEnablement.mutateAsync({ enabled: nextEnabled, expectedEnabled: enabled });
-    } catch {
-      registerNotification({
-        id: "semantic-search-connection-toggle-error",
-        text: formatMessage({ id: "cloud.contextLayer.semanticSearch.updateError" }),
-        type: "error",
-      });
-    }
-  };
-
-  const openDisableConfirmation = () => {
-    openConfirmationModal({
-      title: "cloud.contextLayer.semanticSearch.disableConfirm.title",
-      text: "cloud.contextLayer.semanticSearch.disableConfirm.text",
-      submitButtonText: "cloud.contextLayer.semanticSearch.disableConfirm.submit",
-      submitButtonVariant: "danger",
-      submitButtonDataId: "semantic-search-connection-disable-confirm",
-      onSubmit: async () => {
-        await saveEnablement(false);
-        // Close the dialog even when the save fails. The update hook reads the saved value again, so the dialog
-        // may no longer match it.
-        closeConfirmationModal();
-      },
-    });
-  };
-
-  if (enablementQuery.isError) {
-    return (
-      <Button type="button" size="xs" variant="secondary" onClick={() => enablementQuery.refetch()}>
-        <FormattedMessage id="form.tryAgain" />
-      </Button>
-    );
-  }
-
-  return (
-    <Switch
-      size="sm"
-      checked={enabled}
-      disabled={!canCreateOrEditConnections || enablementQuery.isLoading || updateEnablement.isLoading}
-      onChange={enabled ? openDisableConfirmation : () => void saveEnablement(true)}
-      aria-label={formatMessage(
-        { id: "cloud.contextLayer.semanticSearchPage.semanticSearchControlLabel" },
-        { name: connection.name }
-      )}
-    />
-  );
-};
-
 // The backfill controls stay disabled until the connection backfill endpoint exists.
 const SemanticSearchConnectionTable: React.FC<{
   connections: WebBackendConnectionListItem[];
-  canCreateOrEditConnections: boolean;
-}> = ({ connections, canCreateOrEditConnections }) => {
+  workspaceId: string;
+}> = ({ connections, workspaceId }) => {
   const { formatMessage } = useIntl();
   // Memoized because the table renders each cell function as a component: new functions would remount every
   // switch on each render and drop its pending update.
@@ -145,7 +77,11 @@ const SemanticSearchConnectionTable: React.FC<{
         ),
         meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
         cell: ({ row: { original: connection } }) => (
-          <SemanticSearchSwitch connection={connection} canCreateOrEditConnections={canCreateOrEditConnections} />
+          <SemanticSearchSwitch
+            connectionId={connection.connectionId}
+            name={connection.name}
+            workspaceId={workspaceId}
+          />
         ),
       },
       {
@@ -213,7 +149,7 @@ const SemanticSearchConnectionTable: React.FC<{
         ),
       },
     ],
-    [canCreateOrEditConnections, formatMessage]
+    [formatMessage, workspaceId]
   );
 
   return (
@@ -271,10 +207,7 @@ const SemanticSearchWorkspaceConnections: React.FC<{
         </FlexContainer>
       )}
       {connections.length > 0 && (
-        <SemanticSearchConnectionTable
-          connections={connections}
-          canCreateOrEditConnections={canCreateOrEditConnections}
-        />
+        <SemanticSearchConnectionTable connections={connections} workspaceId={workspace.workspaceId} />
       )}
       {hasNextPage && (
         <FlexContainer>

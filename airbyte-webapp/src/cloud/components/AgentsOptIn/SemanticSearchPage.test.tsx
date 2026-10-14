@@ -13,7 +13,7 @@ import {
   useUpdateConnectionSemanticSearchEnablement,
 } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import { SemanticSearchPage } from "./SemanticSearchPage";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
@@ -44,6 +44,7 @@ jest.mock("./useShowAgentsOptIn", () => ({ useShowAgentsOptIn: jest.fn() }));
 jest.mock("core/utils/rbac", () => ({
   ...jest.requireActual("core/utils/rbac"),
   useGeneratedIntent: jest.fn(),
+  useIntent: jest.fn(),
 }));
 
 const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
@@ -67,6 +68,7 @@ const mockUseUpdateConnectionSemanticSearchEnablement =
     typeof useUpdateConnectionSemanticSearchEnablement
   >;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
+const mockUseIntent = useIntent as jest.MockedFunction<typeof useIntent>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
 const connection = (connectionId: string, sourceName: string, destinationName: string) =>
@@ -153,6 +155,7 @@ describe("SemanticSearchPage", () => {
     mockUseListWorkspacesInOrganization.mockReturnValue(workspacesResult([workspace(1)]));
     mockUseSemanticSearchConnections.mockReturnValue(connectionsResult([]));
     mockUseGeneratedIntent.mockReturnValue(true);
+    mockUseIntent.mockReturnValue(true);
     mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(false));
     mockUpdateEnablement();
   });
@@ -497,7 +500,7 @@ describe("SemanticSearchPage", () => {
     });
 
     it.each([
-      ["the viewer cannot edit connections", () => mockUseGeneratedIntent.mockReturnValue(false)],
+      ["the viewer cannot edit semantic search", () => mockUseIntent.mockReturnValue(false)],
       [
         "the saved value is loading",
         () =>
@@ -514,6 +517,29 @@ describe("SemanticSearchPage", () => {
       screen
         .getAllByRole("checkbox", { name: /semantic search$/ })
         .forEach((control) => expect(control).toBeDisabled());
+    });
+
+    it("checks the semantic search edit permission for the workspace of the row", () => {
+      // Source and destination editors can edit connections, but the enablement endpoints require a workspace editor.
+      mockUseGeneratedIntent.mockReturnValue(true);
+      mockUseIntent.mockReturnValue(false);
+
+      renderPage();
+
+      expect(mockUseIntent).toHaveBeenCalledWith("EditConnectionSemanticSearch", { workspaceId: "workspace-1" });
+      const control = screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" });
+      expect(control).toBeDisabled();
+      fireEvent.mouseOver(control);
+      expect(screen.getByText("You need edit permission for this workspace to change semantic search.")).toBeVisible();
+    });
+
+    it("does not gate the switch on the connection edit intent", () => {
+      mockUseGeneratedIntent.mockReturnValue(false);
+      mockUseIntent.mockReturnValue(true);
+
+      renderPage();
+
+      expect(screen.getByRole("checkbox", { name: "HubSpot to Snowflake semantic search" })).toBeEnabled();
     });
 
     it("shows a retry in place of the switch when the saved value cannot be read", () => {

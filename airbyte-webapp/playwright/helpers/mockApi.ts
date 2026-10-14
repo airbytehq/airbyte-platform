@@ -7,6 +7,7 @@ import type {
   InstanceConfigurationResponse,
   HealthCheckRead,
   OrganizationInfoRead,
+  OrganizationRead,
   OrganizationReadList,
   ListOrganizationSummariesResponse,
   PermissionReadList,
@@ -111,6 +112,11 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
         sso: false,
         scim: false,
       } satisfies OrganizationInfoRead,
+      "POST /api/v1/organizations/get": {
+        organizationId: workspace.organizationId,
+        organizationName: "Test organization",
+        email: user.email,
+      } satisfies OrganizationRead,
       "POST /api/v1/organizations/list_summaries": {
         organizationSummaries: [
           {
@@ -180,6 +186,7 @@ export function createMockAirbyte(scenario: MockAirbyteScenario) {
       "workspaces/get": { workspaceId: workspace.workspaceId },
       "workspaces/list_by_organization_id": { organizationId: workspace.organizationId! },
       "organizations/get_organization_info": { organizationId: workspace.organizationId! },
+      "organizations/get": { organizationId: workspace.organizationId! },
       "organizations/list_by_user_id": { userId: user.userId },
       "organizations/list_summaries": { userId: user.userId },
       "permissions/list_by_user": { userId: user.userId },

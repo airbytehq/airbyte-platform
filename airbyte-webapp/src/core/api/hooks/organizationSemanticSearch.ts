@@ -13,7 +13,7 @@ export const organizationSemanticSearchKeys = {
   all: (organizationId: string) => [SCOPE_ORGANIZATION, "semanticSearch", organizationId] as const,
 };
 
-export const useOrganizationSemanticSearchEnablement = () => {
+export const useOrganizationSemanticSearchEnablement = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
 
@@ -21,7 +21,7 @@ export const useOrganizationSemanticSearchEnablement = () => {
     organizationSemanticSearchKeys.all(organizationId),
     () => getOrganizationSemanticSearchEnablement({ organizationId }, requestOptions),
     {
-      enabled: Boolean(organizationId),
+      enabled: enabled && Boolean(organizationId),
       retry: false,
       staleTime: 30_000,
     }
