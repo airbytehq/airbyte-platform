@@ -64,12 +64,14 @@ kubectl delete service postgres-test-svc --namespace="$NAMESPACE" --ignore-not-f
 # 2. Deploy Postgres pod with single-node support
 echo "🐘 Deploying Postgres pod with single-node overrides..."
 
-# Create overrides for single-node environment using RELEASE_NAME as hostname
+# Pin to the release's node. Defaults to the CI cluster's per-release label; stage overrides it.
+NODE_SELECTOR_KEY="${NODE_SELECTOR_KEY:-airbyte/release-name}"
+NODE_SELECTOR_VALUE="${NODE_SELECTOR_VALUE:-$RELEASE_NAME}"
 node_overrides=$(cat <<EOF
 {
   "spec": {
     "nodeSelector": {
-      "airbyte/release-name": "$RELEASE_NAME"
+      "$NODE_SELECTOR_KEY": "$NODE_SELECTOR_VALUE"
     }
   }
 }
