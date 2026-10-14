@@ -1,4 +1,5 @@
-import { act, render as tlr } from "@testing-library/react";
+import { act, fireEvent, render as tlr, screen, waitFor } from "@testing-library/react";
+import cloneDeep from "lodash/cloneDeep";
 import React from "react";
 import { VirtuosoMockContext } from "react-virtuoso";
 
@@ -17,6 +18,8 @@ import {
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
+import { ConnectionSemanticSearchAccess } from "cloud/components/AgentsOptIn";
+import { useConnectionSemanticSearchAccess } from "cloud/components/AgentsOptIn/useConnectionSemanticSearchAccess";
 import { useDiscoverSchemaQuery } from "core/api";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";
@@ -34,6 +37,9 @@ const mockBaseUseDiscoverSchemaQuery = {
 const mockUseGetSourceFromSearchParams = jest.fn(() => mockConnection.source);
 const mockUseGetDestinationFromSearchParams = jest.fn(() => mockConnection.destination);
 const mockUseOrganizationPlan = jest.fn();
+const mockCreateConnection = jest.fn();
+const mockCreateSemanticSearchEnablement = jest.fn();
+const mockNavigate = jest.fn();
 
 const defaultOrganizationPlanFlags = {
   isStiggPlanEnabled: false,
@@ -61,7 +67,14 @@ jest.mock("core/api", () => ({
     organizationId: "test-org-id",
   }),
   useInvalidateWorkspaceStateQuery: () => () => null,
-  useCreateConnection: () => async () => null,
+  useCreateConnection: () => ({ mutateAsync: mockCreateConnection }),
+  useCreateConnectionSemanticSearchEnablement: () => ({ mutateAsync: mockCreateSemanticSearchEnablement }),
+  // A submit with a basic schedule refreshes the new connection's status 2 seconds later. That timer can fire during a
+  // later test, so the key it reads must exist.
+  connectionsKeys: { statuses: (connectionIds: string[]) => ["connections", "statuses", connectionIds] },
+  useTagsList: () => [],
+  useCreateTag: () => ({ mutateAsync: jest.fn() }),
+  useDescribeCronExpression: () => ({ data: undefined }),
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
@@ -113,6 +126,19 @@ jest.mock("area/connector/utils", () => ({
   ConnectorIds: jest.requireActual("area/connector/utils").ConnectorIds,
 }));
 
+jest.mock("cloud/components/AgentsOptIn/useConnectionSemanticSearchAccess", () => ({
+  useConnectionSemanticSearchAccess: jest.fn(),
+}));
+
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useNavigate: () => mockNavigate,
+}));
+
+const mockUseAccess = useConnectionSemanticSearchAccess as jest.MockedFunction<
+  typeof useConnectionSemanticSearchAccess
+>;
+
 jest.mock("core/utils/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));
@@ -132,19 +158,19 @@ jest.mock("core/services/auth", () => ({
 jest.setTimeout(40000);
 
 describe("CreateConnectionForm", () => {
-  const Wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
-    <TestWrapper>
+  const Wrapper: React.FC<React.PropsWithChildren<{ route?: string }>> = ({ children, route }) => (
+    <TestWrapper route={route}>
       <VirtuosoMockContext.Provider value={{ viewportHeight: 1000, itemHeight: 50 }}>
         {children}
       </VirtuosoMockContext.Provider>
     </TestWrapper>
   );
-  const render = async () => {
+  const render = async (route?: string) => {
     let renderResult: ReturnType<typeof tlr>;
 
     await act(async () => {
       renderResult = tlr(
-        <Wrapper>
+        <Wrapper route={route}>
           <CreateConnectionForm />
         </Wrapper>
       );
@@ -157,6 +183,10 @@ describe("CreateConnectionForm", () => {
     mockUseGetSourceFromSearchParams.mockReturnValue(mockConnection.source);
     mockUseGetDestinationFromSearchParams.mockReturnValue(mockConnection.destination);
     mockUseOrganizationPlan.mockReturnValue(defaultOrganizationPlanFlags);
+    mockUseAccess.mockReturnValue("hidden");
+    mockCreateConnection.mockReset().mockResolvedValue({ connectionId: "new-connection-id" });
+    mockCreateSemanticSearchEnablement.mockReset().mockResolvedValue({ enable_indexing: true });
+    mockNavigate.mockReset();
   });
 
   it("should render", async () => {
@@ -245,5 +275,96 @@ describe("CreateConnectionForm", () => {
         "The source or destination is still in draft and isn't usable in a connection yet. Finish setting up the connector first, then create a connection."
       )
     ).toBeVisible();
+  });
+
+  describe("semantic search", () => {
+    // The "Configure connection" step, where the semantic search field and the submit button are.
+    const CONFIGURE_STEP_ROUTE = "/continued";
+
+    // One selected stream with a primary key, so the form is valid and can be submitted.
+    const [firstStream] = mockConnection.syncCatalog.streams;
+    const validStream = {
+      stream: { ...firstStream.stream!, sourceDefinedPrimaryKey: [["id"]] },
+      config: { ...firstStream.config!, primaryKey: [["id"]], selected: true },
+    };
+
+    beforeEach(() => {
+      mocked(useDiscoverSchemaQuery).mockImplementation(
+        () =>
+          ({
+            ...mockBaseUseDiscoverSchemaQuery,
+            data: { catalog: { streams: [cloneDeep(validStream)] }, catalogId: "" },
+          }) as unknown as ReturnType<typeof useDiscoverSchemaQuery>
+      );
+    });
+
+    afterEach(() => {
+      mocked(useDiscoverSchemaQuery).mockImplementation(
+        () => mockBaseUseDiscoverSchemaQuery as unknown as ReturnType<typeof useDiscoverSchemaQuery>
+      );
+    });
+
+    const submit = async (access: ConnectionSemanticSearchAccess) => {
+      mockUseAccess.mockReturnValue(access);
+      await render(CONFIGURE_STEP_ROUTE);
+      const submitButton = await screen.findByRole("button", { name: "Finish & Sync" });
+      await waitFor(() => expect(submitButton).toBeEnabled());
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("../../connections/new-connection-id"));
+    };
+
+    it("turns semantic search on after create when the viewer can edit", async () => {
+      await submit("editable");
+
+      expect(mockUseAccess).toHaveBeenCalledWith({
+        sourceDefinitionId: mockConnection.source.sourceDefinitionId,
+        destinationDefinitionId: mockConnection.destination.destinationDefinitionId,
+      });
+      expect(mockCreateConnection).toHaveBeenCalledWith(
+        expect.objectContaining({ values: expect.objectContaining({ semanticSearch: true }) })
+      );
+      expect(mockCreateSemanticSearchEnablement).toHaveBeenCalledWith({
+        connectionId: "new-connection-id",
+        enabled: true,
+      });
+    });
+
+    it("does not save semantic search when the user turned it off", async () => {
+      mockUseAccess.mockReturnValue("editable");
+      await render(CONFIGURE_STEP_ROUTE);
+      fireEvent.click(await screen.findByRole("checkbox", { name: /Semantic search/ }));
+      const submitButton = screen.getByRole("button", { name: "Finish & Sync" });
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("../../connections/new-connection-id"));
+      expect(mockCreateSemanticSearchEnablement).not.toHaveBeenCalled();
+    });
+
+    it.each(["hidden", "orgOff", "noPermission"] as const)(
+      "does not save semantic search when the access is %s",
+      async (access) => {
+        await submit(access);
+
+        expect(mockCreateConnection).toHaveBeenCalled();
+        expect(mockCreateSemanticSearchEnablement).not.toHaveBeenCalled();
+      }
+    );
+
+    it("shows an error and still opens the new connection when semantic search cannot be saved", async () => {
+      mockCreateSemanticSearchEnablement.mockRejectedValue(new Error("enablement failed"));
+
+      await submit("editable");
+
+      expect(mockCreateSemanticSearchEnablement).toHaveBeenCalled();
+      expect(
+        await screen.findByText(
+          "Connection created, but semantic search could not be turned on. You can turn it on in the connection settings."
+        )
+      ).toBeInTheDocument();
+    });
   });
 });

@@ -346,7 +346,8 @@ export const useCreateConnection = () => {
           {
             sourceId: source.sourceId,
             destinationId: destination.destinationId,
-            ...omit(values, "geography"),
+            // Semantic search is not a connection field. The create form saves it after create.
+            ...omit(values, "geography", "semanticSearch"),
             status: "active",
             sourceCatalogId,
             destinationCatalogId,

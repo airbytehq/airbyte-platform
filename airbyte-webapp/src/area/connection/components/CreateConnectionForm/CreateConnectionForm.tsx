@@ -14,11 +14,13 @@ import {
   useConnectionFormService,
 } from "area/connection/utils/ConnectionForm/ConnectionFormService";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
+import { useConnectionSemanticSearchAccess } from "cloud/components/AgentsOptIn";
 import {
   connectionsKeys,
   HttpError,
   HttpProblem,
   useCreateConnection,
+  useCreateConnectionSemanticSearchEnablement,
   useDestinationDefinitionVersion,
   useDiscoverSchemaQuery,
   useDiscoverSourceSchemaMutation,
@@ -47,7 +49,12 @@ const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
+  const { mutateAsync: createSemanticSearchEnablement } = useCreateConnectionSemanticSearchEnablement();
   const { connection, setSubmitError } = useConnectionFormService();
+  const semanticSearchAccess = useConnectionSemanticSearchAccess({
+    sourceDefinitionId: connection.source.sourceDefinitionId,
+    destinationDefinitionId: connection.destination.destinationDefinitionId,
+  });
   const { mode } = useFormMode();
   const destinationDefinitionVersion = useDestinationDefinitionVersion(connection.destination.destinationId);
   const initialValues = useInitialFormValues(connection, mode, destinationDefinitionVersion.supportsFileTransfer);
@@ -89,6 +96,20 @@ const CreateConnectionFormInner: React.FC = () => {
           },
           sourceCatalogId: connection.catalogId,
         });
+        // The connection exists now, so a failure here must not block navigation. The user can turn semantic search
+        // on later in the connection settings.
+        // The field keeps its last value when it is hidden, so check the access again here.
+        if (restFormValues.semanticSearch && semanticSearchAccess === "editable") {
+          void createSemanticSearchEnablement({ connectionId: createdConnection.connectionId, enabled: true }).catch(
+            () => {
+              registerNotification({
+                id: "connectionForm.semanticSearch.createFailed",
+                text: formatMessage({ id: "connectionForm.semanticSearch.createFailed" }),
+                type: "error",
+              });
+            }
+          );
+        }
         clearAllFormChanges();
         navigate(`../../connections/${createdConnection.connectionId}`);
 
@@ -124,6 +145,8 @@ const CreateConnectionFormInner: React.FC = () => {
       connection.destination,
       connection.source,
       createConnection,
+      createSemanticSearchEnablement,
+      semanticSearchAccess,
       navigate,
       setSubmitError,
       registerNotification,

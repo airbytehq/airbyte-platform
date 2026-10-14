@@ -6,10 +6,12 @@ import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDef
 import {
   connectionSemanticSearchKeys,
   useConnectionSemanticSearchEnablement,
+  useCreateConnectionSemanticSearchEnablement,
   useSemanticSearchConnections,
   useUpdateConnectionSemanticSearchEnablement,
 } from "./connectionSemanticSearch";
 import {
+  createFusionConnectionEnablement,
   getFusionConnectionEnablement,
   updateFusionConnectionEnablement,
   webBackendListConnectionsForWorkspace,
@@ -22,6 +24,7 @@ jest.mock("./agentsPlatform", () => ({
 }));
 
 jest.mock("../generated/AirbyteClient", () => ({
+  createFusionConnectionEnablement: jest.fn(),
   getFusionConnectionEnablement: jest.fn(),
   updateFusionConnectionEnablement: jest.fn(),
   webBackendListConnectionsForWorkspace: jest.fn(),
@@ -33,6 +36,9 @@ jest.mock("../useRequestOptions", () => ({
 
 const mockWebBackendListConnectionsForWorkspace = webBackendListConnectionsForWorkspace as jest.MockedFunction<
   typeof webBackendListConnectionsForWorkspace
+>;
+const mockCreateFusionConnectionEnablement = createFusionConnectionEnablement as jest.MockedFunction<
+  typeof createFusionConnectionEnablement
 >;
 const mockGetFusionConnectionEnablement = getFusionConnectionEnablement as jest.MockedFunction<
   typeof getFusionConnectionEnablement
@@ -229,5 +235,34 @@ describe("connection semantic search enablement", () => {
 
     await waitFor(() => expect(result.current.query.data?.enable_indexing).toBe(false));
     expect(mockGetFusionConnectionEnablement).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves the first value of a new connection and writes it to the connection cache", async () => {
+    mockCreateFusionConnectionEnablement.mockResolvedValue(enablement("connection-2", true));
+
+    const { result } = renderHook(() => useCreateConnectionSemanticSearchEnablement(), { wrapper });
+    await act(() => result.current.mutateAsync({ connectionId: "connection-2", enabled: true }));
+
+    expect(mockCreateFusionConnectionEnablement).toHaveBeenCalledWith(
+      "connection-2",
+      { enable_indexing: true },
+      { signal: "request-options" }
+    );
+    expect(queryClient.getQueryData(connectionSemanticSearchKeys.enablement("connection-2"))).toEqual(
+      enablement("connection-2", true)
+    );
+  });
+
+  it("returns a failed first save to the caller and caches nothing", async () => {
+    mockCreateFusionConnectionEnablement.mockRejectedValue(new Error("create failed"));
+
+    const { result } = renderHook(() => useCreateConnectionSemanticSearchEnablement(), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ connectionId: "connection-2", enabled: true })).rejects.toEqual(
+        new Error("create failed")
+      );
+    });
+    expect(queryClient.getQueryData(connectionSemanticSearchKeys.enablement("connection-2"))).toBeUndefined();
   });
 });

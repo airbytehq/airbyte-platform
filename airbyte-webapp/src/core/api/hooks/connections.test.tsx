@@ -76,10 +76,11 @@ describe("connection request bodies", () => {
   it.each([
     ["normal connection creation", false],
     ["data activation connection creation", true],
-  ])("omits geography during %s", async (_name, isDataActivationConnection) => {
+  ])("omits geography and semantic search during %s", async (_name, isDataActivationConnection) => {
     const { result } = renderHook(() => useCreateConnection(), { wrapper });
     const values = {
       geography: "auto",
+      semanticSearch: true,
       namespaceDefinition: NamespaceDefinitionType.destination,
       scheduleType: ConnectionScheduleType.manual,
       syncCatalog: { streams: [] },

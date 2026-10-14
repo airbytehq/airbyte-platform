@@ -57,6 +57,8 @@ export interface FormConnectionFormValues {
   backfillPreference?: SchemaChangeBackfillPreference;
   tags?: Tag[];
   onDemandEnabled?: boolean;
+  // Create step only. The semantic search field sets it once the access is known. It is saved after create.
+  semanticSearch?: boolean;
 }
 
 /**

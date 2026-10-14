@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitionIds } from "./agentsPlatform";
 import { connectionsKeys, getNextConnectionListCursor } from "./connections";
 import {
+  createFusionConnectionEnablement,
   getFusionConnectionEnablement,
   updateFusionConnectionEnablement,
   webBackendListConnectionsForWorkspace,
@@ -88,6 +89,29 @@ export const useUpdateConnectionSemanticSearchEnablement = (connectionId: string
       // After a failure the saved value can differ from the shown one: another change landed first (stale
       // expected state), or the server saved a turn-off but could not sync it to Agents. Read it again.
       onError: () => queryClient.invalidateQueries(connectionSemanticSearchKeys.enablement(connectionId)),
+    }
+  );
+};
+
+/**
+ * Saves the first semantic search value of a new connection. The connection ID is a mutation variable, because the
+ * caller creates the connection in the same flow. The server accepts the value only while the connection has no
+ * saved value (off) or already has the same value. Otherwise it returns 409.
+ */
+export const useCreateConnectionSemanticSearchEnablement = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ connectionId, enabled }: { connectionId: string; enabled: boolean }) =>
+      createFusionConnectionEnablement(connectionId, { enable_indexing: enabled }, requestOptions),
+    {
+      onSuccess: async (response, { connectionId }) => {
+        // Cancel a read that is still running, for example from the new connection's Settings tab, so its older
+        // value cannot overwrite the saved one.
+        await queryClient.cancelQueries(connectionSemanticSearchKeys.enablement(connectionId));
+        queryClient.setQueryData(connectionSemanticSearchKeys.enablement(connectionId), response);
+      },
     }
   );
 };
