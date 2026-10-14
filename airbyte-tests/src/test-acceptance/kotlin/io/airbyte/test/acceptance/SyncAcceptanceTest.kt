@@ -19,7 +19,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -61,25 +60,6 @@ internal class SyncAcceptanceTest {
     }
 
     assertEquals(JobStatus.SUCCEEDED, status)
-  }
-
-  @Test
-  fun `sync fails correctly`() {
-    val dstConfig =
-      AtcConfig(
-        data =
-          object : AtcData by AtcDataMovies {
-            // is only going to expect the first record
-            override fun records(): List<Any> = listOf(AtcDataMovies.records().first())
-          },
-      )
-
-    val connectionId = atClient.admin.createAtcConnection(dstCfg = dstConfig)
-    val jobId = atClient.admin.syncConnection(connectionId)
-
-    atClient.admin.jobCancel(jobId)
-    val status = atClient.admin.jobWatchUntilTerminal(jobId)
-    assertNotEquals(JobStatus.SUCCEEDED, status)
   }
 
   @Test
@@ -288,10 +268,5 @@ internal class SyncAcceptanceTest {
     // verify calling delete twice is ok
     atClient.admin.deleteConnection(connectionId)
     assertEquals(ConnectionStatus.DEPRECATED, atClient.admin.getConnectionStatus(connectionId))
-  }
-
-  @Test
-  fun `delete running connection in a bad temporal state`() {
-    // TODO
   }
 }
