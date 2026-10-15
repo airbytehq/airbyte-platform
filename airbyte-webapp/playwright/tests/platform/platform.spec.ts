@@ -1,128 +1,133 @@
-import { test, expect, Page } from "@playwright/test";
+/**
+ * Every test runs against the mock backend in playwright/mock. Each test starts from the backend state in its own
+ * scenario, so no test depends on what an earlier test did.
+ *
+ * Each test is one user journey. Checks that only read the page use `expect.soft`, so one failed check does not hide
+ * the checks after it.
+ */
 
-import { getWorkspaceId } from "../../helpers/workspace";
+import type { Page } from "@playwright/test";
 
-const OSS_SECURITY_CHECK_URL = "https://oss.airbyte.com/security-check";
+import { errors, expect, scenario, test } from "../../mock";
 
-// Helper function for filling setup form
-const fillSetupForm = async (page: Page) => {
-  // Assert that setup form is properly loaded and visible to user
-  const emailInput = page.locator("input[name=email]");
-  await expect(emailInput).toBeVisible({ timeout: 10000 });
-  await emailInput.fill("test-email@some-domain.com");
-  await page.locator("input[name=organizationName]").fill("ACME Corp");
+/** An instance where nobody has submitted the setup page yet. The setup page asks oss.airbyte.com for a security check. */
+const freshInstance = scenario({ instance: { initialSetupComplete: false } });
+
+const setupForm = {
+  fill: async (page: Page) => {
+    const emailInput = page.locator("input[name=email]");
+    await expect(emailInput).toBeVisible();
+    await emailInput.fill("test-email@some-domain.com");
+    await page.locator("input[name=organizationName]").fill("ACME Corp");
+  },
+  submitButton: (page: Page) => page.locator("button[type=submit]"),
 };
 
-const submitButtonClick = async (page: Page) => {
-  await page.locator("button[type=submit]").click({ timeout: 10000 });
-};
+test.describe(() => {
+  test.use({ airbyteScenario: scenario({}) });
 
-// Helper for setting up different security check scenarios
-const setupSecurityCheck = {
-  hanging: (page: Page) =>
-    page.route(OSS_SECURITY_CHECK_URL, (_route) => {
-      // Don't fulfill - simulates ongoing check
-    }),
-  failed: (page: Page) =>
-    page.route(OSS_SECURITY_CHECK_URL, (route) => {
-      route.fulfill({ status: 500, body: "oh noes, internal server error 🤷" });
-    }),
-  open: (page: Page) =>
-    page.route(OSS_SECURITY_CHECK_URL, (route) => {
-      route.fulfill({ status: 200, body: JSON.stringify({ status: "open" }) });
-    }),
-  closed: (page: Page) =>
-    page.route(OSS_SECURITY_CHECK_URL, (route) => {
-      route.fulfill({ status: 200, body: JSON.stringify({ status: "closed" }) });
-    }),
-};
+  test("open Airbyte while its server is down", async ({ page, airbyte }) => {
+    airbyte.failAll(errors.badGateway());
 
-const navigateToSetup = async (page: Page) => {
-  await page.goto("/setup", { timeout: 10000 });
-};
+    await page.goto("/");
 
-const assertSubmitButton = {
-  disabled: (page: Page) => expect(page.locator("button[type=submit]")).toBeDisabled({ timeout: 2000 }),
-  enabled: (page: Page) => expect(page.locator("button[type=submit]")).toBeEnabled({ timeout: 2000 }),
-};
-
-test.describe("Error handling view", () => {
-  test("Shows Server Unavailable page", async ({ page }) => {
-    // First, let the page load normally
-    await page.goto("/", { timeout: 10000 });
-
-    // Now set up the route interception for subsequent requests
-    await page.route("**/api/v1/**", (route) => {
-      route.fulfill({
-        status: 502,
-        body: "Failed to fetch",
-      });
+    await test.step("the server unavailable message shows", async () => {
+      await expect.soft(page.locator("p").filter({ hasText: "Airbyte is temporarily unavailable." })).toBeVisible();
     });
-
-    // Trigger a refresh to force the error condition
-    await page.reload({ timeout: 10000 });
-
-    // Check that the server unavailable message is displayed
-    await expect(page.locator("p").filter({ hasText: "Airbyte is temporarily unavailable." })).toBeVisible({});
   });
 });
 
-test.describe("Setup actions", () => {
-  test.beforeEach(async ({ page }) => {
-    // Intercept instance configuration to simulate initial setup not complete
-    await page.route("**/api/v1/instance_configuration", async (route) => {
-      const response = await route.fetch();
-      const json = await response.json();
-      json.initialSetupComplete = false;
-      await route.fulfill({ response, json });
+test.describe("Initial setup", () => {
+  test.describe(() => {
+    test.use({ airbyteScenario: freshInstance.with({ external: { securityCheck: "hang" } }) });
+
+    test("set up Airbyte while the security check still runs", async ({ page }) => {
+      await page.goto("/setup");
+      await setupForm.fill(page);
+
+      await test.step("the security check shows as running", async () => {
+        await expect.soft(page.locator("[data-testid=securityCheckRunning]")).toBeVisible();
+      });
+
+      await test.step("the submit button is disabled", async () => {
+        await expect.soft(setupForm.submitButton(page)).toBeDisabled();
+      });
     });
   });
 
-  test("Should not allow finishing setup while security check is ongoing", async ({ page }) => {
-    await setupSecurityCheck.hanging(page);
-    await navigateToSetup(page);
-    await fillSetupForm(page);
+  test.describe(() => {
+    test.use({ airbyteScenario: freshInstance.with({ external: { securityCheck: "fail" } }) });
 
-    // Assert that user sees security check running message and submit is disabled
-    await expect(page.locator("[data-testid=securityCheckRunning]")).toBeVisible({ timeout: 2000 });
-    await assertSubmitButton.disabled(page);
+    test("set up Airbyte when the security check fails", async ({ page }) => {
+      await page.goto("/setup");
+      await setupForm.fill(page);
+
+      await test.step("the submit button is enabled", async () => {
+        await expect.soft(setupForm.submitButton(page)).toBeEnabled();
+      });
+    });
   });
 
-  test("Should allow setting up in case of security check fails", async ({ page }) => {
-    await setupSecurityCheck.failed(page);
-    await navigateToSetup(page);
-    await fillSetupForm(page);
-    await assertSubmitButton.enabled(page);
+  test.describe(() => {
+    test.use({ airbyteScenario: freshInstance.with({ external: { securityCheck: "open" } }) });
+
+    test("set up Airbyte on an unsecured installation by accepting the risk", async ({ page }) => {
+      await page.goto("/setup");
+      await setupForm.fill(page);
+
+      await test.step("the submit button is disabled", async () => {
+        await expect.soft(setupForm.submitButton(page)).toBeDisabled();
+      });
+
+      await test.step("accept the risk of an unsecured installation", async () => {
+        await page.locator("[data-testid=advancedOptions]").click();
+        await page.locator("[data-testid=overwriteSecurityCheck]").click({ force: true });
+      });
+
+      await test.step("the submit button is enabled", async () => {
+        await expect.soft(setupForm.submitButton(page)).toBeEnabled();
+      });
+
+      await test.step("the risk warning shows", async () => {
+        await expect
+          .soft(
+            page.getByText(
+              "I am aware that running Airbyte unsecured will put my data at risk but still would like to continue."
+            )
+          )
+          .toBeVisible();
+      });
+    });
   });
 
-  test("Should show error and require marking checkbox if installation unsecured", async ({ page }) => {
-    await setupSecurityCheck.open(page);
-    await navigateToSetup(page);
-    await fillSetupForm(page);
-    await assertSubmitButton.disabled(page);
+  test.describe(() => {
+    test.use({ airbyteScenario: freshInstance.with({ external: { securityCheck: "closed" } }) });
 
-    // Assert that user sees advanced options and security warning
-    await expect(page.locator("[data-testid=advancedOptions]")).toBeVisible({ timeout: 10000 });
-    await page.locator("[data-testid=advancedOptions]").click();
-    await page.locator("[data-testid=overwriteSecurityCheck]").click({ force: true });
+    test("set up Airbyte on a secured installation", async ({ page, airbyte }) => {
+      await page.goto("/setup");
+      await expect(page).toHaveURL(/\/setup/);
+      await setupForm.fill(page);
 
-    // Assert setup can proceed after acknowledging security risk
-    await assertSubmitButton.enabled(page);
-    await expect(
-      page.locator(
-        "text=I am aware that running Airbyte unsecured will put my data at risk but still would like to continue."
-      )
-    ).toBeVisible();
-  });
+      await test.step("submit the setup form", async () => {
+        await setupForm.submitButton(page).click();
+      });
 
-  test("Should redirect to connections page after email is entered on closed installation", async ({ page }) => {
-    await setupSecurityCheck.closed(page);
-    await navigateToSetup(page);
-    await expect(page).toHaveURL(/.*\/setup/);
-    await fillSetupForm(page);
-    await submitButtonClick(page);
+      await test.step("the connections page of the workspace opens", async () => {
+        await expect.soft(page).toHaveURL(new RegExp(`/workspaces/${airbyte.workspaceId}/connections`));
+      });
 
-    const workspaceId = await getWorkspaceId(page);
-    await expect(page).toHaveURL(new RegExp(`.*\\/workspaces\\/${workspaceId}\\/connections`), { timeout: 10000 });
+      await test.step("the webapp saved the setup form", async () => {
+        expect.soft(airbyte.calls("setupInstanceConfiguration")).toEqual([
+          {
+            email: "test-email@some-domain.com",
+            organizationName: "ACME Corp",
+            // The mock instance uses the "logging" tracking strategy, so the form sets anonymousDataCollection to true.
+            anonymousDataCollection: true,
+            initialSetupComplete: true,
+            displaySetupWizard: false,
+          },
+        ]);
+      });
+    });
   });
 });
