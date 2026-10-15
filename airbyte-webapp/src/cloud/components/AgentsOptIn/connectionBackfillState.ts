@@ -44,13 +44,19 @@ export type ConnectionBackfillState =
   | { status: "complete" }
   | { status: "failed" };
 
-const backfillPercent = (activeBackfills: FusionSearchStatusBackfill[]) => {
-  const expectedRecords = activeBackfills.reduce((total, backfill) => total + backfill.expected_total_records, 0);
+// Complete streams count toward the percent so that it does not drop when a stream finishes. A failed or cancelled
+// stream never indexes its expected records, so it is left out.
+const backfillPercent = (backfills: FusionSearchStatusBackfill[]) => {
+  const countedBackfills = backfills.filter(
+    (backfill) => ACTIVE_BACKFILL_STATUSES.has(backfill.status) || backfill.status === "complete"
+  );
+
+  const expectedRecords = countedBackfills.reduce((total, backfill) => total + backfill.expected_total_records, 0);
   if (expectedRecords <= 0) {
     return undefined;
   }
 
-  const indexedRecords = activeBackfills.reduce((total, backfill) => total + backfill.indexed_records, 0);
+  const indexedRecords = countedBackfills.reduce((total, backfill) => total + backfill.indexed_records, 0);
   return Math.min(100, Math.floor((indexedRecords * 100) / expectedRecords));
 };
 
@@ -72,7 +78,7 @@ export const getConnectionBackfillState = (
 
   const activeBackfills = backfills.filter((backfill) => ACTIVE_BACKFILL_STATUSES.has(backfill.status));
   if (activeBackfills.length > 0) {
-    return { status: "running", percent: backfillPercent(activeBackfills) };
+    return { status: "running", percent: backfillPercent(backfills) };
   }
 
   if (statuses.includes("failed")) {

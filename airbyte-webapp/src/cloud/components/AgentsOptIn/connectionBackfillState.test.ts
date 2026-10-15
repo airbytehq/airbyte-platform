@@ -83,12 +83,20 @@ describe("getConnectionBackfillState", () => {
     expect(getConnectionBackfillState(status, "connection-1")).toEqual({ status: "complete" });
   });
 
-  it("sums the progress of the active streams only", () => {
+  it("sums the progress of the active and complete streams", () => {
     const status = response({
       "connection-1": [backfill("running", 30, 100), backfill("starting", 0, 100), backfill("complete", 500, 500)],
     });
 
-    expect(getConnectionBackfillState(status, "connection-1")).toEqual({ status: "running", percent: 15 });
+    expect(getConnectionBackfillState(status, "connection-1")).toEqual({ status: "running", percent: 75 });
+  });
+
+  it("leaves failed and cancelled streams out of the percent", () => {
+    const status = response({
+      "connection-1": [backfill("running", 50, 100), backfill("failed", 10, 100), backfill("cancelled", 0, 100)],
+    });
+
+    expect(getConnectionBackfillState(status, "connection-1")).toEqual({ status: "running", percent: 50 });
   });
 
   it("hides the percent while the expected total is zero", () => {
