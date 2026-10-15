@@ -78,7 +78,7 @@ internal class SecretReferenceWithConfigRepositoryTest : AbstractConfigRepositor
 
     val secretRef2 =
       SecretReference(
-        secretConfigId = persistedSecretConfig.id!!,
+        secretConfigId = persistedSecretConfig.id,
         scopeType = SecretReferenceScopeType.actor,
         scopeId = actorId,
         hydrationPath = "$.foo.baz",
@@ -87,7 +87,7 @@ internal class SecretReferenceWithConfigRepositoryTest : AbstractConfigRepositor
 
     val secretRef3 =
       SecretReference(
-        secretConfigId = persistedSecretConfig.id!!,
+        secretConfigId = persistedSecretConfig.id,
         scopeType = SecretReferenceScopeType.secret_storage,
         scopeId = secretStorageId,
       )

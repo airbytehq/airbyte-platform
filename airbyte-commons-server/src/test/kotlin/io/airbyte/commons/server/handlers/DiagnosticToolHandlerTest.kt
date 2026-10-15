@@ -77,7 +77,7 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("workspaces"))
             Assertions.assertTrue(content.toString().contains("connections"))
             Assertions.assertTrue(content.toString().contains("connectors"))
-          } else if (entry!!.name == AIRBYTE_DEPLOYMENT_YAML) {
+          } else if (entry.name == AIRBYTE_DEPLOYMENT_YAML) {
             foundDeploymentYaml = true
 
             // Check the content of airbyte_deployment.yaml
@@ -91,7 +91,7 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("k8s"))
             Assertions.assertTrue(content.toString().contains("nodes"))
             Assertions.assertTrue(content.toString().contains("pods"))
-          } else if (entry!!.name == AIRBYTE_CSP_CHECKS) {
+          } else if (entry.name == AIRBYTE_CSP_CHECKS) {
             foundCspChecksYaml = true
           }
         }
@@ -132,7 +132,7 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("workspaces"))
             Assertions.assertTrue(content.toString().contains("connections"))
             Assertions.assertTrue(content.toString().contains("connectors"))
-          } else if (entry!!.name == AIRBYTE_DEPLOYMENT_YAML) {
+          } else if (entry.name == AIRBYTE_DEPLOYMENT_YAML) {
             foundDeploymentYaml = true
 
             // Check the content of airbyte_deployment.yaml
@@ -146,7 +146,7 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("k8s"))
             Assertions.assertTrue(content.toString().contains("nodes"))
             Assertions.assertTrue(content.toString().contains("pods"))
-          } else if (entry!!.name == AIRBYTE_CSP_CHECKS) {
+          } else if (entry.name == AIRBYTE_CSP_CHECKS) {
             foundCspChecksYaml = true
           }
         }

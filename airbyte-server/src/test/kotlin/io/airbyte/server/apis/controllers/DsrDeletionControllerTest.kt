@@ -352,9 +352,9 @@ internal class DsrDeletionControllerTest {
     assertEquals("COMPLETED", body.status)
     assertNotNull(body.executionCounts)
     assertEquals(17, body.executionCounts!!.get("deleted_jobs_count").asInt())
-    assertEquals(34, body.executionCounts!!.get("deleted_attempts_count").asInt())
-    assertEquals(2, body.executionCounts!!.get("deleted_connections_count").asInt())
-    assertEquals(true, body.executionCounts!!.get("tombstoned_user").asBoolean())
+    assertEquals(34, body.executionCounts.get("deleted_attempts_count").asInt())
+    assertEquals(2, body.executionCounts.get("deleted_connections_count").asInt())
+    assertEquals(true, body.executionCounts.get("tombstoned_user").asBoolean())
   }
 
   @Test

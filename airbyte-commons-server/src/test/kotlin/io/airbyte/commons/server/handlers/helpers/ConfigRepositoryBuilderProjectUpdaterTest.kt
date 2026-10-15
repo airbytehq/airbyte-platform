@@ -55,7 +55,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService!!.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
       .thenReturn(project)
 
     val update =
@@ -64,7 +64,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         .workspaceId(A_WORKSPACE_ID)
         .builderProjectId(project.getBuilderProjectId())
 
-    projectUpdater!!.persistBuilderProjectUpdate(update)
+    projectUpdater.persistBuilderProjectUpdate(update)
 
     Mockito
       .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
@@ -86,7 +86,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService!!.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
       .thenReturn(project)
 
     val update =
@@ -98,7 +98,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         ).workspaceId(A_WORKSPACE_ID)
         .builderProjectId(project.getBuilderProjectId())
 
-    projectUpdater!!.persistBuilderProjectUpdate(update)
+    projectUpdater.persistBuilderProjectUpdate(update)
 
     Mockito
       .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
@@ -116,7 +116,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
   @Test
   fun givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() {
-    Mockito.`when`<ConnectorBuilderProject?>(connectorBuilderService!!.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(
+    Mockito.`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(
       anyBuilderProject()
         .withBuilderProjectId(A_BUILDER_PROJECT_ID)
         .withWorkspaceId(A_WORKSPACE_ID)
@@ -126,7 +126,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         .withContributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID),
     )
 
-    projectUpdater!!.persistBuilderProjectUpdate(
+    projectUpdater.persistBuilderProjectUpdate(
       ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(
           ConnectorBuilderProjectDetails()

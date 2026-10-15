@@ -1758,8 +1758,8 @@ class ScimUserLifecycleIntegrationTest {
       ),
     )
     val authUserId = "schema-valid-cross-provider-collision"
-    insertAuthUser(userA.id!!, authUserId, AuthProvider.KEYCLOAK)
-    insertAuthUser(userB.id!!, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+    insertAuthUser(userA.id, authUserId, AuthProvider.KEYCLOAK)
+    insertAuthUser(userB.id, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
 
     assertThat(userPersistence.getUserByAuthId(authUserId)).isEmpty()
     assertThat(permissionService.getPermissionsByAuthUserId(authUserId)).isEmpty()
@@ -1800,8 +1800,8 @@ class ScimUserLifecycleIntegrationTest {
         ),
       )
     val authUserId = "schema-valid-same-owner-cross-provider"
-    insertAuthUser(user.id!!, authUserId, AuthProvider.KEYCLOAK)
-    insertAuthUser(user.id!!, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+    insertAuthUser(user.id, authUserId, AuthProvider.KEYCLOAK)
+    insertAuthUser(user.id, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
 
     assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(user.id)
     assertThat(permissionService.getPermissionsByAuthUserId(authUserId).map { it.permissionId })

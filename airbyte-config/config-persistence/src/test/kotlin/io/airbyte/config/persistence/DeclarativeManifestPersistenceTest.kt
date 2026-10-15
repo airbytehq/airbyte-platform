@@ -242,11 +242,11 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     val sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
     assertEquals(
       connectorSpecification,
-      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec(),
     )
     assertEquals(
       A_CDK_VERSION,
-      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag(),
     )
     assertEquals(
       listOf(configInjection),
@@ -374,11 +374,11 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     val sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
     assertEquals(
       connectorSpecification,
-      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getSpec(),
     )
     assertEquals(
       A_CDK_VERSION,
-      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId()).getDockerImageTag(),
     )
     assertEquals(
       listOf(configInjection),
@@ -493,7 +493,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       AN_ACTOR_DEFINITION_ID,
       A_VERSION,
       replacementConfigInjection,
-      MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC!!),
+      MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
       A_CDK_VERSION,
     )
 

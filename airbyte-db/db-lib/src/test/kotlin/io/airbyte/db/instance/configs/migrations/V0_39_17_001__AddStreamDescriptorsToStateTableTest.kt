@@ -47,7 +47,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
     Assertions.assertEquals(2, context.select().from(STATE_TABLE).execute())
 
     // Applying the migration
-    devConfigsDbMigrator!!.migrate()
+    devConfigsDbMigrator.migrate()
 
     val newState = UUID.randomUUID()
     context
@@ -89,7 +89,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
 
   @Test
   fun testUniquenessConstraint() {
-    devConfigsDbMigrator!!.migrate()
+    devConfigsDbMigrator.migrate()
 
     val context = dslContext!!
     context
@@ -177,7 +177,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
 
     val previousMigration: BaseJavaMigration = V0_39_1_001__CreateStreamReset()
     devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
-    devConfigsDbMigrator!!.createBaseline()
+    devConfigsDbMigrator.createBaseline()
     injectMockData()
   }
 

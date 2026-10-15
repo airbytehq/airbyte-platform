@@ -368,7 +368,7 @@ class ScimVerifiedEmailDomainGateTest {
         permissionType = PermissionType.organization_admin,
       ),
     )
-    return Victim(userId = victim.id!!, orgId = victimOrg.id!!)
+    return Victim(userId = victim.id, orgId = victimOrg.id!!)
   }
 
   private fun tenant(

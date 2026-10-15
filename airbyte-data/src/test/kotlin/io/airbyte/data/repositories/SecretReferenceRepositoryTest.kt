@@ -136,7 +136,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
 
     val secretReference2 =
       SecretReference(
-        secretConfigId = persistedSecretConfig.id!!,
+        secretConfigId = persistedSecretConfig.id,
         scopeType = SecretReferenceScopeType.secret_storage,
         scopeId = secretStorageId,
         hydrationPath = "$.foo.bar",
@@ -147,7 +147,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
     assertThrows<DataAccessException> {
       secretReferenceRepository.save(
         SecretReference(
-          secretConfigId = persistedSecretConfig.id!!,
+          secretConfigId = persistedSecretConfig.id,
           scopeType = SecretReferenceScopeType.secret_storage,
           scopeId = secretStorageId,
           hydrationPath = "$.foo.bar",
@@ -159,7 +159,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
     assertThrows<DataAccessException> {
       secretReferenceRepository.save(
         SecretReference(
-          secretConfigId = persistedSecretConfig.id!!,
+          secretConfigId = persistedSecretConfig.id,
           scopeType = SecretReferenceScopeType.secret_storage,
           scopeId = secretStorageId,
           hydrationPath = null,
@@ -214,7 +214,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
 
     val secretRef2 =
       SecretReference(
-        secretConfigId = persistedSecretConfig.id!!,
+        secretConfigId = persistedSecretConfig.id,
         scopeType = SecretReferenceScopeType.actor,
         scopeId = actorId,
         hydrationPath = "$.foo.baz",
@@ -223,7 +223,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
 
     val secretRef3 =
       SecretReference(
-        secretConfigId = persistedSecretConfig.id!!,
+        secretConfigId = persistedSecretConfig.id,
         scopeType = SecretReferenceScopeType.secret_storage,
         scopeId = secretStorageId,
       )
@@ -294,7 +294,7 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
       ),
     )
 
-    assertThat(secretReferenceRepository.existsBySecretConfigId(referencedConfig.id!!)).isTrue()
+    assertThat(secretReferenceRepository.existsBySecretConfigId(referencedConfig.id)).isTrue()
     assertThat(secretReferenceRepository.existsBySecretConfigId(orphanedConfig.id!!)).isFalse()
   }
 }

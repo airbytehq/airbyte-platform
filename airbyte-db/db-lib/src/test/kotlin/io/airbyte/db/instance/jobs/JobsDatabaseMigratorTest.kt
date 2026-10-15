@@ -27,7 +27,7 @@ internal class JobsDatabaseMigratorTest : AbstractJobsDatabaseTest() {
     val migrator: DatabaseMigrator = JobsDatabaseMigrator(database!!, flyway)
     migrator.migrate()
     val schema = migrator.dumpSchema()
-    dumpSchema(schema!!, schemaDumpFile.absolutePath, false)
+    dumpSchema(schema, schemaDumpFile.absolutePath, false)
     val dumpedSchema = Files.readString(schemaDumpFile.toPath())
 
     Assertions.assertTrue(schemaDumpFile.exists())

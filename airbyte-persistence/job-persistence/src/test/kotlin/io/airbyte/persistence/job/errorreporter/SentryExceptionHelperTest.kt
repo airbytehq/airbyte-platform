@@ -340,7 +340,7 @@ internal class SentryExceptionHelperTest {
     )
 
     assertExceptionContent(
-      exceptionList.get(1)!!,
+      exceptionList.get(1),
       "io.airbyte.workers.DefaultReplicationWorker\$DestinationException",
       "Destination process exited with non-zero exit code 1",
       mutableListOf(

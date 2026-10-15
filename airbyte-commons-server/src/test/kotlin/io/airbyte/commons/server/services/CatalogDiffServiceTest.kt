@@ -309,7 +309,7 @@ internal class CatalogDiffServiceTest {
 
     // Capture the original connection state
     val originalConnection = connectionService.getStandardSync(connectionId)
-    val originalCatalog = originalConnection!!.catalog
+    val originalCatalog = originalConnection.catalog
     val originalStatus = originalConnection.status
 
     val request =
@@ -347,7 +347,7 @@ internal class CatalogDiffServiceTest {
 
     // Capture the original connection state
     val originalConnection = connectionService.getStandardSync(connectionId)
-    val originalCatalog = originalConnection!!.catalog
+    val originalCatalog = originalConnection.catalog
 
     val request =
       DiffCatalogsRequest()
@@ -409,7 +409,7 @@ internal class CatalogDiffServiceTest {
 
     // Capture the original connection state
     val originalConnection = connectionService.getStandardSync(connectionId)
-    val originalCatalog = originalConnection!!.catalog
+    val originalCatalog = originalConnection.catalog
     val originalStatus = originalConnection.status
 
     val request =
@@ -448,7 +448,7 @@ internal class CatalogDiffServiceTest {
 
     // Set the connection's nonBreakingChangesPreference to DISABLE
     val connection = connectionService.getStandardSync(connectionId)
-    connection!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.DISABLE
+    connection.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.DISABLE
 
     val originalCatalog = connection.catalog
 

@@ -207,8 +207,8 @@ class GroupServiceDataImplTest {
     val result = groupService.getGroup(GroupId(testGroupId))
 
     assertNotNull(result)
-    assertEquals(testGroup.groupId, result?.groupId)
-    assertEquals(testGroup.name, result?.name)
+    assertEquals(testGroup.groupId, result.groupId)
+    assertEquals(testGroup.name, result.name)
   }
 
   @Test

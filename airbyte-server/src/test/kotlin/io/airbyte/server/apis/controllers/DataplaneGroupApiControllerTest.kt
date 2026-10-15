@@ -87,7 +87,7 @@ class DataplaneGroupApiControllerTest {
           .name(newName)
           .enabled(newEnabled),
       )
-    val responseDataplaneGroups = updatedDataplaneGroup!!
+    val responseDataplaneGroups = updatedDataplaneGroup
 
     assert(responseDataplaneGroups.dataplaneGroupId == mockDataplaneGroup.id)
     assert(responseDataplaneGroups.name == newName)
@@ -130,7 +130,7 @@ class DataplaneGroupApiControllerTest {
           .name(newName),
       )
 
-    assert(updated!!.name == newName)
+    assert(updated.name == newName)
     assert(updated.enabled == originalEnabled)
   }
 
@@ -156,7 +156,7 @@ class DataplaneGroupApiControllerTest {
           .enabled(newEnabled),
       )
 
-    assert(updated!!.enabled == newEnabled)
+    assert(updated.enabled == newEnabled)
     assert(updated.name == originalName)
   }
 
