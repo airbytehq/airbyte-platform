@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.DeploymentMetadataRead
+import io.airbyte.api.server.generated.models.DeploymentMetadataRead
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler
 import io.mockk.every
 import io.mockk.mockk
@@ -26,10 +26,7 @@ class DeploymentMetadataApiControllerTest {
   @Test
   fun testFetchDeploymentMetadata() {
     val expected =
-      DeploymentMetadataRead()
-        .id(UUID.randomUUID())
-        .mode("COMMUNITY")
-        .version("0.2.3")
+      DeploymentMetadataRead(id = UUID.randomUUID(), mode = "COMMUNITY", version = "0.2.3")
 
     every { deploymentMetadataHandler.getDeploymentMetadata() } returns expected
 

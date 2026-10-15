@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.StreamStatusesApi
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusReadList
-import io.airbyte.api.model.generated.StreamStatusRunState
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.apis.StreamStatusesApi
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusReadList
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -21,56 +21,51 @@ import io.airbyte.server.handlers.StreamStatusesHandler
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import java.io.Serial
 
-@Controller("/api/v1/stream_statuses")
+@Controller
 class StreamStatusesApiController(
   private val handler: StreamStatusesHandler,
 ) : StreamStatusesApi {
   @Status(HttpStatus.CREATED)
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Post(uri = "/create")
   override fun createStreamStatus(
-    @Body req: StreamStatusCreateRequestBody,
+    @Body req: StreamStatusCreateRequestBody?,
   ): StreamStatusRead {
-    Validations.validate(req.runState, req.incompleteRunCause)
+    Validations.validate(req!!.runState, req.incompleteRunCause)
 
     return handler.createStreamStatus(req)
   }
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Post(uri = "/update")
   override fun updateStreamStatus(
-    @Body req: StreamStatusUpdateRequestBody,
+    @Body req: StreamStatusUpdateRequestBody?,
   ): StreamStatusRead {
-    Validations.validate(req.runState, req.incompleteRunCause)
+    Validations.validate(req!!.runState, req.incompleteRunCause)
 
     return handler.updateStreamStatus(req)
   }
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Post(uri = "/list")
   override fun getStreamStatuses(
-    @Body req: StreamStatusListRequestBody,
+    @Body req: StreamStatusListRequestBody?,
   ): StreamStatusReadList {
-    Validations.validate(req.pagination)
+    Validations.validate(req!!.pagination)
 
     return handler.listStreamStatus(req)
   }
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Post(uri = "/latest_per_run_state")
   override fun getStreamStatusesByRunState(
-    @Body req: ConnectionIdRequestBody,
-  ): StreamStatusReadList = handler.listStreamStatusPerRunState(req)
+    @Body req: ConnectionIdRequestBody?,
+  ): StreamStatusReadList = handler.listStreamStatusPerRunState(req!!)
 
   /**
    * Stateless request body validations.
@@ -102,13 +97,15 @@ class StreamStatusesApiController(
       if (pagination == null) {
         throw BadRequestException("Pagination params must be provided.")
       }
-      if (pagination.pageSize < PAGE_MIN) {
+      val pageSize = pagination.pageSize ?: throw BadRequestException("Page size must be provided.")
+      val rowOffset = pagination.rowOffset ?: throw BadRequestException("Row offset must be provided.")
+      if (pageSize < PAGE_MIN) {
         throw BadRequestException("Page size must be at least 1.")
       }
-      if (pagination.rowOffset < OFFSET_MIN) {
+      if (rowOffset < OFFSET_MIN) {
         throw BadRequestException("Row offset cannot be less than 0.")
       }
-      if (pagination.rowOffset % pagination.pageSize > 0) {
+      if (rowOffset % pageSize > 0) {
         throw BadRequestException("Row offset must be evenly divisible by page size.")
       }
     }

@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.ConnectorDocumentationRead
-import io.airbyte.api.model.generated.ConnectorDocumentationRequestBody
+import io.airbyte.api.server.generated.models.ActorType
+import io.airbyte.api.server.generated.models.ConnectorDocumentationRead
+import io.airbyte.api.server.generated.models.ConnectorDocumentationRequestBody
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
@@ -44,19 +44,19 @@ open class ConnectorDocumentationHandler(
     // hasn't been republished after doc-only changes
     val liveDocString = remoteDefinitionsProvider.getLiveConnectorDocumentation(documentationUrl)
     if (liveDocString.isPresent) {
-      return ConnectorDocumentationRead().doc(liveDocString.get())
+      return ConnectorDocumentationRead(doc = liveDocString.get())
     }
 
     // Fall back to versioned docs from the connector registry
     val versionedDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, version)
     if (versionedDocString.isPresent) {
-      return ConnectorDocumentationRead().doc(versionedDocString.get())
+      return ConnectorDocumentationRead(doc = versionedDocString.get())
     }
 
     // Fall back to latest docs from the connector registry
     val latestDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, LATEST)
     if (latestDocString.isPresent) {
-      return ConnectorDocumentationRead().doc(latestDocString.get())
+      return ConnectorDocumentationRead(doc = latestDocString.get())
     }
 
     throw NotFoundException(String.format("Could not find any documentation for connector %s", dockerRepo))

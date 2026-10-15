@@ -4,16 +4,19 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncResultRead
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody
 import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.JobSyncResultRead
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusReadList
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusJobType
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusReadList
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.config.AirbyteStream
@@ -72,9 +75,9 @@ internal class StreamStatusesHandlerTest {
 
   @Test
   fun testCreate() {
-    val apiReq = StreamStatusCreateRequestBody()
+    val apiReq = createRequest()
     val domain = StreamStatusBuilder().build()
-    val apiResp = StreamStatusRead()
+    val apiResp = streamStatusRead()
 
     every { mapper.map(apiReq) } returns domain
     every { repo.save(domain) } returns domain
@@ -85,9 +88,9 @@ internal class StreamStatusesHandlerTest {
 
   @Test
   fun testUpdate() {
-    val apiReq = StreamStatusUpdateRequestBody()
+    val apiReq = updateRequest()
     val domain = StreamStatusBuilder().build()
-    val apiResp = StreamStatusRead()
+    val apiResp = streamStatusRead()
 
     every { mapper.map(apiReq) } returns domain
     every { repo.update(domain) } returns domain
@@ -99,11 +102,12 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListWithoutReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = StreamStatusListRequestBody().connectionId(connectionId)
+    val apiReq =
+      StreamStatusListRequestBody(workspaceId = UUID.randomUUID(), pagination = Pagination(pageSize = 10, rowOffset = 0), connectionId = connectionId)
     val domainFilters = FilterParams(null, connectionId, null, null, null, null, null, null)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     every { mapper.map(any<StreamStatusListRequestBody>()) } returns domainFilters
     // Replica feature flag disabled - use primary repo
@@ -121,11 +125,12 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListWithReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = StreamStatusListRequestBody().connectionId(connectionId)
+    val apiReq =
+      StreamStatusListRequestBody(workspaceId = UUID.randomUUID(), pagination = Pagination(pageSize = 10, rowOffset = 0), connectionId = connectionId)
     val domainFilters = FilterParams(null, connectionId, null, null, null, null, null, null)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     every { mapper.map(any<StreamStatusListRequestBody>()) } returns domainFilters
     // Replica feature flag enabled - use replica repo
@@ -143,10 +148,10 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListPerRunStateOriginalWithoutReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
+    val apiReq = ConnectionIdRequestBody(connectionId = connectionId)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     // Both feature flags disabled - use primary repo with original implementation
     every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns false
@@ -160,10 +165,10 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListPerRunStateOriginalWithReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
+    val apiReq = ConnectionIdRequestBody(connectionId = connectionId)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     // Replica enabled, optimized disabled - use replica repo with original implementation
     every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns false
@@ -177,10 +182,10 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListPerRunStateOptimizedWithoutReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
+    val apiReq = ConnectionIdRequestBody(connectionId = connectionId)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     // Optimized enabled, replica disabled - use primary repo with optimized implementation
     every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns true
@@ -194,10 +199,10 @@ internal class StreamStatusesHandlerTest {
   @Test
   fun testListPerRunStateOptimizedWithReplica() {
     val connectionId = UUID.randomUUID()
-    val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
+    val apiReq = ConnectionIdRequestBody(connectionId = connectionId)
     val domainItem = StreamStatusBuilder().build()
-    val apiItem = StreamStatusRead()
-    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+    val apiItem = streamStatusRead()
+    val apiResp = StreamStatusReadList(streamStatuses = listOf(apiItem))
 
     // Both feature flags enabled - use replica repo with optimized implementation
     every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns true
@@ -217,6 +222,7 @@ internal class StreamStatusesHandlerTest {
     val ssOne =
       StreamStatusBuilder()
         .id(UUID.randomUUID())
+        .workspaceId(UUID.randomUUID())
         .connectionId(connectionId)
         .attemptNumber(0)
         .streamName("streamOne")
@@ -229,6 +235,7 @@ internal class StreamStatusesHandlerTest {
     val ssTwo =
       StreamStatusBuilder()
         .id(UUID.randomUUID())
+        .workspaceId(UUID.randomUUID())
         .connectionId(connectionId)
         .attemptNumber(0)
         .streamName("streamTwo")
@@ -242,6 +249,7 @@ internal class StreamStatusesHandlerTest {
     val ssThree =
       StreamStatusBuilder()
         .id(UUID.randomUUID())
+        .workspaceId(UUID.randomUUID())
         .connectionId(connectionId)
         .attemptNumber(0)
         .streamName("streamThree")
@@ -475,3 +483,41 @@ internal class StreamStatusesHandlerTest {
     Assertions.assertEquals(expected, handlerWithRealMapper.getConnectionUptimeHistory(apiReq))
   }
 }
+
+private fun createRequest(): StreamStatusCreateRequestBody =
+  StreamStatusCreateRequestBody(
+    workspaceId = UUID.randomUUID(),
+    connectionId = UUID.randomUUID(),
+    jobId = 1L,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamName = "stream",
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = 0L,
+  )
+
+private fun updateRequest(): StreamStatusUpdateRequestBody =
+  StreamStatusUpdateRequestBody(
+    id = UUID.randomUUID(),
+    workspaceId = UUID.randomUUID(),
+    connectionId = UUID.randomUUID(),
+    jobId = 1L,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamName = "stream",
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = 0L,
+  )
+
+private fun streamStatusRead(): StreamStatusRead =
+  StreamStatusRead(
+    id = UUID.randomUUID(),
+    workspaceId = UUID.randomUUID(),
+    connectionId = UUID.randomUUID(),
+    jobId = 1L,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamName = "stream",
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = 0L,
+  )

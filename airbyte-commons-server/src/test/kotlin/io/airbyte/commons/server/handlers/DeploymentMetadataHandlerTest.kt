@@ -37,8 +37,8 @@ internal class DeploymentMetadataHandlerTest {
 
     val deploymentMetadataRead = handler.getDeploymentMetadata()
 
-    Assertions.assertEquals(deploymentId, deploymentMetadataRead.getId())
-    Assertions.assertEquals(airbyteEdition.name, deploymentMetadataRead.getMode())
-    Assertions.assertEquals(version, deploymentMetadataRead.getVersion())
+    Assertions.assertEquals(deploymentId, deploymentMetadataRead.id)
+    Assertions.assertEquals(airbyteEdition.name, deploymentMetadataRead.mode)
+    Assertions.assertEquals(version, deploymentMetadataRead.version)
   }
 }

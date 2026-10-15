@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.HealthCheckRead
+import io.airbyte.api.server.generated.models.HealthCheckRead
 import io.airbyte.data.services.HealthCheckService
 import jakarta.inject.Singleton
 
@@ -15,5 +15,5 @@ import jakarta.inject.Singleton
 open class HealthCheckHandler(
   private val healthCheckService: HealthCheckService,
 ) {
-  fun health(): HealthCheckRead = HealthCheckRead().available(healthCheckService.healthCheck())
+  fun health(): HealthCheckRead = HealthCheckRead(available = healthCheckService.healthCheck())
 }

@@ -4,9 +4,9 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobRetryStateRequestBody
-import io.airbyte.api.model.generated.RetryStateRead
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobRetryStateRequestBody
+import io.airbyte.api.server.generated.models.RetryStateRead
 import io.airbyte.server.handlers.apidomainmapping.RetryStatesMapper
 import io.airbyte.server.repositories.RetryStatesRepository
 import jakarta.inject.Singleton

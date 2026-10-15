@@ -4,12 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AuthConfiguration
-import io.airbyte.api.model.generated.InstanceConfigurationResponse
-import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum
-import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum
-import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
 import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.api.server.generated.models.AuthConfiguration
+import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.config.AuthenticatedUser
@@ -87,25 +85,27 @@ internal class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler()
 
     val expected =
-      InstanceConfigurationResponse()
-        .edition(EditionEnum.COMMUNITY)
-        .version("0.50.1")
-        .airbyteUrl(AIRBYTE_URL)
-        .auth(
+      InstanceConfigurationResponse(
+        edition = InstanceConfigurationResponse.Edition.COMMUNITY,
+        version = "0.50.1",
+        airbyteUrl = AIRBYTE_URL,
+        auth =
           if (isOidc) {
-            AuthConfiguration()
-              .mode(AuthConfiguration.ModeEnum.OIDC)
-              .clientId(WEB_CLIENT_ID)
-              .authorizationServerUrl(AUTHORIZATION_SERVER_URL)
-              .defaultRealm(AIRBYTE_REALM)
+            AuthConfiguration(
+              mode = AuthConfiguration.Mode.OIDC,
+              clientId = WEB_CLIENT_ID,
+              authorizationServerUrl = AUTHORIZATION_SERVER_URL,
+              defaultRealm = AIRBYTE_REALM,
+            )
           } else {
-            AuthConfiguration().mode(AuthConfiguration.ModeEnum.NONE)
+            AuthConfiguration(mode = AuthConfiguration.Mode.NONE)
           },
-        ).initialSetupComplete(isInitialSetupComplete)
-        .defaultUserId(USER_ID)
-        .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultOrganizationEmail(EMAIL)
-        .trackingStrategy(TrackingStrategyEnum.LOGGING)
+        initialSetupComplete = isInitialSetupComplete,
+        defaultUserId = USER_ID,
+        defaultOrganizationId = ORGANIZATION_ID,
+        defaultOrganizationEmail = EMAIL,
+        trackingStrategy = InstanceConfigurationResponse.TrackingStrategy.LOGGING,
+      )
 
     val actual = instanceConfigurationHandler.instanceConfiguration
 
@@ -121,7 +121,7 @@ internal class InstanceConfigurationHandlerTest {
   )
   fun testGetInstanceConfigurationTrackingStrategy(
     envValue: String,
-    expectedResult: TrackingStrategyEnum?,
+    expectedResult: InstanceConfigurationResponse.TrackingStrategy?,
   ) {
     stubGetDefaultUser()
     stubGetDefaultOrganization()
@@ -144,7 +144,7 @@ internal class InstanceConfigurationHandlerTest {
 
     val result = handler.instanceConfiguration
 
-    Assertions.assertEquals(expectedResult, result.getTrackingStrategy())
+    Assertions.assertEquals(expectedResult, result.trackingStrategy)
   }
 
   @Test
@@ -161,11 +161,12 @@ internal class InstanceConfigurationHandlerTest {
 
     Assertions.assertThrows(IllegalStateException::class.java) {
       instanceConfigurationHandler.setupInstanceConfiguration(
-        InstanceConfigurationSetupRequestBody()
-          .email("test@mail.com")
-          .displaySetupWizard(false)
-          .initialSetupComplete(false)
-          .anonymousDataCollection(false),
+        InstanceConfigurationSetupRequestBody(
+          email = "test@mail.com",
+          displaySetupWizard = false,
+          initialSetupComplete = false,
+          anonymousDataCollection = false,
+        ),
       )
     }
   }
@@ -204,40 +205,36 @@ internal class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler()
 
     val expected =
-      InstanceConfigurationResponse()
-        .edition(EditionEnum.COMMUNITY)
-        .version("0.50.1")
-        .airbyteUrl(AIRBYTE_URL)
-        .auth(
-          AuthConfiguration()
-            .mode(AuthConfiguration.ModeEnum.OIDC)
-            .clientId(WEB_CLIENT_ID)
-            .defaultRealm(AIRBYTE_REALM)
-            .authorizationServerUrl(AUTHORIZATION_SERVER_URL),
-        ).initialSetupComplete(true)
-        .defaultUserId(USER_ID)
-        .defaultOrganizationId(ORGANIZATION_ID)
-        .defaultOrganizationEmail(EMAIL)
-        .trackingStrategy(TrackingStrategyEnum.LOGGING)
+      InstanceConfigurationResponse(
+        edition = InstanceConfigurationResponse.Edition.COMMUNITY,
+        version = "0.50.1",
+        airbyteUrl = AIRBYTE_URL,
+        auth =
+          AuthConfiguration(
+            mode = AuthConfiguration.Mode.OIDC,
+            clientId = WEB_CLIENT_ID,
+            defaultRealm = AIRBYTE_REALM,
+            authorizationServerUrl = AUTHORIZATION_SERVER_URL,
+          ),
+        initialSetupComplete = true,
+        defaultUserId = USER_ID,
+        defaultOrganizationId = ORGANIZATION_ID,
+        defaultOrganizationEmail = EMAIL,
+        trackingStrategy = InstanceConfigurationResponse.TrackingStrategy.LOGGING,
+      )
+
+    val expectedUserName = if (userNamePresent) "test user" else DEFAULT_USER_NAME
+    val expectedOrgName = if (orgNamePresent) "test org" else DEFAULT_ORG_NAME
 
     val requestBody =
-      InstanceConfigurationSetupRequestBody()
-        .email(EMAIL)
-        .displaySetupWizard(true)
-        .anonymousDataCollection(true)
-        .initialSetupComplete(true)
-
-    var expectedUserName: String = DEFAULT_USER_NAME
-    if (userNamePresent) {
-      expectedUserName = "test user"
-      requestBody.setUserName(expectedUserName)
-    }
-
-    var expectedOrgName: String = DEFAULT_ORG_NAME
-    if (orgNamePresent) {
-      expectedOrgName = "test org"
-      requestBody.setOrganizationName(expectedOrgName)
-    }
+      InstanceConfigurationSetupRequestBody(
+        email = EMAIL,
+        displaySetupWizard = true,
+        anonymousDataCollection = true,
+        initialSetupComplete = true,
+        userName = if (userNamePresent) expectedUserName else null,
+        organizationName = if (orgNamePresent) expectedOrgName else null,
+      )
 
     val expectedEmailUpdate: String
     if (userWithEmailAlreadyExists) {

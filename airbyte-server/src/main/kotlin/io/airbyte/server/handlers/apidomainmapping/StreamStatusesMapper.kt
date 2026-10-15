@@ -5,15 +5,15 @@
 package io.airbyte.server.handlers.apidomainmapping
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.model.generated.StreamStatusJobType
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusRunState
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
+import io.airbyte.api.server.generated.models.StreamStatusJobType
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRateLimitedMetadata
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
@@ -53,9 +53,7 @@ class StreamStatusesMapper {
       domain.incompleteRunCause(map(api.incompleteRunCause))
     }
 
-    if (null != api.metadata) {
-      domain.metadata(map(api.metadata))
-    }
+    api.metadata?.let { domain.metadata(map(it)) }
 
     return domain.build()
   }
@@ -78,9 +76,7 @@ class StreamStatusesMapper {
       domain.incompleteRunCause(map(api.incompleteRunCause))
     }
 
-    if (null != api.metadata) {
-      domain.metadata(map(api.metadata))
-    }
+    api.metadata?.let { domain.metadata(map(it)) }
 
     return domain.build()
   }
@@ -96,9 +92,11 @@ class StreamStatusesMapper {
 
   fun map(api: Pagination?): StreamStatusesRepository.Pagination? =
     if (api != null) {
+      // the controller rejects a pagination without these values before mapping
+      val pageSize = api.pageSize!!
       StreamStatusesRepository.Pagination(
-        api.rowOffset / api.pageSize,
-        api.pageSize,
+        api.rowOffset!! / pageSize,
+        pageSize,
       )
     } else {
       null
@@ -117,38 +115,31 @@ class StreamStatusesMapper {
     )
 
   // Domain to API
-  fun map(domain: StreamStatus): StreamStatusRead {
-    val api = StreamStatusRead()
-    api.id = domain.id
-    api.connectionId = domain.connectionId
-    api.workspaceId = domain.workspaceId
-    api.jobId = domain.jobId
-    api.jobType = map(domain.jobType)
-    api.attemptNumber = domain.attemptNumber
-    api.streamName = domain.streamName
-    api.streamNamespace = domain.streamNamespace
-    api.transitionedAt = domain.transitionedAt!!.toInstant().toEpochMilli()
-    api.runState = map(domain.runState)
-
-    if (null != domain.incompleteRunCause) {
-      api.incompleteRunCause = map(domain.incompleteRunCause)
-    }
-
-    if (null != domain.metadata) {
-      api.metadata = map(domain.metadata)
-    }
-
-    return api
-  }
+  // The required values are NOT NULL columns, so a persisted row always has them.
+  fun map(domain: StreamStatus): StreamStatusRead =
+    StreamStatusRead(
+      id = domain.id!!,
+      connectionId = domain.connectionId!!,
+      workspaceId = domain.workspaceId!!,
+      jobId = domain.jobId!!,
+      jobType = map(domain.jobType)!!,
+      attemptNumber = domain.attemptNumber!!,
+      streamName = domain.streamName!!,
+      streamNamespace = domain.streamNamespace,
+      transitionedAt = domain.transitionedAt!!.toInstant().toEpochMilli(),
+      runState = map(domain.runState)!!,
+      incompleteRunCause = domain.incompleteRunCause?.let { map(it) },
+      metadata = domain.metadata?.let { map(it) },
+    )
 
   fun map(domainEnum: JobStreamStatusJobType?): StreamStatusJobType? =
-    if (domainEnum != null) StreamStatusJobType.fromValue(domainEnum.name.uppercase(Locale.getDefault())) else null
+    if (domainEnum != null) StreamStatusJobType.valueOf(domainEnum.name.uppercase(Locale.getDefault())) else null
 
   fun map(domainEnum: JobStreamStatusRunState?): StreamStatusRunState? =
-    if (domainEnum != null) StreamStatusRunState.fromValue(domainEnum.name.uppercase(Locale.getDefault())) else null
+    if (domainEnum != null) StreamStatusRunState.valueOf(domainEnum.name.uppercase(Locale.getDefault())) else null
 
   fun map(domainEnum: JobStreamStatusIncompleteRunCause?): StreamStatusIncompleteRunCause? =
-    if (domainEnum != null) StreamStatusIncompleteRunCause.fromValue(domainEnum.name.uppercase(Locale.getDefault())) else null
+    if (domainEnum != null) StreamStatusIncompleteRunCause.valueOf(domainEnum.name.uppercase(Locale.getDefault())) else null
 
   fun map(rateLimitedMetadata: JsonNode): StreamStatusRateLimitedMetadata {
     val rateLimitedInfo =
@@ -156,12 +147,12 @@ class StreamStatusesMapper {
         rateLimitedMetadata,
         StreamStatusRateLimitedMetadataRepositoryStructure::class.java,
       )
-    return StreamStatusRateLimitedMetadata().quotaReset(rateLimitedInfo.quotaReset)
+    return StreamStatusRateLimitedMetadata(quotaReset = rateLimitedInfo.quotaReset)
   }
 
   fun map(rateLimitedMetadata: StreamStatusRateLimitedMetadata): JsonNode {
     val streamStatusRateLimitedMetadataRepositoryStructure =
-      StreamStatusRateLimitedMetadataRepositoryStructure(rateLimitedMetadata.quotaReset)
+      StreamStatusRateLimitedMetadataRepositoryStructure(rateLimitedMetadata.quotaReset!!)
     return Jsons.jsonNode(streamStatusRateLimitedMetadataRepositoryStructure)
   }
 

@@ -4,15 +4,15 @@
 
 package io.airbyte.server.handlers.apidomainmapping
 
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.model.generated.StreamStatusJobType
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusRunState
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
+import io.airbyte.api.server.generated.models.StreamStatusJobType
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRateLimitedMetadata
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusIncompleteRunCause
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
@@ -71,7 +71,7 @@ class StreamStatusesMapperTest {
       apiRowOffset: Int,
       domainPageOffset: Int,
     ) {
-      val api = Pagination().rowOffset(apiRowOffset).pageSize(pageSize)
+      val api = Pagination(rowOffset = apiRowOffset, pageSize = pageSize)
       val domain = StreamStatusesRepository.Pagination(domainPageOffset, pageSize)
       Assertions.assertEquals(domain, mapper.map(api))
     }
@@ -79,7 +79,7 @@ class StreamStatusesMapperTest {
     @ParameterizedTest
     @ArgumentsSource(FilterParamsMatrix::class)
     fun mapListFilters(
-      workspaceId: UUID?,
+      workspaceId: UUID,
       connectionId: UUID?,
       jobId: Long?,
       attemptNumber: Int?,
@@ -87,17 +87,18 @@ class StreamStatusesMapperTest {
       streamName: String?,
       jobType: StreamStatusJobType?,
     ) {
-      val pagination = Pagination().pageSize(10).rowOffset(0)
+      val pagination = Pagination(pageSize = 10, rowOffset = 0)
       val api =
-        StreamStatusListRequestBody()
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .jobId(jobId)
-          .jobType(jobType)
-          .attemptNumber(attemptNumber)
-          .streamNamespace(streamNamespace)
-          .streamName(streamName)
-          .pagination(pagination)
+        StreamStatusListRequestBody(
+          workspaceId = workspaceId,
+          connectionId = connectionId,
+          jobId = jobId,
+          jobType = jobType,
+          attemptNumber = attemptNumber,
+          streamNamespace = streamNamespace,
+          streamName = streamName,
+          pagination = pagination,
+        )
       val domain =
         FilterParams(
           workspaceId,
@@ -116,27 +117,28 @@ class StreamStatusesMapperTest {
     @ParameterizedTest
     @ArgumentsSource(StreamStatusParamsMatrix::class)
     fun mapStreamStatusCreate(
-      workspaceId: UUID?,
-      connectionId: UUID?,
-      jobId: Long?,
-      attemptNumber: Int?,
+      workspaceId: UUID,
+      connectionId: UUID,
+      jobId: Long,
+      attemptNumber: Int,
       streamNamespace: String?,
-      streamName: String?,
+      streamName: String,
     ) {
       val transitionedAt = System.currentTimeMillis()
       val api =
-        StreamStatusCreateRequestBody()
-          .runState(StreamStatusRunState.INCOMPLETE)
-          .incompleteRunCause(StreamStatusIncompleteRunCause.FAILED)
-          .jobType(StreamStatusJobType.SYNC)
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .jobId(jobId)
-          .attemptNumber(attemptNumber)
-          .streamNamespace(streamNamespace)
-          .streamName(streamName)
-          .transitionedAt(transitionedAt)
-          .metadata(StreamStatusRateLimitedMetadata().quotaReset(transitionedAt))
+        StreamStatusCreateRequestBody(
+          runState = StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause = StreamStatusIncompleteRunCause.FAILED,
+          jobType = StreamStatusJobType.SYNC,
+          workspaceId = workspaceId,
+          connectionId = connectionId,
+          jobId = jobId,
+          attemptNumber = attemptNumber,
+          streamNamespace = streamNamespace,
+          streamName = streamName,
+          transitionedAt = transitionedAt,
+          metadata = StreamStatusRateLimitedMetadata(quotaReset = transitionedAt),
+        )
       val domain =
         StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
@@ -173,29 +175,30 @@ class StreamStatusesMapperTest {
     @ParameterizedTest
     @ArgumentsSource(StreamStatusParamsMatrix::class)
     fun mapStreamStatusUpdate(
-      workspaceId: UUID?,
-      connectionId: UUID?,
-      jobId: Long?,
-      attemptNumber: Int?,
+      workspaceId: UUID,
+      connectionId: UUID,
+      jobId: Long,
+      attemptNumber: Int,
       streamNamespace: String?,
-      streamName: String?,
+      streamName: String,
     ) {
       val id = UUID.randomUUID()
       val transitionedAt = System.currentTimeMillis()
       val api =
-        StreamStatusUpdateRequestBody()
-          .runState(StreamStatusRunState.INCOMPLETE)
-          .incompleteRunCause(StreamStatusIncompleteRunCause.FAILED)
-          .jobType(StreamStatusJobType.SYNC)
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .jobId(jobId)
-          .attemptNumber(attemptNumber)
-          .streamNamespace(streamNamespace)
-          .streamName(streamName)
-          .transitionedAt(transitionedAt)
-          .metadata(StreamStatusRateLimitedMetadata().quotaReset(transitionedAt))
-          .id(id)
+        StreamStatusUpdateRequestBody(
+          runState = StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause = StreamStatusIncompleteRunCause.FAILED,
+          jobType = StreamStatusJobType.SYNC,
+          workspaceId = workspaceId,
+          connectionId = connectionId,
+          jobId = jobId,
+          attemptNumber = attemptNumber,
+          streamNamespace = streamNamespace,
+          streamName = streamName,
+          transitionedAt = transitionedAt,
+          metadata = StreamStatusRateLimitedMetadata(quotaReset = transitionedAt),
+          id = id,
+        )
       val domain =
         StreamStatusBuilder()
           .runState(mapper.map(StreamStatusRunState.INCOMPLETE))
@@ -267,12 +270,12 @@ class StreamStatusesMapperTest {
     @ParameterizedTest
     @ArgumentsSource(StreamStatusParamsMatrix::class)
     fun mapStreamStatusRead(
-      workspaceId: UUID?,
-      connectionId: UUID?,
-      jobId: Long?,
-      attemptNumber: Int?,
+      workspaceId: UUID,
+      connectionId: UUID,
+      jobId: Long,
+      attemptNumber: Int,
       streamNamespace: String?,
-      streamName: String?,
+      streamName: String,
     ) {
       val id = UUID.randomUUID()
       val transitionedAt = System.currentTimeMillis()
@@ -292,19 +295,20 @@ class StreamStatusesMapperTest {
           .metadata(Jsons.jsonNode(StreamStatusRateLimitedMetadataRepositoryStructure(transitionedAt)))
           .build()
       val api =
-        StreamStatusRead()
-          .runState(StreamStatusRunState.INCOMPLETE)
-          .incompleteRunCause(StreamStatusIncompleteRunCause.FAILED)
-          .jobType(StreamStatusJobType.SYNC)
-          .workspaceId(workspaceId)
-          .connectionId(connectionId)
-          .jobId(jobId)
-          .attemptNumber(attemptNumber)
-          .streamNamespace(streamNamespace)
-          .streamName(streamName)
-          .transitionedAt(transitionedAt)
-          .metadata(StreamStatusRateLimitedMetadata().quotaReset(transitionedAt))
-          .id(id)
+        StreamStatusRead(
+          runState = StreamStatusRunState.INCOMPLETE,
+          incompleteRunCause = StreamStatusIncompleteRunCause.FAILED,
+          jobType = StreamStatusJobType.SYNC,
+          workspaceId = workspaceId,
+          connectionId = connectionId,
+          jobId = jobId,
+          attemptNumber = attemptNumber,
+          streamNamespace = streamNamespace,
+          streamName = streamName,
+          transitionedAt = transitionedAt,
+          metadata = StreamStatusRateLimitedMetadata(quotaReset = transitionedAt),
+          id = id,
+        )
 
       val mapped = mapper.map(domain)
 

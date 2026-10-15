@@ -4,8 +4,8 @@
 
 package io.airbyte.server.handlers.apidomainmapping
 
-import io.airbyte.api.model.generated.JobRetryStateRequestBody
-import io.airbyte.api.model.generated.RetryStateRead
+import io.airbyte.api.server.generated.models.JobRetryStateRequestBody
+import io.airbyte.api.server.generated.models.RetryStateRead
 import io.airbyte.server.repositories.domain.RetryState
 import jakarta.inject.Singleton
 
@@ -29,13 +29,15 @@ class RetryStatesMapper {
       .build()
 
   // Domain to API
+  // Every retry_states column is NOT NULL, so a persisted row always has these values.
   fun map(domain: RetryState): RetryStateRead =
-    RetryStateRead()
-      .id(domain.id)
-      .connectionId(domain.connectionId)
-      .jobId(domain.jobId)
-      .successiveCompleteFailures(domain.successiveCompleteFailures)
-      .totalCompleteFailures(domain.totalCompleteFailures)
-      .successivePartialFailures(domain.successivePartialFailures)
-      .totalPartialFailures(domain.totalPartialFailures)
+    RetryStateRead(
+      id = domain.id!!,
+      connectionId = domain.connectionId!!,
+      jobId = domain.jobId!!,
+      successiveCompleteFailures = domain.successiveCompleteFailures!!,
+      totalCompleteFailures = domain.totalCompleteFailures!!,
+      successivePartialFailures = domain.successivePartialFailures!!,
+      totalPartialFailures = domain.totalPartialFailures!!,
+    )
 }

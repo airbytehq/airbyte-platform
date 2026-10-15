@@ -21695,7 +21695,6 @@ components:
         - defaultOrganizationId
         - defaultOrganizationEmail
         - defaultUserId
-        - defaultWorkspaceId
         - edition
         - initialSetupComplete
         - trackingStrategy

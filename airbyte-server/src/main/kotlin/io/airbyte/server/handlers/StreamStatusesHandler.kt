@@ -4,18 +4,18 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncResultRead
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody
 import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.JobSyncResultRead
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusReadList
-import io.airbyte.api.model.generated.StreamStatusRunState
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusReadList
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper
 import io.airbyte.config.Job
@@ -62,7 +62,7 @@ open class StreamStatusesHandler(
 
   fun listStreamStatus(req: StreamStatusListRequestBody): StreamStatusReadList {
     val filters = mapper.map(req)
-    val useReplica = featureFlagClient.boolVariation(UseReadReplicaForStreamStatus, Connection(req.connectionId))
+    val useReplica = featureFlagClient.boolVariation(UseReadReplicaForStreamStatus, Connection(req.connectionId!!))
 
     val page =
       if (useReplica) {
@@ -75,7 +75,7 @@ open class StreamStatusesHandler(
       page.content
         .map { domain -> mapper.map(domain!!) }
 
-    return StreamStatusReadList().streamStatuses(apiList)
+    return StreamStatusReadList(streamStatuses = apiList)
   }
 
   fun listStreamStatusPerRunState(req: ConnectionIdRequestBody): StreamStatusReadList {
@@ -100,7 +100,7 @@ open class StreamStatusesHandler(
       }
 
     val apiList = streamStatuses.map { domain -> mapper.map(domain) }
-    return StreamStatusReadList().streamStatuses(apiList)
+    return StreamStatusReadList(streamStatuses = apiList)
   }
 
   /**

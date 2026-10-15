@@ -4,13 +4,13 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.SecretStorageApi
-import io.airbyte.api.model.generated.MigrateSecretStorageRequestBody
-import io.airbyte.api.model.generated.SecretStorageCreateRequestBody
-import io.airbyte.api.model.generated.SecretStorageIdRequestBody
-import io.airbyte.api.model.generated.SecretStorageListRequestBody
-import io.airbyte.api.model.generated.SecretStorageRead
-import io.airbyte.api.model.generated.SecretStorageReadList
+import io.airbyte.api.server.generated.apis.SecretStorageApi
+import io.airbyte.api.server.generated.models.MigrateSecretStorageRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageCreateRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageIdRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageListRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageRead
+import io.airbyte.api.server.generated.models.SecretStorageReadList
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -34,11 +34,10 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule.IS_AUTHENTICATED
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
+import io.airbyte.api.server.generated.models.ScopeType as ApiScopeType
+import io.airbyte.api.server.generated.models.SecretStorageType as ApiSecretStorageType
 
-typealias ApiScopeType = io.airbyte.api.model.generated.ScopeType
-typealias ApiSecretStorageType = io.airbyte.api.model.generated.SecretStorageType
-
-@Controller("/api/v1/secret_storage")
+@Controller
 @ExecuteOn(AirbyteTaskExecutors.IO)
 class SecretStorageApiController(
   private val secretStorageService: SecretStorageService,
@@ -125,17 +124,17 @@ class SecretStorageApiController(
       @Valid @NotNull
       SecretStorageListRequestBody,
   ): SecretStorageReadList =
-    SecretStorageReadList()
-      .secretStorages(
+    SecretStorageReadList(
+      secretStorages =
         secretStorageService
           .listSecretStorage(
             when (secretStorageListRequestBody.scopeType) {
-              io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> SecretStorageScopeType.ORGANIZATION
-              io.airbyte.api.model.generated.ScopeType.WORKSPACE -> SecretStorageScopeType.WORKSPACE
+              ApiScopeType.ORGANIZATION -> SecretStorageScopeType.ORGANIZATION
+              ApiScopeType.WORKSPACE -> SecretStorageScopeType.WORKSPACE
             },
             secretStorageListRequestBody.scopeId,
           ).map { SecretStorageWithConfig(it, null).toApiModel() },
-      )
+    )
 
   @RequiresIntent(Intent.ManageSecretStorages)
   override fun migrateSecretStorage(
@@ -145,34 +144,31 @@ class SecretStorageApiController(
       SecretStorageId(migrateSecretStorageRequestBody.fromSecretStorageId),
       SecretStorageId(migrateSecretStorageRequestBody.toSecretStorageId),
       when (migrateSecretStorageRequestBody.scopeType) {
-        io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> io.airbyte.config.ScopeType.ORGANIZATION
-        io.airbyte.api.model.generated.ScopeType.WORKSPACE -> io.airbyte.config.ScopeType.WORKSPACE
+        ApiScopeType.ORGANIZATION -> io.airbyte.config.ScopeType.ORGANIZATION
+        ApiScopeType.WORKSPACE -> io.airbyte.config.ScopeType.WORKSPACE
       },
       migrateSecretStorageRequestBody.scopeId,
     )
   }
 }
 
-private fun SecretStorageWithConfig.toApiModel(): SecretStorageRead {
-  val secretStorageRead = SecretStorageRead()
-  secretStorageRead.id(this.secretStorage.id.value)
-  secretStorageRead.isConfiguredFromEnvironment(this.secretStorage.configuredFromEnvironment)
-  secretStorageRead.config(this.config)
-  secretStorageRead.scopeId(this.secretStorage.scopeId)
-  secretStorageRead.scopeType(
-    when (this.secretStorage.scopeType) {
-      SecretStorageScopeType.ORGANIZATION -> io.airbyte.api.model.generated.ScopeType.ORGANIZATION
-      SecretStorageScopeType.WORKSPACE -> io.airbyte.api.model.generated.ScopeType.WORKSPACE
-    },
+private fun SecretStorageWithConfig.toApiModel(): SecretStorageRead =
+  SecretStorageRead(
+    id = this.secretStorage.id.value,
+    isConfiguredFromEnvironment = this.secretStorage.configuredFromEnvironment,
+    config = this.config,
+    scopeId = this.secretStorage.scopeId,
+    scopeType =
+      when (this.secretStorage.scopeType) {
+        SecretStorageScopeType.ORGANIZATION -> ApiScopeType.ORGANIZATION
+        SecretStorageScopeType.WORKSPACE -> ApiScopeType.WORKSPACE
+      },
+    secretStorageType =
+      when (this.secretStorage.storageType) {
+        SecretStorageType.VAULT -> ApiSecretStorageType.VAULT
+        SecretStorageType.AWS_SECRETS_MANAGER -> ApiSecretStorageType.AWS_SECRETS_MANAGER
+        SecretStorageType.GOOGLE_SECRET_MANAGER -> ApiSecretStorageType.GOOGLE_SECRET_MANAGER
+        SecretStorageType.AZURE_KEY_VAULT -> ApiSecretStorageType.AZURE_KEY_VAULT
+        SecretStorageType.LOCAL_TESTING -> ApiSecretStorageType.LOCAL_TESTING
+      },
   )
-  secretStorageRead.secretStorageType(
-    when (this.secretStorage.storageType) {
-      SecretStorageType.VAULT -> io.airbyte.api.model.generated.SecretStorageType.VAULT
-      SecretStorageType.AWS_SECRETS_MANAGER -> io.airbyte.api.model.generated.SecretStorageType.AWS_SECRETS_MANAGER
-      SecretStorageType.GOOGLE_SECRET_MANAGER -> io.airbyte.api.model.generated.SecretStorageType.GOOGLE_SECRET_MANAGER
-      SecretStorageType.AZURE_KEY_VAULT -> io.airbyte.api.model.generated.SecretStorageType.AZURE_KEY_VAULT
-      SecretStorageType.LOCAL_TESTING -> io.airbyte.api.model.generated.SecretStorageType.LOCAL_TESTING
-    },
-  )
-  return secretStorageRead
-}

@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.NotificationRead
-import io.airbyte.api.model.generated.NotificationTrigger
-import io.airbyte.api.model.generated.NotificationWebhookConfigValidationRequestBody
-import io.airbyte.api.model.generated.SlackNotificationConfiguration
+import io.airbyte.api.server.generated.models.NotificationRead
+import io.airbyte.api.server.generated.models.NotificationTrigger
+import io.airbyte.api.server.generated.models.NotificationWebhookConfigValidationRequestBody
+import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
 import io.airbyte.commons.server.handlers.NotificationsHandler
 import io.mockk.every
 import io.mockk.mockk
@@ -25,15 +25,16 @@ internal class NotificationApiControllerTest {
 
   @Test
   fun testTryWebhookApi() {
-    every { notificationsHandler.tryNotification(any(), any()) } returns NotificationRead().status(NotificationRead.StatusEnum.SUCCEEDED)
+    every { notificationsHandler.tryNotification(any(), any()) } returns NotificationRead(status = NotificationRead.Status.SUCCEEDED)
 
     val requestBody =
-      NotificationWebhookConfigValidationRequestBody()
-        .notificationTrigger(NotificationTrigger.SYNC_SUCCESS)
-        .slackConfiguration(SlackNotificationConfiguration().webhook("webhook"))
+      NotificationWebhookConfigValidationRequestBody(
+        notificationTrigger = NotificationTrigger.SYNC_SUCCESS,
+        slackConfiguration = SlackNotificationConfiguration(webhook = "webhook"),
+      )
 
     val result = controller.tryNotificationWebhookConfig(requestBody)
 
-    assert(result!!.status == NotificationRead.StatusEnum.SUCCEEDED)
+    assert(result.status == NotificationRead.Status.SUCCEEDED)
   }
 }

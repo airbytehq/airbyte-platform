@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.HealthCheckRead
+import io.airbyte.api.server.generated.models.HealthCheckRead
 import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
@@ -42,7 +42,7 @@ internal class HealthApiControllerTest {
 
   @Test
   fun testHealth() {
-    every { healthCheckHandler.health() } returns HealthCheckRead()
+    every { healthCheckHandler.health() } returns HealthCheckRead(available = true)
     assertStatus(HttpStatus.OK, client.status(HttpRequest.GET<Any>("/api/v1/health")))
   }
 }

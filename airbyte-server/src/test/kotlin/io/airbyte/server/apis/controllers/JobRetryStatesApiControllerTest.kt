@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobRetryStateRequestBody
-import io.airbyte.api.model.generated.RetryStateRead
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobRetryStateRequestBody
+import io.airbyte.api.server.generated.models.RetryStateRead
 import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.RetryStatesHandler
 import io.airbyte.server.status
@@ -29,16 +29,17 @@ private const val PATH_BASE: String = "/api/v1/jobs/retry_states"
 private const val PATH_GET: String = PATH_BASE + "/get"
 private const val PATH_PUT: String = PATH_BASE + "/create_or_update"
 private const val JOB_ID1: Long = 21891253
-private val jobIdRequestBody = JobIdRequestBody().id(JOB_ID1)
+private val jobIdRequestBody = JobIdRequestBody(id = JOB_ID1)
 private val jobRetryStateRequestBody =
-  JobRetryStateRequestBody()
-    .id(UUID.randomUUID())
-    .connectionId(UUID.randomUUID())
-    .jobId(JOB_ID1)
-    .successiveCompleteFailures(8)
-    .totalCompleteFailures(12)
-    .successivePartialFailures(4)
-    .totalPartialFailures(42)
+  JobRetryStateRequestBody(
+    id = UUID.randomUUID(),
+    connectionId = UUID.randomUUID(),
+    jobId = JOB_ID1,
+    successiveCompleteFailures = 8,
+    totalCompleteFailures = 12,
+    successivePartialFailures = 4,
+    totalPartialFailures = 42,
+  )
 
 @MicronautTest
 internal class JobRetryStatesApiControllerTest {
@@ -58,7 +59,16 @@ internal class JobRetryStatesApiControllerTest {
 
   @Test
   fun forJobFound() {
-    every { retryStatesHandler.getByJobId(any()) } returns RetryStateRead()
+    every { retryStatesHandler.getByJobId(any()) } returns
+      RetryStateRead(
+        id = UUID.randomUUID(),
+        connectionId = UUID.randomUUID(),
+        jobId = JOB_ID1,
+        successiveCompleteFailures = 0,
+        totalCompleteFailures = 0,
+        successivePartialFailures = 0,
+        totalPartialFailures = 0,
+      )
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(PATH_GET, jobIdRequestBody)))
   }
 

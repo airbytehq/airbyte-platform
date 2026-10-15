@@ -6,13 +6,12 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.NotificationRead
-import io.airbyte.api.model.generated.NotificationTrigger
-import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
-import io.airbyte.commons.server.converters.NotificationSettingsConverter.toConfig
+import io.airbyte.api.server.generated.models.NotificationRead
+import io.airbyte.api.server.generated.models.NotificationTrigger
+import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.config.FailureReason
 import io.airbyte.notification.SlackNotificationClient
@@ -37,7 +36,7 @@ open class NotificationsHandler {
    * Send a test notification message to the provided webhook.
    */
   fun tryNotification(
-    slackNotificationConfiguration: SlackNotificationConfiguration?,
+    slackNotificationConfiguration: SlackNotificationConfiguration,
     notificationTrigger: NotificationTrigger,
   ): NotificationRead {
     // Try notification for webhook only.
@@ -45,7 +44,12 @@ open class NotificationsHandler {
     // this function.
 
     val notificationClient =
-      SlackNotificationClient(toConfig(slackNotificationConfiguration), "THIS IS A TEST NOTIFICATION")
+      SlackNotificationClient(
+        io.airbyte.config
+          .SlackNotificationConfiguration()
+          .withWebhook(slackNotificationConfiguration.webhook),
+        "THIS IS A TEST NOTIFICATION",
+      )
 
     val isNotificationSent: Boolean
     try {
@@ -78,15 +82,15 @@ open class NotificationsHandler {
     } catch (e: IllegalArgumentException) {
       throw IdNotFoundKnownException(e.message, notificationTrigger.name, e)
     } catch (e: IOException) {
-      return NotificationRead().status(NotificationRead.StatusEnum.FAILED).message(e.message)
+      return NotificationRead(status = NotificationRead.Status.FAILED, message = e.message)
     } catch (e: InterruptedException) {
-      return NotificationRead().status(NotificationRead.StatusEnum.FAILED).message(e.message)
+      return NotificationRead(status = NotificationRead.Status.FAILED, message = e.message)
     }
 
     return if (isNotificationSent) {
-      NotificationRead().status(NotificationRead.StatusEnum.SUCCEEDED)
+      NotificationRead(status = NotificationRead.Status.SUCCEEDED)
     } else {
-      NotificationRead().status(NotificationRead.StatusEnum.FAILED)
+      NotificationRead(status = NotificationRead.Status.FAILED)
     }
   }
 

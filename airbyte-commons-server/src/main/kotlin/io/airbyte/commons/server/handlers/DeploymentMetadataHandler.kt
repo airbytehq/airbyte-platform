@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DeploymentMetadataRead
+import io.airbyte.api.server.generated.models.DeploymentMetadataRead
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
 import jakarta.inject.Named
@@ -21,10 +21,11 @@ open class DeploymentMetadataHandler(
   fun getDeploymentMetadata(): DeploymentMetadataRead {
     val result = dslContext.fetch(DEPLOYMENT_ID_QUERY)
     val deploymentId = result.getValue(0, "value").toString()
-    return DeploymentMetadataRead()
-      .id(UUID.fromString(deploymentId))
-      .mode(airbyteEdition.name)
-      .version(airbyteVersion.serialize())
+    return DeploymentMetadataRead(
+      id = UUID.fromString(deploymentId),
+      mode = airbyteEdition.name,
+      version = airbyteVersion.serialize(),
+    )
   }
 
   companion object {

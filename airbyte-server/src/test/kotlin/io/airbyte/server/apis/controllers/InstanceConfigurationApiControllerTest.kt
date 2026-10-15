@@ -4,7 +4,9 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.AuthConfiguration
+import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
@@ -21,6 +23,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
 
 private const val PATH: String = "/api/v1/instance_configuration"
 
@@ -46,15 +49,36 @@ internal class InstanceConfigurationApiControllerTest {
 
   @Test
   fun testGetInstanceConfiguration() {
-    every { instanceConfigurationHandler.instanceConfiguration } returns InstanceConfigurationResponse()
+    every { instanceConfigurationHandler.instanceConfiguration } returns instanceConfigurationResponse()
 
     assertStatus(HttpStatus.OK, client.status(HttpRequest.GET<Any>(PATH)))
   }
 
   @Test
   fun testSetupInstanceConfiguration() {
-    every { instanceConfigurationHandler.setupInstanceConfiguration(any()) } returns InstanceConfigurationResponse()
+    every { instanceConfigurationHandler.setupInstanceConfiguration(any()) } returns instanceConfigurationResponse()
 
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST("$PATH/setup", InstanceConfigurationResponse())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST("$PATH/setup", setupRequestBody())))
   }
 }
+
+private fun instanceConfigurationResponse(): InstanceConfigurationResponse =
+  InstanceConfigurationResponse(
+    edition = InstanceConfigurationResponse.Edition.COMMUNITY,
+    version = "0.50.1",
+    auth = AuthConfiguration(mode = AuthConfiguration.Mode.NONE),
+    airbyteUrl = "http://localhost:8000",
+    initialSetupComplete = true,
+    defaultUserId = UUID.randomUUID(),
+    defaultOrganizationId = UUID.randomUUID(),
+    defaultOrganizationEmail = "test@airbyte.io",
+    trackingStrategy = InstanceConfigurationResponse.TrackingStrategy.LOGGING,
+  )
+
+private fun setupRequestBody(): InstanceConfigurationSetupRequestBody =
+  InstanceConfigurationSetupRequestBody(
+    email = "test@airbyte.io",
+    anonymousDataCollection = false,
+    initialSetupComplete = true,
+    displaySetupWizard = false,
+  )

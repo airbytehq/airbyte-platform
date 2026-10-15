@@ -4,12 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AuthConfiguration
-import io.airbyte.api.model.generated.InstanceConfigurationResponse
-import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum
-import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum
-import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
 import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.api.server.generated.models.AuthConfiguration
+import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.enums.convertTo
@@ -48,21 +46,21 @@ open class InstanceConfigurationHandler(
       val defaultOrganization = defaultOrganization
       val initialSetupComplete = workspacePersistence.getInitialSetupComplete()
 
-      return InstanceConfigurationResponse()
-        .airbyteUrl(airbyteConfig.airbyteUrl.ifBlank { "airbyte-url-not-configured" })
-        .edition(airbyteConfig.edition.convertTo<EditionEnum>())
-        .version(airbyteConfig.version)
-        .auth(authConfiguration)
-        .initialSetupComplete(initialSetupComplete)
-        .defaultUserId(defaultUserId)
-        .defaultOrganizationId(defaultOrganization.organizationId)
-        .defaultOrganizationEmail(defaultOrganization.email)
-        .trackingStrategy(
+      return InstanceConfigurationResponse(
+        airbyteUrl = airbyteConfig.airbyteUrl.ifBlank { "airbyte-url-not-configured" },
+        edition = airbyteConfig.edition.convertTo<InstanceConfigurationResponse.Edition>(),
+        version = airbyteConfig.version,
+        auth = authConfiguration,
+        initialSetupComplete = initialSetupComplete,
+        defaultUserId = defaultUserId,
+        defaultOrganizationId = defaultOrganization.organizationId,
+        defaultOrganizationEmail = defaultOrganization.email,
+        trackingStrategy =
           when (airbyteAnalyticsConfig.strategy) {
-            AnalyticsTrackingStrategy.SEGMENT -> TrackingStrategyEnum.SEGMENT
-            else -> TrackingStrategyEnum.LOGGING
+            AnalyticsTrackingStrategy.SEGMENT -> InstanceConfigurationResponse.TrackingStrategy.SEGMENT
+            else -> InstanceConfigurationResponse.TrackingStrategy.LOGGING
           },
-        )
+      )
     }
 
   fun setupInstanceConfiguration(requestBody: InstanceConfigurationSetupRequestBody): InstanceConfigurationResponse {
@@ -93,36 +91,35 @@ open class InstanceConfigurationHandler(
 
   private val authConfiguration: AuthConfiguration
     get() {
-      val authConfig =
-        AuthConfiguration().mode(
-          authConfigs.authMode.convertTo<AuthConfiguration.ModeEnum>(),
-        )
+      val mode = authConfigs.authMode.convertTo<AuthConfiguration.Mode>()
 
       // if Enterprise configurations are present, set OIDC-specific configs
-      if (authConfigs.authMode == AuthMode.OIDC) {
-        if (airbyteAuthConfig.identityProvider.type == "generic-oidc") {
-          authConfig.authorizationServerUrl = airbyteAuthConfig.identityProvider.oidc.endpoints.authorizationServerEndpoint
-          authConfig.clientId = airbyteAuthConfig.identityProvider.oidc.clientId
-          if (airbyteAuthConfig.identityProvider.oidc.audience
-              .isNotBlank()
-          ) {
-            authConfig.audience = airbyteAuthConfig.identityProvider.oidc.audience
-          }
-          if (airbyteAuthConfig.identityProvider.oidc.extraScopes
-              .isNotBlank()
-          ) {
-            authConfig.extraScopes = airbyteAuthConfig.identityProvider.oidc.extraScopes
-          }
-        } else if (authConfigs.keycloakConfig != null && airbyteConfig.airbyteUrl.isNotBlank()) {
-          authConfig.clientId = authConfigs.keycloakConfig!!.webClientId
-          authConfig.authorizationServerUrl = airbyteConfig.airbyteUrl + "/auth/realms/" + authConfigs.keycloakConfig!!.airbyteRealm
-        } else {
-          // TODO: This is a bad error message. Once we figure out what the final config should look like
-          throw IllegalStateException("OIDC must be configured either for Keycloak or in generic oidc mode.")
-        }
+      if (authConfigs.authMode != AuthMode.OIDC) {
+        return AuthConfiguration(mode = mode)
       }
 
-      return authConfig
+      if (airbyteAuthConfig.identityProvider.type == "generic-oidc") {
+        val oidc = airbyteAuthConfig.identityProvider.oidc
+        return AuthConfiguration(
+          mode = mode,
+          authorizationServerUrl = oidc.endpoints.authorizationServerEndpoint,
+          clientId = oidc.clientId,
+          audience = oidc.audience.ifBlank { null },
+          extraScopes = oidc.extraScopes.ifBlank { null },
+        )
+      }
+
+      val keycloakConfig = authConfigs.keycloakConfig
+      if (keycloakConfig != null && airbyteConfig.airbyteUrl.isNotBlank()) {
+        return AuthConfiguration(
+          mode = mode,
+          clientId = keycloakConfig.webClientId,
+          authorizationServerUrl = airbyteConfig.airbyteUrl + "/auth/realms/" + keycloakConfig.airbyteRealm,
+        )
+      }
+
+      // TODO: This is a bad error message. Once we figure out what the final config should look like
+      throw IllegalStateException("OIDC must be configured either for Keycloak or in generic oidc mode.")
     }
 
   @get:Throws(IOException::class)

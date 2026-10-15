@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.ConnectorDocumentationRead
-import io.airbyte.api.model.generated.ConnectorDocumentationRequestBody
+import io.airbyte.api.server.generated.models.ActorType
+import io.airbyte.api.server.generated.models.ConnectorDocumentationRead
+import io.airbyte.api.server.generated.models.ConnectorDocumentationRequestBody
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.StandardDestinationDefinition
@@ -57,13 +57,14 @@ internal class ConnectorDocumentationHandlerTest {
     ).thenReturn(Optional.of(DOC_CONTENTS_LIVE))
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(sourceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+        actorId = sourceId,
+      )
 
-    val expectedResult = ConnectorDocumentationRead().doc(DOC_CONTENTS_LIVE)
+    val expectedResult = ConnectorDocumentationRead(doc = DOC_CONTENTS_LIVE)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -82,11 +83,12 @@ internal class ConnectorDocumentationHandlerTest {
     whenever(remoteDefinitionsProvider.getConnectorDocumentation(any(), any())).thenReturn(Optional.empty())
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(sourceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+        actorId = sourceId,
+      )
 
     Assertions.assertThrows(NotFoundException::class.java) {
       connectorDocumentationHandler.getConnectorDocumentation(request)
@@ -108,14 +110,15 @@ internal class ConnectorDocumentationHandlerTest {
       .thenReturn(Optional.of<String>(DOC_CONTENTS_OLD))
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(sourceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+        actorId = sourceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_OLD)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_OLD)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -145,14 +148,15 @@ internal class ConnectorDocumentationHandlerTest {
     )
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.SOURCE)
-        .actorDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(sourceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+        actorId = sourceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -172,10 +176,14 @@ internal class ConnectorDocumentationHandlerTest {
       .thenReturn(Optional.of<String>(DOC_CONTENTS_LATEST))
 
     val request =
-      ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -205,10 +213,14 @@ internal class ConnectorDocumentationHandlerTest {
     )
 
     val request =
-      ConnectorDocumentationRequestBody().actorType(ActorType.SOURCE).actorDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.SOURCE,
+        actorDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -230,13 +242,14 @@ internal class ConnectorDocumentationHandlerTest {
     ).thenReturn(Optional.of(DOC_CONTENTS_LIVE))
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(destinationId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+        actorId = destinationId,
+      )
 
-    val expectedResult = ConnectorDocumentationRead().doc(DOC_CONTENTS_LIVE)
+    val expectedResult = ConnectorDocumentationRead(doc = DOC_CONTENTS_LIVE)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -258,11 +271,12 @@ internal class ConnectorDocumentationHandlerTest {
     whenever(remoteDefinitionsProvider.getConnectorDocumentation(any(), any())).thenReturn(Optional.empty())
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(destinationId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+        actorId = destinationId,
+      )
 
     Assertions.assertThrows(NotFoundException::class.java) {
       connectorDocumentationHandler.getConnectorDocumentation(request)
@@ -290,14 +304,15 @@ internal class ConnectorDocumentationHandlerTest {
       .thenReturn(Optional.of<String>(DOC_CONTENTS_OLD))
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(destinationId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+        actorId = destinationId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_OLD)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_OLD)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -332,14 +347,15 @@ internal class ConnectorDocumentationHandlerTest {
     ).thenReturn(Optional.of<String>(DOC_CONTENTS_LATEST))
 
     val request =
-      ConnectorDocumentationRequestBody()
-        .actorType(ActorType.DESTINATION)
-        .actorDefinitionId(destinationDefinitionId)
-        .workspaceId(workspaceId)
-        .actorId(destinationId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+        actorId = destinationId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -360,10 +376,14 @@ internal class ConnectorDocumentationHandlerTest {
       .thenReturn(Optional.of<String>(DOC_CONTENTS_LATEST))
 
     val request =
-      ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)
@@ -390,10 +410,14 @@ internal class ConnectorDocumentationHandlerTest {
     ).thenReturn(Optional.of<String>(DOC_CONTENTS_LATEST))
 
     val request =
-      ConnectorDocumentationRequestBody().actorType(ActorType.DESTINATION).actorDefinitionId(destinationDefinitionId).workspaceId(workspaceId)
+      ConnectorDocumentationRequestBody(
+        actorType = ActorType.DESTINATION,
+        actorDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     val expectedResult =
-      ConnectorDocumentationRead().doc(DOC_CONTENTS_LATEST)
+      ConnectorDocumentationRead(doc = DOC_CONTENTS_LATEST)
     val actualResult = connectorDocumentationHandler.getConnectorDocumentation(request)
 
     Assertions.assertEquals(expectedResult, actualResult)

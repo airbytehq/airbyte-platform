@@ -4,8 +4,8 @@
 
 package io.airbyte.server.handlers.apidomainmapping
 
-import io.airbyte.api.model.generated.JobRetryStateRequestBody
-import io.airbyte.api.model.generated.RetryStateRead
+import io.airbyte.api.server.generated.models.JobRetryStateRequestBody
+import io.airbyte.api.server.generated.models.RetryStateRead
 import io.airbyte.server.repositories.domain.RetryState
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.params.ParameterizedTest
@@ -20,22 +20,23 @@ internal class RetryStatesMapperTest {
   @ParameterizedTest
   @MethodSource("retryStateFieldsMatrix")
   fun mapsRequestToRetryState(
-    unused: UUID?,
-    jobId: Long?,
-    connectionId: UUID?,
-    successiveCompleteFailures: Int?,
-    totalCompleteFailures: Int?,
-    successivePartialFailures: Int?,
-    totalPartialFailures: Int?,
+    unused: UUID,
+    jobId: Long,
+    connectionId: UUID,
+    successiveCompleteFailures: Int,
+    totalCompleteFailures: Int,
+    successivePartialFailures: Int,
+    totalPartialFailures: Int,
   ) {
     val api =
-      JobRetryStateRequestBody()
-        .jobId(jobId)
-        .connectionId(connectionId)
-        .successiveCompleteFailures(successiveCompleteFailures)
-        .totalCompleteFailures(totalCompleteFailures)
-        .successivePartialFailures(successivePartialFailures)
-        .totalPartialFailures(totalPartialFailures)
+      JobRetryStateRequestBody(
+        jobId = jobId,
+        connectionId = connectionId,
+        successiveCompleteFailures = successiveCompleteFailures,
+        totalCompleteFailures = totalCompleteFailures,
+        successivePartialFailures = successivePartialFailures,
+        totalPartialFailures = totalPartialFailures,
+      )
 
     val expected =
       RetryState
@@ -56,13 +57,13 @@ internal class RetryStatesMapperTest {
   @ParameterizedTest
   @MethodSource("retryStateFieldsMatrix")
   fun mapsRetryStateToRead(
-    retryId: UUID?,
-    jobId: Long?,
-    connectionId: UUID?,
-    successiveCompleteFailures: Int?,
-    totalCompleteFailures: Int?,
-    successivePartialFailures: Int?,
-    totalPartialFailures: Int?,
+    retryId: UUID,
+    jobId: Long,
+    connectionId: UUID,
+    successiveCompleteFailures: Int,
+    totalCompleteFailures: Int,
+    successivePartialFailures: Int,
+    totalPartialFailures: Int,
   ) {
     val domain =
       RetryState
@@ -77,14 +78,15 @@ internal class RetryStatesMapperTest {
         .build()
 
     val expected =
-      RetryStateRead()
-        .id(retryId)
-        .jobId(jobId)
-        .connectionId(connectionId)
-        .successiveCompleteFailures(successiveCompleteFailures)
-        .totalCompleteFailures(totalCompleteFailures)
-        .successivePartialFailures(successivePartialFailures)
-        .totalPartialFailures(totalPartialFailures)
+      RetryStateRead(
+        id = retryId,
+        jobId = jobId,
+        connectionId = connectionId,
+        successiveCompleteFailures = successiveCompleteFailures,
+        totalCompleteFailures = totalCompleteFailures,
+        successivePartialFailures = successivePartialFailures,
+        totalPartialFailures = totalPartialFailures,
+      )
 
     val result = mapper.map(domain)
 

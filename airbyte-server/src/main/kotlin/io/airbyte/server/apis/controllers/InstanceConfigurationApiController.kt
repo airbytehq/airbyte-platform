@@ -4,32 +4,30 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.InstanceConfigurationApi
-import io.airbyte.api.model.generated.InstanceConfigurationResponse
-import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
+import io.airbyte.api.server.generated.apis.InstanceConfigurationApi
+import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Get
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
 // this controller is only usable in self-managed versions of Airbyte. Not Cloud!
-@Controller("/api/v1/instance_configuration")
+@Controller
 @Secured(SecurityRule.IS_ANONYMOUS)
 class InstanceConfigurationApiController(
   private val instanceConfigurationHandler: InstanceConfigurationHandler,
 ) : InstanceConfigurationApi {
-  @Get
-  override fun getInstanceConfiguration(): InstanceConfigurationResponse? = execute { instanceConfigurationHandler.instanceConfiguration }
+  override fun getInstanceConfiguration(): InstanceConfigurationResponse = execute { instanceConfigurationHandler.instanceConfiguration }
 
   override fun setupInstanceConfiguration(
-    @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,
-  ): InstanceConfigurationResponse? =
+    @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody?,
+  ): InstanceConfigurationResponse =
     execute {
       instanceConfigurationHandler.setupInstanceConfiguration(
-        instanceConfigurationSetupRequestBody,
+        instanceConfigurationSetupRequestBody!!,
       )
     }
 }

@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.StreamStatusCreateRequestBody
-import io.airbyte.api.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.api.model.generated.StreamStatusJobType
-import io.airbyte.api.model.generated.StreamStatusListRequestBody
-import io.airbyte.api.model.generated.StreamStatusRead
-import io.airbyte.api.model.generated.StreamStatusReadList
-import io.airbyte.api.model.generated.StreamStatusRunState
-import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
+import io.airbyte.api.server.generated.models.StreamStatusJobType
+import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
+import io.airbyte.api.server.generated.models.StreamStatusRead
+import io.airbyte.api.server.generated.models.StreamStatusReadList
+import io.airbyte.api.server.generated.models.StreamStatusRunState
+import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.airbyte.server.status
@@ -61,7 +61,7 @@ internal class StreamStatusesApiControllerTest {
 
   @Test
   fun testCreateSuccessful() {
-    every { handler.createStreamStatus(any()) } returns StreamStatusRead()
+    every { handler.createStreamStatus(any()) } returns validRead()
 
     assertStatus(HttpStatus.CREATED, client.status(HttpRequest.POST(PATH_CREATE, validCreate())))
   }
@@ -69,22 +69,19 @@ internal class StreamStatusesApiControllerTest {
   @ParameterizedTest
   @MethodSource("invalidRunStateCauseMatrix")
   fun testCreateIncompleteRunCauseRunStateInvariant(
-    state: StreamStatusRunState?,
+    state: StreamStatusRunState,
     incompleteCause: StreamStatusIncompleteRunCause?,
   ) {
-    every { handler.createStreamStatus(any()) } returns StreamStatusRead()
+    every { handler.createStreamStatus(any()) } returns validRead()
 
-    val invalid =
-      validCreate()
-        .runState(state)
-        .incompleteRunCause(incompleteCause)
+    val invalid = validCreate().copy(runState = state, incompleteRunCause = incompleteCause)
 
     assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(PATH_CREATE, invalid)))
   }
 
   @Test
   fun testUpdateSuccessful() {
-    every { handler.updateStreamStatus(any()) } returns StreamStatusRead()
+    every { handler.updateStreamStatus(any()) } returns validRead()
 
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(PATH_UPDATE, validUpdate())))
   }
@@ -92,42 +89,47 @@ internal class StreamStatusesApiControllerTest {
   @ParameterizedTest
   @MethodSource("invalidRunStateCauseMatrix")
   fun testUpdateIncompleteRunCauseRunStateInvariant(
-    state: StreamStatusRunState?,
+    state: StreamStatusRunState,
     incompleteCause: StreamStatusIncompleteRunCause?,
   ) {
-    every { handler.updateStreamStatus(any()) } returns StreamStatusRead()
+    every { handler.updateStreamStatus(any()) } returns validRead()
 
-    val invalid =
-      validUpdate()
-        .runState(state)
-        .incompleteRunCause(incompleteCause)
+    val invalid = validUpdate().copy(runState = state, incompleteRunCause = incompleteCause)
 
     assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(PATH_UPDATE, invalid)))
   }
 
   @ParameterizedTest
   @MethodSource("validPaginationMatrix")
-  fun testListSuccessful(pagination: Pagination?) {
+  fun testListSuccessful(pagination: Pagination) {
     every { handler.listStreamStatus(any()) } returns StreamStatusReadList()
 
-    val valid = validList().pagination(pagination)
+    val valid = validList().copy(pagination = pagination)
 
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(PATH_LIST, valid)))
   }
 
   @ParameterizedTest
   @MethodSource("invalidListPaginationMatrix")
-  fun testListInvalidPagination(invalidPagination: Pagination?) {
+  fun testListInvalidPagination(invalidPagination: Pagination) {
     every { handler.listStreamStatus(any()) } returns StreamStatusReadList()
 
-    val invalid = validList().pagination(invalidPagination)
+    val invalid = validList().copy(pagination = invalidPagination)
 
     assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(PATH_LIST, invalid)))
   }
 
   @Test
+  fun testListMissingPagination() {
+    // pagination is required, so the Kotlin model can't be built without it; send raw JSON instead
+    val missingPagination = mapOf("workspaceId" to UUID.randomUUID())
+
+    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(PATH_LIST, missingPagination)))
+  }
+
+  @Test
   fun testListPerRunStateSuccessful() {
-    val req = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+    val req = ConnectionIdRequestBody(connectionId = UUID.randomUUID())
 
     every { handler.listStreamStatusPerRunState(req) } returns StreamStatusReadList()
 
@@ -151,23 +153,24 @@ internal class StreamStatusesApiControllerTest {
     private fun validPaginationMatrix() =
       listOf(
         Arguments.of(validPagination()),
-        Arguments.of(validPagination().rowOffset(30)),
-        Arguments.of(validPagination().pageSize(100).rowOffset(300)),
-        Arguments.of(validPagination().pageSize(5).rowOffset(10)),
+        Arguments.of(validPagination().copy(rowOffset = 30)),
+        Arguments.of(validPagination().copy(pageSize = 100, rowOffset = 300)),
+        Arguments.of(validPagination().copy(pageSize = 5, rowOffset = 10)),
       )
 
     @JvmStatic
     private fun invalidListPaginationMatrix() =
       listOf(
-        Arguments.of(null as Pagination?),
-        Arguments.of(validPagination().pageSize(0)),
-        Arguments.of(validPagination().pageSize(-1)),
-        Arguments.of(validPagination().rowOffset(-1)),
-        Arguments.of(validPagination().pageSize(-1).rowOffset(-1)),
-        Arguments.of(validPagination().pageSize(0).rowOffset(-1)),
-        Arguments.of(validPagination().pageSize(10).rowOffset(23)),
-        Arguments.of(validPagination().pageSize(20).rowOffset(10)),
-        Arguments.of(validPagination().pageSize(100).rowOffset(50)),
+        Arguments.of(validPagination().copy(pageSize = null)),
+        Arguments.of(validPagination().copy(rowOffset = null)),
+        Arguments.of(validPagination().copy(pageSize = 0)),
+        Arguments.of(validPagination().copy(pageSize = -1)),
+        Arguments.of(validPagination().copy(rowOffset = -1)),
+        Arguments.of(validPagination().copy(pageSize = -1, rowOffset = -1)),
+        Arguments.of(validPagination().copy(pageSize = 0, rowOffset = -1)),
+        Arguments.of(validPagination().copy(pageSize = 10, rowOffset = 23)),
+        Arguments.of(validPagination().copy(pageSize = 20, rowOffset = 10)),
+        Arguments.of(validPagination().copy(pageSize = 100, rowOffset = 50)),
       )
   }
 }
@@ -180,37 +183,50 @@ private val jobId: Long = Random.nextLong()
 private val transitionedAtMs: Long = System.currentTimeMillis()
 
 private fun validCreate(): StreamStatusCreateRequestBody =
-  StreamStatusCreateRequestBody()
-    .workspaceId(workspaceId)
-    .connectionId(connectionId)
-    .jobId(jobId)
-    .jobType(StreamStatusJobType.SYNC)
-    .attemptNumber(0)
-    .streamNamespace(testNamespace)
-    .streamName(testName)
-    .runState(StreamStatusRunState.PENDING)
-    .transitionedAt(transitionedAtMs)
+  StreamStatusCreateRequestBody(
+    workspaceId = workspaceId,
+    connectionId = connectionId,
+    jobId = jobId,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamNamespace = testNamespace,
+    streamName = testName,
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = transitionedAtMs,
+  )
 
 private fun validUpdate(): StreamStatusUpdateRequestBody =
-  StreamStatusUpdateRequestBody()
-    .workspaceId(workspaceId)
-    .connectionId(connectionId)
-    .jobId(jobId)
-    .jobType(StreamStatusJobType.SYNC)
-    .attemptNumber(0)
-    .streamNamespace(testNamespace)
-    .streamName(testName)
-    .runState(StreamStatusRunState.PENDING)
-    .transitionedAt(transitionedAtMs)
-    .id(UUID.randomUUID())
+  StreamStatusUpdateRequestBody(
+    workspaceId = workspaceId,
+    connectionId = connectionId,
+    jobId = jobId,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamNamespace = testNamespace,
+    streamName = testName,
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = transitionedAtMs,
+    id = UUID.randomUUID(),
+  )
 
-private fun validPagination(): Pagination =
-  Pagination()
-    .pageSize(10)
-    .rowOffset(0)
+private fun validRead(): StreamStatusRead =
+  StreamStatusRead(
+    id = UUID.randomUUID(),
+    workspaceId = workspaceId,
+    connectionId = connectionId,
+    jobId = jobId,
+    jobType = StreamStatusJobType.SYNC,
+    attemptNumber = 0,
+    streamName = testName,
+    runState = StreamStatusRunState.PENDING,
+    transitionedAt = transitionedAtMs,
+  )
+
+private fun validPagination(): Pagination = Pagination(pageSize = 10, rowOffset = 0)
 
 fun validList(): StreamStatusListRequestBody =
-  StreamStatusListRequestBody()
-    .workspaceId(UUID.randomUUID())
-    .jobId(ThreadLocalRandom.current().nextLong())
-    .pagination(validPagination())
+  StreamStatusListRequestBody(
+    workspaceId = UUID.randomUUID(),
+    jobId = ThreadLocalRandom.current().nextLong(),
+    pagination = validPagination(),
+  )

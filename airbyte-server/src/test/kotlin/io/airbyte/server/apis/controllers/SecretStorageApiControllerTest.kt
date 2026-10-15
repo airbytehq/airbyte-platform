@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ScopeType
-import io.airbyte.api.model.generated.SecretStorageCreateRequestBody
-import io.airbyte.api.model.generated.SecretStorageIdRequestBody
-import io.airbyte.api.model.generated.SecretStorageListRequestBody
-import io.airbyte.api.model.generated.SecretStorageRead
-import io.airbyte.api.model.generated.SecretStorageReadList
+import io.airbyte.api.server.generated.models.ScopeType
+import io.airbyte.api.server.generated.models.SecretStorageCreateRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageIdRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageListRequestBody
+import io.airbyte.api.server.generated.models.SecretStorageRead
+import io.airbyte.api.server.generated.models.SecretStorageReadList
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
@@ -105,7 +105,7 @@ internal class SecretStorageApiControllerTest {
     every { secretStorageService.hydrateStorageConfig(secretStorage) } returns storageWithConfig
 
     val path = "/api/v1/secret_storage/get"
-    val request = HttpRequest.POST(path, SecretStorageIdRequestBody().secretStorageId(secretStorageId.value))
+    val request = HttpRequest.POST(path, SecretStorageIdRequestBody(secretStorageId = secretStorageId.value))
     val response: HttpResponse<SecretStorageRead> = client.toBlocking().exchange(request, SecretStorageRead::class.java)
 
     assertStatus(HttpStatus.OK, response.status)
@@ -113,10 +113,10 @@ internal class SecretStorageApiControllerTest {
     val body = response.body()
     assertNotNull(body)
     assertEquals(secretStorageId.value, body.id)
-    assertEquals("value", body.config.get("key").asText())
+    assertEquals("value", body.config!!.get("key").asText())
     assertEquals(secretStorage.scopeId, body.scopeId)
-    assertEquals(io.airbyte.api.model.generated.ScopeType.WORKSPACE, body.scopeType)
-    assertEquals(io.airbyte.api.model.generated.SecretStorageType.GOOGLE_SECRET_MANAGER, body.secretStorageType)
+    assertEquals(io.airbyte.api.server.generated.models.ScopeType.WORKSPACE, body.scopeType)
+    assertEquals(io.airbyte.api.server.generated.models.SecretStorageType.GOOGLE_SECRET_MANAGER, body.secretStorageType)
     assertFalse(body.isConfiguredFromEnvironment)
   }
 
@@ -140,7 +140,7 @@ internal class SecretStorageApiControllerTest {
     every { secretStorageService.listSecretStorage(SecretStorageScopeType.WORKSPACE, scopeId) } returns listOf(secretStorage)
 
     val path = "/api/v1/secret_storage/list"
-    val request = HttpRequest.POST(path, SecretStorageListRequestBody().scopeType(ScopeType.WORKSPACE).scopeId(scopeId))
+    val request = HttpRequest.POST(path, SecretStorageListRequestBody(scopeType = ScopeType.WORKSPACE, scopeId = scopeId))
     val response: HttpResponse<SecretStorageReadList> = client.toBlocking().exchange(request, SecretStorageReadList::class.java)
 
     assertStatus(HttpStatus.OK, response.status)
@@ -201,12 +201,13 @@ internal class SecretStorageApiControllerTest {
 
     val path = "/api/v1/secret_storage/create"
     val requestBody =
-      SecretStorageCreateRequestBody()
-        .descriptor("My Storage")
-        .config(storageConfig)
-        .scopeType(ScopeType.ORGANIZATION)
-        .scopeId(secretStorage.scopeId)
-        .secretStorageType(io.airbyte.api.model.generated.SecretStorageType.AWS_SECRETS_MANAGER)
+      SecretStorageCreateRequestBody(
+        descriptor = "My Storage",
+        config = storageConfig,
+        scopeType = ScopeType.ORGANIZATION,
+        scopeId = secretStorage.scopeId,
+        secretStorageType = io.airbyte.api.server.generated.models.SecretStorageType.AWS_SECRETS_MANAGER,
+      )
     val request = HttpRequest.POST(path, requestBody)
     val response: HttpResponse<SecretStorageRead> = client.toBlocking().exchange(request, SecretStorageRead::class.java)
     assertStatus(HttpStatus.OK, response.status)
@@ -215,7 +216,7 @@ internal class SecretStorageApiControllerTest {
     assertNotNull(body)
     assertEquals(requestBody.scopeId, body.scopeId)
     assertEquals(ScopeType.ORGANIZATION, body.scopeType)
-    assertEquals(io.airbyte.api.model.generated.SecretStorageType.AWS_SECRETS_MANAGER, body.secretStorageType)
+    assertEquals(io.airbyte.api.server.generated.models.SecretStorageType.AWS_SECRETS_MANAGER, body.secretStorageType)
     assertNull(body.config)
   }
 }

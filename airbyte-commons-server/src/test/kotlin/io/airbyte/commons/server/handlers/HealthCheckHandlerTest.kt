@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.HealthCheckRead
+import io.airbyte.api.server.generated.models.HealthCheckRead
 import io.airbyte.data.services.HealthCheckService
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +18,7 @@ internal class HealthCheckHandlerTest {
     every { healthCheckService.healthCheck() } returns true
 
     val healthCheckHandler = HealthCheckHandler(healthCheckService)
-    Assertions.assertEquals(HealthCheckRead().available(true), healthCheckHandler.health())
+    Assertions.assertEquals(HealthCheckRead(available = true), healthCheckHandler.health())
   }
 
   @Test
@@ -27,6 +27,6 @@ internal class HealthCheckHandlerTest {
     every { healthCheckService.healthCheck() } returns false
 
     val healthCheckHandler = HealthCheckHandler(healthCheckService)
-    Assertions.assertEquals(HealthCheckRead().available(false), healthCheckHandler.health())
+    Assertions.assertEquals(HealthCheckRead(available = false), healthCheckHandler.health())
   }
 }

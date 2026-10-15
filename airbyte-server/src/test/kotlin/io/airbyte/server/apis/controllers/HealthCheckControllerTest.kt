@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.HealthCheckRead
+import io.airbyte.api.server.generated.models.HealthCheckRead
 import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.mockk.every
 import io.mockk.mockk
@@ -16,10 +16,10 @@ internal class HealthCheckControllerTest {
   fun testImportDefinitions() {
     val healthCheckHandler: HealthCheckHandler =
       mockk {
-        every { health() } returns HealthCheckRead().available(false)
+        every { health() } returns HealthCheckRead(available = false)
       }
 
     val configurationApi = HealthApiController(healthCheckHandler)
-    Assertions.assertFalse(configurationApi.healthCheck!!.available)
+    Assertions.assertFalse(configurationApi.getHealthCheck().available)
   }
 }
