@@ -12,10 +12,12 @@ import { SetupBillingAlertsLink } from "area/organization/components/SetupBillin
 import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
 import { useFormatCredits } from "core/utils/numberHelper";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { AccountBalance } from "./AccountBalance";
+import { BillingAlerts } from "./BillingAlerts";
 import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
 import { Invoices } from "./Invoices";
@@ -43,6 +45,14 @@ export const OrganizationBillingPage: React.FC = () => {
     billing?.subscriptionStatus !== "subscribed" ||
     (billing?.subscriptionStatus === "subscribed" && billing.paymentStatus === "uninitialized");
 
+  const isBillingNotificationSettingsEnabled = useExperiment("platform.billing-notification-settings");
+  const isPlanWithBillingAlerts = !isProPlan && !isFlexPlan;
+  const showBillingAlerts =
+    isBillingNotificationSettingsEnabled &&
+    canManageOrganizationBilling &&
+    !showSubscribeCards &&
+    isPlanWithBillingAlerts;
+
   return (
     <PageContainer>
       <FlexContainer direction="column" gap="xl">
@@ -50,7 +60,7 @@ export const OrganizationBillingPage: React.FC = () => {
           <Heading as="h1" size="md">
             <FormattedMessage id="settings.organization.billing.title" />
           </Heading>
-          {!showSubscribeCards && <SetupBillingAlertsLink />}
+          {!showSubscribeCards && !showBillingAlerts && <SetupBillingAlertsLink />}
         </FlexContainer>
 
         {/* Show credits as a banner in case the user isn't on an active subscription and thus sees the susbcribe to airbyte cards. */}
@@ -89,6 +99,8 @@ export const OrganizationBillingPage: React.FC = () => {
             )}
           </BorderedTiles>
         )}
+
+        {showBillingAlerts && <BillingAlerts />}
 
         {billing?.subscriptionStatus !== "pre_subscription" && billing?.paymentStatus !== "uninitialized" && (
           <Box py="lg">

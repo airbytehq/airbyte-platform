@@ -3,6 +3,7 @@ export * from "./applications";
 export * from "./auditLogs";
 export * from "./auth";
 export * from "./billing";
+export * from "./billingNotificationSettings";
 export * from "./catalogs";
 export * from "./commands";
 export * from "./connections";

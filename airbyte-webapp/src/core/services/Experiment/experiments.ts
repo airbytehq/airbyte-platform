@@ -35,6 +35,7 @@ export interface Experiments {
   "onboarding.surveyEnabled": boolean;
   "organization.workerUsagePage": boolean;
   "plan-page-redesign-ui": boolean;
+  "platform.billing-notification-settings": boolean;
   "platform.enable-data-worker-allocation": boolean;
   "platform.fusion-semantic-search-ui": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
@@ -94,6 +95,7 @@ export const defaultExperimentValues: Experiments = {
   "onboarding.surveyEnabled": false,
   "organization.workerUsagePage": false,
   "plan-page-redesign-ui": false,
+  "platform.billing-notification-settings": false,
   "platform.enable-data-worker-allocation": false,
   "platform.fusion-semantic-search-ui": false,
   "platform.llm-sync-job-failure-explanation": false,
