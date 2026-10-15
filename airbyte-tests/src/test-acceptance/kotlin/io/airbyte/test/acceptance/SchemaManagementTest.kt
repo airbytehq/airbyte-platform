@@ -100,6 +100,7 @@ internal class SchemaManagementTest {
         .also { log.info { "Created connection: ${it.connectionId}" } }
 
     // Create a connection that shares the source, to verify that the schema management actions are applied to all connections with the same source.
+    // The prefix keeps it from writing to the same destination streams, which Cloud rejects (ValidateConflictingDestinationStreams).
     val conIdSameSrc =
       atClient.admin.createConnection(
         srcId = createdConnection.sourceId,
@@ -107,6 +108,7 @@ internal class SchemaManagementTest {
         catalogId = createdConnection.sourceCatalogId ?: throw IllegalStateException("sourceCatalogId is null"),
         catalog = createdConnection.syncCatalog,
         dataplaneGroupId = createdConnection.dataplaneGroupId,
+        prefix = "same_src_",
       )
 
     createdConnectionWithSameSource =

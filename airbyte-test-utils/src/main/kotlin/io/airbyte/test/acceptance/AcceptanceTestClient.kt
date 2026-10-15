@@ -399,6 +399,7 @@ class AcceptanceTestClient(
       catalogId: UUID,
       catalog: AirbyteCatalog,
       dataplaneGroupId: UUID? = null,
+      prefix: String? = null,
     ): UUID {
       val created = now()
       val req =
@@ -412,6 +413,7 @@ class AcceptanceTestClient(
           syncCatalog = catalog,
           scheduleType = ConnectionScheduleType.MANUAL,
           sourceCatalogId = catalogId,
+          prefix = prefix,
         )
 
       return admin.createConnection(req)
