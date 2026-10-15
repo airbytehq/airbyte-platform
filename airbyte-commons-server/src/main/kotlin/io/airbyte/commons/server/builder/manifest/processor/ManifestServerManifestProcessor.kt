@@ -5,15 +5,15 @@
 package io.airbyte.commons.server.builder.manifest.processor
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ConnectorBuilderAuxiliaryRequest
-import io.airbyte.api.model.generated.ConnectorBuilderCapabilities
-import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest
-import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner
-import io.airbyte.api.model.generated.ConnectorBuilderResolvedManifest
+import io.airbyte.api.server.generated.models.ConnectorBuilderAuxiliaryRequest
+import io.airbyte.api.server.generated.models.ConnectorBuilderCapabilities
+import io.airbyte.api.server.generated.models.ConnectorBuilderHttpRequest
+import io.airbyte.api.server.generated.models.ConnectorBuilderHttpResponse
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadLogsInner
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadSlicesInner
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner
+import io.airbyte.api.server.generated.models.ConnectorBuilderResolvedManifest
 import io.airbyte.manifestserver.api.client.ManifestServerApiClient
 import io.airbyte.manifestserver.api.client.model.generated.FullResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.HttpRequest
@@ -69,8 +69,7 @@ class ManifestServerManifestProcessor(
       manifestServerApiClient.manifestApi.fullResolve(
         fullResolveRequest,
       )
-    return ConnectorBuilderResolvedManifest()
-      .manifest(resolveManifest.manifest)
+    return ConnectorBuilderResolvedManifest(manifest = resolveManifest.manifest)
   }
 
   override fun streamTestRead(
@@ -109,7 +108,7 @@ class ManifestServerManifestProcessor(
 
   override fun getCapabilities(): ConnectorBuilderCapabilities {
     val capabilities = manifestServerApiClient.capabilitiesApi.getCapabilities()
-    return ConnectorBuilderCapabilities().customCodeExecution(capabilities.customCodeExecution)
+    return ConnectorBuilderCapabilities(customCodeExecution = capabilities.customCodeExecution)
   }
 
   private fun convertStreamRead(
@@ -118,67 +117,70 @@ class ManifestServerManifestProcessor(
     // Convert logs
     val convertedLogs =
       manifestServerStreamRead.logs.map { log ->
-        ConnectorBuilderProjectStreamReadLogsInner()
-          .message(log.message)
-          .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.valueOf(log.level.uppercase()))
-          .internalMessage(log.internalMessage)
-          .stacktrace(log.stacktrace)
+        ConnectorBuilderProjectStreamReadLogsInner(
+          message = log.message,
+          level = ConnectorBuilderProjectStreamReadLogsInner.Level.valueOf(log.level.uppercase()),
+          internalMessage = log.internalMessage,
+          stacktrace = log.stacktrace,
+        )
       }
 
     // Convert slices
     val convertedSlices =
       manifestServerStreamRead.slices.map { slice ->
-        ConnectorBuilderProjectStreamReadSlicesInner()
-          .sliceDescriptor(slice.sliceDescriptor)
-          .state(slice.state ?: listOf())
-          .pages(
+        ConnectorBuilderProjectStreamReadSlicesInner(
+          sliceDescriptor = slice.sliceDescriptor,
+          state = slice.state ?: listOf(),
+          pages =
             slice.pages.map { page ->
-              ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
-                .records(page.records)
-                .request(convertHttpRequest(page.request))
-                .response(convertHttpResponse(page.response))
+              ConnectorBuilderProjectStreamReadSlicesInnerPagesInner(
+                records = page.records,
+                request = convertHttpRequest(page.request),
+                response = convertHttpResponse(page.response),
+              )
             },
-          ).auxiliaryRequests(convertAuxiliaryRequests(slice.auxiliaryRequests))
+          auxiliaryRequests = convertAuxiliaryRequests(slice.auxiliaryRequests),
+        )
       }
 
     // Convert auxiliary requests
     val convertedAuxiliaryRequests = convertAuxiliaryRequests(manifestServerStreamRead.auxiliaryRequests)
 
-    return ConnectorBuilderProjectStreamRead()
-      .logs(convertedLogs)
-      .slices(convertedSlices)
-      .testReadLimitReached(manifestServerStreamRead.testReadLimitReached)
-      .auxiliaryRequests(convertedAuxiliaryRequests)
-      .inferredSchema(manifestServerStreamRead.inferredSchema)
-      .inferredDatetimeFormats(manifestServerStreamRead.inferredDatetimeFormats)
+    return ConnectorBuilderProjectStreamRead(
+      logs = convertedLogs,
+      slices = convertedSlices,
+      testReadLimitReached = manifestServerStreamRead.testReadLimitReached,
+      auxiliaryRequests = convertedAuxiliaryRequests,
+      inferredSchema = manifestServerStreamRead.inferredSchema,
+      inferredDatetimeFormats = manifestServerStreamRead.inferredDatetimeFormats,
+    )
   }
 
   private fun convertAuxiliaryRequests(
     auxiliaryRequests: List<io.airbyte.manifestserver.api.client.model.generated.AuxiliaryRequest>?,
   ): List<ConnectorBuilderAuxiliaryRequest>? =
     auxiliaryRequests?.map { auxRequest ->
-      ConnectorBuilderAuxiliaryRequest()
-        .description(auxRequest.description)
-        .title(auxRequest.title)
-        .type(ConnectorBuilderAuxiliaryRequest.TypeEnum.valueOf(auxRequest.type.uppercase()))
-        .request(convertHttpRequest(auxRequest.request)!!)
-        .response(convertHttpResponse(auxRequest.response)!!)
+      ConnectorBuilderAuxiliaryRequest(
+        description = auxRequest.description,
+        title = auxRequest.title,
+        type = ConnectorBuilderAuxiliaryRequest.Type.valueOf(auxRequest.type.uppercase()),
+        request = convertHttpRequest(auxRequest.request)!!,
+        response = convertHttpResponse(auxRequest.response)!!,
+      )
     }
 
   private fun convertHttpRequest(request: HttpRequest?): ConnectorBuilderHttpRequest? =
     request?.let {
-      ConnectorBuilderHttpRequest()
-        .url(it.url)
-        .httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.valueOf(it.httpMethod.uppercase()))
-        .body(it.body)
-        .headers(it.headers)
+      ConnectorBuilderHttpRequest(
+        url = it.url,
+        httpMethod = ConnectorBuilderHttpRequest.HttpMethod.valueOf(it.httpMethod.uppercase()),
+        body = it.body,
+        headers = it.headers,
+      )
     }
 
   private fun convertHttpResponse(response: HttpResponse?): ConnectorBuilderHttpResponse? =
     response?.let {
-      ConnectorBuilderHttpResponse()
-        .status(it.status)
-        .body(it.body)
-        .headers(it.headers)
+      ConnectorBuilderHttpResponse(status = it.status, body = it.body, headers = it.headers)
     }
 }

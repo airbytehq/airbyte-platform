@@ -236,9 +236,12 @@ export const ConnectorBuilderProjectTable = ({
       columnHelper.accessor("updatedAt", {
         header: () => <FormattedMessage id="connectorBuilder.listPage.updatedAt" />,
         cell: (props) => {
+          const updatedAt = props.getValue();
           return (
             <BuilderCell className={styles.updatedAtCell}>
-              <FormattedDate value={props.getValue() * 1000} timeStyle="short" dateStyle="medium" />
+              {updatedAt !== undefined && (
+                <FormattedDate value={updatedAt * 1000} timeStyle="short" dateStyle="medium" />
+              )}
             </BuilderCell>
           );
         },

@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.ExistingConnectorBuilderProjectWithWorkspaceId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.nio.file.Files
@@ -13,7 +13,7 @@ import java.nio.file.Paths
 class LocalFileSystemBuilderProjectUpdater : BuilderProjectUpdater {
   override fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId) {
     try {
-      writeJsonNodeToYamlFile(projectUpdate.builderProject.yamlManifest, "/connectors", projectUpdate.builderProject.name)
+      writeJsonNodeToYamlFile(projectUpdate.builderProject.yamlManifest!!, "/connectors", projectUpdate.builderProject.name)
     } catch (e: Exception) {
             /*
              * While this flow is only meant to be used for local development, we swallow all exceptions to

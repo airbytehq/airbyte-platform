@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.ExistingConnectorBuilderProjectWithWorkspaceId
 
 interface BuilderProjectUpdater {
   fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId)

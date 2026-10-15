@@ -5,9 +5,9 @@
 package io.airbyte.commons.server.builder.manifest.processor
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ConnectorBuilderCapabilities
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
-import io.airbyte.api.model.generated.ConnectorBuilderResolvedManifest
+import io.airbyte.api.server.generated.models.ConnectorBuilderCapabilities
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderResolvedManifest
 import java.util.UUID
 
 /**

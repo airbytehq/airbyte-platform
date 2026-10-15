@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DeclarativeManifestVersionRead
-import io.airbyte.api.model.generated.DeclarativeManifestsReadList
-import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody
-import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody
-import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.DeclarativeManifestVersionRead
+import io.airbyte.api.server.generated.models.DeclarativeManifestsReadList
+import io.airbyte.api.server.generated.models.DeclarativeSourceDefinitionCreateManifestRequestBody
+import io.airbyte.api.server.generated.models.ListDeclarativeManifestsRequestBody
+import io.airbyte.api.server.generated.models.UpdateActiveManifestRequestBody
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
@@ -165,15 +165,17 @@ open class DeclarativeSourceDefinitionsHandler
       val activeVersion =
         connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(requestBody.sourceDefinitionId)
 
-      return DeclarativeManifestsReadList().manifestVersions(
-        existingVersions
-          .map { manifest: DeclarativeManifest ->
-            DeclarativeManifestVersionRead()
-              .description(manifest.description)
-              .version(manifest.version)
-              .isActive(manifest.version == activeVersion.version)
-          }.sorted(Comparator.comparingLong { obj: DeclarativeManifestVersionRead? -> obj!!.version })
-          .collect(Collectors.toList<@Valid DeclarativeManifestVersionRead?>()),
+      return DeclarativeManifestsReadList(
+        manifestVersions =
+          existingVersions
+            .map { manifest: DeclarativeManifest ->
+              DeclarativeManifestVersionRead(
+                description = manifest.description,
+                version = manifest.version,
+                isActive = manifest.version == activeVersion.version,
+              )
+            }.sorted(Comparator.comparingLong { obj: DeclarativeManifestVersionRead? -> obj!!.version })
+            .collect(Collectors.toList<@Valid DeclarativeManifestVersionRead?>()),
       )
     }
 

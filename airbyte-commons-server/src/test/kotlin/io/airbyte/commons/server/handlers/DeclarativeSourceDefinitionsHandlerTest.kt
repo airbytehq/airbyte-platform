@@ -7,11 +7,11 @@ package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody
-import io.airbyte.api.model.generated.DeclarativeSourceManifest
-import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody
-import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.DeclarativeSourceDefinitionCreateManifestRequestBody
+import io.airbyte.api.server.generated.models.DeclarativeSourceManifest
+import io.airbyte.api.server.generated.models.ListDeclarativeManifestsRequestBody
+import io.airbyte.api.server.generated.models.UpdateActiveManifestRequestBody
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
@@ -81,7 +81,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
       handler!!.createDeclarativeSourceDefinitionManifest(
-        DeclarativeSourceDefinitionCreateManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID),
+        DeclarativeSourceDefinitionCreateManifestRequestBody(
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          workspaceId = A_WORKSPACE_ID,
+          setAsActiveManifest = false,
+          declarativeManifest = anyDeclarativeManifest(),
+        ),
       )
     }
   }
@@ -99,10 +104,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       SourceIsNotDeclarativeException::class.java,
     ) {
       handler!!.createDeclarativeSourceDefinitionManifest(
-        DeclarativeSourceDefinitionCreateManifestRequestBody()
-          .workspaceId(A_WORKSPACE_ID)
-          .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-          .declarativeManifest(anyDeclarativeManifest()!!.version(A_VERSION)),
+        DeclarativeSourceDefinitionCreateManifestRequestBody(
+          workspaceId = A_WORKSPACE_ID,
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          setAsActiveManifest = false,
+          declarativeManifest = anyDeclarativeManifest(),
+        ),
       )
     }
   }
@@ -118,10 +125,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ValueConflictKnownException::class.java,
     ) {
       handler!!.createDeclarativeSourceDefinitionManifest(
-        DeclarativeSourceDefinitionCreateManifestRequestBody()
-          .workspaceId(A_WORKSPACE_ID)
-          .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-          .declarativeManifest(anyDeclarativeManifest()!!.version(A_VERSION)),
+        DeclarativeSourceDefinitionCreateManifestRequestBody(
+          workspaceId = A_WORKSPACE_ID,
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          setAsActiveManifest = false,
+          declarativeManifest = anyDeclarativeManifest(),
+        ),
       )
     }
   }
@@ -146,17 +155,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
 
     handler!!.createDeclarativeSourceDefinitionManifest(
-      DeclarativeSourceDefinitionCreateManifestRequestBody()
-        .workspaceId(A_WORKSPACE_ID)
-        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .setAsActiveManifest(true)
-        .declarativeManifest(
-          anyDeclarativeManifest()!!
-            .manifest(A_MANIFEST)
-            .spec(A_SPEC)
-            .version(A_VERSION)
-            .description(A_DESCRIPTION),
-        ),
+      DeclarativeSourceDefinitionCreateManifestRequestBody(
+        workspaceId = A_WORKSPACE_ID,
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        setAsActiveManifest = true,
+        declarativeManifest = anyDeclarativeManifest(),
+      ),
     )
 
     Mockito.verify(manifestInjector, Mockito.times(1)).addInjectedDeclarativeManifest(A_SPEC)
@@ -183,17 +187,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceIsDeclarative()
 
     handler!!.createDeclarativeSourceDefinitionManifest(
-      DeclarativeSourceDefinitionCreateManifestRequestBody()
-        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .workspaceId(A_WORKSPACE_ID)
-        .setAsActiveManifest(false)
-        .declarativeManifest(
-          anyDeclarativeManifest()!!
-            .manifest(A_MANIFEST)
-            .spec(A_SPEC)
-            .version(A_VERSION)
-            .description(A_DESCRIPTION),
-        ),
+      DeclarativeSourceDefinitionCreateManifestRequestBody(
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        workspaceId = A_WORKSPACE_ID,
+        setAsActiveManifest = false,
+        declarativeManifest = anyDeclarativeManifest(),
+      ),
     )
 
     Mockito
@@ -230,17 +229,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceIsDeclarative()
 
     handler!!.createDeclarativeSourceDefinitionManifest(
-      DeclarativeSourceDefinitionCreateManifestRequestBody()
-        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .workspaceId(A_WORKSPACE_ID)
-        .setAsActiveManifest(false)
-        .declarativeManifest(
-          anyDeclarativeManifest()!!
-            .manifest(A_MANIFEST)
-            .spec(A_SPEC)
-            .version(A_VERSION)
-            .description(A_DESCRIPTION),
-        ),
+      DeclarativeSourceDefinitionCreateManifestRequestBody(
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        workspaceId = A_WORKSPACE_ID,
+        setAsActiveManifest = false,
+        declarativeManifest = anyDeclarativeManifest(),
+      ),
     )
 
     Mockito.verify(connectorBuilderService, Mockito.times(1)).deleteManifestDraftForActorDefinition(
@@ -254,7 +248,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
-        UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+        UpdateActiveManifestRequestBody(
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          workspaceId = A_WORKSPACE_ID,
+          version = A_VERSION,
+        ),
       )
     }
   }
@@ -270,7 +268,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
     Assertions.assertThrows(SourceIsNotDeclarativeException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
-        UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+        UpdateActiveManifestRequestBody(
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          workspaceId = A_WORKSPACE_ID,
+          version = A_VERSION,
+        ),
       )
     }
   }
@@ -309,7 +311,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       Assertions
         .assertThrows(IllegalStateException::class.java) {
           handler!!.updateDeclarativeManifestVersion(
-            UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+            UpdateActiveManifestRequestBody(
+              sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+              workspaceId = A_WORKSPACE_ID,
+              version = A_VERSION,
+            ),
           )
         }.message,
     )
@@ -325,7 +331,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
     Assertions.assertThrows(ConfigNotFoundException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
-        UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+        UpdateActiveManifestRequestBody(
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          workspaceId = A_WORKSPACE_ID,
+          version = A_VERSION,
+        ),
       )
     }
   }
@@ -371,7 +381,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
 
     handler!!.updateDeclarativeManifestVersion(
-      UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+      UpdateActiveManifestRequestBody(
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        workspaceId = A_WORKSPACE_ID,
+        version = A_VERSION,
+      ),
     )
 
     Mockito.verify(manifestInjector, Mockito.times(1)).getCdkVersion(A_MANIFEST)
@@ -420,7 +434,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
     Assertions.assertThrows(BadRequestProblem::class.java) {
       handler!!.updateDeclarativeManifestVersion(
-        UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+        UpdateActiveManifestRequestBody(
+          sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+          workspaceId = A_WORKSPACE_ID,
+          version = A_VERSION,
+        ),
       )
     }
     Mockito.verify(connectorBuilderService, Mockito.times(0)).setDeclarativeSourceActiveVersion(
@@ -452,7 +470,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       .thenReturn(manifest2)
 
     val response =
-      handler!!.listManifestVersions(ListDeclarativeManifestsRequestBody().workspaceId(A_WORKSPACE_ID).sourceDefinitionId(sourceDefinitionId))
+      handler!!.listManifestVersions(
+        ListDeclarativeManifestsRequestBody(
+          workspaceId = A_WORKSPACE_ID,
+          sourceDefinitionId = sourceDefinitionId,
+        ),
+      )
     Assertions.assertEquals(3, response.manifestVersions.size)
 
     Assertions.assertFalse(response.manifestVersions[0].isActive)
@@ -495,17 +518,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
 
     handler!!.createDeclarativeSourceDefinitionManifest(
-      DeclarativeSourceDefinitionCreateManifestRequestBody()
-        .workspaceId(A_WORKSPACE_ID)
-        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
-        .setAsActiveManifest(true)
-        .declarativeManifest(
-          anyDeclarativeManifest()!!
-            .manifest(fileUploaderManifest)
-            .spec(A_SPEC)
-            .version(A_VERSION)
-            .description(A_DESCRIPTION),
-        ),
+      DeclarativeSourceDefinitionCreateManifestRequestBody(
+        workspaceId = A_WORKSPACE_ID,
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        setAsActiveManifest = true,
+        declarativeManifest = anyDeclarativeManifest().copy(manifest = fileUploaderManifest),
+      ),
     )
 
     Mockito.verify(connectorBuilderService, Mockito.times(1)).createDeclarativeManifestAsActiveVersion(
@@ -556,7 +574,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
 
     handler!!.updateDeclarativeManifestVersion(
-      UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+      UpdateActiveManifestRequestBody(
+        sourceDefinitionId = A_SOURCE_DEFINITION_ID,
+        workspaceId = A_WORKSPACE_ID,
+        version = A_VERSION,
+      ),
     )
 
     Mockito.verify(connectorBuilderService, Mockito.times(1)).setDeclarativeSourceActiveVersion(
@@ -603,6 +625,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       }
     }
 
-    private fun anyDeclarativeManifest(): DeclarativeSourceManifest? = DeclarativeSourceManifest().version(A_VERSION)
+    private fun anyDeclarativeManifest(): DeclarativeSourceManifest =
+      DeclarativeSourceManifest(description = A_DESCRIPTION, manifest = A_MANIFEST, spec = A_SPEC, version = A_VERSION)
   }
 }

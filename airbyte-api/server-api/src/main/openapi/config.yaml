@@ -14685,7 +14685,6 @@ components:
         - name
         - builderProjectId
         - hasDraft
-        - updatedAt
       properties:
         name:
           type: string
@@ -14698,6 +14697,7 @@ components:
         hasDraft:
           type: boolean
         updatedAt:
+          description: Absent when reading a specific manifest version of the project.
           type: integer
           format: int64
         baseActorDefinitionVersionInfo:
@@ -15169,7 +15169,7 @@ components:
           description: URL of the PR that was created or updated
         actor_definition_id:
           type: string
-          format: UUID
+          format: uuid
           description: The definition ID of the connector that was contributed to
     # Connector Builder Assist Schemas
     AssistV1ProcessRequestBody:

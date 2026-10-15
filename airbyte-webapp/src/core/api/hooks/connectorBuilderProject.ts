@@ -94,7 +94,8 @@ export interface BuilderProject {
   version: "draft" | number;
   sourceDefinitionId?: string;
   id: string;
-  updatedAt: number;
+  // absent when the project was read at a specific manifest version
+  updatedAt?: number;
   hasDraft?: boolean;
   baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
   contributionInfo?: ContributionInfo;

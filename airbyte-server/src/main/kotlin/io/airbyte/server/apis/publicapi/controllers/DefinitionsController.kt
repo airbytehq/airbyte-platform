@@ -7,15 +7,8 @@ package io.airbyte.server.apis.publicapi.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails
-import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
-import io.airbyte.api.model.generated.ConnectorBuilderProjectRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
-import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody
-import io.airbyte.api.model.generated.DeclarativeSourceManifest
 import io.airbyte.api.model.generated.DestinationDefinitionCreate
 import io.airbyte.api.model.generated.DestinationDefinitionRead
 import io.airbyte.api.model.generated.DestinationDefinitionUpdate
@@ -25,6 +18,13 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectDetails
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.server.generated.models.DeclarativeSourceDefinitionCreateManifestRequestBody
+import io.airbyte.api.server.generated.models.DeclarativeSourceManifest
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
@@ -115,35 +115,28 @@ class DefinitionsController(
 
     val res =
       connectorBuilderProjectsHandler.createConnectorBuilderProject(
-        ConnectorBuilderProjectWithWorkspaceId()
-          .workspaceId(workspaceId)
-          .builderProject(
-            ConnectorBuilderProjectDetails()
-              .name(request.name)
-              .draftManifest(manifest),
-          ),
+        ConnectorBuilderProjectWithWorkspaceId(
+          workspaceId = workspaceId,
+          builderProject = ConnectorBuilderProjectDetails(name = request.name, draftManifest = manifest),
+        ),
       )
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(
-      ConnectorBuilderPublishRequestBody()
-        .builderProjectId(res.builderProjectId)
-        .workspaceId(res.workspaceId)
-        .name(request.name)
-        .initialDeclarativeManifest(
-          DeclarativeSourceManifest()
-            .manifest(manifest)
-            .spec(spec)
-            .description("")
-            .version(1),
-        ),
+      ConnectorBuilderPublishRequestBody(
+        builderProjectId = res.builderProjectId,
+        workspaceId = res.workspaceId,
+        name = request.name,
+        initialDeclarativeManifest = DeclarativeSourceManifest(manifest = manifest, spec = spec, description = "", version = 1),
+      ),
     )
 
     connectorBuilderProjectsHandler
       .getConnectorBuilderProjectWithManifest(
-        ConnectorBuilderProjectIdWithWorkspaceId()
-          .workspaceId(workspaceId)
-          .builderProjectId(res.builderProjectId)
-          .version(1),
+        ConnectorBuilderProjectIdWithWorkspaceId(
+          workspaceId = workspaceId,
+          builderProjectId = res.builderProjectId,
+          version = 1,
+        ),
       ).toPublicApi()
       .ok()
   }
@@ -374,25 +367,21 @@ class DefinitionsController(
     spec.replace("connectionSpecification", spec.get("connection_specification"))
 
     declarativeSourceDefinitionsHandler.createDeclarativeSourceDefinitionManifest(
-      DeclarativeSourceDefinitionCreateManifestRequestBody()
-        .sourceDefinitionId(definitionId)
-        .workspaceId(workspaceId)
-        .setAsActiveManifest(true)
-        .declarativeManifest(
-          DeclarativeSourceManifest()
-            .manifest(manifest)
-            .spec(spec)
-            .description("")
-            .version(nextVersion),
-        ),
+      DeclarativeSourceDefinitionCreateManifestRequestBody(
+        sourceDefinitionId = definitionId,
+        workspaceId = workspaceId,
+        setAsActiveManifest = true,
+        declarativeManifest = DeclarativeSourceManifest(manifest = manifest, spec = spec, description = "", version = nextVersion),
+      ),
     )
 
     connectorBuilderProjectsHandler
       .getConnectorBuilderProjectWithManifest(
-        ConnectorBuilderProjectIdWithWorkspaceId()
-          .workspaceId(workspaceId)
-          .builderProjectId(projId)
-          .version(nextVersion),
+        ConnectorBuilderProjectIdWithWorkspaceId(
+          workspaceId = workspaceId,
+          builderProjectId = projId,
+          version = nextVersion,
+        ),
       ).toPublicApi()
       .ok()
   }
@@ -527,8 +516,9 @@ private fun ConnectorBuilderProjectRead.toPublicApi() =
   DeclarativeSourceDefinitionResponse(
     id = builderProject.sourceDefinitionId.toString(),
     name = builderProject.name,
-    manifest = declarativeManifest.manifest,
-    version = builderProject.activeDeclarativeManifestVersion,
+    // the public API model requires these; a missing value fails here as it did before
+    manifest = declarativeManifest!!.manifest!!,
+    version = builderProject.activeDeclarativeManifestVersion!!,
   )
 
 private fun DeclarativeManifest.toPublicApi(name: String) =

@@ -6,36 +6,36 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.BaseActorDefinitionVersionInfo
-import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody
-import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse
-import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest
-import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.ConnectorBuilderCapabilities
-import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails
-import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
-import io.airbyte.api.model.generated.ConnectorBuilderProjectRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate
-import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderResolvedManifest
-import io.airbyte.api.model.generated.ContributionInfo
-import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead
-import io.airbyte.api.model.generated.DeclarativeManifestRead
-import io.airbyte.api.model.generated.DeclarativeManifestRequestBody
-import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.api.model.generated.OAuthConsentRead
-import io.airbyte.api.model.generated.SourceDefinitionIdBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.FailedPreconditionData
 import io.airbyte.api.problems.throwable.generated.FailedPreconditionProblem
+import io.airbyte.api.server.generated.models.BaseActorDefinitionVersionInfo
+import io.airbyte.api.server.generated.models.BuilderProjectForDefinitionRequestBody
+import io.airbyte.api.server.generated.models.BuilderProjectForDefinitionResponse
+import io.airbyte.api.server.generated.models.BuilderProjectOauthConsentRequest
+import io.airbyte.api.server.generated.models.CompleteConnectorBuilderProjectOauthRequest
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.ConnectorBuilderCapabilities
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectDetails
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectDetailsRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectForkRequestBody
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectFullResolveRequestBody
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectReadList
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamRead
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadRequestBody
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectTestingValuesUpdate
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.server.generated.models.ConnectorBuilderResolvedManifest
+import io.airbyte.api.server.generated.models.ContributionInfo
+import io.airbyte.api.server.generated.models.DeclarativeManifestBaseImageRead
+import io.airbyte.api.server.generated.models.DeclarativeManifestRead
+import io.airbyte.api.server.generated.models.DeclarativeManifestRequestBody
+import io.airbyte.api.server.generated.models.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.OAuthConsentRead
+import io.airbyte.api.server.generated.models.SourceDefinitionIdBody
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.builder.manifest.processor.ManifestServerManifestProcessor
@@ -115,49 +115,45 @@ open class ConnectorBuilderProjectsHandler
     @param:Named("oauthImplementationFactory") private val oAuthImplementationFactory: OAuthImplementationFactory,
     private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
   ) {
-    private fun getProjectDetailsWithoutBaseAdvInfo(project: ConnectorBuilderProject): ConnectorBuilderProjectDetailsRead {
-      val detailsRead =
-        ConnectorBuilderProjectDetailsRead()
-          .name(project.name)
-          .updatedAt(project.updatedAt)
-          .builderProjectId(project.builderProjectId)
-          .sourceDefinitionId(project.actorDefinitionId)
-          .activeDeclarativeManifestVersion(
-            project.activeDeclarativeManifestVersion,
-          ).hasDraft(project.hasDraft)
-          .componentsFileContent(project.componentsFileContent)
-
-      if (project.contributionPullRequestUrl != null) {
-        detailsRead.contributionInfo =
-          ContributionInfo()
-            .pullRequestUrl(project.contributionPullRequestUrl)
-            .actorDefinitionId(project.contributionActorDefinitionId)
-      }
-      return detailsRead
-    }
+    private fun getProjectDetailsWithoutBaseAdvInfo(project: ConnectorBuilderProject): ConnectorBuilderProjectDetailsRead =
+      ConnectorBuilderProjectDetailsRead(
+        name = project.name,
+        updatedAt = project.updatedAt,
+        builderProjectId = project.builderProjectId,
+        sourceDefinitionId = project.actorDefinitionId,
+        activeDeclarativeManifestVersion = project.activeDeclarativeManifestVersion,
+        hasDraft = project.hasDraft,
+        componentsFileContent = project.componentsFileContent,
+        contributionInfo =
+          project.contributionPullRequestUrl?.let {
+            ContributionInfo(pullRequestUrl = it, actorDefinitionId = project.contributionActorDefinitionId)
+          },
+      )
 
     private fun buildBaseActorDefinitionVersionInfo(
       actorDefinitionVersion: ActorDefinitionVersion,
       sourceDefinition: StandardSourceDefinition,
     ): BaseActorDefinitionVersionInfo =
-      BaseActorDefinitionVersionInfo()
-        .name(sourceDefinition.name)
-        .dockerRepository(actorDefinitionVersion.dockerRepository)
-        .dockerImageTag(actorDefinitionVersion.dockerImageTag)
-        .actorDefinitionId(actorDefinitionVersion.actorDefinitionId)
-        .icon(sourceDefinition.iconUrl)
-        .documentationUrl(actorDefinitionVersion.documentationUrl)
+      BaseActorDefinitionVersionInfo(
+        name = sourceDefinition.name,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        actorDefinitionId = actorDefinitionVersion.actorDefinitionId,
+        icon = sourceDefinition.iconUrl,
+        documentationUrl = actorDefinitionVersion.documentationUrl,
+      )
 
     private fun builderProjectToDetailsRead(project: ConnectorBuilderProject): ConnectorBuilderProjectDetailsRead {
       val detailsRead = getProjectDetailsWithoutBaseAdvInfo(project)
       if (project.baseActorDefinitionVersionId != null) {
         val baseActorDefinitionVersion =
           actorDefinitionService.getActorDefinitionVersion(project.baseActorDefinitionVersionId)
-        detailsRead.baseActorDefinitionVersionInfo(
-          buildBaseActorDefinitionVersionInfo(
-            baseActorDefinitionVersion,
-            sourceService.getStandardSourceDefinition(baseActorDefinitionVersion.actorDefinitionId),
-          ),
+        return detailsRead.copy(
+          baseActorDefinitionVersionInfo =
+            buildBaseActorDefinitionVersionInfo(
+              baseActorDefinitionVersion,
+              sourceService.getStandardSourceDefinition(baseActorDefinitionVersion.actorDefinitionId),
+            ),
         )
       }
       return detailsRead
@@ -210,22 +206,23 @@ open class ConnectorBuilderProjectsHandler
           val detailsRead = getProjectDetailsWithoutBaseAdvInfo(project)
           val baseAdvId = project.baseActorDefinitionVersionId
           if (baseAdvId != null) {
-            detailsRead
-              .baseActorDefinitionVersionInfo(
+            detailsRead.copy(
+              baseActorDefinitionVersionInfo =
                 buildBaseActorDefinitionVersionInfo(
                   baseAdvIdToAdvMap[baseAdvId]!!,
                   baseAdvIdToAssociatedSourceDefMap[baseAdvId]!!,
                 ),
-              )
+            )
+          } else {
+            detailsRead
           }
-          detailsRead
         }.collect(Collectors.toList<ConnectorBuilderProjectDetailsRead>())
     }
 
     private fun buildIdResponseFromId(
       projectId: UUID,
       workspaceId: UUID,
-    ): ConnectorBuilderProjectIdWithWorkspaceId = ConnectorBuilderProjectIdWithWorkspaceId().workspaceId(workspaceId).builderProjectId(projectId)
+    ): ConnectorBuilderProjectIdWithWorkspaceId = ConnectorBuilderProjectIdWithWorkspaceId(workspaceId = workspaceId, builderProjectId = projectId)
 
     private fun validateProjectUnderRightWorkspace(
       projectId: UUID,
@@ -271,18 +268,12 @@ open class ConnectorBuilderProjectsHandler
     private fun applyPatchDefaultsFromDb(
       projectDetailsUpdate: ConnectorBuilderProjectDetails,
       persistedProject: ConnectorBuilderProject,
-    ): ConnectorBuilderProjectDetails {
-      if (projectDetailsUpdate.baseActorDefinitionVersionId == null) {
-        projectDetailsUpdate.baseActorDefinitionVersionId = persistedProject.baseActorDefinitionVersionId
-      }
-      if (projectDetailsUpdate.contributionPullRequestUrl == null) {
-        projectDetailsUpdate.contributionPullRequestUrl = persistedProject.contributionPullRequestUrl
-      }
-      if (projectDetailsUpdate.contributionActorDefinitionId == null) {
-        projectDetailsUpdate.contributionActorDefinitionId = persistedProject.contributionActorDefinitionId
-      }
-      return projectDetailsUpdate
-    }
+    ): ConnectorBuilderProjectDetails =
+      projectDetailsUpdate.copy(
+        baseActorDefinitionVersionId = projectDetailsUpdate.baseActorDefinitionVersionId ?: persistedProject.baseActorDefinitionVersionId,
+        contributionPullRequestUrl = projectDetailsUpdate.contributionPullRequestUrl ?: persistedProject.contributionPullRequestUrl,
+        contributionActorDefinitionId = projectDetailsUpdate.contributionActorDefinitionId ?: persistedProject.contributionActorDefinitionId,
+      )
 
     fun updateConnectorBuilderProject(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId) {
       val connectorBuilderProject =
@@ -291,7 +282,7 @@ open class ConnectorBuilderProjectsHandler
 
       val projectDetailsUpdate = applyPatchDefaultsFromDb(projectUpdate.builderProject, connectorBuilderProject)
 
-      buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate.builderProject(projectDetailsUpdate))
+      buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate.copy(builderProject = projectDetailsUpdate))
     }
 
     fun deleteConnectorBuilderProject(projectDelete: ConnectorBuilderProjectIdWithWorkspaceId) {
@@ -300,10 +291,11 @@ open class ConnectorBuilderProjectsHandler
     }
 
     fun getConnectorBuilderProjectWithManifest(request: ConnectorBuilderProjectIdWithWorkspaceId): ConnectorBuilderProjectRead {
-      if (request.version != null) {
+      val version = request.version
+      if (version != null) {
         validateProjectUnderRightWorkspace(request.builderProjectId, request.workspaceId)
         return buildConnectorBuilderProjectVersionManifestRead(
-          connectorBuilderService.getVersionedConnectorBuilderProject(request.builderProjectId, request.version),
+          connectorBuilderService.getVersionedConnectorBuilderProject(request.builderProjectId, version),
         )
       }
 
@@ -313,48 +305,54 @@ open class ConnectorBuilderProjectsHandler
     private fun getWithManifestWithoutVersion(request: ConnectorBuilderProjectIdWithWorkspaceId): ConnectorBuilderProjectRead {
       val project = connectorBuilderService.getConnectorBuilderProject(request.builderProjectId, true)
       validateProjectUnderRightWorkspace(project, request.workspaceId)
-      val response = ConnectorBuilderProjectRead().builderProject(builderProjectToDetailsRead(project))
+      val builderProject = builderProjectToDetailsRead(project)
 
       if (project.manifestDraft != null) {
-        response.declarativeManifest =
-          DeclarativeManifestRead()
-            .manifest(project.manifestDraft)
-            .isDraft(true)
-        response.testingValues = maskSecrets(project.testingValues, project.manifestDraft)
+        return ConnectorBuilderProjectRead(
+          builderProject = builderProject,
+          declarativeManifest = DeclarativeManifestRead(manifest = project.manifestDraft, isDraft = true),
+          testingValues = maskSecrets(project.testingValues, project.manifestDraft),
+        )
       } else if (project.actorDefinitionId != null) {
         val declarativeManifest =
           connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
             project.actorDefinitionId,
           )
-        response.declarativeManifest =
-          DeclarativeManifestRead()
-            .isDraft(false)
-            .manifest(declarativeManifest.manifest)
-            .version(declarativeManifest.version)
-            .description(declarativeManifest.description)
-        response.builderProject.componentsFileContent = declarativeManifest.componentsFileContent
-        response.testingValues = maskSecrets(project.testingValues, declarativeManifest.manifest)
+        return ConnectorBuilderProjectRead(
+          builderProject = builderProject.copy(componentsFileContent = declarativeManifest.componentsFileContent),
+          declarativeManifest =
+            DeclarativeManifestRead(
+              isDraft = false,
+              manifest = declarativeManifest.manifest,
+              version = declarativeManifest.version,
+              description = declarativeManifest.description,
+            ),
+          testingValues = maskSecrets(project.testingValues, declarativeManifest.manifest),
+        )
       }
-      return response
+      return ConnectorBuilderProjectRead(builderProject = builderProject)
     }
 
     private fun buildConnectorBuilderProjectVersionManifestRead(project: ConnectorBuilderProjectVersionedManifest): ConnectorBuilderProjectRead =
-      ConnectorBuilderProjectRead()
-        .builderProject(
-          ConnectorBuilderProjectDetailsRead()
-            .builderProjectId(project.builderProjectId)
-            .name(project.name)
-            .hasDraft(project.hasDraft)
-            .activeDeclarativeManifestVersion(project.activeDeclarativeManifestVersion)
-            .sourceDefinitionId(project.sourceDefinitionId)
-            .componentsFileContent(project.componentsFileContent),
-        ).declarativeManifest(
-          DeclarativeManifestRead()
-            .isDraft(false)
-            .manifest(project.manifest)
-            .version(project.manifestVersion)
-            .description(project.manifestDescription),
-        ).testingValues(maskSecrets(project.testingValues, project.manifest))
+      ConnectorBuilderProjectRead(
+        builderProject =
+          ConnectorBuilderProjectDetailsRead(
+            builderProjectId = project.builderProjectId,
+            name = project.name,
+            hasDraft = project.hasDraft,
+            activeDeclarativeManifestVersion = project.activeDeclarativeManifestVersion,
+            sourceDefinitionId = project.sourceDefinitionId,
+            componentsFileContent = project.componentsFileContent,
+          ),
+        declarativeManifest =
+          DeclarativeManifestRead(
+            isDraft = false,
+            manifest = project.manifest,
+            version = project.manifestVersion,
+            description = project.manifestDescription,
+          ),
+        testingValues = maskSecrets(project.testingValues, project.manifest),
+      )
 
     private fun maskSecrets(
       testingValues: JsonNode?,
@@ -374,7 +372,7 @@ open class ConnectorBuilderProjectsHandler
       val projects =
         connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.workspaceId)
 
-      return ConnectorBuilderProjectReadList().projects(builderProjectsToDetailsReads(projects.toList()))
+      return ConnectorBuilderProjectReadList(projects = builderProjectsToDetailsReads(projects.toList()))
     }
 
     fun publishConnectorBuilderProject(connectorBuilderPublishRequestBody: ConnectorBuilderPublishRequestBody): SourceDefinitionIdBody {
@@ -409,7 +407,7 @@ open class ConnectorBuilderProjectsHandler
       )
       connectorBuilderService.deleteBuilderProjectDraft(connectorBuilderPublishRequestBody.builderProjectId)
 
-      return SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId)
+      return SourceDefinitionIdBody(sourceDefinitionId = actorDefinitionId)
     }
 
     private fun createActorDefinition(
@@ -492,7 +490,7 @@ open class ConnectorBuilderProjectsHandler
       }
     }
 
-    fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead? {
+    fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead {
       try {
         val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
         validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
@@ -516,12 +514,13 @@ open class ConnectorBuilderProjectsHandler
           )
 
         // Handle latestConfigUpdate secret processing if present
-        if (builderProjectStreamRead.latestConfigUpdate != null) {
+        val latestConfigUpdate = builderProjectStreamRead.latestConfigUpdate
+        if (latestConfigUpdate != null) {
           val spec = requestBody.manifest[SPEC_FIELD][CONNECTION_SPECIFICATION_FIELD]
           val updatedTestingValuesWithSecretCoordinates =
             writeSecretsToSecretPersistence(
               Optional.ofNullable(project.testingValues),
-              builderProjectStreamRead.latestConfigUpdate,
+              latestConfigUpdate,
               spec,
               project.workspaceId,
               secretPersistenceConfig,
@@ -529,7 +528,7 @@ open class ConnectorBuilderProjectsHandler
           connectorBuilderService.updateBuilderProjectTestingValues(project.builderProjectId, updatedTestingValuesWithSecretCoordinates)
           val updatedTestingValuesWithObfuscatedSecrets =
             secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, spec)
-          builderProjectStreamRead.latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets
+          return builderProjectStreamRead.copy(latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets)
         }
 
         return builderProjectStreamRead
@@ -539,8 +538,8 @@ open class ConnectorBuilderProjectsHandler
     }
 
     fun fullResolveManifestBuilderProject(requestBody: ConnectorBuilderProjectFullResolveRequestBody): ConnectorBuilderResolvedManifest {
-      val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
-      validateProjectUnderRightWorkspace(project, requestBody.workspaceId)
+      val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId!!, false)
+      validateProjectUnderRightWorkspace(project, requestBody.workspaceId!!)
       val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
       val existingHydratedTestingValues =
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
@@ -581,9 +580,10 @@ open class ConnectorBuilderProjectsHandler
             ).map { obj: ConnectorBuilderProject -> obj.workspaceId }
       }
 
-      return BuilderProjectForDefinitionResponse()
-        .builderProjectId(builderProjectId.orElse(null))
-        .workspaceId(workspaceId.orElse(null))
+      return BuilderProjectForDefinitionResponse(
+        builderProjectId = builderProjectId.orElse(null),
+        workspaceId = workspaceId.orElse(null),
+      )
     }
 
     private fun writeSecretsToSecretPersistence(
@@ -658,7 +658,7 @@ open class ConnectorBuilderProjectsHandler
           declarativeManifestImageVersion.imageVersion,
           declarativeManifestImageVersion.imageSha,
         )
-      return DeclarativeManifestBaseImageRead().baseImage(baseImage)
+      return DeclarativeManifestBaseImageRead(baseImage = baseImage)
     }
 
     private fun getImageVersionForManifest(declarativeManifest: JsonNode): DeclarativeManifestImageVersion {
@@ -687,13 +687,17 @@ open class ConnectorBuilderProjectsHandler
           .orElse(null)
 
       val projectDetails =
-        ConnectorBuilderProjectDetails()
-          .name(sourceDefinition.name)
-          .baseActorDefinitionVersionId(defaultVersion.versionId)
-          .draftManifest(manifest)
-          .componentsFileContent(customComponentsContent)
+        ConnectorBuilderProjectDetails(
+          name = sourceDefinition.name,
+          baseActorDefinitionVersionId = defaultVersion.versionId,
+          draftManifest = manifest,
+          componentsFileContent = customComponentsContent,
+        )
       return createConnectorBuilderProject(
-        ConnectorBuilderProjectWithWorkspaceId().workspaceId(requestBody.workspaceId).builderProject(projectDetails),
+        ConnectorBuilderProjectWithWorkspaceId(
+          workspaceId = requestBody.workspaceId,
+          builderProject = projectDetails,
+        ),
       )
     }
 
@@ -747,15 +751,16 @@ open class ConnectorBuilderProjectsHandler
       val maskedTestingValues = maskSecrets(project.testingValues, manifest) ?: Jsons.emptyObject()
 
       val oAuthFlowImplementation = oAuthImplementationFactory.createDeclarativeOAuthImplementation(spec)
-      return OAuthConsentRead().consentUrl(
-        oAuthFlowImplementation.getSourceConsentUrl(
-          requestBody.workspaceId,
-          null,
-          requestBody.redirectUrl,
-          maskedTestingValues,
-          oauthConfigSpecification,
-          existingHydratedTestingValues,
-        ),
+      return OAuthConsentRead(
+        consentUrl =
+          oAuthFlowImplementation.getSourceConsentUrl(
+            requestBody.workspaceId,
+            null,
+            requestBody.redirectUrl,
+            maskedTestingValues,
+            oauthConfigSpecification,
+            existingHydratedTestingValues,
+          ),
       )
     }
 
@@ -790,14 +795,15 @@ open class ConnectorBuilderProjectsHandler
         oAuthFlowImplementation.completeSourceOAuth(
           requestBody.workspaceId,
           null,
-          requestBody.queryParams,
-          requestBody.redirectUrl,
+          requestBody.queryParams!!,
+          requestBody.redirectUrl!!,
           existingHydratedTestingValues,
           oauthConfigSpecification,
           existingHydratedTestingValues,
         )
 
-      return mapToCompleteOAuthResponse(result)
+      // TODO: OAuthHelper still builds the Java model, shared with OAuthHandler; drop this conversion when they move to Kotlin
+      return Jsons.convertValue(mapToCompleteOAuthResponse(result), CompleteOAuthResponse::class.java)
     }
 
     private fun getManifestForProject(project: ConnectorBuilderProject): JsonNode =

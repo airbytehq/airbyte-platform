@@ -8,8 +8,8 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails
-import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectDetails
+import io.airbyte.api.server.generated.models.ExistingConnectorBuilderProjectWithWorkspaceId
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
@@ -55,28 +55,29 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     val update =
-      ExistingConnectorBuilderProjectWithWorkspaceId()
-        .builderProject(ConnectorBuilderProjectDetails().name(project.getName()))
-        .workspaceId(A_WORKSPACE_ID)
-        .builderProjectId(project.getBuilderProjectId())
+      ExistingConnectorBuilderProjectWithWorkspaceId(
+        builderProject = ConnectorBuilderProjectDetails(name = project.name),
+        workspaceId = A_WORKSPACE_ID,
+        builderProjectId = project.builderProjectId,
+      )
 
     projectUpdater.persistBuilderProjectUpdate(update)
 
     Mockito
       .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
       .writeBuilderProjectDraft(
-        project.getBuilderProjectId(),
-        project.getWorkspaceId(),
-        project.getName(),
+        project.builderProjectId,
+        project.workspaceId,
+        project.name,
         null,
-        project.getComponentsFileContent(),
-        project.getBaseActorDefinitionVersionId(),
-        project.getContributionPullRequestUrl(),
-        project.getContributionActorDefinitionId(),
+        project.componentsFileContent,
+        project.baseActorDefinitionVersionId,
+        project.contributionPullRequestUrl,
+        project.contributionActorDefinitionId,
       )
   }
 
@@ -86,31 +87,29 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     val update =
-      ExistingConnectorBuilderProjectWithWorkspaceId()
-        .builderProject(
-          ConnectorBuilderProjectDetails()
-            .name(project.getName())
-            .draftManifest(project.getManifestDraft()),
-        ).workspaceId(A_WORKSPACE_ID)
-        .builderProjectId(project.getBuilderProjectId())
+      ExistingConnectorBuilderProjectWithWorkspaceId(
+        builderProject = ConnectorBuilderProjectDetails(name = project.name, draftManifest = project.getManifestDraft()),
+        workspaceId = A_WORKSPACE_ID,
+        builderProjectId = project.builderProjectId,
+      )
 
     projectUpdater.persistBuilderProjectUpdate(update)
 
     Mockito
       .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
       .writeBuilderProjectDraft(
-        project.getBuilderProjectId(),
-        project.getWorkspaceId(),
-        project.getName(),
+        project.builderProjectId,
+        project.workspaceId,
+        project.name,
         project.getManifestDraft(),
-        project.getComponentsFileContent(),
-        project.getBaseActorDefinitionVersionId(),
-        project.getContributionPullRequestUrl(),
-        project.getContributionActorDefinitionId(),
+        project.componentsFileContent,
+        project.baseActorDefinitionVersionId,
+        project.contributionPullRequestUrl,
+        project.contributionActorDefinitionId,
       )
   }
 
@@ -127,16 +126,18 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
     )
 
     projectUpdater.persistBuilderProjectUpdate(
-      ExistingConnectorBuilderProjectWithWorkspaceId()
-        .builderProject(
-          ConnectorBuilderProjectDetails()
-            .name(A_SOURCE_NAME)
-            .draftManifest(A_MANIFEST)
-            .baseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID)
-            .contributionPullRequestUrl(A_CONTRIBUTION_PULL_REQUEST_URL)
-            .contributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID),
-        ).workspaceId(A_WORKSPACE_ID)
-        .builderProjectId(A_BUILDER_PROJECT_ID),
+      ExistingConnectorBuilderProjectWithWorkspaceId(
+        builderProject =
+          ConnectorBuilderProjectDetails(
+            name = A_SOURCE_NAME,
+            draftManifest = A_MANIFEST,
+            baseActorDefinitionVersionId = A_BASE_ACTOR_DEFINITION_VERSION_ID,
+            contributionPullRequestUrl = A_CONTRIBUTION_PULL_REQUEST_URL,
+            contributionActorDefinitionId = A_CONTRIBUTION_ACTOR_DEFINITION_ID,
+          ),
+        workspaceId = A_WORKSPACE_ID,
+        builderProjectId = A_BUILDER_PROJECT_ID,
+      ),
     )
 
     Mockito

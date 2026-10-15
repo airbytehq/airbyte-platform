@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.builder.manifest.processor
 
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner
+import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadLogsInner
 import io.airbyte.commons.json.Jsons
 import io.airbyte.manifestserver.api.client.ManifestServerApiClient
 import io.airbyte.manifestserver.api.client.generated.CapabilitiesApi
@@ -212,7 +212,7 @@ internal class ManifestServerManifestProcessorTest {
     assertNotNull(result)
     assertEquals(1, result.logs.size)
     assertEquals("Test log message", result.logs[0].message)
-    assertEquals(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.INFO, result.logs[0].level)
+    assertEquals(ConnectorBuilderProjectStreamReadLogsInner.Level.INFO, result.logs[0].level)
 
     assertEquals(1, result.slices.size)
     assertEquals(1, result.slices[0].pages.size)
