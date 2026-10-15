@@ -7,12 +7,16 @@ import {
   connectionSemanticSearchKeys,
   useConnectionSemanticSearchEnablement,
   useCreateConnectionSemanticSearchEnablement,
+  useRequestConnectionBackfill,
   useSemanticSearchConnections,
+  useSourceSearchStatuses,
   useUpdateConnectionSemanticSearchEnablement,
 } from "./connectionSemanticSearch";
 import {
   createFusionConnectionEnablement,
   getFusionConnectionEnablement,
+  getFusionSourceSearchStatus,
+  requestFusionConnectionBackfill,
   updateFusionConnectionEnablement,
   webBackendListConnectionsForWorkspace,
 } from "../generated/AirbyteClient";
@@ -26,6 +30,8 @@ jest.mock("./agentsPlatform", () => ({
 jest.mock("../generated/AirbyteClient", () => ({
   createFusionConnectionEnablement: jest.fn(),
   getFusionConnectionEnablement: jest.fn(),
+  getFusionSourceSearchStatus: jest.fn(),
+  requestFusionConnectionBackfill: jest.fn(),
   updateFusionConnectionEnablement: jest.fn(),
   webBackendListConnectionsForWorkspace: jest.fn(),
 }));
@@ -45,6 +51,12 @@ const mockGetFusionConnectionEnablement = getFusionConnectionEnablement as jest.
 >;
 const mockUpdateFusionConnectionEnablement = updateFusionConnectionEnablement as jest.MockedFunction<
   typeof updateFusionConnectionEnablement
+>;
+const mockGetFusionSourceSearchStatus = getFusionSourceSearchStatus as jest.MockedFunction<
+  typeof getFusionSourceSearchStatus
+>;
+const mockRequestFusionConnectionBackfill = requestFusionConnectionBackfill as jest.MockedFunction<
+  typeof requestFusionConnectionBackfill
 >;
 const mockUseAgentsSupportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds as jest.MockedFunction<
   typeof useAgentsSupportedSourceDefinitionIds
@@ -214,6 +226,58 @@ describe("connection semantic search enablement", () => {
     );
   });
 
+  it("reads the source status again after a saved update", async () => {
+    const completeStatus = {
+      sources: [
+        {
+          source_id: "source-1",
+          destination_id: "destination-1",
+          connection_id: "connection-1",
+          streams: [{ name: "stream-1", indexes: [], backfill: { status: "complete" } }],
+        },
+      ],
+    };
+    const offStatus = { sources: [] };
+    mockGetFusionSourceSearchStatus.mockResolvedValue(completeStatus as never);
+    mockUpdateFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", false));
+    const { result } = renderHook(
+      () => ({
+        statuses: useSourceSearchStatuses(["source-1"], { refetchInterval: () => false }),
+        mutation: useUpdateConnectionSemanticSearchEnablement("connection-1"),
+      }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.statuses[0].data).toEqual(completeStatus));
+    mockGetFusionSourceSearchStatus.mockResolvedValue(offStatus);
+
+    await act(() => result.current.mutation.mutateAsync({ enabled: false, expectedEnabled: true }));
+
+    await waitFor(() => expect(result.current.statuses[0].data).toEqual(offStatus));
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not read the source status again after a failed update", async () => {
+    mockGetFusionSourceSearchStatus.mockResolvedValue({ sources: [] });
+    mockGetFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
+    mockUpdateFusionConnectionEnablement.mockRejectedValue(new Error("conflict"));
+    const { result } = renderHook(
+      () => ({
+        statuses: useSourceSearchStatuses(["source-1"], { refetchInterval: () => false }),
+        mutation: useUpdateConnectionSemanticSearchEnablement("connection-1"),
+      }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.statuses[0].isSuccess).toBe(true));
+
+    await act(async () => {
+      await expect(result.current.mutation.mutateAsync({ enabled: false, expectedEnabled: true })).rejects.toEqual(
+        new Error("conflict")
+      );
+    });
+
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledTimes(1);
+  });
+
   it("reads the saved value again after a failed update", async () => {
     mockGetFusionConnectionEnablement.mockResolvedValue(enablement("connection-1", true));
     mockUpdateFusionConnectionEnablement.mockRejectedValue(new Error("conflict"));
@@ -264,5 +328,109 @@ describe("connection semantic search enablement", () => {
       );
     });
     expect(queryClient.getQueryData(connectionSemanticSearchKeys.enablement("connection-2"))).toBeUndefined();
+  });
+});
+
+const searchStatus = (sourceId: string) => ({
+  sources: [{ source_id: sourceId, destination_id: "destination-1", connection_id: "connection-1", streams: [] }],
+});
+
+describe("connection backfill", () => {
+  let queryClient: QueryClient;
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  it("reads the search status once for each source", async () => {
+    mockGetFusionSourceSearchStatus.mockImplementation(async (sourceId) => searchStatus(sourceId));
+
+    const { result } = renderHook(
+      () => ({
+        first: useSourceSearchStatuses(["source-1", "source-2"], { refetchInterval: () => false }),
+        second: useSourceSearchStatuses(["source-1"], { refetchInterval: () => false }),
+      }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current.first.every((status) => status.isSuccess)).toBe(true));
+    expect(result.current.first.map((status) => status.data)).toEqual([
+      searchStatus("source-1"),
+      searchStatus("source-2"),
+    ]);
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledTimes(2);
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledWith("source-1", { signal: "request-options" });
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledWith("source-2", { signal: "request-options" });
+  });
+
+  it("returns a failed status read for its source only", async () => {
+    mockGetFusionSourceSearchStatus.mockImplementation(async (sourceId) => {
+      if (sourceId === "source-2") {
+        throw new Error("status failed");
+      }
+      return searchStatus(sourceId);
+    });
+
+    const { result } = renderHook(
+      () => useSourceSearchStatuses(["source-1", "source-2"], { refetchInterval: () => false }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current[1].isError).toBe(true));
+    expect(result.current[0].isSuccess).toBe(true);
+    expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["sends the start time when one is set", "2025-09-19T00:00:00Z", { start_time: "2025-09-19T00:00:00Z" }],
+    ["omits the start time when it is empty", "", {}],
+    ["omits the start time when it is not set", undefined, {}],
+  ])("%s and never sends streams", async (_name, startTime, body) => {
+    mockRequestFusionConnectionBackfill.mockResolvedValue({ streams: [] });
+
+    const { result } = renderHook(() => useRequestConnectionBackfill("connection-1", "source-1"), { wrapper });
+    await act(() => result.current.mutateAsync({ startTime }));
+
+    expect(mockRequestFusionConnectionBackfill).toHaveBeenCalledWith("connection-1", body, {
+      signal: "request-options",
+    });
+    expect(mockRequestFusionConnectionBackfill.mock.calls[0][1]).not.toHaveProperty("streams");
+  });
+
+  it("reads the source status again after a started backfill", async () => {
+    mockGetFusionSourceSearchStatus.mockResolvedValue(searchStatus("source-1"));
+    mockRequestFusionConnectionBackfill.mockResolvedValue({ streams: [] });
+    const { result } = renderHook(
+      () => ({
+        statuses: useSourceSearchStatuses(["source-1"], { refetchInterval: () => false }),
+        backfill: useRequestConnectionBackfill("connection-1", "source-1"),
+      }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.statuses[0].isSuccess).toBe(true));
+
+    await act(() => result.current.backfill.mutateAsync({}));
+
+    await waitFor(() => expect(mockGetFusionSourceSearchStatus).toHaveBeenCalledTimes(2));
+  });
+
+  it("returns a failed request to the caller", async () => {
+    mockRequestFusionConnectionBackfill.mockRejectedValue(new Error("conflict"));
+
+    const { result } = renderHook(() => useRequestConnectionBackfill("connection-1", "source-1"), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({})).rejects.toEqual(new Error("conflict"));
+    });
+    expect(queryClient.getQueryState(connectionSemanticSearchKeys.sourceSearchStatus("source-1"))).toBeUndefined();
   });
 });

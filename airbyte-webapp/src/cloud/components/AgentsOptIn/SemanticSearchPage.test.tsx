@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { Route, Routes, useParams } from "react-router-dom";
 
 import { TestWrapper } from "test-utils";
@@ -9,12 +10,15 @@ import {
   useConnectionSemanticSearchEnablement,
   useListWorkspacesInOrganization,
   useOrganizationSemanticSearchEnablement,
+  useRequestConnectionBackfill,
   useSemanticSearchConnections,
+  useSourceSearchStatuses,
   useUpdateConnectionSemanticSearchEnablement,
 } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { FusionSearchStatusBackfillStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 
+import { BACKFILL_STATUS_POLL_INTERVAL_MS, getDefaultBackfillStartTime } from "./connectionBackfillState";
 import { SemanticSearchPage } from "./SemanticSearchPage";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
@@ -27,7 +31,9 @@ jest.mock("core/api", () => ({
   useConnectionSemanticSearchEnablement: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
   useOrganizationSemanticSearchEnablement: jest.fn(),
+  useRequestConnectionBackfill: jest.fn(),
   useSemanticSearchConnections: jest.fn(),
+  useSourceSearchStatuses: jest.fn(),
   useUpdateConnectionSemanticSearchEnablement: jest.fn(),
 }));
 
@@ -67,15 +73,19 @@ const mockUseUpdateConnectionSemanticSearchEnablement =
   useUpdateConnectionSemanticSearchEnablement as jest.MockedFunction<
     typeof useUpdateConnectionSemanticSearchEnablement
   >;
+const mockUseSourceSearchStatuses = useSourceSearchStatuses as jest.MockedFunction<typeof useSourceSearchStatuses>;
+const mockUseRequestConnectionBackfill = useRequestConnectionBackfill as jest.MockedFunction<
+  typeof useRequestConnectionBackfill
+>;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 const mockUseIntent = useIntent as jest.MockedFunction<typeof useIntent>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 
-const connection = (connectionId: string, sourceName: string, destinationName: string) =>
+const connection = (connectionId: string, sourceName: string, destinationName: string, sourceId = "source-1") =>
   ({
     connectionId,
     name: `${sourceName} to ${destinationName}`,
-    source: { name: sourceName },
+    source: { name: sourceName, sourceId },
     destination: { name: destinationName },
   }) as WebBackendConnectionListItem;
 
@@ -103,6 +113,51 @@ const mockUpdateEnablement = (overrides: Record<string, unknown> = {}) => {
   const update = { mutateAsync: jest.fn().mockResolvedValue(undefined), isLoading: false, ...overrides };
   mockUseUpdateConnectionSemanticSearchEnablement.mockReturnValue(update as never);
   return update;
+};
+
+const backfillSource = (
+  connectionId: string,
+  statuses: FusionSearchStatusBackfillStatus[],
+  indexedRecords = 0,
+  expectedRecords = 0
+) => ({
+  source_id: "source-1",
+  destination_id: "destination-1",
+  connection_id: connectionId,
+  streams: statuses.map((status, index) => ({
+    name: `stream-${index}`,
+    indexes: [],
+    backfill: {
+      status,
+      indexed_records: indexedRecords,
+      expected_total_records: expectedRecords,
+      collected_records: 0,
+      backfill_start_time: null,
+      started_at: null,
+      completed_at: null,
+    },
+  })),
+});
+
+const searchStatusResult = (sources: unknown[] = [], overrides: Record<string, unknown> = {}) => ({
+  data: { sources },
+  isError: false,
+  dataUpdatedAt: 1,
+  refetch: jest.fn(),
+  ...overrides,
+});
+
+const mockSearchStatuses = (resultForSource: (sourceId: string) => ReturnType<typeof searchStatusResult>) =>
+  mockUseSourceSearchStatuses.mockImplementation((sourceIds) => sourceIds.map(resultForSource) as never);
+
+const mockRequestBackfill = (overrides: Record<string, unknown> = {}) => {
+  const request = {
+    mutateAsync: jest.fn().mockResolvedValue({ streams: [{ stream_name: "stream-0", outcome: "requested" }] }),
+    isLoading: false,
+    ...overrides,
+  };
+  mockUseRequestConnectionBackfill.mockReturnValue(request as never);
+  return request;
 };
 
 const workspace = (index: number) => ({ workspaceId: `workspace-${index}`, name: `Workspace ${index}` });
@@ -158,6 +213,8 @@ describe("SemanticSearchPage", () => {
     mockUseIntent.mockReturnValue(true);
     mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(false));
     mockUpdateEnablement();
+    mockSearchStatuses(() => searchStatusResult());
+    mockRequestBackfill();
   });
 
   describe("gating", () => {
@@ -443,7 +500,7 @@ describe("SemanticSearchPage", () => {
       );
     });
 
-    it("renders the saved semantic search value and keeps the backfill controls disabled", () => {
+    it("renders the saved semantic search value and enables backfill only where semantic search is on", () => {
       mockUseConnectionSemanticSearchEnablement.mockImplementation((connectionId) =>
         enablementResult(connectionId === "connection-1")
       );
@@ -454,9 +511,11 @@ describe("SemanticSearchPage", () => {
       expect(screen.getByRole("checkbox", { name: "HubSpot to BigQuery semantic search" })).not.toBeChecked();
       ["HubSpot to Snowflake", "HubSpot to BigQuery"].forEach((name) => {
         expect(screen.getByRole("checkbox", { name: `${name} semantic search` })).toBeEnabled();
-        expect(screen.getByRole("textbox", { name: `${name} backfill date` })).toBeDisabled();
-        expect(screen.getByRole("button", { name: `Start backfill for ${name}` })).toBeDisabled();
       });
+      expect(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeEnabled();
+      expect(screen.getByRole("textbox", { name: "HubSpot to BigQuery backfill date" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to BigQuery" })).toBeDisabled();
       expect(screen.getAllByText("Backfill off")).toHaveLength(2);
     });
 
@@ -565,6 +624,331 @@ describe("SemanticSearchPage", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Load more connections" }));
       expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("backfill controls", () => {
+    const snowflakeRow = () => screen.getByRole("row", { name: /HubSpot Snowflake/ });
+
+    beforeEach(() => {
+      mockUseSemanticSearchConnections.mockReturnValue(
+        connectionsResult([
+          connection("connection-1", "HubSpot", "Snowflake"),
+          connection("connection-2", "HubSpot", "BigQuery"),
+        ])
+      );
+      mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(true));
+    });
+
+    it("reads the search status once for a source that several rows share", () => {
+      renderPage();
+
+      expect(mockUseSourceSearchStatuses).toHaveBeenCalled();
+      mockUseSourceSearchStatuses.mock.calls.forEach(([sourceIds]) => expect(sourceIds).toEqual(["source-1"]));
+    });
+
+    it.each([
+      [
+        "semantic search is off for the connection",
+        () => mockUseConnectionSemanticSearchEnablement.mockReturnValue(enablementResult(false)),
+      ],
+      ["the viewer cannot edit semantic search", () => mockUseIntent.mockReturnValue(false)],
+      [
+        "the semantic search value is loading",
+        () =>
+          mockUseConnectionSemanticSearchEnablement.mockReturnValue(
+            enablementResult(false, { data: undefined, isLoading: true })
+          ),
+      ],
+    ])("disables the backfill date and button when %s", (_name, arrange) => {
+      arrange();
+
+      renderPage();
+
+      expect(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeDisabled();
+    });
+
+    it.each([
+      ["Backfill off", "no backfill", [], true, true],
+      ["Backfill off", "a cancelled backfill", [backfillSource("connection-1", ["cancelled"])], true, true],
+      [
+        "Running",
+        "a running backfill",
+        [backfillSource("connection-1", ["running", "complete"], 75, 100)],
+        false,
+        false,
+      ],
+      ["Complete", "a complete backfill", [backfillSource("connection-1", ["complete", "complete"])], true, true],
+      [
+        "Running",
+        "a stream running next to a failed one",
+        [backfillSource("connection-1", ["running", "failed"])],
+        false,
+        false,
+      ],
+      ["Failed", "a failed stream", [backfillSource("connection-1", ["complete", "failed"])], true, true],
+    ])("shows %s for %s and sets the date and button from it", (label, _name, sources, dateEnabled, buttonEnabled) => {
+      mockSearchStatuses(() => searchStatusResult(sources));
+
+      renderPage();
+
+      expect(within(snowflakeRow()).getByText(label)).toBeInTheDocument();
+      expect(within(snowflakeRow()).getByRole("textbox", { name: /backfill date/ })).toHaveProperty(
+        "disabled",
+        !dateEnabled
+      );
+      expect(within(snowflakeRow()).getByRole("button", { name: /^Start backfill/ })).toHaveProperty(
+        "disabled",
+        !buttonEnabled
+      );
+    });
+
+    it("shows the progress of a running backfill", () => {
+      mockSearchStatuses(() => searchStatusResult([backfillSource("connection-1", ["running"], 75, 100)]));
+
+      renderPage();
+
+      expect(within(snowflakeRow()).getByText("75%")).toBeInTheDocument();
+    });
+
+    it("hides the progress until the backfiller has counted the records", () => {
+      mockSearchStatuses(() => searchStatusResult([backfillSource("connection-1", ["starting"], 0, 0)]));
+
+      renderPage();
+
+      expect(within(snowflakeRow()).getByText("Running")).toBeInTheDocument();
+      expect(within(snowflakeRow()).queryByText(/%$/)).not.toBeInTheDocument();
+    });
+
+    it("explains how to retry a failed backfill", () => {
+      mockSearchStatuses(() => searchStatusResult([backfillSource("connection-1", ["failed"])]));
+
+      renderPage();
+
+      fireEvent.mouseOver(within(snowflakeRow()).getByText("Failed"));
+      expect(screen.getByText("To try again, click Start backfill.")).toBeVisible();
+    });
+
+    it("keeps the date and button disabled while the status loads", () => {
+      mockSearchStatuses(() => searchStatusResult([], { data: undefined }));
+
+      renderPage();
+
+      expect(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeDisabled();
+    });
+
+    it("shows an unknown status and locks the controls when the first read of a source fails, and keeps the other rows", () => {
+      mockUseSemanticSearchConnections.mockReturnValue(
+        connectionsResult([
+          connection("connection-1", "HubSpot", "Snowflake", "source-1"),
+          connection("connection-2", "Gong", "BigQuery", "source-2"),
+        ])
+      );
+      mockSearchStatuses((sourceId) =>
+        sourceId === "source-2"
+          ? searchStatusResult([], { data: undefined, isError: true })
+          : searchStatusResult([backfillSource("connection-1", ["complete"])])
+      );
+
+      renderPage();
+
+      expect(within(snowflakeRow()).getByText("Complete")).toBeInTheDocument();
+      const failedRow = screen.getByRole("row", { name: /Gong BigQuery/ });
+      expect(within(failedRow).getByRole("button", { name: "Start backfill for Gong to BigQuery" })).toBeDisabled();
+      expect(within(failedRow).getByRole("textbox", { name: "Gong to BigQuery backfill date" })).toBeDisabled();
+      fireEvent.mouseOver(within(failedRow).getByText("Unknown"));
+      expect(
+        screen.getByText("We encountered an issue fetching the backfill status. We will keep trying in the background.")
+      ).toBeVisible();
+    });
+
+    it.each([
+      ["Running", ["running"]],
+      ["Complete", ["complete"]],
+      ["Failed", ["failed"]],
+    ] as const)("keeps showing %s after a later read fails, and locks the controls", (label, statuses) => {
+      mockSearchStatuses(() => searchStatusResult([backfillSource("connection-1", [...statuses])], { isError: true }));
+
+      renderPage();
+
+      expect(within(snowflakeRow()).getByText(label)).toBeInTheDocument();
+      expect(within(snowflakeRow()).getByRole("textbox", { name: /backfill date/ })).toBeDisabled();
+      expect(within(snowflakeRow()).getByRole("button", { name: /^Start backfill/ })).toBeDisabled();
+    });
+
+    it.each([
+      ["a read failed", undefined, "error", BACKFILL_STATUS_POLL_INTERVAL_MS],
+      ["a backfill is running", ["running"], "success", BACKFILL_STATUS_POLL_INTERVAL_MS],
+      ["a stream runs next to a failed one", ["running", "failed"], "success", BACKFILL_STATUS_POLL_INTERVAL_MS],
+      ["no backfill is running", ["complete"], "success", false],
+    ] as const)("polls the status while %s", (_name, statuses, queryStatus, expected) => {
+      renderPage();
+
+      const [, { refetchInterval }] = mockUseSourceSearchStatuses.mock.calls[0];
+      const data = statuses ? { sources: [backfillSource("connection-1", [...statuses])] } : undefined;
+      expect(refetchInterval(data as never, { state: { status: queryStatus } } as never)).toBe(expected);
+    });
+
+    it("sends the backfill date with the request", async () => {
+      const request = mockRequestBackfill();
+
+      renderPage();
+      fireEvent.change(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" }), {
+        target: { value: "2025-09-19T00:00:00Z" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      await waitFor(() => expect(request.mutateAsync).toHaveBeenCalledWith({ startTime: "2025-09-19T00:00:00Z" }));
+      expect(mockUseRequestConnectionBackfill).toHaveBeenCalledWith("connection-1", "source-1");
+    });
+
+    it("starts a new backfill for a connection whose backfill is complete", async () => {
+      const request = mockRequestBackfill();
+      mockSearchStatuses(() => searchStatusResult([backfillSource("connection-1", ["complete"])]));
+
+      renderPage();
+      fireEvent.change(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" }), {
+        target: { value: "2024-01-01T00:00:00Z" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      await waitFor(() => expect(request.mutateAsync).toHaveBeenCalledWith({ startTime: "2024-01-01T00:00:00Z" }));
+    });
+
+    it("shows and sends the default backfill date when none is entered", async () => {
+      const request = mockRequestBackfill();
+      const defaultStartTime = getDefaultBackfillStartTime();
+
+      renderPage();
+      expect(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" })).toHaveAttribute(
+        "placeholder",
+        defaultStartTime
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      await waitFor(() => expect(request.mutateAsync).toHaveBeenCalledWith({ startTime: defaultStartTime }));
+    });
+
+    it("sends the default backfill date after the entered date is cleared", async () => {
+      const request = mockRequestBackfill();
+      const dateInput = () => screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" });
+
+      renderPage();
+      fireEvent.change(dateInput(), { target: { value: "2025-09-19T00:00:00Z" } });
+      fireEvent.change(dateInput(), { target: { value: "" } });
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      await waitFor(() =>
+        expect(request.mutateAsync).toHaveBeenCalledWith({ startTime: getDefaultBackfillStartTime() })
+      );
+    });
+
+    it("shows a requested backfill as running until the status is read again", async () => {
+      const { rerender } = renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      expect(await within(snowflakeRow()).findByText("Running")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeDisabled();
+
+      mockSearchStatuses(() =>
+        searchStatusResult([backfillSource("connection-1", ["complete"])], { dataUpdatedAt: 2 })
+      );
+      rerender(
+        <TestWrapper route="/organization/test-org-123/context-layer/semantic-search">
+          <Routes>
+            <Route
+              path="/organization/:organizationId/context-layer/semantic-search"
+              element={<SemanticSearchPage />}
+            />
+          </Routes>
+        </TestWrapper>
+      );
+
+      expect(await within(snowflakeRow()).findByText("Complete")).toBeInTheDocument();
+    });
+
+    it("keeps a requested backfill running when the status is read again while the request is pending", async () => {
+      let resolveRequest: (response: unknown) => void = () => undefined;
+      mockRequestBackfill({
+        mutateAsync: jest.fn().mockReturnValue(
+          new Promise((resolve) => {
+            resolveRequest = resolve;
+          })
+        ),
+      });
+      // A newer read re-renders the provider without re-rendering the page, as a poll result does.
+      let setStatusRead: (read: ReturnType<typeof searchStatusResult>) => void = () => undefined;
+      const useStatusReads = (sourceIds: string[]) => {
+        const [read, setRead] = useState(searchStatusResult([backfillSource("connection-1", ["complete"])]));
+        setStatusRead = setRead;
+        return sourceIds.map(() => read) as never;
+      };
+      mockUseSourceSearchStatuses.mockImplementation(useStatusReads);
+
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+      act(() =>
+        setStatusRead(searchStatusResult([backfillSource("connection-1", ["complete"])], { dataUpdatedAt: 2 }))
+      );
+      await act(async () => resolveRequest({ streams: [{ stream_name: "stream-0", outcome: "requested" }] }));
+
+      expect(within(snowflakeRow()).getByText("Running")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeDisabled();
+    });
+
+    it.each([
+      ["Running", "another stream started", "requested", false],
+      ["Failed", "every stream failed", "failed", true],
+    ] as const)("shows %s when a stream fails to start and %s", async (label, _name, otherOutcome, buttonEnabled) => {
+      mockRequestBackfill({
+        mutateAsync: jest.fn().mockResolvedValue({
+          streams: [
+            { stream_name: "stream-0", outcome: otherOutcome },
+            { stream_name: "stream-1", outcome: "failed" },
+          ],
+        }),
+      });
+
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      expect(await within(snowflakeRow()).findByText(label)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toHaveProperty(
+        "disabled",
+        !buttonEnabled
+      );
+    });
+
+    it.each([
+      ["free text", "foo"],
+      ["a date without a time zone", "2025-10-01T00:00:00"],
+      ["a future date", "2999-01-01T00:00:00Z"],
+    ])("rejects %s as the backfill date", (_name, value) => {
+      const request = mockRequestBackfill();
+
+      renderPage();
+      fireEvent.change(screen.getByRole("textbox", { name: "HubSpot to Snowflake backfill date" }), {
+        target: { value },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      expect(
+        within(snowflakeRow()).getByText("Enter a past date and time in UTC, for example 2025-10-15T00:00:00Z.")
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" })).toBeDisabled();
+      expect(request.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("shows an error when the backfill cannot be started", async () => {
+      mockRequestBackfill({ mutateAsync: jest.fn().mockRejectedValue(new Error("conflict")) });
+
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Start backfill for HubSpot to Snowflake" }));
+
+      expect(await screen.findByText("The backfill could not be started. Please try again.")).toBeInTheDocument();
+      expect(within(snowflakeRow()).getByText("Backfill off")).toBeInTheDocument();
     });
   });
 

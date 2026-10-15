@@ -1,20 +1,32 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Query,
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 
 import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitionIds } from "./agentsPlatform";
 import { connectionsKeys, getNextConnectionListCursor } from "./connections";
 import {
   createFusionConnectionEnablement,
   getFusionConnectionEnablement,
+  getFusionSourceSearchStatus,
+  requestFusionConnectionBackfill,
   updateFusionConnectionEnablement,
   webBackendListConnectionsForWorkspace,
 } from "../generated/AirbyteClient";
-import { WebBackendConnectionReadList } from "../types/AirbyteClient";
+import { FusionSearchStatusResponse, WebBackendConnectionReadList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 
 const SEMANTIC_SEARCH_CONNECTIONS_PAGE_SIZE = 25;
 
 export const connectionSemanticSearchKeys = {
   enablement: (connectionId: string) => [...connectionsKeys.all, "semanticSearchEnablement", connectionId] as const,
+  sourceSearchStatuses: () => [...connectionsKeys.all, "semanticSearchSourceStatus"] as const,
+  sourceSearchStatus: (sourceId: string) => [...connectionsKeys.all, "semanticSearchSourceStatus", sourceId] as const,
 };
 
 /**
@@ -85,6 +97,9 @@ export const useUpdateConnectionSemanticSearchEnablement = (connectionId: string
       onMutate: () => queryClient.cancelQueries(connectionSemanticSearchKeys.enablement(connectionId)),
       onSuccess: (response) => {
         queryClient.setQueryData(connectionSemanticSearchKeys.enablement(connectionId), response);
+        // The connection's backfill status changes with the setting, for example to off when the index is deleted.
+        // The connection's source is not known here, so every loaded source status is read again.
+        void queryClient.invalidateQueries(connectionSemanticSearchKeys.sourceSearchStatuses());
       },
       // After a failure the saved value can differ from the shown one: another change landed first (stale
       // expected state), or the server saved a turn-off but could not sync it to Agents. Read it again.
@@ -111,6 +126,57 @@ export const useCreateConnectionSemanticSearchEnablement = () => {
         // value cannot overwrite the saved one.
         await queryClient.cancelQueries(connectionSemanticSearchKeys.enablement(connectionId));
         queryClient.setQueryData(connectionSemanticSearchKeys.enablement(connectionId), response);
+      },
+    }
+  );
+};
+
+interface SourceSearchStatusOptions {
+  refetchInterval: (
+    data: FusionSearchStatusResponse | undefined,
+    query: Query<FusionSearchStatusResponse>
+  ) => number | false;
+}
+
+/**
+ * Reads the backfill and index status of each source. The response holds one entry for each indexed connection of the
+ * source, so connections that share a source share one read. Call it only where semantic search is available: the
+ * endpoint is Cloud only.
+ *
+ * Each read fails on its own and renders inline, so a failed read never breaks the other rows. A failed refetch keeps
+ * the last data. The caller decides when to poll from the data and the query state.
+ */
+export const useSourceSearchStatuses = (sourceIds: string[], { refetchInterval }: SourceSearchStatusOptions) => {
+  const requestOptions = useRequestOptions();
+
+  return useQueries({
+    queries: sourceIds.map(
+      (sourceId): UseQueryOptions<FusionSearchStatusResponse> => ({
+        queryKey: connectionSemanticSearchKeys.sourceSearchStatus(sourceId),
+        queryFn: () => getFusionSourceSearchStatus(sourceId, requestOptions),
+        retry: false,
+        refetchInterval,
+      })
+    ),
+  });
+};
+
+/**
+ * Starts a backfill of every selected stream of one connection. An empty start time backfills the full history. The
+ * server keeps a run that is still queued or running, so a retry is safe. After the request, the source status is read
+ * again.
+ */
+export const useRequestConnectionBackfill = (connectionId: string, sourceId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ startTime }: { startTime?: string }) =>
+      requestFusionConnectionBackfill(connectionId, startTime ? { start_time: startTime } : {}, requestOptions),
+    {
+      // Not returned, so the caller gets the outcome without waiting for the new status.
+      onSuccess: () => {
+        void queryClient.invalidateQueries(connectionSemanticSearchKeys.sourceSearchStatus(sourceId));
       },
     }
   );

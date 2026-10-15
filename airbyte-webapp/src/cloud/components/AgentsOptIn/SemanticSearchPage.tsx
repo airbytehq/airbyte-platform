@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
-import DatePicker from "components/ui/DatePicker";
 import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -27,6 +25,12 @@ import {
   ContextLayerSettingsEmptyState,
   ContextLayerUnavailable,
 } from "./ContextLayerPage";
+import {
+  SemanticSearchBackfillDate,
+  SemanticSearchBackfillProvider,
+  SemanticSearchBackfillStatus,
+  SemanticSearchStartBackfill,
+} from "./SemanticSearchBackfill";
 import styles from "./SemanticSearchPage.module.scss";
 import { SemanticSearchSwitch } from "./SemanticSearchSwitch";
 import { useContextLayerEligibility } from "./useContextLayerEligibility";
@@ -39,7 +43,6 @@ interface WorkspaceConnectionInventory {
   canCreateOrEditConnections: boolean;
 }
 
-// The backfill controls stay disabled until the connection backfill endpoint exists.
 const SemanticSearchConnectionTable: React.FC<{
   connections: WebBackendConnectionListItem[];
   workspaceId: string;
@@ -104,7 +107,7 @@ const SemanticSearchConnectionTable: React.FC<{
                   { name: connection.name }
                 )}
               </label>
-              <DatePicker id={inputId} value="" onChange={() => undefined} disabled withTime />
+              <SemanticSearchBackfillDate id={inputId} connection={connection} workspaceId={workspaceId} />
             </>
           );
         },
@@ -119,17 +122,7 @@ const SemanticSearchConnectionTable: React.FC<{
         ),
         meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
         cell: ({ row: { original: connection } }) => (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled
-            aria-label={formatMessage(
-              { id: "cloud.contextLayer.semanticSearchPage.startBackfillControlLabel" },
-              { name: connection.name }
-            )}
-          >
-            <FormattedMessage id="cloud.contextLayer.semanticSearchPage.startBackfill" />
-          </Button>
+          <SemanticSearchStartBackfill connection={connection} workspaceId={workspaceId} />
         ),
       },
       {
@@ -141,30 +134,27 @@ const SemanticSearchConnectionTable: React.FC<{
           />
         ),
         meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
-        cell: () => (
-          <Badge variant="grey" uppercase={false} className={styles.statusBadge}>
-            <Icon type="minusCircle" size="xs" />
-            <FormattedMessage id="cloud.contextLayer.semanticSearchPage.backfillOff" />
-          </Badge>
-        ),
+        cell: ({ row: { original: connection } }) => <SemanticSearchBackfillStatus connection={connection} />,
       },
     ],
     [formatMessage, workspaceId]
   );
 
   return (
-    <div className={styles.tableWrapper}>
-      <Table
-        className={styles.connectionTable}
-        columns={columns}
-        data={connections}
-        rowId="connectionId"
-        variant="light"
-        sorting={false}
-        stickyHeaders={false}
-        showEmptyPlaceholder={false}
-      />
-    </div>
+    <SemanticSearchBackfillProvider connections={connections}>
+      <div className={styles.tableWrapper}>
+        <Table
+          className={styles.connectionTable}
+          columns={columns}
+          data={connections}
+          rowId="connectionId"
+          variant="light"
+          sorting={false}
+          stickyHeaders={false}
+          showEmptyPlaceholder={false}
+        />
+      </div>
+    </SemanticSearchBackfillProvider>
   );
 };
 
