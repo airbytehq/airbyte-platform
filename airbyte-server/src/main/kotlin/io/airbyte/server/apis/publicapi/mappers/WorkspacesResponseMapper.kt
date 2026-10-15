@@ -49,7 +49,7 @@ object WorkspacesResponseMapper {
     return WorkspacesResponse(
       next = PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
-      data = workspaceReadList.workspaces.mapIndexed { index, obj -> from(obj!!, dataplaneGroupNames[index]) },
+      data = workspaceReadList.workspaces.mapIndexed { index, obj -> from(obj, dataplaneGroupNames[index]) },
     )
   }
 }

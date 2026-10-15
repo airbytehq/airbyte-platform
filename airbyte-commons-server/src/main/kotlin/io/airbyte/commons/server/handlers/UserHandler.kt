@@ -293,7 +293,7 @@ open class UserHandler
           userRead.status?.convertTo<User.Status>(),
         ).withCompanyName(userRead.companyName)
         .withEmail(userRead.email)
-        .withUiMetadata(Jsons.jsonNode(userRead.metadata ?: emptyMap<Any, Any>()))
+        .withUiMetadata(Jsons.jsonNode(userRead.metadata))
         .withNews(userRead.news)
 
     /**

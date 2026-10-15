@@ -231,7 +231,7 @@ class UserInvitationHandler(
   }
 
   private fun getOrgIdFromCreateRequest(req: UserInvitationCreateRequestBody): UUID? =
-    when (req.scopeType!!) {
+    when (req.scopeType) {
       ScopeType.ORGANIZATION -> req.scopeId
       ScopeType.WORKSPACE -> workspaceService.getOrganizationIdFromWorkspaceId(req.scopeId).orElse(null)
     }

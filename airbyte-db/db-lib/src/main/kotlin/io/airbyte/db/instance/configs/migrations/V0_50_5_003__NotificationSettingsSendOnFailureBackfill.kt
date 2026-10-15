@@ -58,10 +58,11 @@ class V0_50_5_003__NotificationSettingsSendOnFailureBackfill : BaseJavaMigration
           return@forEach
         }
 
+        // A JSON literal null in the column deserializes to null: nothing to backfill for that workspace.
         val notificationSetting =
-          Jsons.deserialize<NotificationSettings>(
+          Jsons.deserialize<NotificationSettings?>(
             workspaceRecord.get<JSONB>(NOTIFICATION_SETTINGS_COLUMN).data(),
-            object : TypeReference<NotificationSettings>() {},
+            object : TypeReference<NotificationSettings?>() {},
           ) ?: return@forEach
 
         // By default the following notification are all sent via emails. At this moment customers do not have an option to turn it off.

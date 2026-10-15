@@ -35,7 +35,7 @@ fun buildStandardWorkspace(
     workspaceCreateWithId.dataplaneGroupId ?: dataplaneGroupService.getDefaultDataplaneGroup().id
 
   return StandardWorkspace().apply {
-    workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
+    workspaceId = workspaceCreateWithId.id
     customerId = uuidSupplier.get() // "customer_id" should be deprecated
     name = workspaceCreateWithId.name
     slug = uuidSupplier.get().toString()

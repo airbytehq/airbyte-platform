@@ -26,7 +26,7 @@ object NotificationConverter {
     io.airbyte.config
       .Notification()
       .withNotificationType(
-        notification.notificationType?.convertTo<io.airbyte.config.Notification.NotificationType>(),
+        notification.notificationType.convertTo<io.airbyte.config.Notification.NotificationType>(),
       ).withSendOnSuccess(notification.sendOnSuccess)
       .withSendOnFailure(notification.sendOnFailure)
       .withSlackConfiguration(notification.slackConfiguration?.let { toConfig(it) })

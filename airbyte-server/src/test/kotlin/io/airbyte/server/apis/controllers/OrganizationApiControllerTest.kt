@@ -95,7 +95,7 @@ class OrganizationApiControllerTest {
     val requestBody =
       OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId, isAgentic = true)
     every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns organizationRead.copy(isAgentic = true)
-    assertEquals(true, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
+    assertEquals(true, organizationApiController.setOrganizationAgenticStatus(requestBody).isAgentic)
   }
 
   @Test
@@ -103,7 +103,7 @@ class OrganizationApiControllerTest {
     val requestBody =
       OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId, isAgentic = false)
     every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns organizationRead.copy(isAgentic = false)
-    assertEquals(false, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
+    assertEquals(false, organizationApiController.setOrganizationAgenticStatus(requestBody).isAgentic)
   }
 
   @Test
@@ -133,7 +133,7 @@ class OrganizationApiControllerTest {
     val result = organizationApiController.getOrgInfo(requestBody)
 
     assertNotNull(result)
-    assertEquals(organizationId, result!!.organizationId)
+    assertEquals(organizationId, result.organizationId)
     verify(exactly = 1) { organizationsHandler.getOrganizationInfo(organizationId) }
     verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
   }
