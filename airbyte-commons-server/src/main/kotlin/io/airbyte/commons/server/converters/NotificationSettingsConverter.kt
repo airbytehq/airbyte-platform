@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.NotificationItem
-import io.airbyte.api.model.generated.NotificationSettings
-import io.airbyte.api.model.generated.NotificationType
-import io.airbyte.api.model.generated.SlackNotificationConfiguration
+import io.airbyte.api.server.generated.models.NotificationItem
+import io.airbyte.api.server.generated.models.NotificationSettings
+import io.airbyte.api.server.generated.models.NotificationType
+import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.Notification
 import java.util.stream.Collectors
@@ -23,35 +23,15 @@ object NotificationSettingsConverter {
       return configNotificationSettings
     }
 
-    if (notification.sendOnSuccess != null) {
-      configNotificationSettings.sendOnSuccess = toConfig(notification.sendOnSuccess)
-    }
-    if (notification.sendOnFailure != null) {
-      configNotificationSettings.sendOnFailure = toConfig(notification.sendOnFailure)
-    }
-    if (notification.sendOnConnectionUpdate != null) {
-      configNotificationSettings.sendOnConnectionUpdate = toConfig(notification.sendOnConnectionUpdate)
-    }
-    if (notification.sendOnSyncDisabled != null) {
-      configNotificationSettings.sendOnSyncDisabled = toConfig(notification.sendOnSyncDisabled)
-    }
-    if (notification.sendOnSyncDisabledWarning != null) {
-      configNotificationSettings.sendOnSyncDisabledWarning = toConfig(notification.sendOnSyncDisabledWarning)
-    }
-    if (notification.sendOnConnectionUpdateActionRequired != null) {
-      configNotificationSettings.sendOnConnectionUpdateActionRequired =
-        toConfig(notification.sendOnConnectionUpdateActionRequired)
-    }
-    if (notification.sendOnBreakingChangeWarning != null) {
-      configNotificationSettings.sendOnBreakingChangeWarning = toConfig(notification.sendOnBreakingChangeWarning)
-    }
-    if (notification.sendOnBreakingChangeSyncsDisabled != null) {
-      configNotificationSettings.sendOnBreakingChangeSyncsDisabled =
-        toConfig(notification.sendOnBreakingChangeSyncsDisabled)
-    }
-    if (notification.sendOnConnectionSyncQueued != null) {
-      configNotificationSettings.sendOnConnectionSyncQueued = toConfig(notification.sendOnConnectionSyncQueued)
-    }
+    notification.sendOnSuccess?.let { configNotificationSettings.sendOnSuccess = toConfig(it) }
+    notification.sendOnFailure?.let { configNotificationSettings.sendOnFailure = toConfig(it) }
+    notification.sendOnConnectionUpdate?.let { configNotificationSettings.sendOnConnectionUpdate = toConfig(it) }
+    notification.sendOnSyncDisabled?.let { configNotificationSettings.sendOnSyncDisabled = toConfig(it) }
+    notification.sendOnSyncDisabledWarning?.let { configNotificationSettings.sendOnSyncDisabledWarning = toConfig(it) }
+    notification.sendOnConnectionUpdateActionRequired?.let { configNotificationSettings.sendOnConnectionUpdateActionRequired = toConfig(it) }
+    notification.sendOnBreakingChangeWarning?.let { configNotificationSettings.sendOnBreakingChangeWarning = toConfig(it) }
+    notification.sendOnBreakingChangeSyncsDisabled?.let { configNotificationSettings.sendOnBreakingChangeSyncsDisabled = toConfig(it) }
+    notification.sendOnConnectionSyncQueued?.let { configNotificationSettings.sendOnConnectionSyncQueued = toConfig(it) }
 
     return configNotificationSettings
   }
@@ -63,6 +43,7 @@ object NotificationSettingsConverter {
         .NotificationItem()
         .withNotificationType(
           notificationItem.notificationType
+            .orEmpty()
             .stream()
             .map { notificationType: NotificationType ->
               notificationType.convertTo<Notification.NotificationType>()
@@ -93,47 +74,26 @@ object NotificationSettingsConverter {
 
   @JvmStatic
   fun toApi(notificationSettings: io.airbyte.config.NotificationSettings?): NotificationSettings {
-    val apiNotificationSetings = NotificationSettings()
     if (notificationSettings == null) {
-      return apiNotificationSetings
+      return NotificationSettings()
     }
-
-    if (notificationSettings.sendOnSuccess != null) {
-      apiNotificationSetings.sendOnSuccess = toApi(notificationSettings.sendOnSuccess)
-    }
-    if (notificationSettings.sendOnFailure != null) {
-      apiNotificationSetings.sendOnFailure = toApi(notificationSettings.sendOnFailure)
-    }
-    if (notificationSettings.sendOnConnectionUpdate != null) {
-      apiNotificationSetings.sendOnConnectionUpdate = toApi(notificationSettings.sendOnConnectionUpdate)
-    }
-    if (notificationSettings.sendOnSyncDisabled != null) {
-      apiNotificationSetings.sendOnSyncDisabled = toApi(notificationSettings.sendOnSyncDisabled)
-    }
-    if (notificationSettings.sendOnSyncDisabledWarning != null) {
-      apiNotificationSetings.sendOnSyncDisabledWarning = toApi(notificationSettings.sendOnSyncDisabledWarning)
-    }
-    if (notificationSettings.sendOnConnectionUpdateActionRequired != null) {
-      apiNotificationSetings.sendOnConnectionUpdateActionRequired =
-        toApi(notificationSettings.sendOnConnectionUpdateActionRequired)
-    }
-    if (notificationSettings.sendOnBreakingChangeWarning != null) {
-      apiNotificationSetings.sendOnBreakingChangeWarning = toApi(notificationSettings.sendOnBreakingChangeWarning)
-    }
-    if (notificationSettings.sendOnBreakingChangeSyncsDisabled != null) {
-      apiNotificationSetings.sendOnBreakingChangeSyncsDisabled =
-        toApi(notificationSettings.sendOnBreakingChangeSyncsDisabled)
-    }
-    if (notificationSettings.sendOnConnectionSyncQueued != null) {
-      apiNotificationSetings.sendOnConnectionSyncQueued = toApi(notificationSettings.sendOnConnectionSyncQueued)
-    }
-    return apiNotificationSetings
+    return NotificationSettings(
+      sendOnSuccess = notificationSettings.sendOnSuccess?.let { toApi(it) },
+      sendOnFailure = notificationSettings.sendOnFailure?.let { toApi(it) },
+      sendOnConnectionUpdate = notificationSettings.sendOnConnectionUpdate?.let { toApi(it) },
+      sendOnSyncDisabled = notificationSettings.sendOnSyncDisabled?.let { toApi(it) },
+      sendOnSyncDisabledWarning = notificationSettings.sendOnSyncDisabledWarning?.let { toApi(it) },
+      sendOnConnectionUpdateActionRequired = notificationSettings.sendOnConnectionUpdateActionRequired?.let { toApi(it) },
+      sendOnBreakingChangeWarning = notificationSettings.sendOnBreakingChangeWarning?.let { toApi(it) },
+      sendOnBreakingChangeSyncsDisabled = notificationSettings.sendOnBreakingChangeSyncsDisabled?.let { toApi(it) },
+      sendOnConnectionSyncQueued = notificationSettings.sendOnConnectionSyncQueued?.let { toApi(it) },
+    )
   }
 
   private fun toApi(notificationItem: io.airbyte.config.NotificationItem): NotificationItem {
     val result =
-      NotificationItem()
-        .notificationType(
+      NotificationItem(
+        notificationType =
           notificationItem.notificationType
             .stream()
             .map { notificationType: Notification.NotificationType ->
@@ -141,10 +101,8 @@ object NotificationSettingsConverter {
             }.collect(
               Collectors.toList(),
             ),
-        )
-    if (notificationItem.slackConfiguration != null) {
-      result.slackConfiguration(toApi(notificationItem.slackConfiguration))
-    }
+        slackConfiguration = notificationItem.slackConfiguration?.let { toApi(it) },
+      )
     return result
   }
 
@@ -152,11 +110,9 @@ object NotificationSettingsConverter {
     // webhook is non-nullable field in the OpenAPI spec and some configurations have been saved with
     // a null webhook, so we must default to an empty string or we incur deser errors.
     if (notification == null || notification.webhook == null) {
-      return SlackNotificationConfiguration()
-        .webhook("")
+      return SlackNotificationConfiguration(webhook = "")
     }
-    return SlackNotificationConfiguration()
-      .webhook(notification.webhook)
+    return SlackNotificationConfiguration(webhook = notification.webhook)
   }
 
   @JvmStatic

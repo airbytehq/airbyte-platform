@@ -6,28 +6,28 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
-import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
-import io.airbyte.api.model.generated.NotificationConfig
-import io.airbyte.api.model.generated.NotificationsConfig
-import io.airbyte.api.model.generated.OrganizationInfoRead
-import io.airbyte.api.model.generated.SlugRequestBody
-import io.airbyte.api.model.generated.WorkspaceCreate
-import io.airbyte.api.model.generated.WorkspaceCreateWithId
-import io.airbyte.api.model.generated.WorkspaceGiveFeedback
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.api.model.generated.WorkspaceReadList
-import io.airbyte.api.model.generated.WorkspaceUpdate
-import io.airbyte.api.model.generated.WorkspaceUpdateName
-import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.ListWorkspacesByUserRequestBody
+import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.server.generated.models.NotificationConfig
+import io.airbyte.api.server.generated.models.NotificationsConfig
+import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.SlugRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceCreate
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
+import io.airbyte.api.server.generated.models.WorkspaceGiveFeedback
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceReadList
+import io.airbyte.api.server.generated.models.WorkspaceUpdate
+import io.airbyte.api.server.generated.models.WorkspaceUpdateName
+import io.airbyte.api.server.generated.models.WorkspaceUpdateOrganization
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -123,19 +123,20 @@ class WorkspacesHandler
   ) {
     fun createWorkspace(workspaceCreate: WorkspaceCreate): WorkspaceRead {
       val workspaceCreateWithId =
-        WorkspaceCreateWithId()
-          .id(uuidSupplier.get())
-          .organizationId(workspaceCreate.organizationId)
-          .dataplaneGroupId(workspaceCreate.dataplaneGroupId)
-          .displaySetupWizard(workspaceCreate.displaySetupWizard)
-          .name(workspaceCreate.name)
-          .notifications(workspaceCreate.notifications)
-          .webhookConfigs(workspaceCreate.webhookConfigs)
-          .anonymousDataCollection(workspaceCreate.anonymousDataCollection)
-          .email(workspaceCreate.email)
-          .news(workspaceCreate.news)
-          .notificationSettings(workspaceCreate.notificationSettings)
-          .securityUpdates(workspaceCreate.securityUpdates)
+        WorkspaceCreateWithId(
+          id = uuidSupplier.get(),
+          organizationId = workspaceCreate.organizationId,
+          dataplaneGroupId = workspaceCreate.dataplaneGroupId,
+          displaySetupWizard = workspaceCreate.displaySetupWizard,
+          name = workspaceCreate.name,
+          notifications = workspaceCreate.notifications,
+          webhookConfigs = workspaceCreate.webhookConfigs,
+          anonymousDataCollection = workspaceCreate.anonymousDataCollection,
+          email = workspaceCreate.email,
+          news = workspaceCreate.news,
+          notificationSettings = workspaceCreate.notificationSettings,
+          securityUpdates = workspaceCreate.securityUpdates,
+        )
 
       return createWorkspaceIfNotExist(workspaceCreateWithId)
     }
@@ -186,11 +187,9 @@ class WorkspacesHandler
       // Since this code is currently only called by OSS, it's enforced in the public API and the UI
       // currently.
 
-      if (workspaceCreateWithId.organizationId == null) {
-        throw BadObjectSchemaKnownException("Workspace missing org ID.")
-      }
+      val organizationId = workspaceCreateWithId.organizationId ?: throw BadObjectSchemaKnownException("Workspace missing org ID.")
 
-      ensureWithinMaximumWorkspaces(workspaceCreateWithId.id, workspaceCreateWithId.organizationId)
+      ensureWithinMaximumWorkspaces(workspaceCreateWithId.id, organizationId)
 
       val email = workspaceCreateWithId.email
       val anonymousDataCollection = workspaceCreateWithId.anonymousDataCollection
@@ -199,18 +198,19 @@ class WorkspacesHandler
       val displaySetupWizard = workspaceCreateWithId.displaySetupWizard
 
       // if not set on the workspaceCreate, set the default dataplane group ID
+      val requestedDataplaneGroupId = workspaceCreateWithId.dataplaneGroupId
       val dataplaneGroupId: UUID
-      if (workspaceCreateWithId.dataplaneGroupId == null) {
+      if (requestedDataplaneGroupId == null) {
         val defaultDataplaneGroup = dataplaneGroupService.getDefaultDataplaneGroup()
         dataplaneGroupId = defaultDataplaneGroup.id
       } else {
         // If an explicit dataplane group ID is provided, ensure it is a valid assignment for the workspace.
         validateDataplaneGroupAssignment(
-          DataplaneGroupId(workspaceCreateWithId.dataplaneGroupId),
-          OrganizationId(workspaceCreateWithId.organizationId),
+          DataplaneGroupId(requestedDataplaneGroupId),
+          OrganizationId(organizationId),
         )
 
-        dataplaneGroupId = workspaceCreateWithId.dataplaneGroupId
+        dataplaneGroupId = requestedDataplaneGroupId
       }
 
       // NotificationSettings from input will be patched with default values.
@@ -233,7 +233,7 @@ class WorkspacesHandler
           .withNotificationSettings(notificationSettings)
           .withDataplaneGroupId(dataplaneGroupId)
           .withWebhookOperationConfigs(toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier))
-          .withOrganizationId(workspaceCreateWithId.organizationId)
+          .withOrganizationId(organizationId)
 
       if (!email.isNullOrBlank()) {
         workspace.withEmail(email)
@@ -307,7 +307,12 @@ class WorkspacesHandler
       }
 
       // disable all connections associated with this workspace
-      for (connectionRead in connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody).connections) {
+      // ConnectionsHandler still takes the Java-generated request body
+      val connectionsRequest =
+        io.airbyte.api.model.generated
+          .WorkspaceIdRequestBody()
+          .workspaceId(workspaceIdRequestBody.workspaceId)
+      for (connectionRead in connectionsHandler.listConnectionsForWorkspace(connectionsRequest).connections) {
         connectionsHandler.deleteConnection(connectionRead.connectionId)
       }
 
@@ -345,7 +350,7 @@ class WorkspacesHandler
           .stream()
           .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
           .collect(Collectors.toList<WorkspaceRead>())
-      return WorkspaceReadList().workspaces(reads)
+      return WorkspaceReadList(workspaces = reads)
     }
 
     fun listWorkspacesPaginated(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): WorkspaceReadList {
@@ -353,9 +358,9 @@ class WorkspacesHandler
         workspaceService.listStandardWorkspacesPaginated(
           ResourcesQueryPaginated(
             listResourcesForWorkspacesRequestBody.workspaceIds,
-            listResourcesForWorkspacesRequestBody.includeDeleted,
-            listResourcesForWorkspacesRequestBody.pagination.pageSize,
-            listResourcesForWorkspacesRequestBody.pagination.rowOffset,
+            listResourcesForWorkspacesRequestBody.includeDeleted!!,
+            listResourcesForWorkspacesRequestBody.pagination.pageSize!!,
+            listResourcesForWorkspacesRequestBody.pagination.rowOffset!!,
             null,
           ),
         )
@@ -365,19 +370,19 @@ class WorkspacesHandler
           .stream()
           .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
           .collect(Collectors.toList<WorkspaceRead>())
-      return WorkspaceReadList().workspaces(reads)
+      return WorkspaceReadList(workspaces = reads)
     }
 
     @WithSpan
     fun getWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): WorkspaceRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
-      val includeTombstone = if (workspaceIdRequestBody.includeTombstone != null) workspaceIdRequestBody.includeTombstone else false
+      val includeTombstone = workspaceIdRequestBody.includeTombstone ?: false
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone)
       val result = domainToApiModel(workspace)
       if (ffClient.boolVariation(HydrateLimits, Workspace(workspaceId))) {
         val limits = limitsProvider.getLimitForWorkspace(workspaceId)
         val consumption = consumptionService.getForWorkspace(workspaceId)
-        result.workspaceLimits(domainToApiModel(limits, consumption))
+        return result.copy(workspaceLimits = domainToApiModel(limits, consumption))
       }
       return result
     }
@@ -408,16 +413,17 @@ class WorkspacesHandler
     }
 
     fun listWorkspacesInOrganization(request: ListWorkspacesInOrganizationRequestBody): WorkspaceReadList {
-      val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
+      val nameContains = Optional.ofNullable(request.nameContains?.takeUnless { StringUtils.isBlank(it) })
+      val pagination = request.pagination
       val standardWorkspaces =
-        if (request.pagination != null) {
+        if (pagination != null) {
           workspacePersistence
             .listWorkspacesByOrganizationIdPaginated(
               ResourcesByOrganizationQueryPaginated(
                 request.organizationId,
                 false,
-                request.pagination.pageSize,
-                request.pagination.rowOffset,
+                pagination.pageSize!!,
+                pagination.rowOffset!!,
               ),
               nameContains,
             ).stream()
@@ -430,26 +436,28 @@ class WorkspacesHandler
             .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
             .collect(Collectors.toList<WorkspaceRead>())
         }
-      return WorkspaceReadList()
-        .workspaces(standardWorkspaces)
-        .totalWorkspaceCount(workspacePersistence.countWorkspacesByOrganizationId(request.organizationId))
+      return WorkspaceReadList(
+        workspaces = standardWorkspaces,
+        totalWorkspaceCount = workspacePersistence.countWorkspacesByOrganizationId(request.organizationId),
+      )
     }
 
     fun listWorkspacesInOrganizationForUser(
       userId: UUID,
       request: ListWorkspacesInOrganizationRequestBody,
     ): WorkspaceReadList {
-      val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
+      val nameContains = Optional.ofNullable(request.nameContains?.takeUnless { StringUtils.isBlank(it) })
+      val pagination = request.pagination
       val standardWorkspaces =
-        if (request.pagination != null) {
+        if (pagination != null) {
           workspacePersistence
             .listWorkspacesInOrganizationByUserIdPaginated(
               query =
                 ResourcesByOrganizationQueryPaginated(
                   organizationId = request.organizationId,
                   includeDeleted = false,
-                  pageSize = request.pagination.pageSize,
-                  rowOffset = request.pagination.rowOffset,
+                  pageSize = pagination.pageSize!!,
+                  rowOffset = pagination.rowOffset!!,
                 ),
               userId = userId,
               keyword = nameContains,
@@ -468,20 +476,22 @@ class WorkspacesHandler
         }
       // The list contains only the workspaces the calling user can access, but the total reflects
       // the whole organization so clients can enforce org-wide workspace limits.
-      return WorkspaceReadList()
-        .workspaces(standardWorkspaces)
-        .totalWorkspaceCount(workspacePersistence.countWorkspacesByOrganizationId(request.organizationId))
+      return WorkspaceReadList(
+        workspaces = standardWorkspaces,
+        totalWorkspaceCount = workspacePersistence.countWorkspacesByOrganizationId(request.organizationId),
+      )
     }
 
     private fun listWorkspacesByInstanceAdminUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {
-      val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
+      val nameContains = Optional.ofNullable(request.nameContains?.takeUnless { StringUtils.isBlank(it) })
+      val pagination = request.pagination
       val standardWorkspaces =
-        if (request.pagination != null) {
+        if (pagination != null) {
           workspacePersistence
             .listWorkspacesByInstanceAdminUserPaginated(
               false,
-              request.pagination.pageSize,
-              request.pagination.rowOffset,
+              pagination.pageSize!!,
+              pagination.rowOffset!!,
               nameContains,
             ).stream()
             .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
@@ -493,7 +503,7 @@ class WorkspacesHandler
             .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
             .collect(Collectors.toList<WorkspaceRead>())
         }
-      return WorkspaceReadList().workspaces(standardWorkspaces)
+      return WorkspaceReadList(workspaces = standardWorkspaces)
     }
 
     fun listWorkspacesByUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {
@@ -502,16 +512,17 @@ class WorkspacesHandler
         return listWorkspacesByInstanceAdminUser(request)
       }
       // User has no instance_admin permission.
-      val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
+      val nameContains = Optional.ofNullable(request.nameContains?.takeUnless { StringUtils.isBlank(it) })
+      val pagination = request.pagination
       val standardWorkspaces =
-        if (request.pagination != null) {
+        if (pagination != null) {
           workspacePersistence
             .listWorkspacesByUserIdPaginated(
               ResourcesByUserQueryPaginated(
                 request.userId,
                 false,
-                request.pagination.pageSize,
-                request.pagination.rowOffset,
+                pagination.pageSize!!,
+                pagination.rowOffset!!,
               ),
               nameContains,
             ).stream()
@@ -524,7 +535,7 @@ class WorkspacesHandler
             .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
             .collect(Collectors.toList<WorkspaceRead>())
         }
-      return WorkspaceReadList().workspaces(standardWorkspaces)
+      return WorkspaceReadList(workspaces = standardWorkspaces)
     }
 
     fun updateWorkspace(workspacePatch: WorkspaceUpdate): WorkspaceRead {
@@ -599,11 +610,12 @@ class WorkspacesHandler
       organization: Organization,
       scimEnabled: Boolean,
     ): OrganizationInfoRead =
-      OrganizationInfoRead()
-        .organizationId(organization.organizationId)
-        .organizationName(organization.name)
-        .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
-        .scim(scimEnabled)
+      OrganizationInfoRead(
+        organizationId = organization.organizationId,
+        organizationName = organization.name,
+        sso = organization.ssoRealm != null && organization.ssoRealm.isNotEmpty(),
+        scim = scimEnabled,
+      )
 
     /**
      * True only when SCIM is both configured as enabled and currently allowed for the organization.
@@ -666,7 +678,7 @@ class WorkspacesHandler
       if (workspacePatch.securityUpdates != null) {
         workspace.securityUpdates = workspacePatch.securityUpdates
       }
-      if (workspacePatch.email != null && workspacePatch.email.isNotBlank()) {
+      if (!workspacePatch.email.isNullOrBlank()) {
         workspace.email = workspacePatch.email
       }
       if (workspacePatch.initialSetupComplete != null) {
@@ -688,18 +700,18 @@ class WorkspacesHandler
       if (workspacePatch.notificationSettings != null) {
         workspace.notificationSettings = toConfig(workspacePatch.notificationSettings)
       } else if (workspacePatch.notificationsConfig != null) {
-        patchNotifications(workspace, workspacePatch.notificationsConfig)
+        patchNotifications(workspace, workspacePatch.notificationsConfig!!)
       }
       if (workspacePatch.dataplaneGroupId != null) {
         validateDataplaneGroupAssignment(
-          DataplaneGroupId(workspacePatch.dataplaneGroupId),
+          DataplaneGroupId(workspacePatch.dataplaneGroupId!!),
           OrganizationId(workspace.organizationId),
         )
         workspace.dataplaneGroupId = workspacePatch.dataplaneGroupId
       }
       if (workspacePatch.name != null) {
         workspace.name = workspacePatch.name
-        workspace.slug = generateUniqueSlug(workspacePatch.name)
+        workspace.slug = generateUniqueSlug(workspacePatch.name!!)
       }
       // Empty List is a valid value for webhookConfigs
       if (workspacePatch.webhookConfigs != null) {
@@ -752,7 +764,7 @@ class WorkspacesHandler
       }
 
       if (email != null && email.enabled != null) {
-        if (email.enabled) {
+        if (email.enabled!!) {
           addNotificationType(item, Notification.NotificationType.CUSTOMERIO)
         } else {
           removeNotificationType(item, Notification.NotificationType.CUSTOMERIO)
@@ -761,7 +773,7 @@ class WorkspacesHandler
 
       if (webhook != null) {
         if (webhook.enabled != null) {
-          if (webhook.enabled) {
+          if (webhook.enabled!!) {
             addNotificationType(item, Notification.NotificationType.SLACK)
           } else {
             removeNotificationType(item, Notification.NotificationType.SLACK)

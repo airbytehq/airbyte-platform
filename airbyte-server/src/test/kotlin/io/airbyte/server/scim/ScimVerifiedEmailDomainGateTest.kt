@@ -5,7 +5,7 @@
 package io.airbyte.server.scim
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.UserAuthIdRequestBody
+import io.airbyte.api.server.generated.models.UserAuthIdRequestBody
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.UserAuthenticationResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -220,7 +220,7 @@ class ScimVerifiedEmailDomainGateTest {
     val subject = "plat-941-subject"
     val response =
       loginHandler(resolver(subject, "alice.newname@corp-alias.example"))
-        .getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(subject))
+        .getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = subject))
 
     assertThat(response.userRead.userId).isEqualTo(created.userId)
     assertThat(

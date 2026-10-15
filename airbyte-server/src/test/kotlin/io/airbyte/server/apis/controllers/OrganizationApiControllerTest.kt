@@ -4,15 +4,15 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationCreateRequestBody
-import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationInfoRead
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.mockk.every
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.LocalDate
 import java.util.UUID
 
 class OrganizationApiControllerTest {
@@ -33,10 +34,14 @@ class OrganizationApiControllerTest {
 
   private val organizationId = UUID.randomUUID()
   private val organizationInfoRead =
-    OrganizationInfoRead()
-      .organizationId(organizationId)
-      .organizationName("Test Organization")
-      .sso(false)
+    OrganizationInfoRead(
+      organizationId = organizationId,
+      organizationName = "Test Organization",
+      sso = false,
+      scim = false,
+    )
+
+  private val organizationRead = OrganizationRead(organizationId = organizationId, organizationName = "Test Organization", email = "test@example.com")
 
   @BeforeEach
   fun setup() {
@@ -51,9 +56,9 @@ class OrganizationApiControllerTest {
 
   @Test
   fun `getOrganization succeeds when validation passes`() {
-    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
     every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
-    every { organizationsHandler.getOrganization(requestBody) } returns OrganizationRead()
+    every { organizationsHandler.getOrganization(requestBody) } returns organizationRead
 
     val result = organizationApiController.getOrganization(requestBody)
 
@@ -67,7 +72,7 @@ class OrganizationApiControllerTest {
     val forbiddenException = ForbiddenProblem()
     every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
 
-    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
     val exception =
       assertThrows<ForbiddenProblem> {
@@ -81,40 +86,40 @@ class OrganizationApiControllerTest {
 
   @Test
   fun testUpdateOrganization() {
-    every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
-    assertNotNull(organizationApiController.updateOrganization(OrganizationUpdateRequestBody()))
+    every { organizationsHandler.updateOrganization(any()) } returns organizationRead
+    assertNotNull(organizationApiController.updateOrganization(OrganizationUpdateRequestBody(organizationId = organizationId)))
   }
 
   @Test
   fun testSetOrganizationAgenticStatus() {
     val requestBody =
-      OrganizationAgenticStatusUpdateRequestBody()
-        .organizationId(organizationId)
-        .isAgentic(true)
-    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(true)
+      OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId, isAgentic = true)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns organizationRead.copy(isAgentic = true)
     assertEquals(true, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
   }
 
   @Test
   fun testSetOrganizationAgenticStatusFalse() {
     val requestBody =
-      OrganizationAgenticStatusUpdateRequestBody()
-        .organizationId(organizationId)
-        .isAgentic(false)
-    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(false)
+      OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId, isAgentic = false)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns organizationRead.copy(isAgentic = false)
     assertEquals(false, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
   }
 
   @Test
   fun testCreateOrganization() {
-    every { organizationsHandler.createOrganization(any()) } returns OrganizationRead()
-    assertNotNull(organizationApiController.createOrganization(OrganizationCreateRequestBody()))
+    every { organizationsHandler.createOrganization(any()) } returns organizationRead
+    assertNotNull(
+      organizationApiController.createOrganization(OrganizationCreateRequestBody(userId = UUID.randomUUID(), organizationName = "Test Organization")),
+    )
   }
 
   @Test
   fun `getOrganizationDataWorkerUsage is not implemented in OSS`() {
     assertThrows<ApiNotImplementedInOssProblem> {
-      organizationApiController.getOrganizationDataWorkerUsage(OrganizationDataWorkerUsageRequestBody())
+      organizationApiController.getOrganizationDataWorkerUsage(
+        OrganizationDataWorkerUsageRequestBody(organizationId = organizationId, startDate = LocalDate.now(), endDate = LocalDate.now()),
+      )
     }
   }
 
@@ -123,7 +128,7 @@ class OrganizationApiControllerTest {
     // Mock the currentUserService to succeed (no exception thrown)
     every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
 
-    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
     val result = organizationApiController.getOrgInfo(requestBody)
 
@@ -138,7 +143,7 @@ class OrganizationApiControllerTest {
     val forbiddenException = ForbiddenProblem()
     every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
 
-    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
     val exception =
       assertThrows<ForbiddenProblem> {

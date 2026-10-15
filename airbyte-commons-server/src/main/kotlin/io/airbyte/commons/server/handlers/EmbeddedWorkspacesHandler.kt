@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceCreate
+import io.airbyte.api.server.generated.models.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.services.DataplaneGroupService
@@ -38,14 +38,17 @@ class EmbeddedWorkspacesHandler(
       // FIXME: we'll eventually want to make webhooks and notifications configurable
       // https://github.com/airbytehq/airbyte-internal-issues/issues/12785
 
-      val workspaceCreateRequest = WorkspaceCreate().name(workspaceName).organizationId(organizationId.value)
       // Create workspaces in the EU region if the organization is one of the embedded EU organizations.
       // Today, we hardcoded Genetica EU and Merkatus
       // We'll implement a proper solution soon https://github.com/airbytehq/sonar/issues/506
-      if (embeddedEUOrganizations.contains(organizationId.value)) {
-        val dataplaneGroupIdForEU = dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, "EU")
-        workspaceCreateRequest.dataplaneGroupId(dataplaneGroupIdForEU.id)
-      }
+      val dataplaneGroupId =
+        if (embeddedEUOrganizations.contains(organizationId.value)) {
+          dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, "EU").id
+        } else {
+          null
+        }
+      val workspaceCreateRequest =
+        WorkspaceCreate(name = workspaceName, organizationId = organizationId.value, dataplaneGroupId = dataplaneGroupId)
       val workspaceRead = workspacesHandler.createWorkspace(workspaceCreateRequest)
       return WorkspaceId(workspaceRead.workspaceId)
     }

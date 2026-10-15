@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
@@ -62,7 +62,7 @@ class EmbeddedController(
     val organizations =
       organizationsHandler
         .listAllOrganizationsByUser(
-          ListOrganizationsByUserRequestBody().userId(currentUserId),
+          ListOrganizationsByUserRequestBody(userId = currentUserId),
         )
 
     val permissions = permissionHandler.listEffectivePermissionsForUser(currentUserId)

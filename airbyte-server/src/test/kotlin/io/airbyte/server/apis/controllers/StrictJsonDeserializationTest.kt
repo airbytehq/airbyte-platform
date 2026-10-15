@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Ticker
 import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.handlers.ConnectionsHandler
@@ -144,7 +144,8 @@ internal class StrictJsonDeserializationTest {
     wrappedOrganizationUpdateTracker.reset()
     instanceConfigurationSetupTracker.reset()
     every { connectionsHandler.getConnection(any()) } returns ConnectionRead()
-    every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
+    every { organizationsHandler.updateOrganization(any()) } returns
+      OrganizationRead(organizationId = UUID.randomUUID(), organizationName = "name", email = "test@example.com")
     every { featureFlagClient.boolVariation(any(), Empty) } returns true
   }
 

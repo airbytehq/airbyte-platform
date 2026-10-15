@@ -1,6 +1,6 @@
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useGetWorkspace } from "core/api";
-import { WorkspaceRead } from "core/api/types/AirbyteClient";
+import { Limit, WorkspaceRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 
 interface CurrentWorkspaceLimits {
@@ -24,11 +24,12 @@ export const useCurrentWorkspaceLimits = (workspaceId?: string): CurrentWorkspac
   }
 
   return {
-    activeConnectionLimitReached:
-      workspace.workspaceLimits.activeConnections.current >= workspace.workspaceLimits.activeConnections.max,
-    sourceLimitReached: workspace.workspaceLimits.sources.current >= workspace.workspaceLimits.sources.max,
-    destinationLimitReached:
-      workspace.workspaceLimits?.destinations.current >= workspace.workspaceLimits?.destinations?.max,
+    activeConnectionLimitReached: isLimitReached(workspace.workspaceLimits.activeConnections),
+    sourceLimitReached: isLimitReached(workspace.workspaceLimits.sources),
+    destinationLimitReached: isLimitReached(workspace.workspaceLimits.destinations),
     limits: workspace.workspaceLimits,
   };
 };
+
+// a limit without a max is unlimited
+const isLimitReached = (limit: Limit) => limit.max !== undefined && limit.current >= limit.max;

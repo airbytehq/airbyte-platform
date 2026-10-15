@@ -6,9 +6,9 @@ package io.airbyte.server.apis.publicapi.services
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.ActorTypeEnum
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.problems.model.generated.ProblemValueData
 import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.domain.models.ActorDefinitionId
@@ -53,7 +53,7 @@ open class OrganizationServiceImpl(
     val result =
       kotlin
         .runCatching {
-          organizationsHandler.listAllOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId))
+          organizationsHandler.listAllOrganizationsByUser(ListOrganizationsByUserRequestBody(userId = userId))
         }.onFailure {
           log.error(it) { "Error for getOrganizationsByUser" }
           ConfigClientErrorHandler.handleError(it)

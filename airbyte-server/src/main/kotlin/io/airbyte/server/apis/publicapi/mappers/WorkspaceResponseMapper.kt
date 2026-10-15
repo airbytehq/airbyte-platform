@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.NotificationItem
-import io.airbyte.api.model.generated.NotificationType
-import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.server.generated.models.NotificationItem
+import io.airbyte.api.server.generated.models.NotificationType
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationsConfig
@@ -46,11 +46,11 @@ object WorkspaceResponseMapper {
     NotificationConfig(
       email =
         EmailNotificationConfig(
-          enabled = notificationType.contains(NotificationType.CUSTOMERIO),
+          enabled = notificationType.orEmpty().contains(NotificationType.CUSTOMERIO),
         ),
       webhook =
         WebhookNotificationConfig(
-          enabled = notificationType.contains(NotificationType.SLACK),
+          enabled = notificationType.orEmpty().contains(NotificationType.SLACK),
           url = slackConfiguration?.webhook,
         ),
     )

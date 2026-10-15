@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationReadList
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationReadList
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
@@ -40,6 +40,7 @@ class EmbeddedControllerTest {
   @Test
   fun basic() {
     val organizationId = UUID.randomUUID()
+    val currentUserId = UUID.randomUUID()
     val workspaceId = WorkspaceId(UUID.randomUUID())
     val externalId = "cool customer"
     val claims = slot<Map<String, Any>>()
@@ -60,21 +61,23 @@ class EmbeddedControllerTest {
           ),
         currentUserService =
           mockk {
-            every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
+            every { getCurrentUser() } returns AuthenticatedUser().withUserId(currentUserId).withAuthUserId("user-id-1")
           },
         organizationsHandler =
           mockk {
             every {
-              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody(userId = currentUserId))
             } returns
-              OrganizationReadList().organizations(
-                mutableListOf(
-                  OrganizationRead()
-                    .organizationId(organizationId)
-                    .organizationName("Test Organization")
-                    .email("test-email@airbyte.io")
-                    .ssoRealm("test-realm"),
-                ),
+              OrganizationReadList(
+                organizations =
+                  mutableListOf(
+                    OrganizationRead(
+                      organizationId = organizationId,
+                      organizationName = "Test Organization",
+                      email = "test-email@airbyte.io",
+                      ssoRealm = "test-realm",
+                    ),
+                  ),
               )
           },
         permissionHandler =
@@ -156,6 +159,7 @@ class EmbeddedControllerTest {
   @Test
   fun `scoped token`() {
     val organizationId = UUID.randomUUID()
+    val currentUserId = UUID.randomUUID()
     val workspaceId = WorkspaceId(UUID.randomUUID())
     val claims = slot<Map<String, Any>>()
 
@@ -169,21 +173,23 @@ class EmbeddedControllerTest {
         airbyteAuthConfig = AirbyteAuthConfig(tokenIssuer = "test-token-issuer"),
         currentUserService =
           mockk {
-            every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
+            every { getCurrentUser() } returns AuthenticatedUser().withUserId(currentUserId).withAuthUserId("user-id-1")
           },
         organizationsHandler =
           mockk {
             every {
-              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody(userId = currentUserId))
             } returns
-              OrganizationReadList().organizations(
-                mutableListOf(
-                  OrganizationRead()
-                    .organizationId(organizationId)
-                    .organizationName("Test Organization")
-                    .email("test-email@airbyte.io")
-                    .ssoRealm("test-realm"),
-                ),
+              OrganizationReadList(
+                organizations =
+                  mutableListOf(
+                    OrganizationRead(
+                      organizationId = organizationId,
+                      organizationName = "Test Organization",
+                      email = "test-email@airbyte.io",
+                      ssoRealm = "test-realm",
+                    ),
+                  ),
               )
           },
         permissionHandler =
@@ -272,9 +278,9 @@ class EmbeddedControllerTest {
       buildController(
         userIdString,
         listOf(
-          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
-          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
-          OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
+          OrganizationRead(organizationId = orgId1, organizationName = "Org 1", email = "test@example.com"),
+          OrganizationRead(organizationId = orgId2, organizationName = "Org 2", email = "test@example.com"),
+          OrganizationRead(organizationId = orgId3, organizationName = "Org 3", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userIdString) } returns
@@ -338,8 +344,8 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
-          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
+          OrganizationRead(organizationId = orgId1, organizationName = "Org 1", email = "test@example.com"),
+          OrganizationRead(organizationId = orgId2, organizationName = "Org 2", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -387,8 +393,8 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(entitledOrgId).organizationName("Entitled Org"),
-          OrganizationRead().organizationId(nonEntitledOrgId).organizationName("Non-Entitled Org"),
+          OrganizationRead(organizationId = entitledOrgId, organizationName = "Entitled Org", email = "test@example.com"),
+          OrganizationRead(organizationId = nonEntitledOrgId, organizationName = "Non-Entitled Org", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -436,7 +442,7 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+          OrganizationRead(organizationId = orgId, organizationName = "Org 1", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -479,7 +485,7 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+          OrganizationRead(organizationId = orgId, organizationName = "Org 1", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -516,7 +522,7 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+          OrganizationRead(organizationId = orgId, organizationName = "Org 1", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -560,9 +566,9 @@ class EmbeddedControllerTest {
       buildController(
         userId,
         listOf(
-          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
-          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
-          OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
+          OrganizationRead(organizationId = orgId1, organizationName = "Org 1", email = "test@example.com"),
+          OrganizationRead(organizationId = orgId2, organizationName = "Org 2", email = "test@example.com"),
+          OrganizationRead(organizationId = orgId3, organizationName = "Org 3", email = "test@example.com"),
         ),
         mockk {
           every { listEffectivePermissionsForUser(userId) } returns
@@ -621,7 +627,7 @@ class EmbeddedControllerTest {
           listAllOrganizationsByUser(
             match<ListOrganizationsByUserRequestBody> { it.userId == userId },
           )
-        } returns OrganizationReadList().organizations(organizations)
+        } returns OrganizationReadList(organizations = organizations)
       },
       permissionHandler.also {
         every { it.isUserInstanceAdmin(userId) } returns isInstanceAdmin

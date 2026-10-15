@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.WebhookConfigRead
-import io.airbyte.api.model.generated.WebhookConfigWrite
+import io.airbyte.api.server.generated.models.WebhookConfigRead
+import io.airbyte.api.server.generated.models.WebhookConfigWrite
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
@@ -88,12 +88,16 @@ object WorkspaceWebhookConfigsConverter {
       .withCustomDbtHost(input.customDbtHost)
 
   private fun toApiRead(configJson: JsonNode): WebhookConfigRead {
-    val read = WebhookConfigRead()
-    read.id = UUID.fromString(configJson.findValue("id").asText())
-    read.name = configJson.findValue("name").asText()
-    if (configJson.has("customDbtHost") && configJson.findValue("customDbtHost").isTextual) {
-      read.customDbtHost = configJson.findValue("customDbtHost").asText()
-    }
-    return read
+    val customDbtHost =
+      if (configJson.has("customDbtHost") && configJson.findValue("customDbtHost").isTextual) {
+        configJson.findValue("customDbtHost").asText()
+      } else {
+        null
+      }
+    return WebhookConfigRead(
+      id = UUID.fromString(configJson.findValue("id").asText()),
+      name = configJson.findValue("name").asText(),
+      customDbtHost = customDbtHost,
+    )
   }
 }

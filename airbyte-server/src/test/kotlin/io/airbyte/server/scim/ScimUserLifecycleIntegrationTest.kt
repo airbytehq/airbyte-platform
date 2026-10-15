@@ -6,9 +6,9 @@ package io.airbyte.server.scim
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.UserAuthIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.api.server.generated.models.UserAuthIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceReadList
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.resolvers.GenericOidcUserAuthenticationResolver
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -328,7 +328,7 @@ class ScimUserLifecycleIntegrationTest {
 
     val login =
       runCatching {
-        handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+        handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
       }
 
     assertThat(login.exceptionOrNull())
@@ -453,7 +453,7 @@ class ScimUserLifecycleIntegrationTest {
         permissionHandler = permissionHandler,
         resourceBootstrapHandler = resourceBootstrapHandler,
         uuidSupplier = uuidSupplier,
-      ).getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+      ).getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
 
     assertThat(response.newUserCreated).isTrue()
     assertThat(workspaceWriteObservedCommittedUser).isTrue()
@@ -584,7 +584,7 @@ class ScimUserLifecycleIntegrationTest {
         mockk<EntitlementService>(relaxed = true),
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
-    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList(workspaces = emptyList())
     val externalUserService = mockk<ExternalUserService>(relaxed = true)
     every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "sso-migration-bootstrap-legacy-realm"
     val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
@@ -604,7 +604,7 @@ class ScimUserLifecycleIntegrationTest {
         resourceBootstrapHandler = resourceBootstrapHandler,
         featureFlagClient = featureFlagClient,
         uuidSupplier = uuidSupplier,
-      ).getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      ).getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
 
     assertThat(response.userRead.userId).isEqualTo(existingUser.userId)
     assertThat(response.newUserCreated).isFalse()
@@ -673,7 +673,7 @@ class ScimUserLifecycleIntegrationTest {
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
     every { workspacesHandler.listWorkspacesInOrganization(any()) } returns
-      WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+      WorkspaceReadList(workspaces = listOf(testWorkspaceRead(UUID.randomUUID())))
     val featureFlagClient = mockk<FeatureFlagClient>()
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     val handler =
@@ -691,9 +691,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }
         }
       check(loginReachedDecision.await(10, TimeUnit.SECONDS))
@@ -798,9 +798,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }
         }
       check(attachmentStarted.await(10, TimeUnit.SECONDS))
@@ -890,7 +890,7 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
     }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
 
     verify(exactly = 0) { applicationService.deleteApplication(any(), any()) }
@@ -961,7 +961,7 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
     }.isInstanceOf(IllegalStateException::class.java)
 
     assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(application.id)))).isEqualTo(1)
@@ -1023,11 +1023,10 @@ class ScimUserLifecycleIntegrationTest {
     val workspacesHandler = mockk<WorkspacesHandler>()
     every {
       workspacesHandler.listWorkspacesInOrganization(
-        io.airbyte.api.model.generated
-          .ListWorkspacesInOrganizationRequestBody()
-          .organizationId(tenant.organizationId),
+        io.airbyte.api.server.generated.models
+          .ListWorkspacesInOrganizationRequestBody(organizationId = tenant.organizationId),
       )
-    } returns WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+    } returns WorkspaceReadList(workspaces = listOf(testWorkspaceRead(UUID.randomUUID())))
     val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
     every {
       featureFlagClient.boolVariation(
@@ -1049,14 +1048,14 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
     }.isInstanceOf(ExpectedFailure::class.java)
 
     assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
     assertThat(userPersistence.getUserByAuthId(oldAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
     assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(existingApplication.id)))).isZero()
 
-    val result = handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    val result = handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
 
     assertThat(result.userRead.userId).isEqualTo(existingUser.userId)
     assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
@@ -1133,13 +1132,13 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val firstLogin =
-        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
-          firstHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        executor.submit<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse> {
+          firstHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
         }
       assertThat(cleanupStarted.await(10, TimeUnit.SECONDS)).isTrue()
       val secondLogin =
-        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
-          secondHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        executor.submit<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse> {
+          secondHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
         }
       assertThat(secondLoginResolved.await(10, TimeUnit.SECONDS)).isTrue()
       assertThat(secondLogin.isDone).isFalse()
@@ -1207,7 +1206,7 @@ class ScimUserLifecycleIntegrationTest {
           .withUser(existingUser),
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
-    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList(workspaces = emptyList())
     val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
     every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any(), any()) } throws ExpectedFailure()
     val featureFlagClient = mockk<FeatureFlagClient>()
@@ -1227,7 +1226,7 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
     }.isInstanceOf(ExpectedFailure::class.java)
 
     assertThat(userPersistence.getUserByAuthId(oldAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
@@ -1286,7 +1285,7 @@ class ScimUserLifecycleIntegrationTest {
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
     every { workspacesHandler.listWorkspacesInOrganization(any()) } returns
-      WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+      WorkspaceReadList(workspaces = listOf(testWorkspaceRead(UUID.randomUUID())))
     val featureFlagClient = mockk<FeatureFlagClient>()
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     val phaseOneCommitted = CountDownLatch(1)
@@ -1329,9 +1328,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
           }
         }
       check(phaseOneCommitted.await(10, TimeUnit.SECONDS))
@@ -1414,9 +1413,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
           }
         }
       check(realmResolutionStarted.await(10, TimeUnit.SECONDS))
@@ -1518,11 +1517,11 @@ class ScimUserLifecycleIntegrationTest {
         permissionService,
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
-    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList(workspaces = emptyList())
     val defaultWorkspaceId = workspace(tenant.organizationId, "sso-migration-stale-global-workspace")
     val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
     every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any(), any()) } returns
-      WorkspaceRead().workspaceId(defaultWorkspaceId)
+      testWorkspaceRead(defaultWorkspaceId)
     val featureFlagClient = mockk<FeatureFlagClient>()
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     val handler =
@@ -1542,9 +1541,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
           }
         }
       check(realmResolutionStarted.await(10, TimeUnit.SECONDS))
@@ -1633,7 +1632,7 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
     }.isInstanceOf(io.airbyte.api.problems.throwable.generated.SSORequiredProblem::class.java)
 
     verify(exactly = 0) { externalUserService.deleteUserByExternalId(any(), any()) }
@@ -1674,7 +1673,7 @@ class ScimUserLifecycleIntegrationTest {
       )
 
     assertThatThrownBy {
-      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
     }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
 
     verify(exactly = 0) { externalUserService.deleteUserByExternalId(any(), any()) }
@@ -1723,7 +1722,7 @@ class ScimUserLifecycleIntegrationTest {
           )
 
         assertThatThrownBy {
-          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
         }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
 
         assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isZero()
@@ -2151,7 +2150,7 @@ class ScimUserLifecycleIntegrationTest {
     every { authenticationResolver.resolveRealm() } returns null
     val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
     every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
-      WorkspaceRead().workspaceId(defaultWorkspaceId)
+      testWorkspaceRead(defaultWorkspaceId)
     val handler =
       UserHandler(
         userPersistence,
@@ -2189,9 +2188,9 @@ class ScimUserLifecycleIntegrationTest {
       check(ownershipChecked.await(10, TimeUnit.SECONDS))
 
       val normalLoginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }.also { normalCompleted.countDown() }
         }
 
@@ -2244,7 +2243,7 @@ class ScimUserLifecycleIntegrationTest {
     every { authenticationResolver.resolveRealm() } returns null
     val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
     every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
-      WorkspaceRead().workspaceId(defaultWorkspaceId)
+      testWorkspaceRead(defaultWorkspaceId)
     val handler =
       UserHandler(
         concurrentUserPersistence,
@@ -2269,9 +2268,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val normalLoginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }
         }
       check(normalCreateAttempted.await(10, TimeUnit.SECONDS))
@@ -2355,8 +2354,8 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
-          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+        executor.submit<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse> {
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
         }
       check(decisionComplete.await(10, TimeUnit.SECONDS))
 
@@ -2460,8 +2459,8 @@ class ScimUserLifecycleIntegrationTest {
       check(applicationCreationHasIdentityLock.await(10, TimeUnit.SECONDS))
 
       val loginFuture =
-        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
-          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        executor.submit<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse> {
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
         }
       assertThat(loginFuture.isDone).isFalse()
 
@@ -2543,9 +2542,9 @@ class ScimUserLifecycleIntegrationTest {
       check(mappingHasLock.await(10, TimeUnit.SECONDS))
 
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }
         }
       check(waitForAdvisoryLockWaiters(initialWaiters + 1))
@@ -2657,9 +2656,9 @@ class ScimUserLifecycleIntegrationTest {
 
     try {
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = incomingAuthUserId))
           }
         }
       check(decisionComplete.await(10, TimeUnit.SECONDS))
@@ -3916,7 +3915,7 @@ class ScimUserLifecycleIntegrationTest {
     every { authenticationResolver.resolveRealm() } returns null
     val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
     every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
-      WorkspaceRead().workspaceId(defaultWorkspaceId)
+      testWorkspaceRead(defaultWorkspaceId)
     val loginUserId = UUID.randomUUID()
     val handler =
       UserHandler(
@@ -3958,9 +3957,9 @@ class ScimUserLifecycleIntegrationTest {
 
       val initialWaiters = advisoryLockWaiterCount()
       val loginFuture =
-        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+        executor.submit<Result<io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse>> {
           runCatching {
-            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody(authUserId = authUserId))
           }
         }
       check(waitForAdvisoryLockWaiters(initialWaiters + 1))
@@ -4952,3 +4951,13 @@ class ScimUserLifecycleIntegrationTest {
     }
   }
 }
+
+private fun testWorkspaceRead(workspaceId: UUID) =
+  WorkspaceRead(
+    workspaceId = workspaceId,
+    customerId = UUID.randomUUID(),
+    name = "name",
+    slug = "slug",
+    initialSetupComplete = true,
+    organizationId = UUID.randomUUID(),
+  )

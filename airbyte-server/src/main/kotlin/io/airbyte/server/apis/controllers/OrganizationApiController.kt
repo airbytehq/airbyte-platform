@@ -4,22 +4,22 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.OrganizationApi
-import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
-import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
-import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationCreateRequestBody
-import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRead
-import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationInfoRead
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationReadList
-import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationUsageRead
-import io.airbyte.api.model.generated.OrganizationUsageRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.api.server.generated.apis.OrganizationApi
+import io.airbyte.api.server.generated.models.ListOrganizationSummariesRequestBody
+import io.airbyte.api.server.generated.models.ListOrganizationSummariesResponse
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
+import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRead
+import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationReadList
+import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationUsageRead
+import io.airbyte.api.server.generated.models.OrganizationUsageRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.generated.Intent
@@ -28,54 +28,50 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.apis.requireBody
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/organizations")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
 ) : OrganizationApi {
-  @Post("/get")
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganization(
-    @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationRead? =
+    @Body organizationIdRequestBody: OrganizationIdRequestBody?,
+  ): OrganizationRead =
     execute {
-      organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationIdRequestBody.organizationId)
+      val request = organizationIdRequestBody.requireBody()
+      organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(request.organizationId)
 
-      organizationsHandler.getOrganization(organizationIdRequestBody)
+      organizationsHandler.getOrganization(request)
     }
 
-  @Post("/update")
   @Secured(AuthRoleConstants.ORGANIZATION_EDITOR)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun updateOrganization(
-    @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody,
-  ): OrganizationRead? = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody) }
+    @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody?,
+  ): OrganizationRead = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody.requireBody()) }
 
-  @Post("/agentic_status")
   @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun setOrganizationAgenticStatus(
-    @Body organizationAgenticStatusUpdateRequestBody: OrganizationAgenticStatusUpdateRequestBody,
-  ): OrganizationRead? = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody) }
+    @Body organizationAgenticStatusUpdateRequestBody: OrganizationAgenticStatusUpdateRequestBody?,
+  ): OrganizationRead = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody.requireBody()) }
 
-  @Post("/create")
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun createOrganization(
-    @Body organizationCreateRequestBody: OrganizationCreateRequestBody,
-  ): OrganizationRead? = execute { organizationsHandler.createOrganization(organizationCreateRequestBody) }
+    @Body organizationCreateRequestBody: OrganizationCreateRequestBody?,
+  ): OrganizationRead = execute { organizationsHandler.createOrganization(organizationCreateRequestBody.requireBody()) }
 
-  @Post("/delete")
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun deleteOrganization(
@@ -84,33 +80,29 @@ open class OrganizationApiController(
     // To be implemented; we need a tombstone column for organizations table.
   }
 
-  @Post("/list_by_user_id")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listOrganizationsByUser(
-    @Body request: ListOrganizationsByUserRequestBody,
-  ): OrganizationReadList? = execute { organizationsHandler.listOrganizationsByUser(request) }
+    @Body request: ListOrganizationsByUserRequestBody?,
+  ): OrganizationReadList = execute { organizationsHandler.listOrganizationsByUser(request.requireBody()) }
 
-  @Post("/get_usage")
   @RequiresIntent(Intent.ViewOrganizationUsage)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationUsage(
     @Body organizationUsageRequestBody: OrganizationUsageRequestBody?,
   ): OrganizationUsageRead = throw ApiNotImplementedInOssProblem()
 
-  @Post("/list_summaries")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listOrganizationSummaries(
-    @Body organizationSummaryRequestBody: ListOrganizationSummariesRequestBody,
-  ): ListOrganizationSummariesResponse? = execute { organizationsHandler.getOrganizationSummaries(organizationSummaryRequestBody) }
+    @Body organizationSummaryRequestBody: ListOrganizationSummariesRequestBody?,
+  ): ListOrganizationSummariesResponse = execute { organizationsHandler.getOrganizationSummaries(organizationSummaryRequestBody.requireBody()) }
 
-  @Post("/get_organization_info")
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrgInfo(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationInfoRead? =
+  ): OrganizationInfoRead =
     execute {
       val organizationId = organizationIdRequestBody.organizationId
 
@@ -119,10 +111,9 @@ open class OrganizationApiController(
       organizationsHandler.getOrganizationInfo(organizationId)
     }
 
-  @Post("/get_data_worker_usage")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationDataWorkerUsage(
-    @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody,
-  ): OrganizationDataWorkerUsageRead? = throw ApiNotImplementedInOssProblem()
+    @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody?,
+  ): OrganizationDataWorkerUsageRead = throw ApiNotImplementedInOssProblem()
 }

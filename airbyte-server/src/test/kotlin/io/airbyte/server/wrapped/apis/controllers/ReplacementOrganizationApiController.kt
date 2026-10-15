@@ -4,8 +4,8 @@
 
 package io.airbyte.server.wrapped.apis.controllers
 
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.server.apis.controllers.OrganizationApiController
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
@@ -28,8 +28,8 @@ open class ReplacementOrganizationApiController(
     organizationAccessAuthorizationHelper,
   ) {
   override fun updateOrganization(
-    @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody,
-  ): OrganizationRead? {
+    @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody?,
+  ): OrganizationRead {
     updateTracker.recordUpdate()
     return super.updateOrganization(organizationUpdateRequestBody)
   }

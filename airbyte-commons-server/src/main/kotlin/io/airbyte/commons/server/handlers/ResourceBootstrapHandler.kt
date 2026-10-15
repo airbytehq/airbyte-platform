@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceCreateWithId
-import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver

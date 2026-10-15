@@ -7,6 +7,7 @@
 package io.airbyte.server.apis
 
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
+import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -52,3 +53,8 @@ internal fun <T> execute(call: Callable<T>): T {
     }
   }
 }
+
+/**
+ * Request bodies that the spec does not mark as required are nullable in the generated Kotlin interfaces.
+ */
+fun <T : Any> T?.requireBody(): T = this ?: throw BadRequestException("Request body is required.")

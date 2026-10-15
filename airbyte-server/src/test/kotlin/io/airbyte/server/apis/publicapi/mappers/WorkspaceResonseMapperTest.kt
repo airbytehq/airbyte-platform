@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -14,11 +14,15 @@ class WorkspaceResonseMapperTest {
   fun `from should convert a WorkspaceRead object from the config api to a WorkspaceResponse`() {
     // Given
     val workspaceRead =
-      WorkspaceRead().apply {
-        this.workspaceId = UUID.randomUUID()
-        this.name = "workspaceName"
-        this.email = "workspaceEmail@gmail.com"
-      }
+      WorkspaceRead(
+        workspaceId = UUID.randomUUID(),
+        customerId = UUID.randomUUID(),
+        name = "workspaceName",
+        slug = "workspace-slug",
+        initialSetupComplete = true,
+        organizationId = UUID.randomUUID(),
+        email = "workspaceEmail@gmail.com",
+      )
 
     // When
     val workspaceResponse = WorkspaceResponseMapper.from(workspaceRead, "fake name")

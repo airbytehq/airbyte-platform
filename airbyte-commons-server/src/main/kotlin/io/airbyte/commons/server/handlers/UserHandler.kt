@@ -5,28 +5,28 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationUserRead
-import io.airbyte.api.model.generated.OrganizationUserReadList
-import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.api.model.generated.UserAuthIdRequestBody
-import io.airbyte.api.model.generated.UserEmailRequestBody
-import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse
-import io.airbyte.api.model.generated.UserIdRequestBody
-import io.airbyte.api.model.generated.UserRead
-import io.airbyte.api.model.generated.UserStatus
-import io.airbyte.api.model.generated.UserUpdate
-import io.airbyte.api.model.generated.UserWithPermissionInfoRead
-import io.airbyte.api.model.generated.UserWithPermissionInfoReadList
-import io.airbyte.api.model.generated.WorkspaceCreateWithId
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead
-import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList
 import io.airbyte.api.problems.model.generated.ProblemEmailData
 import io.airbyte.api.problems.throwable.generated.SSORequiredProblem
 import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem
+import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationUserRead
+import io.airbyte.api.server.generated.models.OrganizationUserReadList
+import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionType
+import io.airbyte.api.server.generated.models.UserAuthIdRequestBody
+import io.airbyte.api.server.generated.models.UserEmailRequestBody
+import io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse
+import io.airbyte.api.server.generated.models.UserIdRequestBody
+import io.airbyte.api.server.generated.models.UserRead
+import io.airbyte.api.server.generated.models.UserStatus
+import io.airbyte.api.server.generated.models.UserUpdate
+import io.airbyte.api.server.generated.models.UserWithPermissionInfoRead
+import io.airbyte.api.server.generated.models.UserWithPermissionInfoReadList
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceUserAccessInfoRead
+import io.airbyte.api.server.generated.models.WorkspaceUserAccessInfoReadList
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.config.InitialUserConfig
@@ -216,16 +216,17 @@ open class UserHandler
     }
 
     private fun buildUserRead(user: User): UserRead =
-      UserRead()
-        .name(user.name)
-        .userId(user.userId)
-        .status(user.status?.convertTo<UserStatus>())
-        .companyName(user.companyName)
-        .email(user.email)
-        .metadata(if (user.uiMetadata != null) user.uiMetadata else emptyMap<Any, Any>())
-        .news(user.news)
-        .defaultWorkspaceId(user.defaultWorkspaceId)
-        .agenticEnabledAt(user.agenticEnabledAt)
+      UserRead(
+        name = user.name,
+        userId = user.userId,
+        status = user.status?.convertTo<UserStatus>(),
+        companyName = user.companyName,
+        email = user.email,
+        metadata = if (user.uiMetadata != null) user.uiMetadata else emptyMap<Any, Any>(),
+        news = user.news,
+        defaultWorkspaceId = user.defaultWorkspaceId,
+        agenticEnabledAt = user.agenticEnabledAt,
+      )
 
     /**
      * Patch update a user object.
@@ -238,7 +239,7 @@ open class UserHandler
      * @throws JsonValidationException If input json was not expected.
      */
     fun updateUser(userUpdate: UserUpdate): UserRead {
-      val userRead = getUser(UserIdRequestBody().userId(userUpdate.userId))
+      val userRead = getUser(UserIdRequestBody(userId = userUpdate.userId))
 
       val user = buildUserInfo(userRead)
 
@@ -309,12 +310,13 @@ open class UserHandler
 
     private fun deleteUser(userRead: UserRead) {
       val userUpdate =
-        UserUpdate()
-          .name(userRead.name)
-          .userId(userRead.userId)
-          .status(UserStatus.DISABLED)
-          .companyName(userRead.companyName)
-          .news(userRead.news)
+        UserUpdate(
+          name = userRead.name,
+          userId = userRead.userId,
+          status = UserStatus.DISABLED,
+          companyName = userRead.companyName,
+          news = userRead.news,
+        )
       updateUser(userUpdate)
     }
 
@@ -332,15 +334,17 @@ open class UserHandler
 
     fun listInstanceAdminUsers(): UserWithPermissionInfoReadList {
       val userPermissions = permissionHandler.listInstanceAdminUsers()
-      return UserWithPermissionInfoReadList().users(
-        userPermissions
-          .map { userPermission: UserPermission ->
-            UserWithPermissionInfoRead()
-              .userId(userPermission.user.userId)
-              .email(userPermission.user.email)
-              .name(userPermission.user.name)
-              .permissionId(userPermission.permission.permissionId)
-          },
+      return UserWithPermissionInfoReadList(
+        users =
+          userPermissions
+            .map { userPermission: UserPermission ->
+              UserWithPermissionInfoRead(
+                userId = userPermission.user.userId,
+                email = userPermission.user.email,
+                name = userPermission.user.name,
+                permissionId = userPermission.permission.permissionId,
+              )
+            },
       )
     }
 
@@ -590,12 +594,14 @@ open class UserHandler
                   action.existingUser.userId,
                 )
               }
-          UserGetOrCreateByAuthIdResponse()
-            .userRead(buildUserRead(updatedUser))
-            .authUserId(action.incomingJwtUser.authUserId)
-            .authProvider(
-              action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-            ).newUserCreated(false)
+          UserGetOrCreateByAuthIdResponse(
+            userRead = buildUserRead(updatedUser),
+            authUserId = action.incomingJwtUser.authUserId,
+            authProvider =
+              action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.server.generated.models.AuthProvider>()
+                ?: io.airbyte.api.server.generated.models.AuthProvider.AIRBYTE,
+            newUserCreated = false,
+          )
         }
 
       return finishExternalAuthUserCleanup(
@@ -809,12 +815,14 @@ open class UserHandler
             )
           }
 
-      return UserGetOrCreateByAuthIdResponse()
-        .userRead(buildUserRead(updatedUser))
-        .authUserId(action.incomingJwtUser.authUserId)
-        .authProvider(
-          action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-        ).newUserCreated(action.newUserCreated)
+      return UserGetOrCreateByAuthIdResponse(
+        userRead = buildUserRead(updatedUser),
+        authUserId = action.incomingJwtUser.authUserId,
+        authProvider =
+          action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.server.generated.models.AuthProvider>()
+            ?: io.airbyte.api.server.generated.models.AuthProvider.AIRBYTE,
+        newUserCreated = action.newUserCreated,
+      )
     }
 
     fun getOrCreateUserByAuthId(userAuthIdRequestBody: UserAuthIdRequestBody): UserGetOrCreateByAuthIdResponse {
@@ -921,23 +929,27 @@ open class UserHandler
           log.info { "Upgraded user ${existingUser.userId} to agentic user" }
 
           return LoginAction.Complete(
-            UserGetOrCreateByAuthIdResponse()
-              .userRead(buildUserRead(toUser(upgradedUser)))
-              .authUserId(userAuthIdRequestBody.authUserId)
-              .authProvider(
-                incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-              ).newUserCreated(false),
+            UserGetOrCreateByAuthIdResponse(
+              userRead = buildUserRead(toUser(upgradedUser)),
+              authUserId = userAuthIdRequestBody.authUserId,
+              authProvider =
+                incomingJwtUser.authProvider?.convertTo<io.airbyte.api.server.generated.models.AuthProvider>()
+                  ?: io.airbyte.api.server.generated.models.AuthProvider.AIRBYTE,
+              newUserCreated = false,
+            ),
           )
         }
 
         // Otherwise, return existing user as-is (agenticEnabledAt is immutable once set)
         val response =
-          UserGetOrCreateByAuthIdResponse()
-            .userRead(buildUserRead(toUser(existingUser)))
-            .authUserId(userAuthIdRequestBody.authUserId)
-            .authProvider(
-              incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-            ).newUserCreated(false)
+          UserGetOrCreateByAuthIdResponse(
+            userRead = buildUserRead(toUser(existingUser)),
+            authUserId = userAuthIdRequestBody.authUserId,
+            authProvider =
+              incomingJwtUser.authProvider?.convertTo<io.airbyte.api.server.generated.models.AuthProvider>()
+                ?: io.airbyte.api.server.generated.models.AuthProvider.AIRBYTE,
+            newUserCreated = false,
+          )
         val previousAuthUsers =
           persistedAuthUsers(existingUser.userId)
             .filter { it.authUserId != incomingJwtUser.authUserId }
@@ -1173,7 +1185,7 @@ open class UserHandler
       // workspace for this user.
       val orgWorkspaces =
         workspacesHandler.listWorkspacesInOrganization(
-          ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ListWorkspacesInOrganizationRequestBody(organizationId = organization.organizationId),
         )
 
       if (orgWorkspaces.workspaces.isEmpty()) {
@@ -1198,15 +1210,16 @@ open class UserHandler
       val news = user.news
       // otherwise, create a default workspace for this user
       val workspaceCreate =
-        WorkspaceCreateWithId()
-          .name(getDefaultWorkspaceName(organization, companyName, email))
-          .organizationId(organization.map { obj: Organization -> obj.organizationId }.orElse(null))
-          .email(email)
-          .news(news)
-          .anonymousDataCollection(false)
-          .securityUpdates(false)
-          .displaySetupWizard(true)
-          .id(uuidGenerator.get())
+        WorkspaceCreateWithId(
+          name = getDefaultWorkspaceName(organization, companyName, email),
+          organizationId = organization.map { obj: Organization -> obj.organizationId }.orElse(null),
+          email = email,
+          news = news,
+          anonymousDataCollection = false,
+          securityUpdates = false,
+          displaySetupWizard = true,
+          id = uuidGenerator.get(),
+        )
 
       val defaultWorkspace =
         currentConfigContext()?.let { ctx ->
@@ -1215,9 +1228,7 @@ open class UserHandler
 
       // set default workspace id in User table
       val userUpdateDefaultWorkspace =
-        UserUpdate()
-          .userId(user.userId)
-          .defaultWorkspaceId(defaultWorkspace.workspaceId)
+        UserUpdate(userId = user.userId, defaultWorkspaceId = defaultWorkspace.workspaceId)
       updateUser(userUpdateDefaultWorkspace)
     }
 
@@ -1302,31 +1313,33 @@ open class UserHandler
       organizationId: UUID,
     ): OrganizationUserReadList {
       // we exclude the default user from this list because we don't want to expose it in the UI
-      return OrganizationUserReadList().users(
-        userPermissions
-          .filter { userPermission: UserPermission -> userPermission.user.userId != DEFAULT_USER_ID }
-          .map { userPermission: UserPermission ->
-            OrganizationUserRead()
-              .userId(userPermission.user.userId)
-              .email(userPermission.user.email)
-              .name(userPermission.user.name)
-              .organizationId(organizationId)
-              .permissionId(userPermission.permission.permissionId)
-              .permissionType(
-                userPermission.permission.permissionType
-                  .value()
-                  .toEnum<PermissionType>()!!,
+      return OrganizationUserReadList(
+        users =
+          userPermissions
+            .filter { userPermission: UserPermission -> userPermission.user.userId != DEFAULT_USER_ID }
+            .map { userPermission: UserPermission ->
+              OrganizationUserRead(
+                userId = userPermission.user.userId,
+                email = userPermission.user.email,
+                name = userPermission.user.name,
+                organizationId = organizationId,
+                permissionId = userPermission.permission.permissionId,
+                permissionType =
+                  userPermission.permission.permissionType
+                    .value()
+                    .toEnum<PermissionType>()!!,
               )
-          },
+            },
       )
     }
 
     private fun buildWorkspaceUserAccessInfoReadList(accessInfos: List<WorkspaceUserAccessInfo>): WorkspaceUserAccessInfoReadList {
       // we exclude the default user from this list because we don't want to expose it in the UI
-      return WorkspaceUserAccessInfoReadList().usersWithAccess(
-        accessInfos
-          .filter { accessInfo: WorkspaceUserAccessInfo -> accessInfo.userId != DEFAULT_USER_ID }
-          .map { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) },
+      return WorkspaceUserAccessInfoReadList(
+        usersWithAccess =
+          accessInfos
+            .filter { accessInfo: WorkspaceUserAccessInfo -> accessInfo.userId != DEFAULT_USER_ID }
+            .map { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) },
       )
     }
 
@@ -1335,33 +1348,34 @@ open class UserHandler
         Optional
           .ofNullable(accessInfo.workspacePermission)
           .map { wp: Permission ->
-            PermissionRead()
-              .permissionId(wp.permissionId)
-              .permissionType(
-                wp.permissionType?.convertTo<PermissionType>(),
-              ).userId(wp.userId)
-              .workspaceId(wp.workspaceId)
+            PermissionRead(
+              permissionId = wp.permissionId,
+              permissionType = wp.permissionType.convertTo<PermissionType>(),
+              userId = wp.userId,
+              workspaceId = wp.workspaceId,
+            )
           }.orElse(null)
 
       val organizationPermissionRead =
         Optional
           .ofNullable(accessInfo.organizationPermission)
           .map { op: Permission ->
-            PermissionRead()
-              .permissionId(op.permissionId)
-              .permissionType(
-                op.permissionType?.convertTo<PermissionType>(),
-              ).userId(op.userId)
-              .organizationId(op.organizationId)
+            PermissionRead(
+              permissionId = op.permissionId,
+              permissionType = op.permissionType.convertTo<PermissionType>(),
+              userId = op.userId,
+              organizationId = op.organizationId,
+            )
           }.orElse(null)
 
-      return WorkspaceUserAccessInfoRead()
-        .userId(accessInfo.userId)
-        .userEmail(accessInfo.userEmail)
-        .userName(accessInfo.userName)
-        .workspaceId(accessInfo.workspaceId)
-        .workspacePermission(workspacePermissionRead)
-        .organizationPermission(organizationPermissionRead)
+      return WorkspaceUserAccessInfoRead(
+        userId = accessInfo.userId,
+        userEmail = accessInfo.userEmail,
+        userName = accessInfo.userName,
+        workspaceId = accessInfo.workspaceId,
+        workspacePermission = workspacePermissionRead,
+        organizationPermission = organizationPermissionRead,
+      )
     }
 
     companion object {

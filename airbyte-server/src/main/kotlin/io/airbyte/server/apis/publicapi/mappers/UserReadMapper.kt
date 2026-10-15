@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.OrganizationUserRead
+import io.airbyte.api.server.generated.models.OrganizationUserRead
 import io.airbyte.publicApi.server.generated.models.UserResponse
 
 /**
@@ -20,7 +20,8 @@ object UserReadMapper {
   fun from(organizationUserRead: OrganizationUserRead): UserResponse =
     UserResponse(
       id = organizationUserRead.userId,
-      name = organizationUserRead.name,
+      // the public API model requires a name; a missing one fails here as it did before
+      name = organizationUserRead.name!!,
       email = organizationUserRead.email,
     )
 }

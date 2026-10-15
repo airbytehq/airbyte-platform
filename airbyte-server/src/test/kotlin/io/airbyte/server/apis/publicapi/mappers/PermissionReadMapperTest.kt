@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,13 +17,13 @@ class PermissionReadMapperTest {
   fun `should convert a PermissionRead object from the config api to a PermissionResponse`() {
     // Given
     val permissionRead =
-      PermissionRead().apply {
-        this.permissionId = UUID.randomUUID()
-        this.permissionType = PermissionType.WORKSPACE_EDITOR
-        this.userId = UUID.randomUUID()
-        this.workspaceId = UUID.randomUUID()
-        this.organizationId = null
-      }
+      PermissionRead(
+        permissionId = UUID.randomUUID(),
+        permissionType = PermissionType.WORKSPACE_EDITOR,
+        userId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        organizationId = null,
+      )
 
     // When
     val permissionResponse = PermissionReadMapper.from(permissionRead)
@@ -40,13 +40,13 @@ class PermissionReadMapperTest {
   @EnumSource(value = PermissionType::class, names = ["WORKSPACE_SOURCE_EDITOR", "WORKSPACE_DESTINATION_EDITOR"])
   fun `should convert the actor-scoped workspace editor permission types`(permissionType: PermissionType) {
     val permissionRead =
-      PermissionRead().apply {
-        this.permissionId = UUID.randomUUID()
-        this.permissionType = permissionType
-        this.userId = UUID.randomUUID()
-        this.workspaceId = UUID.randomUUID()
-        this.organizationId = null
-      }
+      PermissionRead(
+        permissionId = UUID.randomUUID(),
+        permissionType = permissionType,
+        userId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        organizationId = null,
+      )
 
     val permissionResponse = PermissionReadMapper.from(permissionRead)
 

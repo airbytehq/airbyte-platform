@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.Notification
-import io.airbyte.api.model.generated.NotificationType
-import io.airbyte.api.model.generated.SlackNotificationConfiguration
+import io.airbyte.api.server.generated.models.Notification
+import io.airbyte.api.server.generated.models.NotificationType
+import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
 import io.airbyte.commons.enums.convertTo
 import java.util.stream.Collectors
 
@@ -29,7 +29,7 @@ object NotificationConverter {
         notification.notificationType?.convertTo<io.airbyte.config.Notification.NotificationType>(),
       ).withSendOnSuccess(notification.sendOnSuccess)
       .withSendOnFailure(notification.sendOnFailure)
-      .withSlackConfiguration(toConfig(notification.slackConfiguration))
+      .withSlackConfiguration(notification.slackConfiguration?.let { toConfig(it) })
 
   private fun toConfig(notification: SlackNotificationConfiguration): io.airbyte.config.SlackNotificationConfiguration =
     io.airbyte.config
@@ -45,15 +45,15 @@ object NotificationConverter {
       }.collect(Collectors.toList())
 
   fun toApi(notification: io.airbyte.config.Notification): Notification =
-    Notification()
-      .notificationType(notification.notificationType?.convertTo<NotificationType>())
-      .sendOnSuccess(notification.sendOnSuccess)
-      .sendOnFailure(notification.sendOnFailure)
-      .slackConfiguration(toApi(notification.slackConfiguration))
+    Notification(
+      notificationType = notification.notificationType.convertTo<NotificationType>(),
+      sendOnSuccess = notification.sendOnSuccess,
+      sendOnFailure = notification.sendOnFailure,
+      slackConfiguration = toApi(notification.slackConfiguration),
+    )
 
   private fun toApi(notification: io.airbyte.config.SlackNotificationConfiguration): SlackNotificationConfiguration =
-    SlackNotificationConfiguration()
-      .webhook(notification.webhook)
+    SlackNotificationConfiguration(webhook = notification.webhook)
 
   fun toClientApiList(configNotifications: List<io.airbyte.config.Notification>?): List<io.airbyte.api.client.model.generated.Notification> {
     if (configNotifications == null) {

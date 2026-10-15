@@ -30,6 +30,12 @@ const exceededWorkspaceLimits: WorkspaceLimits = {
   destinations: { current: 99, max: 10 },
 };
 
+const unlimitedWorkspaceLimits: WorkspaceLimits = {
+  activeConnections: { current: 99 },
+  sources: { current: 99 },
+  destinations: { current: 99 },
+};
+
 const metWorkspaceLimits: WorkspaceLimits = {
   activeConnections: { current: 10, max: 10 },
   sources: { current: 10, max: 10 },
@@ -65,6 +71,18 @@ describe("useGetWouseCurrentWorkspaceLimitsrkspaceLimits", () => {
     expect(result.current.sourceLimitReached).toBe(false);
     expect(result.current.destinationLimitReached).toBe(false);
     expect(result.current.limits).toEqual(okWorkspaceLimits);
+  });
+
+  it("should return all limits as false if the limits have no max", () => {
+    mocked(useGetWorkspace).mockReturnValueOnce({
+      ...mockWorkspace,
+      workspaceLimits: unlimitedWorkspaceLimits,
+    });
+    const { result } = renderHook(() => useCurrentWorkspaceLimits());
+
+    expect(result.current.activeConnectionLimitReached).toBe(false);
+    expect(result.current.sourceLimitReached).toBe(false);
+    expect(result.current.destinationLimitReached).toBe(false);
   });
 
   it("should return all limits as false if the experiment is off", () => {

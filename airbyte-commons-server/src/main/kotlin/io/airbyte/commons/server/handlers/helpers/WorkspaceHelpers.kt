@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem
 import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter

@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.publicApi.server.generated.models.OrganizationResponse
 
 /**

@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceCreateWithId
-import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import org.jooq.DSLContext
 
 interface ResourceBootstrapHandlerInterface {

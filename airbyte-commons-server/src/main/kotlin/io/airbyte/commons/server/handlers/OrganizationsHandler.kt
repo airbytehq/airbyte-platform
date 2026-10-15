@@ -4,22 +4,21 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
-import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
-import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
-import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
-import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationCreateRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationInfoRead
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationReadList
-import io.airbyte.api.model.generated.OrganizationSummary
-import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.api.server.generated.models.ListOrganizationSummariesRequestBody
+import io.airbyte.api.server.generated.models.ListOrganizationSummariesResponse
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
+import io.airbyte.api.server.generated.models.ListWorkspacesByUserRequestBody
+import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationReadList
+import io.airbyte.api.server.generated.models.OrganizationSummary
+import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceReadList
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Organization
@@ -63,13 +62,14 @@ open class OrganizationsHandler(
       serializeIsAgentic: Boolean = false,
     ): OrganizationRead {
       val read =
-        OrganizationRead()
-          .organizationId(organization.organizationId)
-          .organizationName(organization.name)
-          .email(organization.email)
-          .ssoRealm(organization.ssoRealm)
+        OrganizationRead(
+          organizationId = organization.organizationId,
+          organizationName = organization.name,
+          email = organization.email,
+          ssoRealm = organization.ssoRealm,
+        )
       if (serializeIsAgentic || organization.isAgentic) {
-        read.isAgentic(organization.isAgentic)
+        return read.copy(isAgentic = organization.isAgentic)
       }
       return read
     }
@@ -189,21 +189,17 @@ open class OrganizationsHandler(
     request: ListOrganizationsByUserRequestBody,
     includeAgentic: Boolean,
   ): OrganizationReadList {
-    val nameContains =
-      if (StringUtils.isBlank(request.nameContains)) {
-        Optional.empty<String>()
-      } else {
-        Optional.of(request.nameContains)
-      }
+    val nameContains = Optional.ofNullable(request.nameContains?.takeUnless { StringUtils.isBlank(it) })
 
+    val pagination = request.pagination
     val organizationReadList =
-      if (request.pagination != null) {
+      if (pagination != null) {
         val query =
           ResourcesByUserQueryPaginated(
             request.userId,
             false,
-            request.pagination.pageSize,
-            request.pagination.rowOffset,
+            pagination.pageSize!!,
+            pagination.rowOffset!!,
           )
         if (includeAgentic) {
           organizationService.listAllOrganizationsByUserIdPaginated(query, nameContains)
@@ -218,7 +214,7 @@ open class OrganizationsHandler(
         }.map { buildOrganizationRead(it) }
       }
 
-    return OrganizationReadList().organizations(organizationReadList)
+    return OrganizationReadList(organizations = organizationReadList)
   }
 
   /**
@@ -243,18 +239,20 @@ open class OrganizationsHandler(
   @WithSpan
   fun getOrganizationSummaries(request: ListOrganizationSummariesRequestBody): ListOrganizationSummariesResponse {
     val orgListReq =
-      ListOrganizationsByUserRequestBody()
-        .userId(request.userId)
-        .nameContains(request.nameContains)
-        .pagination(request.pagination)
+      ListOrganizationsByUserRequestBody(
+        userId = request.userId,
+        nameContains = request.nameContains,
+        pagination = request.pagination,
+      )
 
     val orgListResp: OrganizationReadList = this.listOrganizationsByUser(orgListReq)
 
     val workspaceListReq =
-      ListWorkspacesByUserRequestBody()
-        .userId(request.userId)
-        .nameContains(request.nameContains)
-        .pagination(request.pagination)
+      ListWorkspacesByUserRequestBody(
+        userId = request.userId,
+        nameContains = request.nameContains,
+        pagination = request.pagination,
+      )
 
     val workspaceListResp: WorkspaceReadList = workspacesHandler.listWorkspacesByUser(workspaceListReq)
 
@@ -278,17 +276,18 @@ open class OrganizationsHandler(
         .getPermissionsForUser(request.userId)
         .any { it.permissionType == Permission.PermissionType.INSTANCE_ADMIN }
 
+    val organizations = orgListResp.organizations.toMutableList()
     for (orgId in orgIdsToRetrieve) {
-      val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(orgId))
+      val retrieved = this.getOrganization(OrganizationIdRequestBody(organizationId = orgId))
       if (retrieved.isAgentic == true && !isInstanceAdmin) {
         continue
       }
-      orgListResp.addOrganizationsItem(retrieved)
+      organizations.add(retrieved)
     }
 
     val memberCounts =
       permissionService.getMemberCountsForOrganizationList(
-        orgListResp.organizations.map { it.organizationId },
+        organizations.map { it.organizationId },
       )
     val orgIdToMemberCount = memberCounts.associate { it.organizationId to it.count }
 
@@ -304,44 +303,42 @@ open class OrganizationsHandler(
       orgIdToWorkspaceMap.mapValues {
         if (it.value.isEmpty()) {
           val req =
-            ListWorkspacesInOrganizationRequestBody()
-              .organizationId(it.key)
-              .nameContains(request.nameContains)
-              .pagination(
-                Pagination()
-                  .pageSize(request.pagination.pageSize)
-                  .rowOffset(request.pagination.rowOffset),
-              )
+            ListWorkspacesInOrganizationRequestBody(
+              organizationId = it.key,
+              nameContains = request.nameContains,
+              pagination = request.pagination,
+            )
           val workspaces = workspacesHandler.listWorkspacesInOrganization(req)
-          workspaces.workspaces
+          workspaces.workspaces.orEmpty()
         } else {
           it.value
         }
       }
 
     val orgSummaries = mutableListOf<OrganizationSummary>()
-    for (org in orgListResp.organizations) {
+    for (org in organizations) {
       val summary =
-        OrganizationSummary()
-          .organization(org)
-          .workspaces(fullyPopulatedOrgMap[org.organizationId])
-          .memberCount(orgIdToMemberCount[org.organizationId])
+        OrganizationSummary(
+          organization = org,
+          workspaces = fullyPopulatedOrgMap[org.organizationId] ?: emptyList(),
+          memberCount = orgIdToMemberCount[org.organizationId] ?: 0,
+        )
       orgSummaries.add(summary)
     }
 
-    return ListOrganizationSummariesResponse()
-      .organizationSummaries(orgSummaries)
+    return ListOrganizationSummariesResponse(organizationSummaries = orgSummaries)
   }
 
   private fun buildOrganizationInfoRead(
     organization: Organization,
     scimEnabled: Boolean,
   ): OrganizationInfoRead =
-    OrganizationInfoRead()
-      .organizationId(organization.organizationId)
-      .organizationName(organization.name)
-      .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
-      .scim(scimEnabled)
+    OrganizationInfoRead(
+      organizationId = organization.organizationId,
+      organizationName = organization.name,
+      sso = organization.ssoRealm != null && organization.ssoRealm.isNotEmpty(),
+      scim = scimEnabled,
+    )
 
   @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {

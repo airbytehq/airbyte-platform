@@ -4,15 +4,15 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.NotificationItem
-import io.airbyte.api.model.generated.NotificationSettings
-import io.airbyte.api.model.generated.NotificationType
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.SlackNotificationConfiguration
-import io.airbyte.api.model.generated.WorkspaceCreate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.NotificationItem
+import io.airbyte.api.server.generated.models.NotificationSettings
+import io.airbyte.api.server.generated.models.NotificationType
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
+import io.airbyte.api.server.generated.models.WorkspaceCreate
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceUpdate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -113,14 +113,13 @@ open class WorkspaceServiceImpl(
     val organizationId = DEFAULT_ORGANIZATION_ID
 
     val workspaceCreate =
-      WorkspaceCreate()
-        .name(workspaceCreateRequest.name)
-        .email(currentUserService.getCurrentUser().email)
-        .organizationId(organizationId)
-        .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
-    if (workspaceCreateRequest.regionId != null) {
-      workspaceCreate.dataplaneGroupId = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).id
-    }
+      WorkspaceCreate(
+        name = workspaceCreateRequest.name,
+        email = currentUserService.getCurrentUser().email,
+        organizationId = organizationId,
+        notificationSettings = workspaceCreateRequest.notifications?.toNotificationSettings(),
+        dataplaneGroupId = workspaceCreateRequest.regionId?.let { dataplaneGroupService.getDataplaneGroup(it).id },
+      )
 
     val result =
       kotlin
@@ -132,7 +131,7 @@ open class WorkspaceServiceImpl(
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return WorkspaceResponseMapper.from(
       result.getOrNull()!!,
-      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
+      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId!!).name,
     )
   }
 
@@ -166,16 +165,12 @@ open class WorkspaceServiceImpl(
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): WorkspaceResponse {
     val workspaceUpdate =
-      WorkspaceUpdate().apply {
-        this.name = workspaceUpdateRequest.name
-        this.workspaceId = workspaceId
-        this.notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig()
-      }
-    if (workspaceUpdateRequest.regionId != null) {
-      workspaceUpdate.apply {
-        this.dataplaneGroupId = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).id
-      }
-    }
+      WorkspaceUpdate(
+        name = workspaceUpdateRequest.name,
+        workspaceId = workspaceId,
+        notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig(),
+        dataplaneGroupId = workspaceUpdateRequest.regionId?.let { dataplaneGroupService.getDataplaneGroup(it).id },
+      )
 
     val result =
       kotlin
@@ -187,7 +182,7 @@ open class WorkspaceServiceImpl(
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return WorkspaceResponseMapper.from(
       result.getOrNull()!!,
-      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
+      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId!!).name,
     )
   }
 
@@ -220,8 +215,7 @@ open class WorkspaceServiceImpl(
    */
   @WithSpan
   override fun getWorkspace(workspaceId: UUID): WorkspaceResponse {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val result =
       kotlin
         .runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
@@ -230,7 +224,7 @@ open class WorkspaceServiceImpl(
           ConfigClientErrorHandler.handleError(it)
         }
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
-    return WorkspaceResponseMapper.from(result.getOrNull()!!, dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name)
+    return WorkspaceResponseMapper.from(result.getOrNull()!!, dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId!!).name)
   }
 
   @WithSpan
@@ -263,8 +257,7 @@ open class WorkspaceServiceImpl(
    * Deletes a workspace by ID.
    */
   override fun deleteWorkspace(workspaceId: UUID) {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody()
-    workspaceIdRequestBody.workspaceId = workspaceId
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspaceId)
     val result =
       kotlin
         .runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
@@ -304,14 +297,16 @@ open class WorkspaceServiceImpl(
     limit: Int,
     offset: Int,
   ): WorkspacesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination: Pagination = Pagination(pageSize = limit, rowOffset = offset)
 
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
     log.debug { "Workspaces to query: $workspaceIdsToQuery" }
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        pagination = pagination,
+        includeDeleted = includeDeleted,
+      )
     val result =
       kotlin
         .runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
@@ -324,7 +319,7 @@ open class WorkspaceServiceImpl(
       result.getOrNull()!!,
       workspaceIds,
       result.getOrNull()!!.workspaces.map {
-        dataplaneGroupService.getDataplaneGroup(it.dataplaneGroupId).name
+        dataplaneGroupService.getDataplaneGroup(it.dataplaneGroupId!!).name
       },
       includeDeleted,
       limit,
@@ -379,58 +374,58 @@ open class WorkspaceServiceImpl(
 }
 
 fun NotificationsConfig.toNotificationSettings() =
-  NotificationSettings()
-    .sendOnFailure(failure?.toNotificationItem(enableEmailByDefault = true))
-    .sendOnSuccess(success?.toNotificationItem(enableEmailByDefault = false))
-    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem(enableEmailByDefault = true))
-    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem(enableEmailByDefault = true))
-    .sendOnSyncDisabled(syncDisabled?.toNotificationItem(enableEmailByDefault = true))
-    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem(enableEmailByDefault = true))
+  NotificationSettings(
+    sendOnFailure = failure?.toNotificationItem(enableEmailByDefault = true),
+    sendOnSuccess = success?.toNotificationItem(enableEmailByDefault = false),
+    sendOnConnectionUpdate = connectionUpdate?.toNotificationItem(enableEmailByDefault = true),
+    sendOnConnectionUpdateActionRequired = connectionUpdateActionRequired?.toNotificationItem(enableEmailByDefault = true),
+    sendOnSyncDisabled = syncDisabled?.toNotificationItem(enableEmailByDefault = true),
+    sendOnSyncDisabledWarning = syncDisabledWarning?.toNotificationItem(enableEmailByDefault = true),
+  )
 
 private fun NotificationsConfig?.toInternalNotificationConfig() =
   this?.let {
-    io.airbyte.api.model.generated
-      .NotificationsConfig()
-      .success(it.success?.toInternalNotificationConfig())
-      .failure(it.failure?.toInternalNotificationConfig())
-      .connectionUpdate(it.connectionUpdate?.toInternalNotificationConfig())
-      .connectionUpdateActionRequired(it.connectionUpdateActionRequired?.toInternalNotificationConfig())
-      .syncDisabled(it.syncDisabled?.toInternalNotificationConfig())
-      .syncDisabledWarning(it.syncDisabledWarning?.toInternalNotificationConfig())
+    io.airbyte.api.server.generated.models.NotificationsConfig(
+      success = it.success?.toInternalNotificationConfig(),
+      failure = it.failure?.toInternalNotificationConfig(),
+      connectionUpdate = it.connectionUpdate?.toInternalNotificationConfig(),
+      connectionUpdateActionRequired = it.connectionUpdateActionRequired?.toInternalNotificationConfig(),
+      syncDisabled = it.syncDisabled?.toInternalNotificationConfig(),
+      syncDisabledWarning = it.syncDisabledWarning?.toInternalNotificationConfig(),
+    )
   }
 
 private fun NotificationConfig?.toInternalNotificationConfig() =
   this?.let {
-    io.airbyte.api.model.generated
-      .NotificationConfig()
-      .email(it.email?.toInternalEmailNotificationConfig())
-      .webhook(it.webhook?.toInternalWebhookNotificationConfig())
+    io.airbyte.api.server.generated.models.NotificationConfig(
+      email = it.email?.toInternalEmailNotificationConfig(),
+      webhook = it.webhook?.toInternalWebhookNotificationConfig(),
+    )
   }
 
 private fun EmailNotificationConfig?.toInternalEmailNotificationConfig() =
   this?.let {
-    io.airbyte.api.model.generated
-      .EmailNotificationConfig()
-      .enabled(it.enabled)
+    io.airbyte.api.server.generated.models
+      .EmailNotificationConfig(enabled = it.enabled)
   }
 
 private fun WebhookNotificationConfig?.toInternalWebhookNotificationConfig() =
   this?.let {
-    io.airbyte.api.model.generated
-      .WebhookNotificationConfig()
-      .enabled(it.enabled)
-      .url(it.url)
+    io.airbyte.api.server.generated.models
+      .WebhookNotificationConfig(enabled = it.enabled, url = it.url)
   }
 
 private fun NotificationConfig.toNotificationItem(enableEmailByDefault: Boolean): NotificationItem {
-  val item = NotificationItem()
+  val notificationTypes = mutableListOf<NotificationType>()
+  var slackConfiguration: SlackNotificationConfiguration? = null
   if (this.webhook?.enabled == true) {
-    item.addNotificationTypeItem(NotificationType.SLACK)
-    item.slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+    notificationTypes.add(NotificationType.SLACK)
+    // webhook is required on the API model; match NotificationSettingsConverter and default a missing url to ""
+    slackConfiguration = SlackNotificationConfiguration(webhook = this.webhook?.url.orEmpty())
   }
 
   if (this.email?.enabled == true || (enableEmailByDefault && this.email == null)) {
-    item.addNotificationTypeItem(NotificationType.CUSTOMERIO)
+    notificationTypes.add(NotificationType.CUSTOMERIO)
   }
-  return item
+  return NotificationItem(notificationType = notificationTypes, slackConfiguration = slackConfiguration)
 }

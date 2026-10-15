@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler.Companion.embeddedEUOrganizations
 import io.airbyte.config.DataplaneGroup
@@ -27,11 +27,17 @@ class EmbeddedWorkspacesHandlerTest {
   private val organizationId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
   private val expectedCreateWorkspaceRequest =
-    io.airbyte.api.model.generated
-      .WorkspaceCreate()
-      .name(externalUserId)
-      .organizationId(organizationId)
-  private val workspaceRead = WorkspaceRead().workspaceId(workspaceId)
+    io.airbyte.api.server.generated.models
+      .WorkspaceCreate(name = externalUserId, organizationId = organizationId)
+  private val workspaceRead =
+    WorkspaceRead(
+      workspaceId = workspaceId,
+      customerId = UUID.randomUUID(),
+      name = externalUserId,
+      slug = "slug",
+      initialSetupComplete = true,
+      organizationId = organizationId,
+    )
 
   private val workspacesHandler = mockk<WorkspacesHandler>()
   private val workspaceRepository = mockk<WorkspaceRepository>()
@@ -98,11 +104,11 @@ class EmbeddedWorkspacesHandlerTest {
     } returns euDataplane
 
     val expectedCreateWorkspaceRequestInEU =
-      io.airbyte.api.model.generated
-        .WorkspaceCreate()
-        .name(externalUserId)
-        .organizationId(orgId)
-        .dataplaneGroupId(dataplaneGroupIdEU)
+      io.airbyte.api.server.generated.models.WorkspaceCreate(
+        name = externalUserId,
+        organizationId = orgId,
+        dataplaneGroupId = dataplaneGroupIdEU,
+      )
 
     every {
       workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, orgId)

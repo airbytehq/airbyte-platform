@@ -4,17 +4,17 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
-import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
-import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationCreateRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationRead
-import io.airbyte.api.model.generated.OrganizationReadList
-import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.api.server.generated.models.ListOrganizationSummariesRequestBody
+import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
+import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationRead
+import io.airbyte.api.server.generated.models.OrganizationReadList
+import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.WorkspaceRead
+import io.airbyte.api.server.generated.models.WorkspaceReadList
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
@@ -113,9 +113,7 @@ class OrganizationsHandlerTest {
 
     val result =
       organizationsHandler.createOrganization(
-        OrganizationCreateRequestBody()
-          .organizationName(organizationName)
-          .email(organizationEmail),
+        OrganizationCreateRequestBody(userId = UUID.randomUUID(), organizationName = organizationName, email = organizationEmail),
       )
 
     assertEquals(organizationId1, result.organizationId)
@@ -142,7 +140,7 @@ class OrganizationsHandlerTest {
 
     val result =
       organizationsHandler.getOrganization(
-        OrganizationIdRequestBody().organizationId(organizationId1),
+        OrganizationIdRequestBody(organizationId = organizationId1),
       )
 
     assertEquals(organizationId1, result.organizationId)
@@ -171,10 +169,11 @@ class OrganizationsHandlerTest {
 
     val result =
       organizationsHandler.updateOrganization(
-        OrganizationUpdateRequestBody()
-          .organizationId(organizationId1)
-          .organizationName(newName)
-          .email(newEmail),
+        OrganizationUpdateRequestBody(
+          organizationId = organizationId1,
+          organizationName = newName,
+          email = newEmail,
+        ),
       )
 
     assertEquals(organizationId1, result.organizationId)
@@ -190,9 +189,7 @@ class OrganizationsHandlerTest {
 
     val result =
       organizationsHandler.setOrganizationAgenticStatus(
-        OrganizationAgenticStatusUpdateRequestBody()
-          .organizationId(organizationId1)
-          .isAgentic(true),
+        OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId1, isAgentic = true),
       )
 
     assertEquals(organizationId1, result.organizationId)
@@ -209,9 +206,7 @@ class OrganizationsHandlerTest {
 
     val result =
       organizationsHandler.setOrganizationAgenticStatus(
-        OrganizationAgenticStatusUpdateRequestBody()
-          .organizationId(organizationId1)
-          .isAgentic(false),
+        OrganizationAgenticStatusUpdateRequestBody(organizationId = organizationId1, isAgentic = false),
       )
 
     assertEquals(organizationId1, result.organizationId)
@@ -225,9 +220,7 @@ class OrganizationsHandlerTest {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val request =
-      ListOrganizationsByUserRequestBody()
-        .userId(userId)
-        .nameContains("keyword")
+      ListOrganizationsByUserRequestBody(userId = userId, nameContains = "keyword")
 
     every {
       organizationService.listOrganizationsByUserId(userId, any())
@@ -244,16 +237,16 @@ class OrganizationsHandlerTest {
       )
 
     val expectedList =
-      OrganizationReadList().organizations(
-        listOf(
-          OrganizationRead()
-            .organizationName("org name")
-            .organizationId(orgId)
-            .email(organizationEmail)
-            .ssoRealm(
-              organizationSsoRealm,
+      OrganizationReadList(
+        organizations =
+          listOf(
+            OrganizationRead(
+              organizationName = "org name",
+              organizationId = orgId,
+              email = organizationEmail,
+              ssoRealm = organizationSsoRealm,
             ),
-        ),
+          ),
       )
 
     val result = organizationsHandler.listOrganizationsByUser(request)
@@ -265,10 +258,11 @@ class OrganizationsHandlerTest {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val request =
-      ListOrganizationsByUserRequestBody()
-        .userId(userId)
-        .nameContains("keyword")
-        .pagination(Pagination().pageSize(10).rowOffset(1))
+      ListOrganizationsByUserRequestBody(
+        userId = userId,
+        nameContains = "keyword",
+        pagination = Pagination(pageSize = 10, rowOffset = 1),
+      )
 
     every {
       organizationService.listOrganizationsByUserIdPaginated(any(), any())
@@ -285,16 +279,16 @@ class OrganizationsHandlerTest {
       )
 
     val expectedList =
-      OrganizationReadList().organizations(
-        listOf(
-          OrganizationRead()
-            .organizationName(organizationName)
-            .organizationId(orgId)
-            .email(organizationEmail)
-            .ssoRealm(
-              organizationSsoRealm,
+      OrganizationReadList(
+        organizations =
+          listOf(
+            OrganizationRead(
+              organizationName = organizationName,
+              organizationId = orgId,
+              email = organizationEmail,
+              ssoRealm = organizationSsoRealm,
             ),
-        ),
+          ),
       )
 
     val result = organizationsHandler.listOrganizationsByUser(request)
@@ -305,7 +299,7 @@ class OrganizationsHandlerTest {
   fun `testListAllOrganizationsByUser delegates to unfiltered service method without pagination`() {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
-    val request = ListOrganizationsByUserRequestBody().userId(userId)
+    val request = ListOrganizationsByUserRequestBody(userId = userId)
 
     every {
       organizationService.listAllOrganizationsByUserId(userId, any())
@@ -332,9 +326,11 @@ class OrganizationsHandlerTest {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val request =
-      ListOrganizationsByUserRequestBody()
-        .userId(userId)
-        .pagination(Pagination().pageSize(10).rowOffset(0))
+      ListOrganizationsByUserRequestBody(
+        userId = userId,
+        nameContains = "",
+        pagination = Pagination(pageSize = 10, rowOffset = 0),
+      )
 
     every {
       organizationService.listAllOrganizationsByUserIdPaginated(any(), any())
@@ -365,9 +361,11 @@ class OrganizationsHandlerTest {
     val agenticOrgId = UUID.randomUUID()
     val agenticWorkspaceId = UUID.randomUUID()
     val request =
-      ListOrganizationSummariesRequestBody()
-        .userId(userId)
-        .pagination(Pagination().pageSize(10).rowOffset(0))
+      ListOrganizationSummariesRequestBody(
+        userId = userId,
+        nameContains = "",
+        pagination = Pagination(pageSize = 10, rowOffset = 0),
+      )
 
     every { organizationService.listOrganizationsByUserIdPaginated(any(), any()) } returns
       listOf(
@@ -381,10 +379,18 @@ class OrganizationsHandlerTest {
           .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
       )
     every { workspacesHandler.listWorkspacesByUser(any()) } returns
-      WorkspaceReadList().workspaces(
-        listOf(
-          WorkspaceRead().workspaceId(agenticWorkspaceId).organizationId(agenticOrgId).name("agentic-ws"),
-        ),
+      WorkspaceReadList(
+        workspaces =
+          listOf(
+            WorkspaceRead(
+              workspaceId = agenticWorkspaceId,
+              customerId = UUID.randomUUID(),
+              name = "agentic-ws",
+              slug = "agentic-ws",
+              initialSetupComplete = true,
+              organizationId = agenticOrgId,
+            ),
+          ),
       )
     every { organizationService.getActiveOrganization(agenticOrgId) } returns
       Optional.of(
@@ -399,7 +405,7 @@ class OrganizationsHandlerTest {
 
     val response = organizationsHandler.getOrganizationSummaries(request)
 
-    assertEquals(listOf(regularOrgId), response.organizationSummaries.map { it.organization.organizationId })
+    assertEquals(listOf(regularOrgId), response.organizationSummaries!!.map { it.organization.organizationId })
   }
 
   @Test
@@ -409,23 +415,26 @@ class OrganizationsHandlerTest {
     val workspaceId = UUID.randomUUID()
 
     val request =
-      ListOrganizationSummariesRequestBody()
-        .userId(userId)
-        .pagination(Pagination().pageSize(10).rowOffset(0))
+      ListOrganizationSummariesRequestBody(
+        userId = userId,
+        nameContains = "",
+        pagination = Pagination(pageSize = 10, rowOffset = 0),
+      )
 
     val organizationRead =
-      OrganizationRead()
-        .organizationId(orgId)
-        .organizationName("test-org")
-        .email("org@example.com")
-    val orgList = OrganizationReadList().organizations(listOf(organizationRead))
+      OrganizationRead(organizationId = orgId, organizationName = "test-org", email = "org@example.com")
+    val orgList = OrganizationReadList(organizations = listOf(organizationRead))
 
     val workspaceRead =
-      WorkspaceRead()
-        .workspaceId(workspaceId)
-        .organizationId(orgId)
-        .name("test-workspace")
-    val workspaceList = WorkspaceReadList().workspaces(listOf(workspaceRead))
+      WorkspaceRead(
+        workspaceId = workspaceId,
+        customerId = UUID.randomUUID(),
+        name = "test-workspace",
+        slug = "test-workspace",
+        initialSetupComplete = true,
+        organizationId = orgId,
+      )
+    val workspaceList = WorkspaceReadList(workspaces = listOf(workspaceRead))
 
     every { organizationsHandler.listOrganizationsByUser(any()) } returns orgList
 
@@ -435,9 +444,9 @@ class OrganizationsHandlerTest {
 
     val response = organizationsHandler.getOrganizationSummaries(request)
 
-    assertEquals(1, response.organizationSummaries.size)
+    assertEquals(1, response.organizationSummaries!!.size)
 
-    val summary = response.organizationSummaries[0]
+    val summary = response.organizationSummaries!![0]
     assertEquals(orgId, summary.organization.organizationId)
     assertEquals("test-org", summary.organization.organizationName)
     assertEquals(1, summary.workspaces.size)
@@ -460,10 +469,11 @@ class OrganizationsHandlerTest {
     every { organizationService.writeOrganization(any()) } just runs
 
     val request =
-      OrganizationCreateRequestBody()
-        .organizationName(organizationName)
-        .email(organizationEmail)
-        .userId(userId)
+      OrganizationCreateRequestBody(
+        organizationName = organizationName,
+        email = organizationEmail,
+        userId = userId,
+      )
 
     organizationsHandler.createOrganization(request)
 
@@ -645,7 +655,7 @@ class OrganizationsHandlerTest {
     every { organizationService.getActiveOrganization(organizationId1) } returns Optional.empty()
 
     assertThrows(PersistenceConfigNotFoundException::class.java) {
-      organizationsHandler.getOrganization(OrganizationIdRequestBody().organizationId(organizationId1))
+      organizationsHandler.getOrganization(OrganizationIdRequestBody(organizationId = organizationId1))
     }
 
     verify(exactly = 0) { organizationService.getOrganization(organizationId1) }

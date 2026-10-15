@@ -4,10 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationUserReadList
-import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.api.server.generated.models.ListWorkspacesByUserRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceReadList
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.publicApi.server.generated.models.UsersResponse
@@ -38,7 +37,7 @@ open class UserServiceImpl(
   private val userHandler: UserHandler,
 ) : UserService {
   override fun getAllWorkspaceIdsForUser(userId: UUID): List<UUID> {
-    val listWorkspacesByUserRequestBody = ListWorkspacesByUserRequestBody().userId(userId)
+    val listWorkspacesByUserRequestBody = ListWorkspacesByUserRequestBody(userId = userId)
     val result =
       kotlin
         .runCatching { workspacesHandler.listWorkspacesByUser(listWorkspacesByUserRequestBody) }
@@ -48,7 +47,7 @@ open class UserServiceImpl(
         }
 
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
-    val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList().workspaces(emptyList()))
+    val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList(workspaces = emptyList()))
     return workspaceReadList.workspaces.map { it.workspaceId }
   }
 
@@ -58,7 +57,7 @@ open class UserServiceImpl(
     emails: List<String>?,
   ): UsersResponse {
     // 1. Get all users in the organization.
-    val organizationIdRequestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    val organizationIdRequestBody = OrganizationIdRequestBody(organizationId = organizationId)
     val result =
       kotlin
         .runCatching {
@@ -70,8 +69,7 @@ open class UserServiceImpl(
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     val userReadList = result.getOrThrow()
     // 2. Filter users on either ids or emails.
-    val finalUserReadList = OrganizationUserReadList()
-    finalUserReadList.users =
+    val filteredUsers =
       when {
         !ids.isNullOrEmpty() && !emails.isNullOrEmpty() -> { // Filter on both ids and emails.
           userReadList.users.filter { it.userId.toString() in ids || it.email in emails }
@@ -87,6 +85,6 @@ open class UserServiceImpl(
         }
       }
     // 3. Return mapped result.
-    return UsersResponse(data = finalUserReadList.users.mapNotNull { UserReadMapper.from(it) })
+    return UsersResponse(data = filteredUsers.mapNotNull { UserReadMapper.from(it) })
   }
 }

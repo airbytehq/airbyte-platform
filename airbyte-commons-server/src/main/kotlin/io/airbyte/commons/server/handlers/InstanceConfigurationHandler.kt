@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.server.generated.models.AuthConfiguration
 import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
 import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceUpdate
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.enums.convertTo
@@ -77,12 +77,13 @@ open class InstanceConfigurationHandler(
 
     // Update the underlying workspace to mark the initial setup as complete
     workspacesHandler.updateWorkspace(
-      WorkspaceUpdate()
-        .workspaceId(defaultWorkspace.workspaceId)
-        .email(requestBody.email)
-        .displaySetupWizard(requestBody.displaySetupWizard)
-        .anonymousDataCollection(requestBody.anonymousDataCollection)
-        .initialSetupComplete(requestBody.initialSetupComplete),
+      WorkspaceUpdate(
+        workspaceId = defaultWorkspace.workspaceId,
+        email = requestBody.email,
+        displaySetupWizard = requestBody.displaySetupWizard,
+        anonymousDataCollection = requestBody.anonymousDataCollection,
+        initialSetupComplete = requestBody.initialSetupComplete,
+      ),
     )
 
     // Return the updated instance configuration

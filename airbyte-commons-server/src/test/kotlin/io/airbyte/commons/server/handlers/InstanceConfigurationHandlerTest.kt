@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.server.generated.models.AuthConfiguration
 import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
 import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceUpdate
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.config.AuthenticatedUser
@@ -271,12 +271,13 @@ internal class InstanceConfigurationHandlerTest {
 
     verify(mWorkspacesHandler).updateWorkspace(
       eq(
-        WorkspaceUpdate()
-          .workspaceId(WORKSPACE_ID)
-          .email(EMAIL)
-          .displaySetupWizard(true)
-          .anonymousDataCollection(true)
-          .initialSetupComplete(true),
+        WorkspaceUpdate(
+          workspaceId = WORKSPACE_ID,
+          email = EMAIL,
+          displaySetupWizard = true,
+          anonymousDataCollection = true,
+          initialSetupComplete = true,
+        ),
       ),
     )
   }

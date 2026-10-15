@@ -4,18 +4,18 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.PermissionApi
-import io.airbyte.api.model.generated.PermissionCheckRead
-import io.airbyte.api.model.generated.PermissionCheckRequest
-import io.airbyte.api.model.generated.PermissionCreate
-import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody
-import io.airbyte.api.model.generated.PermissionIdRequestBody
-import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.api.model.generated.PermissionReadList
-import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.api.model.generated.PermissionUpdate
-import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
-import io.airbyte.api.model.generated.UserIdRequestBody
+import io.airbyte.api.server.generated.apis.PermissionApi
+import io.airbyte.api.server.generated.models.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRequest
+import io.airbyte.api.server.generated.models.PermissionCreate
+import io.airbyte.api.server.generated.models.PermissionDeleteUserFromWorkspaceRequestBody
+import io.airbyte.api.server.generated.models.PermissionIdRequestBody
+import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionReadList
+import io.airbyte.api.server.generated.models.PermissionType
+import io.airbyte.api.server.generated.models.PermissionUpdate
+import io.airbyte.api.server.generated.models.PermissionsCheckMultipleWorkspacesRequest
+import io.airbyte.api.server.generated.models.UserIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -26,23 +26,21 @@ import io.airbyte.server.apis.execute
 import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/permissions")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class PermissionApiController(
   private val permissionHandler: PermissionHandler,
 ) : PermissionApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
-  @Post("/create")
   @AuditLogging(provider = AuditLoggingProvider.CREATE_PERMISSION)
   override fun createPermission(
     @Body permissionCreate: PermissionCreate,
-  ): PermissionRead? =
+  ): PermissionRead =
     execute {
       validatePermissionCreation(permissionCreate)
       permissionHandler.createPermission(permissionCreate.toDomain()).toApi()
@@ -58,13 +56,11 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.WORKSPACE_READER)
-  @Post("/get")
   override fun getPermission(
     @Body permissionIdRequestBody: PermissionIdRequestBody,
-  ): PermissionRead? = execute { permissionHandler.getPermissionRead(permissionIdRequestBody) }
+  ): PermissionRead = execute { permissionHandler.getPermissionRead(permissionIdRequestBody) }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
-  @Post("/update")
   @AuditLogging(provider = AuditLoggingProvider.UPDATE_PERMISSION)
   override fun updatePermission(
     @Body permissionUpdate: PermissionUpdate,
@@ -85,7 +81,6 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
-  @Post("/delete")
   @AuditLogging(provider = AuditLoggingProvider.DELETE_PERMISSION)
   override fun deletePermission(
     @Body permissionIdRequestBody: PermissionIdRequestBody,
@@ -97,7 +92,6 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.SELF)
-  @Post("/delete_user_from_workspace")
   override fun deleteUserFromWorkspace(
     @Body permissionDeleteUserFromWorkspaceRequestBody: PermissionDeleteUserFromWorkspaceRequestBody,
   ) {
@@ -108,22 +102,19 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
-  @Post("/list_by_user")
   override fun listPermissionsByUser(
     @Body userIdRequestBody: UserIdRequestBody,
-  ): PermissionReadList? = execute { permissionHandler.effectivePermissionReadListForUser(userIdRequestBody.userId) }
+  ): PermissionReadList = execute { permissionHandler.effectivePermissionReadListForUser(userIdRequestBody.userId) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
-  @Post("/check")
   override fun checkPermissions(
     @Body permissionCheckRequest: PermissionCheckRequest,
-  ): PermissionCheckRead? = execute { permissionHandler.checkPermissions(permissionCheckRequest) }
+  ): PermissionCheckRead = execute { permissionHandler.checkPermissions(permissionCheckRequest) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
-  @Post("/check_multiple_workspaces")
   override fun checkPermissionsAcrossMultipleWorkspaces(
     @Body request: PermissionsCheckMultipleWorkspacesRequest,
-  ): PermissionCheckRead? = execute { permissionHandler.permissionsCheckMultipleWorkspaces(request) }
+  ): PermissionCheckRead = execute { permissionHandler.permissionsCheckMultipleWorkspaces(request) }
 }
 
 private fun PermissionCreate.toDomain() =
@@ -135,9 +126,10 @@ private fun PermissionCreate.toDomain() =
     .withPermissionType(enumValueOf(this.permissionType.name))
 
 private fun Permission.toApi() =
-  PermissionRead()
-    .permissionId(this.permissionId)
-    .userId(this.userId)
-    .workspaceId(this.workspaceId)
-    .organizationId(this.organizationId)
-    .permissionType(enumValueOf(this.permissionType.name))
+  PermissionRead(
+    permissionId = this.permissionId,
+    userId = this.userId,
+    workspaceId = this.workspaceId,
+    organizationId = this.organizationId,
+    permissionType = enumValueOf(this.permissionType.name),
+  )

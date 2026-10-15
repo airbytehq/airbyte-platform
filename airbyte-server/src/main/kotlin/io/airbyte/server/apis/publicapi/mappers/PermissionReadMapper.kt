@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionRead
 import io.airbyte.publicApi.server.generated.models.PermissionResponse
 
 /**
@@ -21,7 +21,8 @@ object PermissionReadMapper {
     PermissionResponse(
       permissionId = permissionRead.permissionId,
       permissionType = enumValueOf(permissionRead.permissionType.name),
-      userId = permissionRead.userId,
+      // the public API model requires a user id; a service-account permission fails here as it did before
+      userId = permissionRead.userId!!,
       workspaceId = permissionRead.workspaceId,
       organizationId = permissionRead.organizationId,
     )

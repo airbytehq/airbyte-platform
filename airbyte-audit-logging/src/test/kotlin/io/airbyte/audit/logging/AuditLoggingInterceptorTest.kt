@@ -4,9 +4,9 @@
 
 package io.airbyte.audit.logging
 
-import io.airbyte.api.model.generated.PermissionCreate
-import io.airbyte.api.model.generated.PermissionRead
-import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.server.generated.models.PermissionCreate
+import io.airbyte.api.server.generated.models.PermissionRead
+import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.audit.logging.model.Actor
 import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
@@ -131,10 +131,7 @@ class AuditLoggingInterceptorTest {
 
     val parameterValue = mockk<MutableArgumentValue<Any>>()
     val permissionUpdate =
-      PermissionCreate().apply {
-        permissionId = UUID.randomUUID()
-        permissionType = PermissionType.WORKSPACE_EDITOR
-      }
+      PermissionCreate(userId = UUID.randomUUID(), permissionId = UUID.randomUUID(), permissionType = PermissionType.WORKSPACE_EDITOR)
     every { parameterValue.value } returns permissionUpdate
 
     val parameters = mutableMapOf<String, MutableArgumentValue<*>>("permissionCreate" to parameterValue)
@@ -158,11 +155,13 @@ class AuditLoggingInterceptorTest {
     val targetUserId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
     every { context.proceed() } returns
-      PermissionRead()
-        .userId(targetUserId)
-        .workspaceId(workspaceId)
-        .organizationId(null)
-        .permissionType(PermissionType.WORKSPACE_EDITOR)
+      PermissionRead(
+        permissionId = UUID.randomUUID(),
+        userId = targetUserId,
+        workspaceId = workspaceId,
+        organizationId = null,
+        permissionType = PermissionType.WORKSPACE_EDITOR,
+      )
 
     val resolvedOrganizationId = UUID.randomUUID()
     every { auditScopeResolver.resolveScope(any(), any(), any()) } returns
@@ -222,7 +221,8 @@ class AuditLoggingInterceptorTest {
     val fakeProvider = mockk<AuditProvider>()
     every { applicationContext.findBean(AuditProvider::class.java, Qualifiers.byName("testProvider")) } returns Optional.of(fakeProvider)
 
-    every { context.proceed() } returns PermissionRead()
+    every { context.proceed() } returns
+      PermissionRead(permissionId = UUID.randomUUID(), permissionType = PermissionType.WORKSPACE_EDITOR, userId = UUID.randomUUID())
 
     interceptor.intercept(context)
     // Verifying that request is proceeded

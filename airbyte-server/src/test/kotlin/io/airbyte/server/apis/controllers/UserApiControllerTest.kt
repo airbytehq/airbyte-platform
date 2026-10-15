@@ -4,17 +4,17 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationUserReadList
-import io.airbyte.api.model.generated.UserAuthIdRequestBody
-import io.airbyte.api.model.generated.UserEmailRequestBody
-import io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse
-import io.airbyte.api.model.generated.UserIdRequestBody
-import io.airbyte.api.model.generated.UserRead
-import io.airbyte.api.model.generated.UserUpdate
-import io.airbyte.api.model.generated.UserWithPermissionInfoReadList
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationUserReadList
+import io.airbyte.api.server.generated.models.UserAuthIdRequestBody
+import io.airbyte.api.server.generated.models.UserEmailRequestBody
+import io.airbyte.api.server.generated.models.UserGetOrCreateByAuthIdResponse
+import io.airbyte.api.server.generated.models.UserIdRequestBody
+import io.airbyte.api.server.generated.models.UserRead
+import io.airbyte.api.server.generated.models.UserUpdate
+import io.airbyte.api.server.generated.models.UserWithPermissionInfoReadList
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceUserAccessInfoReadList
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.server.assertStatus
@@ -48,6 +48,8 @@ internal class UserApiControllerTest {
   @Client("/")
   lateinit var client: HttpClient
 
+  private fun userRead() = UserRead(userId = UUID.randomUUID(), email = "test@test.com", metadata = emptyMap<String, Any>())
+
   @BeforeAll
   fun setupMock() {
     userHandler = mockk()
@@ -56,26 +58,26 @@ internal class UserApiControllerTest {
 
   @Test
   fun testGetUser() {
-    every { userHandler.getUser(any()) } returns UserRead()
+    every { userHandler.getUser(any()) } returns userRead()
 
     val path = "/api/v1/users/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserIdRequestBody(userId = UUID.randomUUID()))))
   }
 
   @Test
   fun testGetUserByAuthId() {
-    every { userHandler.getUserByAuthId(any()) } returns UserRead()
+    every { userHandler.getUserByAuthId(any()) } returns userRead()
 
     val path = "/api/v1/users/get_by_auth_id"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserAuthIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserAuthIdRequestBody(authUserId = "auth-user-id"))))
   }
 
   @Test
   fun testGetUserByEmail() {
-    every { userHandler.getUserByEmail(any()) } returns UserRead()
+    every { userHandler.getUserByEmail(any()) } returns userRead()
 
     val path = "/api/v1/users/get_by_email"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserEmailRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserEmailRequestBody(email = "test@test.com"))))
   }
 
   @Test
@@ -83,28 +85,28 @@ internal class UserApiControllerTest {
     every { userHandler.deleteUser(any()) } returns Unit
 
     val path = "/api/v1/users/delete"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserIdRequestBody(userId = UUID.randomUUID()))))
   }
 
   @Test
   fun testUpdateUser() {
-    every { userHandler.updateUser(any()) } returns UserRead()
+    every { userHandler.updateUser(any()) } returns userRead()
 
     val path = "/api/v1/users/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserUpdate(userId = UUID.randomUUID()))))
   }
 
   @Test
   fun testListUsersInOrganization() {
-    every { userHandler.listUsersInOrganization(any()) } returns OrganizationUserReadList()
+    every { userHandler.listUsersInOrganization(any()) } returns OrganizationUserReadList(users = emptyList())
 
     val path = "/api/v1/users/list_by_organization_id"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OrganizationIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OrganizationIdRequestBody(organizationId = UUID.randomUUID()))))
   }
 
   @Test
   fun testListInstanceAdminUsers() {
-    every { userHandler.listInstanceAdminUsers() } returns UserWithPermissionInfoReadList()
+    every { userHandler.listInstanceAdminUsers() } returns UserWithPermissionInfoReadList(users = emptyList())
 
     val path = "/api/v1/users/list_instance_admin"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, Jsons.emptyObject())))
@@ -112,34 +114,37 @@ internal class UserApiControllerTest {
 
   @Test
   fun testGetOrCreateUser() {
-    every { userHandler.getOrCreateUserByAuthId(any()) } returns UserGetOrCreateByAuthIdResponse().userRead(UserRead())
+    every { userHandler.getOrCreateUserByAuthId(any()) } returns
+      UserGetOrCreateByAuthIdResponse(userRead = userRead(), authUserId = "auth-user-id", newUserCreated = false)
 
     val path = "/api/v1/users/get_or_create_by_auth_id"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserAuthIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserAuthIdRequestBody(authUserId = "auth-user-id"))))
   }
 
   @Test
   fun testListAccessInfoByWorkspaceId() {
-    every { userHandler.listAccessInfoByWorkspaceId(any()) } returns WorkspaceUserAccessInfoReadList()
+    every { userHandler.listAccessInfoByWorkspaceId(any()) } returns WorkspaceUserAccessInfoReadList(usersWithAccess = emptyList())
 
     val path = "/api/v1/users/list_access_info_by_workspace_id"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, Jsons.serialize(WorkspaceIdRequestBody()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, Jsons.serialize(WorkspaceIdRequestBody(workspaceId = UUID.randomUUID())))))
   }
 
   @Test
   fun testAgenticEnabledAtSerializesAsIsoString() {
     val agenticEnabledAt = OffsetDateTime.of(2026, 2, 5, 12, 0, 0, 0, ZoneOffset.UTC)
     val userRead =
-      UserRead()
-        .userId(UUID.randomUUID())
-        .email("test@test.com")
-        .name("test")
-        .agenticEnabledAt(agenticEnabledAt)
+      UserRead(
+        userId = UUID.randomUUID(),
+        email = "test@test.com",
+        name = "test",
+        metadata = emptyMap<String, Any>(),
+        agenticEnabledAt = agenticEnabledAt,
+      )
 
     every { userHandler.getUser(any()) } returns userRead
 
     val path = "/api/v1/users/get"
-    val response = client.toBlocking().retrieve(HttpRequest.POST(path, UserIdRequestBody()), String::class.java)
+    val response = client.toBlocking().retrieve(HttpRequest.POST(path, UserIdRequestBody(userId = UUID.randomUUID())), String::class.java)
 
     // Verify the response contains an ISO-8601 date string, not a numeric timestamp
     Assertions.assertTrue(response.contains("2026-02-05T12:00:00"), "agenticEnabledAt should be serialized as ISO-8601 string, got: $response")

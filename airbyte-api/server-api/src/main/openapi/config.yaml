@@ -14017,7 +14017,6 @@ components:
       required:
         - id
         - name
-        - organizationId
       properties:
         id:
           type: string
@@ -14049,6 +14048,9 @@ components:
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
         organizationId:
+          description: >-
+            Required by create_if_not_exist. Absent when bootstrapping a new user's first workspace,
+            which finds or creates the user's organization.
           $ref: "#/components/schemas/OrganizationId"
     WebhookConfigWrite:
       type: object
@@ -18550,12 +18552,12 @@ components:
       type: object
       required:
         - current
-        - max
       properties:
         current:
           type: integer
           format: int64
         max:
+          description: Absent when the dimension has no limit.
           type: integer
           format: int64
     OrganizationReadList:
@@ -18815,7 +18817,6 @@ components:
       required:
         - permissionId
         - permissionType
-        - userId
       properties:
         permissionId:
           type: string
@@ -18823,6 +18824,7 @@ components:
         permissionType:
           $ref: "#/components/schemas/PermissionType"
         userId:
+          description: Absent for permissions that belong to a service account rather than a user.
           $ref: "#/components/schemas/UserId"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
