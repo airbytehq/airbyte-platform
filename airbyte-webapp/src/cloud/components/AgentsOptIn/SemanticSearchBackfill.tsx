@@ -26,6 +26,12 @@ import {
 } from "./connectionBackfillState";
 import styles from "./SemanticSearchPage.module.scss";
 
+// The connection fields that the backfill controls read. A connection list item and a full connection read both have
+// them.
+type BackfillConnection = Pick<WebBackendConnectionListItem, "connectionId" | "name"> & {
+  source: Pick<WebBackendConnectionListItem["source"], "sourceId">;
+};
+
 interface SemanticSearchBackfillContextValue {
   statusBySourceId: Map<string, SourceStatusRead>;
   defaultStartTime: string;
@@ -46,12 +52,12 @@ const useSemanticSearchBackfillContext = () => {
 };
 
 /**
- * Holds the backfill state of the connections in one table: the source status reads, the start times that the user
+ * Holds the backfill state of the connections on one page: the source status reads, the start times that the user
  * entered, and the outcome of each start request. The start time is sent with the request only and is not saved. An
  * empty start time sends the default, which stays fixed while the page is open.
  */
 export const SemanticSearchBackfillProvider: React.FC<
-  React.PropsWithChildren<{ connections: WebBackendConnectionListItem[] }>
+  React.PropsWithChildren<{ connections: BackfillConnection[] }>
 > = ({ connections, children }) => {
   const sourceIds = useMemo(
     () => Array.from(new Set(connections.map((connection) => connection.source.sourceId))),
@@ -109,7 +115,7 @@ export const SemanticSearchBackfillProvider: React.FC<
   return <SemanticSearchBackfillContext.Provider value={value}>{children}</SemanticSearchBackfillContext.Provider>;
 };
 
-const useConnectionBackfillState = (connection: WebBackendConnectionListItem) => {
+const useConnectionBackfillState = (connection: BackfillConnection) => {
   const { statusBySourceId, requests } = useSemanticSearchBackfillContext();
   const statusQuery = statusBySourceId.get(connection.source.sourceId);
   const dataUpdatedAt = statusQuery?.dataUpdatedAt ?? 0;
@@ -129,21 +135,23 @@ const useCanEditBackfill = (connectionId: string, workspaceId: string) => {
   return canEdit && enablementQuery.data?.enable_indexing === true;
 };
 
-const useBackfillControls = (connection: WebBackendConnectionListItem, workspaceId: string) => {
+// disabled comes from the caller, for example a deprecated connection's settings.
+const useBackfillControls = (connection: BackfillConnection, workspaceId: string, disabled = false) => {
   const canEditBackfill = useCanEditBackfill(connection.connectionId, workspaceId);
   const { locked, dataUpdatedAt } = useConnectionBackfillState(connection);
-  return { controlsDisabled: !canEditBackfill || locked, dataUpdatedAt };
+  return { controlsDisabled: disabled || !canEditBackfill || locked, dataUpdatedAt };
 };
 
 interface BackfillDateProps {
   id: string;
-  connection: WebBackendConnectionListItem;
+  connection: BackfillConnection;
   workspaceId: string;
+  disabled?: boolean;
 }
 
-const BackfillDateContent: React.FC<BackfillDateProps> = ({ id, connection, workspaceId }) => {
+const BackfillDateContent: React.FC<BackfillDateProps> = ({ id, connection, workspaceId, disabled }) => {
   const { defaultStartTime, startTimes, setStartTime } = useSemanticSearchBackfillContext();
-  const { controlsDisabled } = useBackfillControls(connection, workspaceId);
+  const { controlsDisabled } = useBackfillControls(connection, workspaceId, disabled);
   const startTime = startTimes[connection.connectionId] ?? "";
   const invalid = !isValidBackfillStartTime(startTime);
 
@@ -175,8 +183,9 @@ export const SemanticSearchBackfillDate: React.FC<BackfillDateProps> = (props) =
 );
 
 interface StartBackfillProps {
-  connection: WebBackendConnectionListItem;
+  connection: BackfillConnection;
   workspaceId: string;
+  disabled?: boolean;
 }
 
 const StartBackfillButton: React.FC<{
@@ -201,11 +210,11 @@ const StartBackfillButton: React.FC<{
   );
 };
 
-const StartBackfillContent: React.FC<StartBackfillProps> = ({ connection, workspaceId }) => {
+const StartBackfillContent: React.FC<StartBackfillProps> = ({ connection, workspaceId, disabled }) => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const { defaultStartTime, startTimes, setRequest } = useSemanticSearchBackfillContext();
-  const { controlsDisabled, dataUpdatedAt } = useBackfillControls(connection, workspaceId);
+  const { controlsDisabled, dataUpdatedAt } = useBackfillControls(connection, workspaceId, disabled);
   const startTime = startTimes[connection.connectionId] ?? "";
   const requestBackfill = useRequestConnectionBackfill(connection.connectionId, connection.source.sourceId);
   // The request records the status version that was current when it finished, not when it started.
@@ -250,9 +259,7 @@ export const SemanticSearchStartBackfill: React.FC<StartBackfillProps> = (props)
   </React.Suspense>
 );
 
-export const SemanticSearchBackfillStatus: React.FC<{ connection: WebBackendConnectionListItem }> = ({
-  connection,
-}) => {
+export const SemanticSearchBackfillStatus: React.FC<{ connection: BackfillConnection }> = ({ connection }) => {
   const { state } = useConnectionBackfillState(connection);
 
   switch (state.status) {

@@ -10,6 +10,12 @@ export {
 export { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 export { ContextLayerPage, ContextLayerConnectorsPage } from "./ContextLayerPage";
 export { InstallMcpPage } from "./InstallMcpPage";
+export {
+  SemanticSearchBackfillDate,
+  SemanticSearchBackfillProvider,
+  SemanticSearchBackfillStatus,
+  SemanticSearchStartBackfill,
+} from "./SemanticSearchBackfill";
 export { SemanticSearchPage } from "./SemanticSearchPage";
 export { SemanticSearchSwitch } from "./SemanticSearchSwitch";
 export { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
