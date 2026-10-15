@@ -69,7 +69,7 @@ const messages = {
   "cloud.contextLayer.agentAccess.title": "Agent access",
   "cloud.contextLayer.setup.agentAccess.title": "Agent access",
   "cloud.contextLayer.setup.agentAccess.description":
-    "Agents can use the Airbyte MCP to read from and write to this {actorType, select, source {source} other {destination}} directly. No sync required.",
+    "Agents can use the Airbyte MCP to read from this {actorType, select, source {source} other {destination}} directly. No sync required.",
   "cloud.contextLayer.semanticSearch.title": "Semantic Search",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
@@ -194,9 +194,7 @@ describe("ActorContextLayerCard", () => {
     expect(screen.queryByText(/semantic search/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
     expect(
-      screen.getByText(
-        `Agents can use the Airbyte MCP to read from and write to this ${actorType} directly. No sync required.`
-      )
+      screen.getByText(`Agents can use the Airbyte MCP to read from this ${actorType} directly. No sync required.`)
     ).toBeInTheDocument();
   });
 });

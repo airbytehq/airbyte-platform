@@ -122,7 +122,7 @@ const messages = {
     "Ask an organization admin of your Airbyte organization to enable this feature for your team.",
   "cloud.contextLayer.organizationAgentAccess.title": "Agent access",
   "cloud.contextLayer.organizationAgentAccess.description":
-    "Agents can use the Airbyte MCP to query and write to supported sources, and query supported destinations. Agent access is controlled by the credentials used to authenticate the connector in that workspace. All supported sources are enabled when you turn this on. Destinations must be enabled individually.",
+    "Agents can use the Airbyte MCP to query supported sources and destinations. Agent access is controlled by the credentials used to authenticate the connector in that workspace. All supported sources are enabled when you turn this on. Destinations must be enabled individually.",
   "cloud.contextLayer.semanticSearch.title": "Semantic search",
   "cloud.contextLayer.semanticSearch.description":
     "Airbyte builds a semantic index from data you sync. Both the source and destination must be an agent connector. Agents can use the Airbyte MCP to search and reason about your data faster and more effectively. Airbyte hosts this data on its own infrastructure and you must accept new terms of service. If you turn semantic search off, Airbyte deletes your semantic index. Manage individual connections on the Semantic search page.",
