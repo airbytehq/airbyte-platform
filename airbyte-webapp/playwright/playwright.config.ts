@@ -14,7 +14,6 @@ export default defineConfig({
   testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
   // Writes the route table of the mock backend. It runs after the dev server has generated the API client.
   globalSetup: "./scripts/generate-mock-routes.js",
-  globalTeardown: "./global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -123,17 +123,13 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
     create: async (
       request: APIRequestContext,
       name: string,
-      workspaceId: string,
-      configOverrides?: Record<string, unknown>
+      workspaceId: string
     ): Promise<SourceRead | DestinationRead> => {
       const createData = {
         name,
         [`${connectorType}DefinitionId`]: config.definitionId,
         workspaceId,
-        connectionConfiguration: {
-          ...config.defaultConfig,
-          ...configOverrides,
-        },
+        connectionConfiguration: config.defaultConfig,
       };
 
       const response = await request.post(`${apiBaseUrl}/${config.endpoint}/create`, {

@@ -137,4 +137,41 @@ test.describe("Mock backend store", () => {
       "Catalog has no stream named no_such_stream"
     );
   });
+
+  test("catalogs add the fields that withFields names, and fail on a field they already have", () => {
+    const phone = { type: "string" };
+    const catalog = catalogs.postgres({ withoutFields: { users: ["email"] }, withFields: { users: { phone } } });
+    const properties = catalogs.find(catalog, "public", "users").stream?.jsonSchema?.properties ?? {};
+
+    expect(Object.keys(properties)).toEqual(["updated_at", "name", "id", "phone"]);
+    expect(properties).toHaveProperty("phone", phone);
+    expect(() => catalogs.postgres({ withFields: { users: { email: phone } } })).toThrow(
+      "Stream users already has a field named email"
+    );
+    expect(() => catalogs.postgres({ withFields: { no_such_stream: { phone } } })).toThrow(
+      "Catalog has no stream named no_such_stream"
+    );
+  });
+
+  test("catalogs change the type of a field that is in both withoutFields and withFields", () => {
+    const idAsString = { type: "string" };
+    const catalog = catalogs.postgres({ withoutFields: { users: ["id"] }, withFields: { users: { id: idAsString } } });
+
+    expect(catalogs.find(catalog, "public", "users").stream?.jsonSchema?.properties).toHaveProperty("id", idAsString);
+  });
+
+  test("catalogs leave out the streams that withoutStreams names, and fail on a name they do not have", () => {
+    const catalog = catalogs.postgres({ withoutStreams: ["cities"] });
+
+    expect(catalog.streams.map(({ stream }) => stream?.name)).toEqual(["cars", "users"]);
+    expect(() => catalogs.postgres({ withoutStreams: ["no_such_stream"] })).toThrow(
+      "Catalog has no stream named no_such_stream"
+    );
+  });
+
+  test("catalogs fail when withoutStreams leaves out a stream that another option changes", () => {
+    expect(() =>
+      catalogs.postgres({ withoutStreams: ["cars"], streams: { cars: { selected: false } }, withFields: { cars: {} } })
+    ).toThrow("withoutStreams leaves out cars, which other options change");
+  });
 });

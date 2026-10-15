@@ -14,6 +14,14 @@ export interface CatalogOptions {
   streams?: Record<string, Partial<AirbyteStreamConfiguration>>;
   /** Fields to remove from the JSON schema of a stream, keyed by stream name. For example, a column the source dropped. */
   withoutFields?: Record<string, string[]>;
+  /**
+   * Fields to add to the JSON schema of a stream, keyed by stream name and then by field name. The value is the JSON
+   * schema of the field. For example, a column the source added. Applied after `withoutFields`, so a field in both
+   * gets a new schema, as when the source changes the type of a column.
+   */
+  withFields?: Record<string, Record<string, object>>;
+  /** Streams to leave out of the catalog. For example, a table the source dropped. */
+  withoutStreams?: string[];
 }
 
 /**
@@ -37,20 +45,46 @@ function removeFields(stream: AirbyteStream, fields: string[]): AirbyteStream {
   return { ...stream, jsonSchema: { ...stream.jsonSchema, properties: kept } };
 }
 
+/** Adds fields to the top-level properties of a stream's JSON schema. */
+function addFields(stream: AirbyteStream, fields: Record<string, object>): AirbyteStream {
+  const properties = (stream.jsonSchema?.properties ?? {}) as Record<string, unknown>;
+  const existingFields = Object.keys(fields).filter((field) => field in properties);
+  if (existingFields.length > 0) {
+    throw new Error(`Stream ${stream.name} already has a field named ${existingFields.join(", ")}`);
+  }
+  return { ...stream, jsonSchema: { ...stream.jsonSchema, properties: { ...properties, ...fields } } };
+}
+
+/** Removes, then adds, fields of one stream. A stream without changes keeps its original JSON schema. */
+function changeFields(
+  stream: AirbyteStream,
+  fieldsToRemove: string[] | undefined,
+  fieldsToAdd: Record<string, object> | undefined
+): AirbyteStream {
+  const kept = fieldsToRemove ? removeFields(stream, fieldsToRemove) : stream;
+  return fieldsToAdd ? addFields(kept, fieldsToAdd) : kept;
+}
+
 function configure(
   catalog: AirbyteCatalog,
-  { selected, streams = {}, withoutFields = {} }: CatalogOptions
+  { selected, streams = {}, withoutFields = {}, withFields = {}, withoutStreams = [] }: CatalogOptions
 ): AirbyteCatalog {
-  const unknownStreams = [...Object.keys(streams), ...Object.keys(withoutFields)].filter(
+  const changedStreams = [...Object.keys(streams), ...Object.keys(withoutFields), ...Object.keys(withFields)];
+  const unknownStreams = [...changedStreams, ...withoutStreams].filter(
     (name) => !catalog.streams.some(({ stream }) => stream?.name === name)
   );
   if (unknownStreams.length > 0) {
     throw new Error(`Catalog has no stream named ${unknownStreams.join(", ")}`);
   }
+  const changedAndLeftOut = [...new Set(changedStreams)].filter((name) => withoutStreams.includes(name));
+  if (changedAndLeftOut.length > 0) {
+    throw new Error(`withoutStreams leaves out ${changedAndLeftOut.join(", ")}, which other options change`);
+  }
 
+  const keptStreams = catalog.streams.filter(({ stream }) => !withoutStreams.includes(stream?.name ?? ""));
   return {
-    streams: catalog.streams.map(({ stream, config }) => ({
-      stream: stream && withoutFields[stream.name] ? removeFields(stream, withoutFields[stream.name]) : stream,
+    streams: keptStreams.map(({ stream, config }) => ({
+      stream: stream && changeFields(stream, withoutFields[stream.name], withFields[stream.name]),
       config: {
         ...(config ?? defaultConfig),
         ...(selected === undefined ? {} : { selected }),

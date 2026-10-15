@@ -1,446 +1,490 @@
 /**
- * Auto-Detect Schema Changes Tests (With Worker Isolation)
+ * Auto-Detect Schema Changes Tests
  *
- * Tests the connection's ability to automatically detect and respond to schema changes
- * in the source database, including non-breaking and breaking changes.
+ * Tests how a connection shows and handles changes in the schema of its source: no changes, non-breaking changes,
+ * and breaking changes. Also tests the connection setting that says what to do with non-breaking changes.
  *
- * PARALLELIZATION STRATEGY:
- * Each Playwright worker operates in its own PostgreSQL schema:
- * - Worker 0 uses 'test_worker_0' schema
- * - Worker 1 uses 'test_worker_1' schema
- * - Worker N uses 'test_worker_N' schema
+ * Every test runs against the mock backend in playwright/mock. Each test starts from the backend state in its own
+ * scenario, so no test depends on what an earlier test did.
  *
- * Benefits:
- * - Faster execution with parallelization
- * - Complete isolation from public schema (no risk of polluting other tests)
+ * Each test is one user journey. Its `test.step` blocks continue on the same page, in order. Checks that only read
+ * the page use `expect.soft`, so one failed check does not hide the checks after it.
+ *
+ * The mock does not compute schema diffs. When a test refreshes the schema, `airbyte.schema.onRefresh` supplies what
+ * the server found: the refreshed catalog, the diff, and the kind of schema change.
  */
 
-import { test, expect } from "@playwright/test";
+import type { ConnectionHandle, MockAirbyte, SchemaRefreshAnswer } from "../../mock";
+import type { Page } from "@playwright/test";
+import type { AirbyteCatalog } from "@src/core/api/types/AirbyteClient";
+
 import { SyncMode, DestinationSyncMode } from "@src/core/api/types/AirbyteClient";
 
-import { connectionAPI, connectionTestScaffold, ConnectionTestData, connectionForm } from "../../helpers/connection";
+import { connectionForm } from "../../helpers/connection";
 import { connectionList } from "../../helpers/connectionList";
-import { dbHelpers, alterTable, getWorkerSchema } from "../../helpers/database";
 import { schemaChange, catalogDiffModal, streamsTable, replicationForm } from "../../helpers/replication";
-import { setupWorkspaceForTests } from "../../helpers/workspace";
-import { setFeatureFlags, setFeatureServiceFlags, injectFeatureFlagsAndStyle } from "../../support/e2e";
+import { catalogs, connection, defs, destination, expect, scenario, source, test } from "../../mock";
 
-test.describe("Connection - Auto-detect schema changes", () => {
-  let workspaceId: string;
-  let schema: string;
+const postgresSource = source({ def: defs.postgresSource, name: "Postgres source" });
+const postgresDestination = destination({ def: defs.postgresDestination, name: "Postgres destination" });
 
-  test.beforeAll(async () => {
-    workspaceId = await setupWorkspaceForTests();
+/**
+ * Every scenario in this file uses the synchronous schema refresh, because airbyte.schema.onRefresh answers only that
+ * one.
+ */
+const experiments = { asyncSchemaDiscovery: false };
 
-    // Explicitly disable async schema discovery to guarantee sync behavior
-    // This prevents tests from accidentally using the async code path since
-    // asyncSchemaDiscovery defaults to true in experiments.ts
-    setFeatureFlags({ asyncSchemaDiscovery: false });
-  });
+/** Waits until the replication page shows the refresh schema button, which the tests click or check next. */
+async function waitForReplicationPage(page: Page) {
+  await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible();
+}
 
-  test.afterAll(async () => {
-    // Clean up flags to prevent cross-test contamination
-    setFeatureFlags({});
-    setFeatureServiceFlags({});
-  });
+/** Opens the replication page of a connection and waits for it to load. */
+async function openReplicationPage(page: Page, airbyte: MockAirbyte, ref: ConnectionHandle) {
+  await page.goto(airbyte.paths.connection(ref, "replication"));
+  await waitForReplicationPage(page);
+}
 
-  test.describe("No changes", () => {
-    let testData: ConnectionTestData;
+/** The switch on the connection page that turns the connection on and off. */
+const connectionSwitch = (page: Page) => page.locator('[data-testid="connection-status-switch"]');
 
-    test.beforeEach(async ({ request, page }, testInfo) => {
-      // Inject feature flags into page before any navigation
-      await injectFeatureFlagsAndStyle(page);
+/**
+ * Finds a stream by name in a catalog, for example in a request body. Returns undefined when the stream is missing, so
+ * that a soft check fails and the test goes on.
+ */
+const findStream = (catalog: AirbyteCatalog | undefined, name: string) =>
+  catalog?.streams.find(({ stream }) => stream?.name === name);
 
-      // Get worker-specific schema for isolation
-      schema = getWorkerSchema(testInfo.parallelIndex);
+/**
+ * No changes
+ *
+ * The start state is a Postgres → Postgres connection with every stream selected. The source schema has not changed
+ * since the connection was made.
+ */
+const unchangedConnection = connection({
+  source: postgresSource,
+  destination: postgresDestination,
+  catalog: catalogs.postgres({ selected: true }),
+});
 
-      // Setup worker schema with baseline tables
-      await dbHelpers.setupWorkerSchema(schema);
+const unchangedScenario = scenario({ connections: [unchangedConnection], experiments });
 
-      // Create a Postgres → Postgres connection with all streams enabled
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
-        enableAllStreams: true,
-        schema, // Pass schema for connector configuration
-      });
-    });
+/** A refresh of a source schema that has not changed. */
+const noChanges: SchemaRefreshAnswer = {
+  catalog: catalogs.postgres({ selected: true }),
+  diff: { transforms: [] },
+  schemaChange: "no_change",
+};
 
-    test.afterEach(async ({ request }) => {
-      if (testData) {
-        await connectionTestScaffold.cleanupConnection(request, testData);
-      }
-      // Teardown worker schema (drops schema and all tables)
-      if (schema) {
-        await dbHelpers.teardownWorkerSchema(schema);
-      }
-    });
+test.describe(() => {
+  test.use({ airbyteScenario: unchangedScenario });
 
-    test("shows no diff after refresh if there have been no changes", async ({ page }) => {
-      // Navigate to the replication page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/replication`);
+  test("refresh the schema when the source has not changed", async ({ page, airbyte }) => {
+    const unchanged = airbyte.store.connections.get(unchangedConnection);
+    airbyte.schema.onRefresh(unchangedConnection, noChanges);
 
-      // Wait for page to load
-      await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
+    await test.step("refresh the schema", async () => {
+      await openReplicationPage(page, airbyte, unchangedConnection);
 
-      // Set up listener for schema refresh API call
-      const refreshPromise = page.waitForResponse(
-        (response) =>
-          response.url().includes("/web_backend/connections/get") &&
-          response.request().postDataJSON()?.withRefreshedCatalog === true,
-        { timeout: 30000 }
-      );
-
-      // Click refresh schema button
       await streamsTable.clickRefreshSchemaButton(page);
 
-      await refreshPromise;
-
-      // Verify "No diff" toast appears
       await schemaChange.verifyNoDiffToast(page);
+      expect.soft(airbyte.calls.last("webBackendGetConnection")).toEqual({
+        connectionId: unchanged.connectionId,
+        withRefreshedCatalog: true,
+      });
+    });
 
-      // Verify catalog diff modal does NOT appear
+    await test.step("no changes show", async () => {
       await catalogDiffModal.verifyModalNotVisible(page);
     });
   });
+});
 
-  test.describe("Non-breaking changes", () => {
-    let testData: ConnectionTestData;
+/**
+ * Non-breaking schema change
+ *
+ * The start state is a Postgres → Postgres connection made when the source had the tables cities and users. The
+ * source has since changed:
+ * - the table cities is gone
+ * - the table cars is new
+ * - users lost the column email and has the new columns address and phone
+ *
+ * An earlier schema refresh found these non-breaking changes. The connection's preference for non-breaking changes is
+ * "ignore", so the server kept the connection enabled.
+ */
+const nonBreakingConnection = connection({
+  source: postgresSource,
+  destination: postgresDestination,
+  catalog: catalogs.postgres({ selected: true, withoutStreams: ["cars"] }),
+  schemaChange: "non_breaking",
+  nonBreakingChangesPreference: "ignore",
+});
 
-    test.beforeEach(async ({ request, page }, testInfo) => {
-      // Inject feature flags into page before any navigation
-      await injectFeatureFlagsAndStyle(page);
+const nonBreakingChangeScenario = scenario({ connections: [nonBreakingConnection], experiments });
 
-      // Get worker-specific schema for isolation
-      schema = getWorkerSchema(testInfo.parallelIndex);
+/**
+ * A refresh of the changed source. The server keeps the config of the streams it already had, and adds cars as a
+ * stream that is not selected.
+ */
+const sourceChanged: SchemaRefreshAnswer = {
+  catalog: catalogs.postgres({
+    selected: true,
+    streams: { cars: { selected: false } },
+    withoutStreams: ["cities"],
+    withoutFields: { users: ["email"] },
+    withFields: { users: { address: { type: "string" }, phone: { type: "string" } } },
+  }),
+  diff: {
+    transforms: [
+      { transformType: "remove_stream", streamDescriptor: { namespace: "public", name: "cities" } },
+      { transformType: "add_stream", streamDescriptor: { namespace: "public", name: "cars" } },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "public", name: "users" },
+        updateStream: {
+          fieldTransforms: [
+            {
+              transformType: "remove_field",
+              fieldName: ["email"],
+              breaking: false,
+              removeField: { schema: { type: "string" } },
+            },
+            {
+              transformType: "add_field",
+              fieldName: ["address"],
+              breaking: false,
+              addField: { schema: { type: "string" } },
+            },
+            {
+              transformType: "add_field",
+              fieldName: ["phone"],
+              breaking: false,
+              addField: { schema: { type: "string" } },
+            },
+          ],
+          streamAttributeTransforms: [],
+        },
+      },
+    ],
+  },
+  schemaChange: "non_breaking",
+};
 
-      // Setup worker schema with baseline tables
-      await dbHelpers.setupWorkerSchema(schema);
+/** A refresh after the source is back to the schema the connection was made from. */
+const sourceRestored: SchemaRefreshAnswer = {
+  catalog: catalogs.postgres({ selected: true, withoutStreams: ["cars"] }),
+  diff: { transforms: [] },
+  schemaChange: "no_change",
+};
 
-      // Create a Postgres → Postgres connection with all streams enabled
-      // With "ignore", non-breaking changes are detected but connection stays enabled
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
-        enableAllStreams: true,
-        nonBreakingChangesPreference: "ignore",
-        schema, // Pass schema for connector configuration
+test.describe("Non-breaking schema change", () => {
+  test.describe(() => {
+    test.use({ airbyteScenario: nonBreakingChangeScenario });
+
+    test("review and save a non-breaking schema change", async ({ page, airbyte }) => {
+      const changed = airbyte.store.connections.get(nonBreakingConnection);
+      airbyte.schema.onRefresh(nonBreakingConnection, sourceChanged);
+      // The server saves the refreshed catalog with the connection. The saved catalog then matches the source schema,
+      // so the server reports no schema change any more. The mock does not compute this, so the override supplies it.
+      // next() runs the normal mock save first.
+      airbyte.override("webBackendUpdateConnection", ({ body, next, store }) => {
+        next();
+        return store.connections.update(body.connectionId, { schemaChange: "no_change" });
       });
 
-      // Make schema changes in the database
-      await dbHelpers.makeChangesInDBSource(schema);
-    });
+      await test.step("the connection list shows the connection enabled and without a warning", async () => {
+        await connectionList.visit(page, airbyte.workspaceId);
 
-    test.afterEach(async ({ request }) => {
-      if (testData) {
-        await connectionTestScaffold.cleanupConnection(request, testData);
-      }
-      // Teardown worker schema
-      if (schema) {
-        await dbHelpers.teardownWorkerSchema(schema);
-      }
-    });
+        await connectionList.verifyNoWarningIcon(page, changed);
+        await connectionList.verifyConnectionEnabled(page, changed);
+      });
 
-    test("does not show non-breaking change on list page", async ({ page, request }) => {
-      // Refresh schema via API to detect changes
-      // This is needed for the list page test since we can't click refresh there
-      await connectionAPI.refreshSchema(request, testData.connection.connectionId);
+      await test.step("open the replication page", async () => {
+        await openReplicationPage(page, airbyte, nonBreakingConnection);
+      });
 
-      // Navigate to connections list
-      await connectionList.visit(page, workspaceId);
+      await test.step("the non-breaking change banner shows, and the connection stays enabled", async () => {
+        await schemaChange.verifySchemaChangeBanner(page, false);
+        await expect.soft(connectionSwitch(page)).toBeChecked();
+        await expect.soft(connectionSwitch(page)).toBeEnabled();
+      });
 
-      // Verify NO warning icon appears (non-breaking changes with "ignore" don't show on list)
-      await connectionList.verifyNoWarningIcon(page, testData.connection);
+      await test.step("review the changes", async () => {
+        await schemaChange.clickReviewChangesButton(page);
 
-      // Verify connection is still enabled
-      await connectionList.verifyConnectionEnabled(page, testData.connection);
-    });
+        await catalogDiffModal.verifyModalVisible(page);
+        expect.soft(airbyte.calls.last("webBackendGetConnection")).toEqual({
+          connectionId: changed.connectionId,
+          withRefreshedCatalog: true,
+        });
+      });
 
-    test("shows non-breaking change that can be saved after refresh", async ({ page, request }) => {
-      // Refresh schema via API first (matching Cypress: done before navigating to page)
-      // This ensures the banner is visible when the page loads
-      testData.connection = await connectionAPI.refreshSchema(request, testData.connection.connectionId);
+      await test.step("the changes show the removed and new streams and fields", async () => {
+        await catalogDiffModal.verifyRemovedStreams(page, ["cities"]);
+        await catalogDiffModal.verifyNewStreams(page, ["cars"]);
+        await catalogDiffModal.toggleStreamAccordion(page, "users");
+        await catalogDiffModal.verifyRemovedFields(page, ["email"]);
+        await catalogDiffModal.verifyNewFields(page, ["address", "phone"]);
+      });
 
-      // Navigate to the replication page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/replication`);
+      await test.step("close the changes, and the banner goes away", async () => {
+        await catalogDiffModal.closeModal(page);
 
-      // Wait for page to load and verify refresh button is visible
-      await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
+        await schemaChange.verifySchemaChangeBannerCleared(page);
+      });
 
-      // Verify the schema change banner is visible (non-breaking changes)
-      await schemaChange.verifySchemaChangeBanner(page, false);
+      await test.step("save the refreshed streams", async () => {
+        await replicationForm.saveChanges(page, false);
 
-      // Verify connection sync switch is enabled (non-breaking doesn't disable)
-      const syncSwitch = page.locator('[data-testid="connection-status-switch"]');
-      await expect(syncSwitch).toBeEnabled();
+        const update = airbyte.calls.last("webBackendUpdateConnection");
+        expect.soft(update).toMatchObject({ connectionId: changed.connectionId, skipReset: true });
+        expect.soft(update?.syncCatalog?.streams.map(({ stream }) => stream?.name).sort()).toEqual(["cars", "users"]);
+        expect
+          .soft(Object.keys(findStream(update?.syncCatalog, "users")?.stream?.jsonSchema?.properties ?? {}))
+          .toEqual(["updated_at", "name", "id", "address", "phone"]);
+        expect.soft(findStream(update?.syncCatalog, "cars")?.config?.selected).toBe(false);
+      });
 
-      // Click the "Review changes" button on the banner to open the catalog diff modal
-      await schemaChange.clickReviewChangesButton(page);
-
-      // Verify catalog diff modal is visible
-      await catalogDiffModal.verifyModalVisible(page);
-
-      // Verify removed streams (cities table was dropped)
-      await catalogDiffModal.verifyRemovedStreams(page, ["cities"]);
-
-      // Verify new streams (cars table was created)
-      await catalogDiffModal.verifyNewStreams(page, ["cars"]);
-
-      // Toggle users stream accordion to see field changes
-      await catalogDiffModal.toggleStreamAccordion(page, "users");
-
-      // Verify removed fields (email was dropped)
-      await catalogDiffModal.verifyRemovedFields(page, ["email"]);
-
-      // Verify new fields (phone and address were added)
-      await catalogDiffModal.verifyNewFields(page, ["address", "phone"]);
-
-      // Close the modal
-      await catalogDiffModal.closeModal(page);
-
-      // Verify banner is cleared after closing modal
-      await schemaChange.verifySchemaChangeBannerCleared(page);
-
-      // Save changes (no reset modal expected for non-breaking changes)
-      await replicationForm.saveChanges(page, false);
-
-      // Verify connection is still enabled after save
-      await expect(syncSwitch).toBeEnabled();
-    });
-
-    test("clears non-breaking change when db changes are restored", async ({ page, request }) => {
-      // Refresh schema via API first
-      // This ensures the banner is visible when the page loads
-      testData.connection = await connectionAPI.refreshSchema(request, testData.connection.connectionId);
-
-      // Navigate to the replication page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/replication`);
-
-      // Wait for page to load and verify the schema change banner is visible
-      await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
-
-      // Verify the schema change banner is visible (from the API refresh in beforeEach)
-      await schemaChange.verifySchemaChangeBanner(page, false);
-
-      // Reverse the database changes (restore cities table, revert users field changes, drop cars)
-      await dbHelpers.reverseChangesInDBSource(schema);
-
-      // Click the "Review changes" button on the banner (this triggers another schema refresh)
-      await schemaChange.clickReviewChangesButton(page);
-
-      // After clicking review, the banner should clear because there are no changes anymore
-      await schemaChange.verifySchemaChangeBannerCleared(page);
-
-      // Verify catalog diff modal does NOT appear (no changes to show)
-      await catalogDiffModal.verifyModalNotVisible(page);
-
-      // Verify "No diff" toast appears
-      await schemaChange.verifyNoDiffToast(page);
+      await test.step("the connection stays enabled, and the banner stays away", async () => {
+        await expect.soft(connectionSwitch(page)).toBeChecked();
+        await expect.soft(connectionSwitch(page)).toBeEnabled();
+        await schemaChange.verifySchemaChangeBannerCleared(page);
+      });
     });
   });
 
-  test.describe("Breaking changes", () => {
-    let testData: ConnectionTestData;
+  test.describe(() => {
+    test.use({ airbyteScenario: nonBreakingChangeScenario });
 
-    test.beforeEach(async ({ request, page }, testInfo) => {
-      // Inject feature flags into page before any navigation
-      await injectFeatureFlagsAndStyle(page);
+    test("clear a non-breaking schema change after the source is restored", async ({ page, airbyte }) => {
+      const changed = airbyte.store.connections.get(nonBreakingConnection);
+      airbyte.schema.onRefresh(nonBreakingConnection, sourceRestored);
 
-      // Get worker-specific schema for isolation
-      schema = getWorkerSchema(testInfo.parallelIndex);
+      await test.step("the non-breaking change banner shows", async () => {
+        await openReplicationPage(page, airbyte, nonBreakingConnection);
 
-      // Setup worker schema with baseline tables
-      await dbHelpers.setupWorkerSchema(schema);
-
-      // Create a Postgres → Postgres connection with all streams enabled
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
-        enableAllStreams: true,
-        schema, // Pass schema for connector configuration
+        await schemaChange.verifySchemaChangeBanner(page, false);
       });
 
-      // Configure the users stream to use incremental sync with cursor field
-      // This sets up the scenario where dropping the cursor field will cause a breaking change
-      const streamToUpdate = testData.connection.syncCatalog.streams.findIndex(
-        (stream) => stream.stream?.name === "users" && stream.stream?.namespace === schema
-      );
+      await test.step("review the changes", async () => {
+        await schemaChange.clickReviewChangesButton(page);
 
-      if (streamToUpdate === -1) {
-        throw new Error("Users stream not found in connection");
-      }
-
-      const updatedCatalog = { streams: [...testData.connection.syncCatalog.streams] };
-      updatedCatalog.streams[streamToUpdate].config = {
-        ...updatedCatalog.streams[streamToUpdate].config,
-        destinationSyncMode: DestinationSyncMode.append_dedup,
-        syncMode: SyncMode.incremental,
-        cursorField: ["updated_at"],
-      };
-
-      // Update the connection with the new sync catalog
-      testData.connection = await connectionAPI.update(request, testData.connection.connectionId, {
-        syncCatalog: updatedCatalog,
+        await schemaChange.verifyNoDiffToast(page);
+        expect.soft(airbyte.calls.last("webBackendGetConnection")).toEqual({
+          connectionId: changed.connectionId,
+          withRefreshedCatalog: true,
+        });
       });
 
-      // Drop the cursor field from the database to create a breaking change
-      await dbHelpers.runQuery(alterTable("users", { drop: ["updated_at"] }, schema));
-
-      // Refresh the schema via API
-      testData.connection = await connectionAPI.refreshSchema(request, testData.connection.connectionId);
-    });
-
-    test.afterEach(async ({ request }) => {
-      if (testData) {
-        await connectionTestScaffold.cleanupConnection(request, testData);
-      }
-      // Teardown worker schema
-      if (schema) {
-        await dbHelpers.teardownWorkerSchema(schema);
-      }
-    });
-
-    test("shows breaking change on list page", async ({ page }) => {
-      // Navigate to connections list
-      await connectionList.visit(page, workspaceId);
-
-      // Verify error icon appears (breaking changes show as errors)
-      await connectionList.verifyHasErrorIcon(page, testData.connection);
-
-      // Verify connection is disabled (breaking changes auto-disable the connection)
-      await connectionList.verifyConnectionDisabled(page, testData.connection);
-    });
-
-    test("shows breaking change that can be saved after refresh and fix", async ({ page, request }) => {
-      // Navigate to the replication page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/replication`);
-
-      // Wait for page to load
-      await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
-
-      // Verify the breaking change banner is visible
-      await schemaChange.verifySchemaChangeBanner(page, true);
-
-      // Verify connection sync switch is disabled (breaking changes disable the connection)
-      const syncSwitch = page.locator('[data-testid="connection-status-switch"]');
-      await expect(syncSwitch).toBeDisabled();
-
-      // Click the "Review changes" button on the banner to open the catalog diff modal
-      await schemaChange.clickReviewChangesButton(page);
-
-      // Verify the sync switch is still disabled after opening the modal
-      await expect(syncSwitch).toBeDisabled();
-
-      // Verify catalog diff modal is visible
-      await catalogDiffModal.verifyModalVisible(page);
-
-      // Verify no removed or new streams (only field changes)
-      await catalogDiffModal.verifyNoRemovedStreams(page);
-      await catalogDiffModal.verifyNoNewStreams(page);
-
-      // Toggle users stream accordion to see field changes
-      await catalogDiffModal.toggleStreamAccordion(page, "users");
-
-      // Verify removed field (updated_at was dropped)
-      await catalogDiffModal.verifyRemovedFields(page, ["updated_at"]);
-
-      // Verify no new fields
-      await catalogDiffModal.verifyNoNewFields(page);
-
-      // Close the modal
-      await catalogDiffModal.closeModal(page);
-
-      // Verify banner is cleared after closing modal
-      await schemaChange.verifySchemaChangeBannerCleared(page);
-
-      // Fix the conflict by changing the sync mode to full_refresh
-      await streamsTable.filterByStreamName(page, "users");
-      await streamsTable.selectSyncMode(page, schema, "users", SyncMode.full_refresh, DestinationSyncMode.append);
-
-      // Save changes (no reset modal expected for fixing breaking changes)
-      await replicationForm.saveChanges(page, false);
-
-      // Verify connection is now enabled after fixing the breaking change
-      await expect(syncSwitch).toBeEnabled();
-    });
-
-    test("clears breaking change if db changes are restored", async ({ page, request }) => {
-      // Navigate to the replication page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/replication`);
-
-      // Wait for page to load
-      await expect(page.locator('button[data-testid="refresh-schema-btn"]')).toBeVisible({ timeout: 10000 });
-
-      // Verify the breaking change banner is visible
-      await schemaChange.verifySchemaChangeBanner(page, true);
-
-      // Restore the dropped column in the database
-      await dbHelpers.runQuery(alterTable("users", { add: ["updated_at TIMESTAMP"] }, schema));
-      await schemaChange.clickReviewChangesButton(page);
-
-      // After clicking review, the banner should clear because the breaking change is fixed
-      await schemaChange.verifySchemaChangeBannerCleared(page);
-
-      // Verify catalog diff modal does NOT appear (no changes to show)
-      await catalogDiffModal.verifyModalNotVisible(page);
-
-      // Verify "No diff" toast appears
-      await schemaChange.verifyNoDiffToast(page);
+      await test.step("the banner goes away, and no changes show", async () => {
+        await schemaChange.verifySchemaChangeBannerCleared(page);
+        await catalogDiffModal.verifyModalNotVisible(page);
+      });
     });
   });
+});
 
-  test.describe("Non-breaking schema update preference", () => {
-    let testData: ConnectionTestData;
+/**
+ * Non-breaking schema update preference
+ *
+ * The start state is `unchangedConnection`. Its preference for non-breaking changes is "ignore", the default of the
+ * mock store.
+ */
+test.describe(() => {
+  test.use({ airbyteScenario: unchangedScenario });
 
-    test.beforeEach(async ({ request, page }, testInfo) => {
-      // Inject feature flags into page before any navigation
-      await injectFeatureFlagsAndStyle(page);
+  test("change what the connection does with non-breaking schema changes", async ({ page, airbyte }) => {
+    const unchanged = airbyte.store.connections.get(unchangedConnection);
 
-      // Get worker-specific schema for isolation
-      schema = getWorkerSchema(testInfo.parallelIndex);
-
-      // Setup worker schema with baseline tables
-      await dbHelpers.setupWorkerSchema(schema);
-
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
-        enableAllStreams: true,
-        schema, // Pass schema for connector configuration
-        useMockSchemaDiscovery: true,
-      });
-    });
-
-    test.afterEach(async ({ request }) => {
-      if (testData) {
-        await connectionTestScaffold.cleanupConnection(request, testData);
-      }
-      // Teardown worker schema
-      if (schema) {
-        await dbHelpers.teardownWorkerSchema(schema);
-      }
-    });
-
-    test("saves non-breaking schema update preference change", async ({ page }) => {
-      // Navigate to the connection settings page
-      await page.goto(`/workspaces/${workspaceId}/connections/${testData.connection.connectionId}/settings`);
-      await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 10000 });
+    await test.step("select disable in the advanced settings", async () => {
+      await page.goto(airbyte.paths.connection(unchangedConnection, "settings"));
+      await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 
       await connectionForm.toggleAdvancedSettings(page);
       await replicationForm.selectNonBreakingChangesPreference(page, "disable");
+    });
 
-      // Set up listener for the update API call
-      const updatePromise = page.waitForResponse(
-        (response) =>
-          response.url().includes("/web_backend/connections/update") && response.request().method() === "POST",
-        { timeout: 30000 }
-      );
-
+    await test.step("save the settings", async () => {
       await page.getByRole("button", { name: "Save changes" }).click();
 
-      // Wait for the API call and verify the request body
-      const updateResponse = await updatePromise;
-      const requestBody = updateResponse.request().postDataJSON();
-      expect(requestBody.nonBreakingChangesPreference).toBe("disable");
-
-      expect(updateResponse.status()).toBe(200);
-
-      // Verify the response body has the updated preference and success notification appears
-      const responseBody = await updateResponse.json();
-      expect(responseBody.nonBreakingChangesPreference).toBe("disable");
       await expect(page.getByText("Your changes were saved!")).toBeVisible();
+      expect.soft(airbyte.calls.last("webBackendUpdateConnection")).toMatchObject({
+        connectionId: unchanged.connectionId,
+        nonBreakingChangesPreference: "disable",
+      });
+    });
+  });
+});
+
+/**
+ * Breaking schema change
+ *
+ * The start state is a Postgres → Postgres connection whose users stream syncs incrementally with the cursor
+ * updated_at. The source has since dropped the column updated_at. An earlier schema refresh found this breaking
+ * change, and the server disabled the connection.
+ */
+
+/** users as Incremental | Append + Deduped with the cursor updated_at. */
+const incrementalUsers = {
+  syncMode: SyncMode.incremental,
+  destinationSyncMode: DestinationSyncMode.append_dedup,
+  cursorField: ["updated_at"],
+};
+
+const brokenConnection = connection({
+  source: postgresSource,
+  destination: postgresDestination,
+  catalog: catalogs.postgres({ selected: true, streams: { users: incrementalUsers } }),
+  status: "inactive",
+  schemaChange: "breaking",
+});
+
+const breakingChangeScenario = scenario({ connections: [brokenConnection], experiments });
+
+/** A refresh while updated_at is missing: users has lost the field, and the server marks it as a breaking change. */
+const updatedAtDropped: SchemaRefreshAnswer = {
+  catalog: catalogs.postgres({
+    selected: true,
+    streams: { users: incrementalUsers },
+    withoutFields: { users: ["updated_at"] },
+  }),
+  diff: {
+    transforms: [
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "public", name: "users" },
+        updateStream: {
+          fieldTransforms: [
+            {
+              transformType: "remove_field",
+              fieldName: ["updated_at"],
+              breaking: true,
+              removeField: {
+                schema: { type: "string", format: "date-time", airbyte_type: "timestamp_without_timezone" },
+              },
+            },
+          ],
+          streamAttributeTransforms: [],
+        },
+      },
+    ],
+  },
+  schemaChange: "breaking",
+};
+
+/** A refresh after updated_at is back: the source schema is the one the connection was made from. */
+const updatedAtRestored: SchemaRefreshAnswer = {
+  catalog: catalogs.postgres({ selected: true, streams: { users: incrementalUsers } }),
+  diff: { transforms: [] },
+  schemaChange: "no_change",
+};
+
+test.describe("Breaking schema change", () => {
+  test.describe(() => {
+    test.use({ airbyteScenario: breakingChangeScenario });
+
+    test("find and fix a breaking schema change", async ({ page, airbyte }) => {
+      const broken = airbyte.store.connections.get(brokenConnection);
+      airbyte.schema.onRefresh(brokenConnection, updatedAtDropped);
+      // The server diffs the saved catalog against the source schema. Full refresh needs no cursor, so the saved
+      // catalog has no breaking change any more. The mock does not compute this, so the override supplies it.
+      // next() runs the normal mock save first.
+      airbyte.override("webBackendUpdateConnection", ({ body, next, store }) => {
+        next();
+        return store.connections.update(body.connectionId, { schemaChange: "no_change" });
+      });
+
+      await test.step("the connection list shows the connection with an error and disabled", async () => {
+        await connectionList.visit(page, airbyte.workspaceId);
+
+        await connectionList.verifyHasErrorIcon(page, broken);
+        await connectionList.verifyConnectionDisabled(page, broken);
+      });
+
+      await test.step("open the replication page from the error", async () => {
+        await page.getByTestId(`link-replication-${broken.connectionId}`).click();
+
+        await waitForReplicationPage(page);
+      });
+
+      await test.step("the breaking change banner shows, and the connection cannot be enabled", async () => {
+        await schemaChange.verifySchemaChangeBanner(page, true);
+        await expect.soft(connectionSwitch(page)).toBeDisabled();
+      });
+
+      await test.step("review the changes", async () => {
+        await schemaChange.clickReviewChangesButton(page);
+
+        await catalogDiffModal.verifyModalVisible(page);
+        expect.soft(airbyte.calls.last("webBackendGetConnection")).toEqual({
+          connectionId: broken.connectionId,
+          withRefreshedCatalog: true,
+        });
+      });
+
+      await test.step("the changes show that users lost the field updated_at", async () => {
+        await catalogDiffModal.verifyNoRemovedStreams(page);
+        await catalogDiffModal.verifyNoNewStreams(page);
+        await catalogDiffModal.toggleStreamAccordion(page, "users");
+        await catalogDiffModal.verifyRemovedFields(page, ["updated_at"]);
+        await catalogDiffModal.verifyNoNewFields(page);
+        await expect.soft(connectionSwitch(page)).toBeDisabled();
+      });
+
+      await test.step("close the changes, and the banner goes away", async () => {
+        await catalogDiffModal.closeModal(page);
+
+        await schemaChange.verifySchemaChangeBannerCleared(page);
+      });
+
+      await test.step("change users to Full refresh | Append and save", async () => {
+        await streamsTable.filterByStreamName(page, "users");
+        await streamsTable.selectSyncMode(page, "public", "users", SyncMode.full_refresh, DestinationSyncMode.append);
+        await replicationForm.saveChanges(page, false);
+
+        const update = airbyte.calls.last("webBackendUpdateConnection");
+        expect.soft(update).toMatchObject({ connectionId: broken.connectionId, skipReset: true });
+        expect.soft(findStream(update?.syncCatalog, "users")?.config).toMatchObject({
+          syncMode: SyncMode.full_refresh,
+          destinationSyncMode: DestinationSyncMode.append,
+        });
+      });
+
+      await test.step("the connection can be enabled again", async () => {
+        await expect.soft(connectionSwitch(page)).toBeEnabled();
+      });
+    });
+  });
+
+  test.describe(() => {
+    test.use({ airbyteScenario: breakingChangeScenario });
+
+    test("clear a breaking schema change after the source is restored", async ({ page, airbyte }) => {
+      const broken = airbyte.store.connections.get(brokenConnection);
+      airbyte.schema.onRefresh(brokenConnection, updatedAtRestored);
+
+      await test.step("the breaking change banner shows, and the connection cannot be enabled", async () => {
+        await openReplicationPage(page, airbyte, brokenConnection);
+
+        await schemaChange.verifySchemaChangeBanner(page, true);
+        await expect.soft(connectionSwitch(page)).toBeDisabled();
+      });
+
+      await test.step("review the changes", async () => {
+        await schemaChange.clickReviewChangesButton(page);
+
+        await schemaChange.verifyNoDiffToast(page);
+        expect.soft(airbyte.calls.last("webBackendGetConnection")).toEqual({
+          connectionId: broken.connectionId,
+          withRefreshedCatalog: true,
+        });
+      });
+
+      await test.step("the banner goes away, and no changes show", async () => {
+        await schemaChange.verifySchemaChangeBannerCleared(page);
+        await catalogDiffModal.verifyModalNotVisible(page);
+      });
     });
   });
 });

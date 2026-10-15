@@ -31,7 +31,6 @@ import { appendRandomString } from "./ui";
  * - jobUI: Job event and modal helpers for timeline/status tests
  * - connectionTestHelpers: Test setup helpers for creating connector pairs and cleanup
  * - connectionForm: Form interaction helpers for connection settings page
- * - connectionTestScaffold: Reusable test scaffolding patterns for connection test suites
  *
  * Currently supported connector pairs: "poke-e2e", "faker-e2e", "postgres-postgres", "poke-postgres"
  */
@@ -195,11 +194,6 @@ export const connectionAPI = {
     return await response.json();
   },
 
-  // Refresh connection schema (convenience method for get with withRefreshedCatalog)
-  refreshSchema: async (request: APIRequestContext, connectionId: string): Promise<WebBackendConnectionRead> => {
-    return connectionAPI.get(request, connectionId, { withRefreshedCatalog: true });
-  },
-
   // Update a connection
   update: async (
     request: APIRequestContext,
@@ -327,10 +321,7 @@ export const connectionTestHelpers = {
     workspaceId: string,
     connectorType: ConnectorPair = "poke-e2e",
     sourcePrefix?: string,
-    destinationPrefix?: string,
-    options?: {
-      schema?: string; // PostgreSQL schema for worker isolation
-    }
+    destinationPrefix?: string
   ) => {
     // Determine connector APIs and default names based on type
     const configs: Record<
@@ -372,33 +363,8 @@ export const connectionTestHelpers = {
     const sourceName = appendRandomString(sourcePrefix ?? config.defaultSourcePrefix);
     const destinationName = appendRandomString(destinationPrefix ?? config.defaultDestinationPrefix);
 
-    // Apply schema configuration for Postgres connectors
-    let sourceConfigOverrides: Record<string, unknown> | undefined;
-    let destConfigOverrides: Record<string, unknown> | undefined;
-
-    if (options?.schema) {
-      // Only apply source schema overrides when source is Postgres
-      if (connectorType === "postgres-postgres") {
-        sourceConfigOverrides = { schemas: [options.schema] };
-        destConfigOverrides = { schema: options.schema };
-      } else if (connectorType === "poke-postgres") {
-        // For poke-postgres, only destination needs schema config
-        destConfigOverrides = { schema: options.schema };
-      }
-    }
-
-    const source = (await config.sourceAPI.create(
-      request,
-      sourceName,
-      workspaceId,
-      sourceConfigOverrides
-    )) as SourceRead;
-    const destination = (await config.destinationAPI.create(
-      request,
-      destinationName,
-      workspaceId,
-      destConfigOverrides
-    )) as DestinationRead;
+    const source = (await config.sourceAPI.create(request, sourceName, workspaceId)) as SourceRead;
+    const destination = (await config.destinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
 
     return {
       source,
@@ -599,96 +565,5 @@ export const connectionForm = {
   verifyPreviewNotVisible: async (page: Page, testId: string): Promise<void> => {
     const preview = page.locator(`[data-testid="${testId}"]`);
     return expect(preview).not.toBeVisible({ timeout: 10000 });
-  },
-};
-
-/**
- * Type alias for connection test data returned by setupConnection
- * Provides explicit typing for test variables
- */
-export interface ConnectionTestData {
-  connection: WebBackendConnectionRead;
-  sourceId: string;
-  destinationId: string;
-  source: SourceRead;
-  destination: DestinationRead;
-}
-
-// Reusable test scaffolding for connection test suites
-// This provides a pattern for managing connection lifecycle in tests
-export const connectionTestScaffold = {
-  /**
-   * Creates a connection test scaffold with automatic setup/cleanup
-   * Use in beforeAll/afterAll hooks to eliminate boilerplate
-   *
-   * @example
-   * test.beforeAll(async ({ request }) => {
-   *   testData = await connectionTestScaffold.setupConnection(
-   *     request, workspaceId, "postgres-postgres", { schema: "test_worker_0" }
-   *   );
-   * });
-   */
-  setupConnection: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    connectorType: ConnectorPair = "poke-e2e",
-    options: {
-      enableAllStreams?: boolean;
-      status?: "active" | "inactive";
-      nonBreakingChangesPreference?: "propagate_columns" | "propagate_fully" | "ignore" | "disable";
-      schema?: string; // PostgreSQL schema for worker isolation
-      useMockSchemaDiscovery?: boolean;
-    } = {}
-  ): Promise<ConnectionTestData> => {
-    const testResources = await connectionTestHelpers.setupConnectors(
-      request,
-      workspaceId,
-      connectorType,
-      undefined,
-      undefined,
-      { schema: options.schema }
-    );
-
-    // Determine mock source type based on connector type
-    const mockSourceType = connectorType === "poke-e2e" || connectorType === "poke-postgres" ? "pokeapi" : "postgres";
-
-    const connection = await connectionAPI.create(request, testResources.source, testResources.destination, {
-      enableAllStreams: options.enableAllStreams ?? true,
-      nonBreakingChangesPreference: options.nonBreakingChangesPreference,
-      useMockSchemaDiscovery: options.useMockSchemaDiscovery,
-      mockSourceType,
-    });
-
-    // Apply status if specified
-    if (options.status === "inactive") {
-      await connectionAPI.update(request, connection.connectionId, { status: "inactive" });
-    }
-
-    return {
-      connection,
-      sourceId: testResources.sourceId,
-      destinationId: testResources.destinationId,
-      source: testResources.source,
-      destination: testResources.destination,
-    };
-  },
-
-  /**
-   * Cleans up connection test resources
-   * Use in afterAll hooks
-   */
-  cleanupConnection: (
-    request: APIRequestContext,
-    testData: {
-      connection?: WebBackendConnectionRead;
-      sourceId?: string;
-      destinationId?: string;
-    }
-  ) => {
-    return connectionTestHelpers.cleanupConnectionTest(request, {
-      connectionId: testData.connection?.connectionId,
-      sourceId: testData.sourceId,
-      destinationId: testData.destinationId,
-    });
   },
 };
