@@ -58,7 +58,7 @@ open class DomainVerificationJob(
 
     val pendingVerifications = airbyteApiClient.domainVerificationsApi.listPendingDomainVerifications()
 
-    val verifications = pendingVerifications.domainVerifications ?: emptyList()
+    val verifications = pendingVerifications.domainVerifications
     logger.info { "Found ${verifications.size} pending domain verifications" }
 
     var successCount = 0
@@ -135,7 +135,7 @@ open class DomainVerificationJob(
       return true
     }
 
-    val attempts = verification.attempts ?: 0
+    val attempts = verification.attempts
 
     // First hour: check every time (every minute)
     if (attempts < FREQUENT_CHECK_THRESHOLD) {

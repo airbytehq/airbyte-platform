@@ -321,7 +321,7 @@ class SlackNotificationClient : NotificationClient {
     val slackNotification =
       buildSchemaPropagationNotification(
         notification.workspace.name!!,
-        notification.sourceInfo.name!!,
+        notification.sourceInfo.name,
         summary,
         header,
         notification.workspace.url,
@@ -362,7 +362,7 @@ class SlackNotificationClient : NotificationClient {
     val slackNotification =
       buildSchemaDiffToApplyNotification(
         notification.workspace.name!!,
-        notification.sourceInfo.name!!,
+        notification.sourceInfo.name,
         summary,
         header,
         message,
@@ -406,7 +406,7 @@ class SlackNotificationClient : NotificationClient {
     val slackNotification =
       buildSchemaDiffToApplyNotification(
         notification.workspace.name!!,
-        notification.sourceInfo.name!!,
+        notification.sourceInfo.name,
         summary,
         header,
         message,

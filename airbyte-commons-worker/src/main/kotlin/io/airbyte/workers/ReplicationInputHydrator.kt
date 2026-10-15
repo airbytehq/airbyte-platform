@@ -131,10 +131,10 @@ class ReplicationInputHydrator(
 
     val declaredStreamFields =
       connectionInfo.syncCatalog
-        ?.streams
-        ?.filter { it?.config?.selected == true }
-        ?.mapNotNull { streamAndConfiguration ->
-          val stream = streamAndConfiguration?.stream ?: return@mapNotNull null
+        .streams
+        .filter { it.config?.selected == true }
+        .mapNotNull { streamAndConfiguration ->
+          val stream = streamAndConfiguration.stream ?: return@mapNotNull null
           val properties = stream.jsonSchema?.findPath("properties")
           val fields =
             if (properties?.isObject == true) {
@@ -146,7 +146,7 @@ class ReplicationInputHydrator(
             StreamDescriptor().withName(stream.name).withNamespace(stream.namespace),
             fields,
           )
-        } ?: emptyList()
+        }
     val catalog = retrieveCatalog(connectionInfo)
     if (replicationActivityInput.isReset!!) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.

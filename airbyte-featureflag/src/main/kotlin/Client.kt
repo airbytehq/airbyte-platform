@@ -273,7 +273,7 @@ class FeatureFlagServiceClient(
         .url("${airbyteFeatureFlagConfig.baseUrl}$basePath/$key/evaluate?${context.toQueryParams()}")
         .build()
     return httpClient.newCall(request).execute().use {
-      if (it.code == 200) it.body?.string() else null
+      if (it.code == 200) it.body.string() else null
     }
   }
 

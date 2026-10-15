@@ -534,7 +534,7 @@ class JobTracker
       // track it.
       if (workspaceId != null) {
         val standardWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)
-        if (standardWorkspace?.name != null) {
+        if (standardWorkspace.name != null) {
           val standardTrackingMetadata =
             mapOf(
               "workspace_id" to workspaceId,

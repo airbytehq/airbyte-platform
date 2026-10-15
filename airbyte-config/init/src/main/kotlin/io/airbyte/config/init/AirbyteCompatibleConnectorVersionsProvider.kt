@@ -49,7 +49,7 @@ open class AirbyteCompatibleConnectorVersionsProvider(
         if (response.isSuccessful) {
           val responseBody = response.body.string()
           val compatibleConnectorVersionsMatrix = Jsons.deserialize(responseBody, AirbyteCompatibleConnectorVersionsMatrix::class.java)
-          return compatibleConnectorVersionsMatrix?.convertToMap() ?: emptyMap()
+          return compatibleConnectorVersionsMatrix.convertToMap()
         } else {
           logger.warn {
             "Disabling compatibility validation: request to fetch platform compatibility matrix failed: " +

@@ -100,7 +100,7 @@ class PromoteOrRollbackActivityImpl(
             return
           } else {
             throw IOException(
-              "Failed to trigger GHA workflow for $dockerRepository:$releaseCandidateVersion: ${response.code}, ${response.body?.string()}\n" +
+              "Failed to trigger GHA workflow for $dockerRepository:$releaseCandidateVersion: ${response.code}, ${response.body.string()}\n" +
                 "request.url: ${request.url}, request.body: $jsonBodyString",
             )
           }

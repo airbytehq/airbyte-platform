@@ -98,7 +98,7 @@ class AccessTokenInterceptor(
       throw Exception("Token request failed with HTTP code ${response.code}")
     }
 
-    val responseBody = response.body?.string() ?: throw Exception("Token response body is null")
+    val responseBody = response.body.string()
     val tokenNode = objectMapper.readTree(responseBody)
     val token = tokenNode.get(ACCESS_TOKEN_RESPONSE_PARAM).asText()
 

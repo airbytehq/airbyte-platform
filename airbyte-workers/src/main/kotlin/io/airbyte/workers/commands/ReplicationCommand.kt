@@ -134,7 +134,7 @@ class ReplicationCommand(
     syncSummary.status = replicationAttemptSummary.status
     syncSummary.totalStats = replicationAttemptSummary.totalStats
     syncSummary.streamStats = replicationAttemptSummary.streamStats
-    syncSummary.performanceMetrics = replicationAttemptSummary?.performanceMetrics
+    syncSummary.performanceMetrics = replicationAttemptSummary.performanceMetrics
     syncSummary.streamCount = replicationAttemptSummary.streamCount ?: 0L
     standardSyncOutput.standardSyncSummary = syncSummary
     standardSyncOutput.failures = failures

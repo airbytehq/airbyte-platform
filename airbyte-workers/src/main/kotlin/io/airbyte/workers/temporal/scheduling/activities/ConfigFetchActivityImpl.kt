@@ -180,7 +180,7 @@ class ConfigFetchActivityImpl
         val nextRunStart = prevRunStart + getIntervalInSecond(connectionRead.scheduleData!!.basicSchedule!!)
         val timeToWait =
           Duration.ofSeconds(
-            max(0, nextRunStart - currentSecondsSupplier.get()!!),
+            max(0, nextRunStart - currentSecondsSupplier.get()),
           )
         return timeToWait
       } else {
@@ -210,7 +210,7 @@ class ConfigFetchActivityImpl
             // resolution.
             val earliestNextRun: Long =
               max(
-                currentSecondsSupplier.get()!! * MS_PER_SECOND,
+                currentSecondsSupplier.get() * MS_PER_SECOND,
                 (
                   if (previousJobOptional.job != null) {
                     if (previousJobOptional.job!!.startedAt != null) {
@@ -224,11 +224,11 @@ class ConfigFetchActivityImpl
                   } else {
                     currentSecondsSupplier.get()
                   }
-                )!! * MS_PER_SECOND,
+                ) * MS_PER_SECOND,
               )
             val nextRunStart = cronExpression.getNextValidTimeAfter(Date(earliestNextRun))
             return Duration.ofSeconds(
-              max(0, nextRunStart.time / MS_PER_SECOND - currentSecondsSupplier.get()!!),
+              max(0, nextRunStart.time / MS_PER_SECOND - currentSecondsSupplier.get()),
             )
           }
         } catch (e: ParseException) {

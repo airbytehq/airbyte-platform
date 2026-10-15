@@ -81,7 +81,7 @@ class CheckCommand(
       organizationId = organizationId,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
       type = WorkloadType.CHECK,
-      priority = WorkloadPriority.fromValue(input.launcherConfig.priority.toString())!!,
+      priority = WorkloadPriority.fromValue(input.launcherConfig.priority.toString()),
       signalInput = signalPayload,
       dataplaneGroup = dataplaneGroup,
     )

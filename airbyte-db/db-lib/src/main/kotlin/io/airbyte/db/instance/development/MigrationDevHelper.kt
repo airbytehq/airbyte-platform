@@ -47,7 +47,7 @@ object MigrationDevHelper {
       """.trimIndent()
     }
 
-    val migrateResult = migrator.migrate() ?: throw IllegalStateException("MigrationInfo is null")
+    val migrateResult = migrator.migrate()
     log.info {
       "\n==== Migration Result ====\n" +
         formatMigrationResult(migrateResult)

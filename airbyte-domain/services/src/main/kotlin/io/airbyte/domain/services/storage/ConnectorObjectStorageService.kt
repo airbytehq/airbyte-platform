@@ -87,7 +87,7 @@ class ConnectorObjectStorageService(
   }
 
   private fun getJobDestinationVersion(job: Job): ActorDefinitionVersion? {
-    if (job.config?.configType != JobConfig.ConfigType.SYNC) return null
+    if (job.config.configType != JobConfig.ConfigType.SYNC) return null
 
     val destinationVersionId = job.config.sync.destinationDefinitionVersionId
     return try {

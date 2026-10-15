@@ -28,7 +28,7 @@ class StateCheckSumEventPubSubWriter(
 
   fun publishEvent(event: List<StateCheckSumCountEvent>) {
     try {
-      event.forEach { stateCheckSumEvent -> Jsons.serialize(stateCheckSumEvent)?.let { writeMessageToPubSub(it) } }
+      event.forEach { stateCheckSumEvent -> writeMessageToPubSub(Jsons.serialize(stateCheckSumEvent)) }
     } catch (e: Exception) {
       logger.error(e) { "Swallowed exception during publishing pubsub message" }
     }

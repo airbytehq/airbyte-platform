@@ -41,7 +41,7 @@ class WorkloadApiClient(
       val reason =
         if (error is ImagePullException || error.cause is ImagePullException) {
           val imagePullException = if (error is ImagePullException) error else error.cause as ImagePullException
-          imagePullException.message ?: "Unable to pull container image"
+          imagePullException.message
         } else {
           // Extract the exception message; fallback to exception type if message is null
           error.message ?: "Failed to launch workload: ${error.javaClass.simpleName}"

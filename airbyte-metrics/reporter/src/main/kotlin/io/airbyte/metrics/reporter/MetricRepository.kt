@@ -100,7 +100,12 @@ internal class MetricRepository(
         ).groupBy(io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.PROCESSING_TASK_QUEUE)
 
     val countResultField = DSL.field(DSL.name(countFieldName), Int::class.java)
-    val queriedMap = result.fetchMap(io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.PROCESSING_TASK_QUEUE, countResultField)
+    // processing_task_queue is nullable: a running attempt without a queue is reported under the unknown queue.
+    val queriedMap =
+      result
+        .fetchMap(io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.PROCESSING_TASK_QUEUE, countResultField)
+        .mapKeys { it.key ?: Emitter.UNKNOWN }
+        .toMutableMap()
     for (potentialAttemptQueue in REGISTERED_ATTEMPT_QUEUE) {
       if (!queriedMap.containsKey(potentialAttemptQueue)) {
         queriedMap[potentialAttemptQueue] = 0
@@ -184,7 +189,12 @@ internal class MetricRepository(
         DSL.name("run_duration_seconds"),
         Double::class.java,
       )
-    val queriedMap = result.intoMap(taskQueueResultField, runDurationSecondsField)
+    // processing_task_queue is nullable: a running attempt without a queue is reported under the unknown queue.
+    val queriedMap =
+      result
+        .intoMap(taskQueueResultField, runDurationSecondsField)
+        .mapKeys { it.key ?: Emitter.UNKNOWN }
+        .toMutableMap()
     for (potentialAttemptQueue in REGISTERED_ATTEMPT_QUEUE) {
       if (!queriedMap.containsKey(potentialAttemptQueue)) {
         queriedMap[potentialAttemptQueue] = 0.0

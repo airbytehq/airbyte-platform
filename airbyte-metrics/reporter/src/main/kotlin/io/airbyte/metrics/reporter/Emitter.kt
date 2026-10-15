@@ -27,7 +27,7 @@ internal class NumPendingJobs(
         client.gauge(
           OssMetricsRegistry.NUM_PENDING_JOBS,
           count.toDouble(),
-          MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName ?: UNKNOWN),
+          MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName),
         )
       }
       null
@@ -45,7 +45,7 @@ internal class NumRunningJobs(
         client.gauge(
           OssMetricsRegistry.NUM_RUNNING_JOBS,
           count.toDouble(),
-          MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue ?: UNKNOWN),
+          MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue),
         )
       }
       null
@@ -76,7 +76,7 @@ internal class OldestRunningJob(
         client.gauge(
           OssMetricsRegistry.OLDEST_RUNNING_JOB_AGE_SECS,
           count,
-          MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue ?: UNKNOWN),
+          MetricAttribute(MetricTags.ATTEMPT_QUEUE, attemptQueue),
         )
       }
       null

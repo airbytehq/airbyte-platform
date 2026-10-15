@@ -102,7 +102,7 @@ class TestFlagsSetter(
             .put(Jsons.serialize(requestFlag).toRequestBody("application/json".toMediaType()))
             .build(),
         ).execute()
-    assert(response.code == 200) { "Failed to update the feature flag ${requestFlag.key}, error: ${response.code}: ${response.body?.string()}" }
+    assert(response.code == 200) { "Failed to update the feature flag ${requestFlag.key}, error: ${response.code}: ${response.body.string()}" }
   }
 
   fun <T> getFlag(flag: Flag<T>): String? =
@@ -114,7 +114,7 @@ class TestFlagsSetter(
           .build(),
       ).execute()
       .body
-      ?.string()
+      .string()
 
   fun <T> evalFlag(
     flag: Flag<T>,
@@ -128,7 +128,7 @@ class TestFlagsSetter(
           .build(),
       ).execute()
       .body
-      ?.string()
+      .string()
 
   fun <T> setRule(
     flag: Flag<T>,
@@ -149,7 +149,7 @@ class TestFlagsSetter(
             .post(Jsons.serialize(requestRule).toRequestBody("application/json".toMediaType()))
             .build(),
         ).execute()
-    assert(response.code == 200) { "Failed to update the feature flag ${flag.key}, error: ${response.code}: ${response.body?.string()}" }
+    assert(response.code == 200) { "Failed to update the feature flag ${flag.key}, error: ${response.code}: ${response.body.string()}" }
   }
 
   fun <T> deleteRule(

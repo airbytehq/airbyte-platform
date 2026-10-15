@@ -140,6 +140,59 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
+    fun runningJobsWithoutQueueAreReportedUnderUnknown() {
+      // processing_task_queue is nullable: a running attempt without a queue must be counted under the
+      // unknown queue, never surface as a null key.
+      ctx!!
+        .insertInto(
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.JOB_ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.STATUS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.PROCESSING_TASK_QUEUE,
+        ).values(10L, 1L, AttemptStatus.running, SYNC_QUEUE)
+        .values(20L, 2L, AttemptStatus.running, null)
+        .execute()
+      val activeConnectionId = UUID.randomUUID()
+      ctx!!
+        .insertInto(
+          Tables.CONNECTION,
+          Tables.CONNECTION.ID,
+          Tables.CONNECTION.STATUS,
+          Tables.CONNECTION.NAMESPACE_DEFINITION,
+          Tables.CONNECTION.SOURCE_ID,
+          Tables.CONNECTION.DESTINATION_ID,
+          Tables.CONNECTION.NAME,
+          Tables.CONNECTION.CATALOG,
+          Tables.CONNECTION.MANUAL,
+        ).values(
+          activeConnectionId,
+          StatusType.active,
+          NamespaceDefinitionType.source,
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          CONN,
+          JSONB.valueOf("{}"),
+          true,
+        ).execute()
+      ctx!!
+        .insertInto(
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.SCOPE,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.STATUS,
+        ).values(1L, activeConnectionId.toString(), JobStatus.running)
+        .values(2L, activeConnectionId.toString(), JobStatus.running)
+        .execute()
+
+      val result = db!!.numberOfRunningJobsByTaskQueue()
+      Assertions.assertEquals(setOf(SYNC_QUEUE, AWS_SYNC_QUEUE, "null", Emitter.UNKNOWN), result.keys)
+      Assertions.assertEquals(1, result[SYNC_QUEUE])
+      Assertions.assertEquals(1, result[Emitter.UNKNOWN])
+      Assertions.assertEquals(0, result["null"])
+    }
+
+    @Test
     fun pendingJobsShouldReturnCorrectCount() {
       // non-pending jobs
       val connectionUuid = UUID.randomUUID()
@@ -639,6 +692,40 @@ abstract class MetricRepositoryTest {
       // expected age is 1000 seconds, but allow for +/- 1 second to account for timing/rounding errors
       Assertions.assertTrue(9999 < result[SYNC_QUEUE]!! && result[SYNC_QUEUE]!! < 10001L)
       Assertions.assertEquals(result[AWS_SYNC_QUEUE], 0.0)
+    }
+
+    @Test
+    fun runningJobsWithoutQueueReportTheirAgeUnderUnknown() {
+      // processing_task_queue is nullable: the age of a running attempt without a queue must be reported
+      // under the unknown queue, never surface as a null key.
+      val expAgeSecs = 10000
+      val oldestCreateAt = OffsetDateTime.now().minus(expAgeSecs.toLong(), ChronoUnit.SECONDS)
+      ctx!!
+        .insertInto(
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.JOB_ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.STATUS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS.PROCESSING_TASK_QUEUE,
+        ).values(10L, 1L, AttemptStatus.running, SYNC_QUEUE)
+        .values(20L, 2L, AttemptStatus.running, null)
+        .execute()
+      ctx!!
+        .insertInto(
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.ID,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.SCOPE,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.STATUS,
+          io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.CREATED_AT,
+        ).values(1L, "", JobStatus.running, OffsetDateTime.now())
+        .values(2L, "", JobStatus.running, oldestCreateAt)
+        .execute()
+
+      val result = db!!.oldestRunningJobAgeSecsByTaskQueue()
+      Assertions.assertEquals(setOf(SYNC_QUEUE, AWS_SYNC_QUEUE, "null", Emitter.UNKNOWN), result.keys)
+      // allow +/- 1 second for timing and rounding
+      Assertions.assertTrue(9999 < result[Emitter.UNKNOWN]!! && result[Emitter.UNKNOWN]!! < 10001L)
+      Assertions.assertEquals(0.0, result["null"])
     }
 
     @Test
