@@ -60,7 +60,34 @@ function toListItem(connection: Readonly<WebBackendConnectionRead>): WebBackendC
 
 /** Connection reads, lists, updates, and deletes. The mock has no jobs, so every connection is idle. */
 export const connectionHandlers: HandlerMap = {
-  webBackendGetConnection: ({ body, store }) => store.connections.find(body.connectionId) ?? notFound(),
+  /**
+   * With `withRefreshedCatalog`, the server discovers the source schema and diffs it against the connection. The mock
+   * computes no diff: it answers with the catalog, diff and schemaChange that the test set with
+   * `airbyte.schema.onRefresh`. The refresh does not change the stored connection.
+   */
+  webBackendGetConnection: ({ body, store }) => {
+    const connection = store.connections.find(body.connectionId);
+    if (!connection) {
+      return notFound();
+    }
+    if (!body.withRefreshedCatalog) {
+      return connection;
+    }
+
+    const refresh = store.schemaRefreshes.find(body.connectionId);
+    if (!refresh) {
+      throw new Error(
+        `The webapp refreshed the schema of connection ${body.connectionId}, but the test set no answer. ` +
+          "Call airbyte.schema.onRefresh() before the refresh."
+      );
+    }
+    return {
+      ...connection,
+      syncCatalog: refresh.catalog,
+      catalogDiff: refresh.diff,
+      schemaChange: refresh.schemaChange,
+    };
+  },
 
   webBackendListConnectionsForWorkspace: ({ body, store }) => {
     if (isOtherWorkspace(store, body.workspaceId)) {

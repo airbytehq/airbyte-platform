@@ -5,10 +5,18 @@ import type { Store } from "../store";
 export class MockResponse {
   readonly status: number;
   readonly json?: unknown;
+  /** A body that is not JSON, such as an error page of a proxy. The mock sends it as text/plain instead of `json`. */
+  readonly text?: string;
 
-  constructor(status: number, json?: unknown) {
+  constructor(status: number, json?: unknown, text?: string) {
     this.status = status;
     this.json = json;
+    this.text = text;
+  }
+
+  /** A reply with a text/plain body instead of JSON. */
+  static text(status: number, body: string): MockResponse {
+    return new MockResponse(status, undefined, body);
   }
 }
 
@@ -33,3 +41,15 @@ export interface HandlerContext<O extends Op> {
 export type Handler<O extends Op> = (context: HandlerContext<O>) => Reply<O> | MockResponse;
 
 export type HandlerMap = { [O in Op]?: Handler<O> };
+
+export interface OverrideContext<O extends Op> extends HandlerContext<O> {
+  /** Runs the default handler of the operation and returns its reply. Throws when the operation has no default handler. */
+  next(): Reply<O> | MockResponse;
+}
+
+/**
+ * Answers one operation in place of its default handler, for the rest of one test. Set it with `airbyte.override`.
+ * Use it for an answer that the default handler does not give: an error, or a backend decision that the mock does not
+ * compute.
+ */
+export type Override<O extends Op> = (context: OverrideContext<O>) => Reply<O> | MockResponse;

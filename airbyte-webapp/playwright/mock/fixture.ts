@@ -22,11 +22,12 @@ interface MockOptions {
 
 /**
  * Playwright `test` with a mock Airbyte backend. Each test gets a fresh store built from its scenario.
- * Every API call is answered from the store. A request that no handler answers fails the test, with the
+ * Every API call is answered from the store, or by an override that the test set. The hosts outside Airbyte in
+ * external.ts are answered from the scenario. A request that nothing answers fails the test, with the
  * request listed as "METHOD path (operationId)".
  *
- * Set up data in the scenario. In the test, check the requests the webapp sent (`airbyte.calls`) and check
- * the page. Do not check the store.
+ * Set up data in the scenario. Set a backend reaction that the mock does not compute with `airbyte.override`. In
+ * the test, check the requests the webapp sent (`airbyte.calls`) and check the page. Do not check the store.
  */
 export const test = base.extend<{ airbyte: MockAirbyte } & MockOptions>({
   airbyteScenario: [undefined, { option: true }],

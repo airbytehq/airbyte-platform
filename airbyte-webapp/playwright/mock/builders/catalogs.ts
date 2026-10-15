@@ -1,5 +1,6 @@
 import type {
   AirbyteCatalog,
+  AirbyteStream,
   AirbyteStreamAndConfiguration,
   AirbyteStreamConfiguration,
 } from "@src/core/api/types/AirbyteClient";
@@ -11,6 +12,8 @@ export interface CatalogOptions {
   selected?: boolean;
   /** Per-stream config overrides, keyed by stream name. Applied after `selected`. */
   streams?: Record<string, Partial<AirbyteStreamConfiguration>>;
+  /** Fields to remove from the JSON schema of a stream, keyed by stream name. For example, a column the source dropped. */
+  withoutFields?: Record<string, string[]>;
 }
 
 /**
@@ -23,8 +26,22 @@ const defaultConfig: AirbyteStreamConfiguration = {
   selected: false,
 };
 
-function configure(catalog: AirbyteCatalog, { selected, streams = {} }: CatalogOptions): AirbyteCatalog {
-  const unknownStreams = Object.keys(streams).filter(
+/** Removes fields from the top-level properties of a stream's JSON schema. */
+function removeFields(stream: AirbyteStream, fields: string[]): AirbyteStream {
+  const properties = (stream.jsonSchema?.properties ?? {}) as Record<string, unknown>;
+  const unknownFields = fields.filter((field) => !(field in properties));
+  if (unknownFields.length > 0) {
+    throw new Error(`Stream ${stream.name} has no field named ${unknownFields.join(", ")}`);
+  }
+  const kept = Object.fromEntries(Object.entries(properties).filter(([field]) => !fields.includes(field)));
+  return { ...stream, jsonSchema: { ...stream.jsonSchema, properties: kept } };
+}
+
+function configure(
+  catalog: AirbyteCatalog,
+  { selected, streams = {}, withoutFields = {} }: CatalogOptions
+): AirbyteCatalog {
+  const unknownStreams = [...Object.keys(streams), ...Object.keys(withoutFields)].filter(
     (name) => !catalog.streams.some(({ stream }) => stream?.name === name)
   );
   if (unknownStreams.length > 0) {
@@ -33,7 +50,7 @@ function configure(catalog: AirbyteCatalog, { selected, streams = {} }: CatalogO
 
   return {
     streams: catalog.streams.map(({ stream, config }) => ({
-      stream,
+      stream: stream && withoutFields[stream.name] ? removeFields(stream, withoutFields[stream.name]) : stream,
       config: {
         ...(config ?? defaultConfig),
         ...(selected === undefined ? {} : { selected }),

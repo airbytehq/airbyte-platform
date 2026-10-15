@@ -9,8 +9,11 @@ import type { Handle } from "./builders/handle";
 import type { Scenario } from "./scenario";
 import type {
   ActorDefinitionVersionRead,
+  AirbyteCatalog,
+  CatalogDiff,
   DestinationRead,
   OrganizationRead,
+  SchemaChange,
   SourceRead,
   UserRead,
   WebBackendConnectionRead,
@@ -37,8 +40,24 @@ export type StoredConnection = Omit<
   "source" | "destination" | "sourceActorDefinitionVersion" | "destinationActorDefinitionVersion"
 >;
 
+export interface Identity {
+  user: UserRead;
+  workspace: WorkspaceRead;
+  organization: OrganizationRead;
+}
+
+/** What a schema refresh of a connection finds. The test supplies it, because the mock computes no diff. */
+export interface SchemaRefreshAnswer {
+  /** The refreshed sync catalog, with the stream config the server keeps from the current catalog. */
+  catalog: AirbyteCatalog;
+  diff: CatalogDiff;
+  schemaChange: SchemaChange;
+}
+
 export interface Store {
-  readonly identity: Readonly<{ user: UserRead; workspace: WorkspaceRead; organization: OrganizationRead }>;
+  readonly identity: Readonly<Identity>;
+  /** Saves fields of the user, the workspace or the organization. The IDs do not change. */
+  updateIdentity(patch: { [K in keyof Identity]?: Partial<Identity[K]> }): Readonly<Identity>;
   readonly sources: Collection<SourceRead, SourceRead, SourceHandle>;
   readonly destinations: Collection<DestinationRead, DestinationRead, DestinationHandle>;
   /** Full WebBackendConnectionRead, derived from the stored connection, its source, and its destination. */
@@ -49,6 +68,11 @@ export interface Store {
     destination(destinationDefinitionId: string): Readonly<DestinationDefinitionInput> | undefined;
     allSources(): ReadonlyArray<Readonly<SourceDefinitionInput>>;
     allDestinations(): ReadonlyArray<Readonly<DestinationDefinitionInput>>;
+  };
+  /** The answer to the next schema refreshes of each connection. `airbyte.schema.onRefresh` sets it. */
+  readonly schemaRefreshes: {
+    set(ref: ConnectionHandle | string, answer: SchemaRefreshAnswer): void;
+    find(ref: ConnectionHandle | string): Readonly<SchemaRefreshAnswer> | undefined;
   };
 }
 
@@ -139,9 +163,15 @@ export function actorDefinitionVersion(definition: { dockerRepository: string; d
   } satisfies ActorDefinitionVersionRead;
 }
 
-function createIdentity() {
+function createIdentity(scenario: Scenario): Identity {
   const organizationId = ids.organization(1);
-  const user: UserRead = { userId: ids.user(1), email: "test@example.com", name: "Test User", metadata: {} };
+  const user: UserRead = {
+    email: "test@example.com",
+    name: "Test User",
+    metadata: {},
+    ...scenario.input.user,
+    userId: ids.user(1),
+  };
   const organization: OrganizationRead = {
     organizationId,
     organizationName: "Test organization",
@@ -154,7 +184,8 @@ function createIdentity() {
     email: user.email,
     name: "Test workspace",
     slug: "test-workspace",
-    initialSetupComplete: true,
+    // The server reports this flag of the default workspace as the initialSetupComplete of the instance.
+    initialSetupComplete: scenario.input.instance?.initialSetupComplete ?? true,
     displaySetupWizard: false,
     anonymousDataCollection: false,
   };
@@ -163,7 +194,7 @@ function createIdentity() {
 
 /** Builds a fresh store from a scenario. IDs follow the order in which the scenario lists the entities. */
 export function createStore(scenario: Scenario): Store {
-  const identity = snapshot(createIdentity());
+  let identity = snapshot(createIdentity(scenario));
   const sourceDefinitions = new Map<string, SourceDefinitionInput>();
   const destinationDefinitions = new Map<string, DestinationDefinitionInput>();
 
@@ -294,8 +325,27 @@ export function createStore(scenario: Scenario): Store {
     });
   });
 
+  const refreshAnswers = new Map<string, SchemaRefreshAnswer>();
+  function connectionIdOf(ref: ConnectionHandle | string) {
+    return typeof ref === "string" ? ref : connections.get(ref).connectionId;
+  }
+
   return {
-    identity,
+    get identity() {
+      return identity;
+    },
+    updateIdentity: (patch) => {
+      identity = snapshot({
+        user: { ...identity.user, ...patch.user, userId: identity.user.userId },
+        workspace: { ...identity.workspace, ...patch.workspace, workspaceId: identity.workspace.workspaceId },
+        organization: {
+          ...identity.organization,
+          ...patch.organization,
+          organizationId: identity.organization.organizationId,
+        },
+      });
+      return identity;
+    },
     sources,
     destinations,
     connections,
@@ -304,6 +354,15 @@ export function createStore(scenario: Scenario): Store {
       destination: (id) => (destinationDefinitions.has(id) ? snapshot(destinationDefinitions.get(id)!) : undefined),
       allSources: () => snapshot([...sourceDefinitions.values()]),
       allDestinations: () => snapshot([...destinationDefinitions.values()]),
+    },
+    schemaRefreshes: {
+      set: (ref, answer) => {
+        refreshAnswers.set(connectionIdOf(ref), structuredClone(answer));
+      },
+      find: (ref) => {
+        const answer = refreshAnswers.get(connectionIdOf(ref));
+        return answer && snapshot(answer);
+      },
     },
   };
 }

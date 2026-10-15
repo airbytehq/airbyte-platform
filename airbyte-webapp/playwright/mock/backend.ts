@@ -1,11 +1,12 @@
 import type { ConnectionHandle } from "./builders/connection";
-import type { HandlerMap } from "./handlers/handler";
+import type { Override } from "./handlers/handler";
 import type { Recorder } from "./recorder";
 import type { Op } from "./routes";
 import type { Scenario } from "./scenario";
-import type { Store } from "./store";
+import type { SchemaRefreshAnswer, Store } from "./store";
 import type { BrowserContext, Route } from "@playwright/test";
 
+import { findExternalHost } from "./external";
 import { defaultHandlers } from "./handlers";
 import { MockResponse } from "./handlers/handler";
 import { createRecorder } from "./recorder";
@@ -21,6 +22,31 @@ export interface MockAirbyte {
   readonly calls: Recorder;
   /** ID of the scenario's workspace. */
   readonly workspaceId: string;
+  /**
+   * Replaces the answer of one operation for the rest of the test. Call it again to change the answer during the test.
+   * The handler gets the context of a default handler, plus `next()`, which runs the default handler. Example of a
+   * backend reaction to a save:
+   *
+   *   airbyte.override("webBackendUpdateConnection", ({ body, next, store }) => {
+   *     next();
+   *     return store.connections.update(body.connectionId, { schemaChange: "no_change" });
+   *   });
+   */
+  override<O extends Op>(op: O, handler: Override<O>): void;
+  /**
+   * From now on, every Airbyte API call answers `response`, as when the server is down. It wins over overrides.
+   * External hosts still answer.
+   */
+  failAll(response: MockResponse): void;
+  /** Answers that the mock cannot compute for schema actions, such as a schema refresh. */
+  readonly schema: {
+    /**
+     * Sets what the next schema refreshes of a connection find. The webapp refreshes in one of two ways, chosen by the
+     * asyncSchemaDiscovery experiment (ConnectionEditService.tsx). The mock answers the synchronous way only, so the
+     * scenario must set `experiments: { asyncSchemaDiscovery: false }`.
+     */
+    onRefresh(connection: ConnectionHandle | string, answer: SchemaRefreshAnswer): void;
+  };
   /** URLs of app pages, relative to baseURL. */
   readonly paths: {
     connection(ref: ConnectionHandle | string, tab?: ConnectionTab): string;
@@ -42,6 +68,12 @@ function describeRequest(method: string, url: URL, isApiCall: boolean, op: Op | 
   return `${method} ${url.pathname} (${op ?? "unknown operation"})`;
 }
 
+/**
+ * A handler or override without the types of its operation. TypeScript checks each handler and override against the
+ * types of its own operation. The operation is known only when a request arrives, so TypeScript cannot check the call.
+ */
+type UntypedHandler = (context: unknown) => unknown;
+
 export function createMockBackend(scenario: Scenario, options: MockBackendOptions) {
   const { appOrigin, apiOrigins } = options;
   const store = createStore(scenario);
@@ -49,6 +81,8 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
   const unexpected: string[] = [];
   const handlerErrors: string[] = [];
   const notFound: string[] = [];
+  const overrides = new Map<Op, UntypedHandler>();
+  let allCallsFail: MockResponse | undefined;
 
   const isApiCall = (url: URL) => apiOrigins.includes(url.origin) && url.pathname.startsWith("/api/");
 
@@ -56,10 +90,18 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
     const request = route.request();
     const url = new URL(request.url());
     const apiCall = isApiCall(url);
+    const externalHost = apiCall ? undefined : findExternalHost(request.method(), url);
+    if (externalHost) {
+      return externalHost.answer(route, scenario);
+    }
+
     const matched = apiCall ? matchRoute(request.method(), url.pathname) : undefined;
     const description = describeRequest(request.method(), url, apiCall, matched?.op);
-    const handler = matched && (defaultHandlers[matched.op] as HandlerMap[Op] | undefined);
-    if (!matched || !handler) {
+
+    const handler = matched && (defaultHandlers[matched.op] as UntypedHandler | undefined);
+    const override = matched && overrides.get(matched.op);
+    const hasAnswer = Boolean(allCallsFail || override || handler);
+    if (!matched || !hasAnswer) {
       unexpected.push(description);
       return route.abort("failed");
     }
@@ -69,9 +111,22 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
     try {
       // postDataJSON() throws when the body is not JSON. Inside the try, that shows as a handler error.
       body = request.postData() ? request.postDataJSON() : undefined;
-      // TypeScript checks each handler against the types of its own operation. Here the operation is only known
-      // when the request arrives, so this call cannot be checked.
-      reply = (handler as (context: unknown) => unknown)({ body, params: matched.params, store });
+      const context = { body, params: matched.params, store };
+      const runDefault = () => {
+        if (!handler) {
+          throw new Error(`The override called next(), but the mock has no default handler for ${matched.op}`);
+        }
+        return handler(context);
+      };
+
+      // The answer comes from the first of: failAll, the override of the operation, the default handler.
+      if (allCallsFail) {
+        reply = allCallsFail;
+      } else if (override) {
+        reply = override({ ...context, next: runDefault });
+      } else {
+        reply = runDefault();
+      }
     } catch (error) {
       handlerErrors.push(`${description}: ${error instanceof Error ? error.message : String(error)}`);
       return route.fulfill({ status: 500, json: { message: "Mock handler error" } });
@@ -86,6 +141,9 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
 
     if (status === 204) {
       return route.fulfill({ status });
+    }
+    if (response?.text !== undefined) {
+      return route.fulfill({ status, contentType: "text/plain", body: response.text });
     }
     return route.fulfill({ status, json: response ? response.json : reply });
   }
@@ -133,6 +191,23 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
     store,
     calls,
     workspaceId,
+    override: (op, handler) => {
+      overrides.set(op, handler as UntypedHandler);
+    },
+    failAll: (response) => {
+      allCallsFail = response;
+    },
+    schema: {
+      onRefresh: (connection, answer) => {
+        if (scenario.input.experiments?.asyncSchemaDiscovery !== false) {
+          throw new Error(
+            "airbyte.schema.onRefresh answers the synchronous refresh only. " +
+              "Set experiments: { asyncSchemaDiscovery: false } in the scenario."
+          );
+        }
+        store.schemaRefreshes.set(connection, answer);
+      },
+    },
     paths: {
       connection: (ref, tab) => {
         const connectionId = typeof ref === "string" ? ref : store.connections.get(ref).connectionId;

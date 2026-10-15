@@ -100,4 +100,41 @@ test.describe("Mock backend store", () => {
     expect(store.connections.find(pokeConnection.copy())).toBeUndefined();
     expect(() => store.connections.get("no-such-id")).toThrow("The mock store has no connection with ID no-such-id");
   });
+
+  test("instance and user in the scenario change the identity, and the IDs stay the same", () => {
+    const store = createStore(
+      scenario({ instance: { initialSetupComplete: false }, user: { email: "admin@example.com", name: "Admin" } })
+    );
+    const defaults = createStore(scenario({})).identity;
+
+    expect(store.identity.workspace.initialSetupComplete).toBe(false);
+    expect(store.identity.user).toEqual({ ...defaults.user, email: "admin@example.com", name: "Admin" });
+    expect(defaults.workspace.initialSetupComplete).toBe(true);
+  });
+
+  test("updateIdentity saves fields, keeps the IDs, and leaves earlier reads unchanged", () => {
+    const store = createStore(scenario({}));
+    const before = store.identity;
+
+    store.updateIdentity({ workspace: { name: "Renamed", workspaceId: "other-id" } });
+
+    expect(store.identity.workspace).toEqual({ ...before.workspace, name: "Renamed" });
+    expect(before.workspace.name).toBe("Test workspace");
+    expect(Object.isFrozen(store.identity.workspace)).toBe(true);
+  });
+
+  test("catalogs remove the fields that withoutFields names, and fail on a name they do not have", () => {
+    const catalog = catalogs.postgres({ withoutFields: { users: ["updated_at"] } });
+    const users = catalogs.find(catalog, "public", "users");
+    const cars = catalogs.find(catalog, "public", "cars");
+
+    expect(Object.keys(users.stream?.jsonSchema?.properties ?? {})).toEqual(["name", "id", "email"]);
+    expect(cars).toEqual(catalogs.find(catalogs.postgres(), "public", "cars"));
+    expect(() => catalogs.postgres({ withoutFields: { users: ["no_such_field"] } })).toThrow(
+      "Stream users has no field named no_such_field"
+    );
+    expect(() => catalogs.postgres({ withoutFields: { no_such_stream: ["id"] } })).toThrow(
+      "Catalog has no stream named no_such_stream"
+    );
+  });
 });
