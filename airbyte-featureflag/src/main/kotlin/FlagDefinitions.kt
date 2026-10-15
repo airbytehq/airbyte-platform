@@ -281,3 +281,10 @@ object UseOptimizedStreamStatusQuery : Temporary<Boolean>(key = "platform.use-op
 object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-read-replica-for-stream-status", default = false)
 
 object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.external-cloud-orgs.enabled", default = false)
+
+/**
+ * Gates the billing notification settings pilot for an organization: the webapp settings section and
+ * the Customer.io confirmation email sent after a save. Settings persistence is not gated. Remove once
+ * the Retool form is retired and every organization is on the platform settings.
+ */
+object EnableBillingNotificationSettings : Temporary<Boolean>(key = "platform.billing-notification-settings", default = false)

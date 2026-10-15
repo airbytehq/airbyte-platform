@@ -4,6 +4,7 @@
 
 package io.airbyte.notification
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -24,6 +25,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.apache.http.HttpHeaders
 import java.io.IOException
+import java.math.BigDecimal
 import java.util.UUID
 
 private val log = KotlinLogging.logger { }
@@ -157,6 +159,44 @@ open class CustomerIoEmailNotificationSender(
     callCustomerIoSendNotification(customerIoPayload, null)
   }
 
+  /**
+   * Confirms the billing notification settings an organization just saved. The thresholds travel as
+   * JSON numbers because the template branches on them: zero means that alert is off.
+   */
+  fun sendBillingNotificationSettingsConfirmation(
+    config: CustomerIoEmailConfig,
+    organizationName: String,
+    syncCreditThreshold: BigDecimal,
+    invoiceAmountThreshold: BigDecimal,
+  ) {
+    val payload =
+      mapOf(
+        "transactional_message_id" to BILLING_NOTIFICATION_SETTINGS_CONFIRMATION_TRANSACTION_MESSAGE_ID,
+        "to" to config.to,
+        "identifiers" to mapOf("email" to config.to),
+        "message_data" to
+          mapOf(
+            "organization_name" to organizationName,
+            "sync_credit_threshold" to syncCreditThreshold.withoutTrailingZeros(),
+            "invoice_amount_threshold" to invoiceAmountThreshold.withoutTrailingZeros(),
+          ),
+        "disable_message_retention" to false,
+        // The recipient is typed by an organization admin, not a known Airbyte user, so an unsubscribe
+        // must hold and there is nothing worth tracking in a confirmation with no links.
+        "send_to_unsubscribed" to false,
+        "tracked" to false,
+        "queue_draft" to false,
+        "disable_css_preprocessing" to true,
+      )
+    callCustomerIoSendNotification(Jsons.serialize(payload), null)
+  }
+
+  /**
+   * `100.00` from the database must reach the template as `100`, and `stripTrailingZeros` alone
+   * would serialize it as `1E+2`.
+   */
+  private fun BigDecimal.withoutTrailingZeros(): BigDecimal = BigDecimal(stripTrailingZeros().toPlainString())
+
   protected open fun callCustomerIoSendNotification(
     customerIoPayload: String,
     workspaceId: UUID?,
@@ -258,6 +298,7 @@ open class CustomerIoEmailNotificationSender(
     private const val INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID = "12"
     private const val INVITATION_RESEND_TRANSACTION_MESSAGE_ID = "17"
     private const val INVITE_USER_TRANSACTION_MESSAGE_ID = "28"
+    private const val BILLING_NOTIFICATION_SETTINGS_CONFIRMATION_TRANSACTION_MESSAGE_ID = "40"
 
     // Agentic clone of INVITE_USER_TRANSACTION_MESSAGE_ID used for Airbyte Agents organizations
     // (Organization.isAgentic = true). Overridable via CUSTOMERIO_INVITE_USER_AGENTIC_ID.

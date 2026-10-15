@@ -5,6 +5,7 @@
 package io.airbyte.domain.services.billing
 
 import io.airbyte.data.repositories.BillingNotificationSettingsRepository
+import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.billing.BillingNotificationSettings
 import io.airbyte.domain.models.billing.BillingNotificationSettingsValidationException
@@ -23,6 +24,7 @@ private val EMAIL_SHAPE = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 @Singleton
 open class BillingNotificationSettingsService(
   private val repository: BillingNotificationSettingsRepository,
+  private val organizationRepository: OrganizationRepository,
   @param:Named("config") private val configTransactionOperations: TransactionOperations<Connection>,
 ) {
   open fun get(organizationId: OrganizationId): BillingNotificationSettings =
@@ -72,6 +74,16 @@ open class BillingNotificationSettingsService(
         }.toDomain()
     }
   }
+
+  /**
+   * Name shown in the confirmation email. The settings row references the organization, so a
+   * missing or deleted organization after a save is an invariant violation, not a normal outcome.
+   */
+  open fun organizationName(organizationId: OrganizationId): String =
+    organizationRepository
+      .findByIdAndTombstoneFalse(organizationId.value)
+      .orElseThrow { IllegalStateException("Organization ${organizationId.value} not found") }
+      .name
 
   private fun requireNonNegative(
     field: String,

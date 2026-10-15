@@ -5,6 +5,8 @@
 package io.airbyte.domain.services.billing
 
 import io.airbyte.data.repositories.BillingNotificationSettingsRepository
+import io.airbyte.data.repositories.OrganizationRepository
+import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.billing.BillingNotificationSettingsValidationException
 import io.kotest.assertions.throwables.shouldThrow
@@ -25,7 +27,8 @@ import io.airbyte.data.repositories.entities.BillingNotificationSettings as Bill
 
 internal class BillingNotificationSettingsServiceTest {
   private val repository: BillingNotificationSettingsRepository = mockk(relaxed = true)
-  private val service = BillingNotificationSettingsService(repository, ImmediateTransactionOperations())
+  private val organizationRepository: OrganizationRepository = mockk()
+  private val service = BillingNotificationSettingsService(repository, organizationRepository, ImmediateTransactionOperations())
   private val organizationId = OrganizationId(UUID.randomUUID())
 
   @Test
@@ -136,6 +139,21 @@ internal class BillingNotificationSettingsServiceTest {
     shouldThrow<IllegalStateException> {
       service.save(organizationId, null, BigDecimal.ZERO, BigDecimal.ZERO)
     }
+  }
+
+  @Test
+  fun `organizationName returns the live organization's name`() {
+    every { organizationRepository.findByIdAndTombstoneFalse(organizationId.value) } returns
+      Optional.of(Organization(id = organizationId.value, name = "Example & Partners", email = "owner@example.com"))
+
+    service.organizationName(organizationId) shouldBe "Example & Partners"
+  }
+
+  @Test
+  fun `organizationName fails loudly when the organization is missing or deleted`() {
+    every { organizationRepository.findByIdAndTombstoneFalse(organizationId.value) } returns Optional.empty()
+
+    shouldThrow<IllegalStateException> { service.organizationName(organizationId) }
   }
 
   private fun entity(
