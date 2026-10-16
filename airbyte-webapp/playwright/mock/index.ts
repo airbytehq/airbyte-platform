@@ -12,6 +12,9 @@ export { connection } from "./builders/connection";
 export { catalogs } from "./builders/catalogs";
 export { errors } from "./errors";
 export { mapperValidation } from "./handlers/mappers";
+export { checkOutput } from "./builders/commands";
+export { streamRead } from "./builders/streamRead";
+export { MOCK_START_TIME } from "./clock";
 export { ids } from "./ids";
 
 export type { MockAirbyte, ConnectionTab } from "./backend";
@@ -23,4 +26,5 @@ export type { SchemaRefreshAnswer, Store } from "./store";
 export type { SecurityCheckAnswer } from "./external";
 export type { Override } from "./handlers/handler";
 export type { Recorder } from "./recorder";
+export type { CheckOutput } from "./commands";
 export type { Op, Body, Reply } from "./routes";

@@ -1,6 +1,9 @@
 import type { ConnectionHandle } from "./builders/connection";
+import type { SourceDefinitionHandle } from "./builders/connectors";
+import type { CheckOutput } from "./commands";
 import type { SecurityCheckAnswer } from "./external";
-import type { UserRead } from "@src/core/api/types/AirbyteClient";
+import type { SyncOutcome } from "./jobs";
+import type { UserRead, ConnectorBuilderProjectStreamRead } from "@src/core/api/types/AirbyteClient";
 import type { Experiments } from "@src/core/services/Experiment/experiments";
 import type { FeatureSet } from "@src/core/services/features/types";
 
@@ -18,12 +21,23 @@ export interface ScenarioInput {
   user?: Partial<Omit<UserRead, "userId">>;
   /** Answers of hosts outside Airbyte that the webapp calls. external.ts lists the hosts. */
   external?: { securityCheck?: SecurityCheckAnswer };
+  /** Source definitions in the marketplace. The definitions of the sources in `connections` are added automatically. */
+  sourceDefinitions?: SourceDefinitionHandle[];
   /** Sources and destinations that a connection references are added automatically. */
   connections?: ConnectionHandle[];
   /** Experiment overrides, sent to the webapp as window._e2eOverwrites. */
   experiments?: Partial<Experiments>;
   /** Feature overrides, sent to the webapp as window._e2eFeatureOverwrites. */
   features?: FeatureSet;
+  /** Results of long-running operations that finish on their own. See lifecycle.ts. */
+  outcomes?: {
+    /** Default: the check succeeds. */
+    check?: CheckOutput;
+    /** Default: the sync succeeds. */
+    sync?: SyncOutcome;
+    /** The result of every Connector Builder test read. No default: a test read without it fails the test. */
+    streamRead?: ConnectorBuilderProjectStreamRead;
+  };
 }
 
 export interface Scenario {

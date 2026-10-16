@@ -31,6 +31,28 @@ export type DestinationDefinitionHandle = Handle<"destinationDefinition", Destin
 
 const emptySpecification = { type: "object", properties: {} };
 
+/**
+ * The configuration form of source-pokeapi 0.3.75, from oss/airbyte-config/specs/src/main/resources/seed/
+ * local_oss_registry.json. The list of Pokémon names is cut to four.
+ */
+const pokeApiSpecification = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  type: "object",
+  required: ["pokemon_name"],
+  additionalProperties: true,
+  properties: {
+    pokemon_name: {
+      type: "string",
+      title: "Pokemon Name",
+      description: "Pokemon requested from the API.",
+      pattern: "^[a-z0-9_\\-]+$",
+      enum: ["bulbasaur", "ivysaur", "venusaur", "ditto"],
+      examples: ["ditto", "luxray", "snorlax"],
+      order: 0,
+    },
+  },
+};
+
 const sourceDefinition = (input: SourceDefinitionInput) => createHandle("sourceDefinition", input);
 const destinationDefinition = (input: DestinationDefinitionInput) => createHandle("destinationDefinition", input);
 
@@ -47,8 +69,10 @@ export const defs = {
       name: "PokeAPI",
       dockerRepository: "airbyte/source-pokeapi",
       dockerImageTag: "1.0.0",
+      // Community connectors show in the Marketplace tab of the connector list.
+      supportLevel: "community",
     },
-    specification: emptySpecification,
+    specification: pokeApiSpecification,
   }),
   postgresSource: sourceDefinition({
     definition: {

@@ -17,6 +17,8 @@ const prefixes = {
   destination: "d0000000",
   connection: "c0000000",
   catalog: "ca000000",
+  event: "e0000000",
+  builderProject: "bb000000",
 } as const;
 
 export type IdKind = keyof typeof prefixes;

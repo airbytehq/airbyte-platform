@@ -203,6 +203,19 @@ export const catalogDiffModal = {
 /**
  * Streams table helpers
  */
+/**
+ * Waits until the browser has drawn two more frames, so that a check after a filter change sees the new rows.
+ *
+ * The streams table draws its rows in an animation frame (requestAnimationFrame). Tests that use the mock backend
+ * run with a fake browser clock (mock/clock.ts), and that clock also schedules animation frames, so a frame can come
+ * later than the check. The helper waits for two frames: in the first, React applies the filter. In the second, the
+ * table draws the filtered rows.
+ */
+const waitForTableRender = (page: Page) =>
+  page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  );
+
 export const streamsTable = {
   /**
    * Clicks the refresh schema button
@@ -218,7 +231,8 @@ export const streamsTable = {
   filterByStreamName: async (page: Page, streamName: string): Promise<void> => {
     const searchInput = page.locator('input[data-testid="sync-catalog-search"]');
     await searchInput.clear();
-    return searchInput.fill(streamName);
+    await searchInput.fill(streamName);
+    await waitForTableRender(page);
   },
 
   /**
@@ -226,7 +240,8 @@ export const streamsTable = {
    */
   clearFilterByStreamName: async (page: Page): Promise<void> => {
     const searchInput = page.locator('input[data-testid="sync-catalog-search"]');
-    return searchInput.clear();
+    await searchInput.clear();
+    await waitForTableRender(page);
   },
 
   /**
@@ -350,7 +365,8 @@ export const streamsTable = {
     }[tab];
 
     const tabButton = page.locator(`button[data-id="${tabId}"]`);
-    return tabButton.click({ timeout: 10000 });
+    await tabButton.click({ timeout: 10000 });
+    await waitForTableRender(page);
   },
 
   /**
@@ -423,19 +439,27 @@ export const streamsTable = {
   },
 
   /**
-   * Checks if the "no streams" empty state message is displayed
+   * Checks if the "no streams" empty state message is displayed. The table shows it after the filter applies, so the
+   * check waits up to 5 seconds for it.
    */
   hasNoStreamsMessage: async (page: Page): Promise<boolean> => {
     const emptyStateText = page.locator('table[data-testid="sync-catalog-table"]').getByText("No streams");
-    return emptyStateText.isVisible();
+    return emptyStateText.waitFor({ state: "visible", timeout: 5000 }).then(
+      () => true,
+      () => false
+    );
   },
 
   /**
-   * Checks if the "no matching streams" message is displayed (when filter has no results)
+   * Checks if the "no matching streams" message is displayed (when filter has no results). The table shows it after
+   * the filter applies, so the check waits up to 5 seconds for it.
    */
   hasNoMatchingStreamsMessage: async (page: Page): Promise<boolean> => {
     const noMatchText = page.locator('table[data-testid="sync-catalog-table"]').getByText("No matching streams");
-    return noMatchText.isVisible();
+    return noMatchText.waitFor({ state: "visible", timeout: 5000 }).then(
+      () => true,
+      () => false
+    );
   },
 
   // ============================================================================

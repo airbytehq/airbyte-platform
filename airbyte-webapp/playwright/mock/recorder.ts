@@ -36,9 +36,19 @@ export function createRecorder() {
     log: () => [...entries],
   });
 
+  let waiters: Array<{ op: Op; resolve: () => void }> = [];
+
   function record(entry: RecordedCall) {
     entries.push(snapshot(entry));
+    const answered = waiters.filter(({ op }) => op === entry.op);
+    waiters = waiters.filter(({ op }) => op !== entry.op);
+    answered.forEach(({ resolve }) => resolve());
   }
 
-  return { calls, record };
+  /** Resolves when the webapp next sends a request for `op`. Used by lifecycle.ts, not by tests. */
+  function nextCall(op: Op) {
+    return new Promise<void>((resolve) => waiters.push({ op, resolve }));
+  }
+
+  return { calls, record, nextCall };
 }

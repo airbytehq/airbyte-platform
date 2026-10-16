@@ -1,12 +1,13 @@
 /**
  * Self-tests of the mock backend (playwright/mock/backend.ts). They protect the rules that converted tests rely on.
  */
-import type { SchemaRefreshAnswer, Scenario } from "../../mock";
-import type { BrowserContext, Page } from "@playwright/test";
+import type { SchemaRefreshAnswer } from "../../mock";
+import type { Page } from "@playwright/test";
 import type { FieldSpec } from "@src/core/api/types/AirbyteClient";
 
 import { test, expect } from "@playwright/test";
 
+import { installBackend, post } from "./selfTest";
 import { catalogs, connection, defs, destination, errors, mapperValidation, scenario, source } from "../../mock";
 import { createMockBackend } from "../../mock/backend";
 import { MockResponse } from "../../mock/handlers/handler";
@@ -16,15 +17,6 @@ const pokeConnection = connection({
   destination: destination({ def: defs.e2eTestingDestination }),
   catalog: catalogs.pokeApi({ selected: true }),
 });
-
-/** Installs a mock backend for a scenario, on the origin of baseURL, and opens a blank page to send requests from. */
-async function installBackend(context: BrowserContext, page: Page, baseURL: string | undefined, input: Scenario) {
-  const appOrigin = new URL(baseURL!).origin;
-  const backend = createMockBackend(input, { appOrigin, apiOrigins: [appOrigin] });
-  await backend.install(context);
-  await page.goto("about:blank");
-  return { backend, appOrigin };
-}
 
 /** Sends one JSON request from the page. Resolves with the status, the content type and the body text. */
 function send(page: Page, url: string, method: string, body?: object) {
@@ -47,8 +39,8 @@ function send(page: Page, url: string, method: string, body?: object) {
 }
 
 /** Sends a mapper validation with one hashing mapper (ID m1) for the pokemon stream. The body replaces fields. */
-function validateMappers(page: Page, appOrigin: string, body: object) {
-  return send(page, `${appOrigin}/api/v1/web_backend/mappers/validate`, "POST", {
+function validateMappers(page: Page, body: object) {
+  return send(page, "/api/v1/web_backend/mappers/validate", "POST", {
     streamDescriptor: { name: "pokemon" },
     mappers: [{ id: "m1", type: "hashing", mapperConfiguration: { targetField: "name" } }],
     ...body,
@@ -64,27 +56,21 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const appOrigin = new URL(baseURL!).origin;
-    const backend = createMockBackend(scenario({ connections: [pokeConnection] }), {
-      appOrigin,
-      apiOrigins: [appOrigin],
-    });
-    await backend.install(context);
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
 
-    await page.goto("about:blank");
-    await page.evaluate(async (origin) => {
-      const send = (path: string) => fetch(`${origin}${path}`, { method: "POST", body: "{}" }).catch(() => undefined);
-      await send("/api/v1/connections/sync");
+    await page.evaluate(async () => {
+      const send = (path: string) => fetch(path, { method: "POST", body: "{}" }).catch(() => undefined);
+      await send("/api/v1/connections/reset");
       await send("/api/v1/no_such_endpoint");
       await fetch("https://external.example.com/script.js").catch(() => undefined);
-    }, appOrigin);
+    });
 
     expect(backend.problems()).toEqual([
-      "Unexpected request: POST /api/v1/connections/sync (syncConnection)",
+      "Unexpected request: POST /api/v1/connections/reset (resetConnection)",
       "Unexpected request: POST /api/v1/no_such_endpoint (unknown operation)",
       "Unexpected request: GET https://external.example.com/script.js (external host)",
     ]);
-    expect(() => backend.verify()).toThrow("POST /api/v1/connections/sync (syncConnection)");
+    expect(() => backend.verify()).toThrow("POST /api/v1/connections/reset (resetConnection)");
   });
 
   test("fails the test on a body that is not JSON, and on a connection list request it cannot answer", async ({
@@ -92,20 +78,14 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const appOrigin = new URL(baseURL!).origin;
-    const backend = createMockBackend(scenario({ connections: [pokeConnection] }), {
-      appOrigin,
-      apiOrigins: [appOrigin],
-    });
-    await backend.install(context);
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { workspaceId } = backend.airbyte;
     const unusedFilters = { searchTerm: "", statuses: undefined, tagIds: [], onDemandEnabled: null };
 
-    await page.goto("about:blank");
     const statuses = await page.evaluate(
-      async ({ origin, workspaceId, unusedFilters }) => {
+      async ({ workspaceId, unusedFilters }) => {
         const send = (path: string, body: string) =>
-          fetch(`${origin}${path}`, { method: "POST", body }).then((response) => response.status);
+          fetch(path, { method: "POST", body }).then((response) => response.status);
         const list = (body: object) =>
           send("/api/v1/web_backend/connections/list", JSON.stringify({ workspaceId, ...body }));
         return [
@@ -115,7 +95,7 @@ test.describe("Mock backend", () => {
           await list({ filters: { ...unusedFilters, searchTerm: "poke" } }),
         ];
       },
-      { origin: appOrigin, workspaceId, unusedFilters }
+      { workspaceId, unusedFilters }
     );
 
     // A list request whose filters are all empty is answered. The other requests are handler errors.
@@ -132,19 +112,14 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
     backend.airbyte.override("webBackendGetConnection", ({ next }) => {
       const reply = next();
       return reply instanceof MockResponse ? reply : { ...reply, name: "Overridden" };
     });
 
-    const read = await send(page, `${appOrigin}/api/v1/web_backend/connections/get`, "POST", { connectionId });
+    const read = await send(page, "/api/v1/web_backend/connections/get", "POST", { connectionId });
 
     expect(JSON.parse(read.text)).toMatchObject({ connectionId, name: "Overridden" });
     expect(backend.airbyte.calls.log().map(({ op, status }) => ({ op, status }))).toEqual([
@@ -154,12 +129,7 @@ test.describe("Mock backend", () => {
   });
 
   test("sends an errors.problem reply as application/json", async ({ context, page, baseURL }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
     const conflict = {
       status: 409,
@@ -168,7 +138,7 @@ test.describe("Mock backend", () => {
     };
     backend.airbyte.override("deleteConnection", () => errors.problem(conflict));
 
-    const deletion = await send(page, `${appOrigin}/api/v1/connections/delete`, "POST", { connectionId });
+    const deletion = await send(page, "/api/v1/connections/delete", "POST", { connectionId });
 
     // The webapp parses an error body as JSON only when the content type is exactly application/json (apiCall.ts).
     expect(deletion).toEqual({ status: 409, contentType: "application/json", text: JSON.stringify(conflict) });
@@ -196,14 +166,9 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { workspaceId } = backend.airbyte;
-    const getWorkspace = () => send(page, `${appOrigin}/api/v1/workspaces/get`, "POST", { workspaceId });
+    const getWorkspace = () => send(page, "/api/v1/workspaces/get", "POST", { workspaceId });
 
     const before = await getWorkspace();
     backend.airbyte.override("getWorkspace", () => errors.notFound());
@@ -222,19 +187,14 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
-    backend.airbyte.override("syncConnection", ({ next }) => next());
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
+    backend.airbyte.override("resetConnection", ({ next }) => next());
 
-    const sync = await send(page, `${appOrigin}/api/v1/connections/sync`, "POST", { connectionId: "any" });
+    const reset = await send(page, "/api/v1/connections/reset", "POST", { connectionId: "any" });
 
-    expect(sync.status).toBe(500);
+    expect(reset.status).toBe(500);
     expect(backend.problems()).toEqual([
-      "Handler error: POST /api/v1/connections/sync (syncConnection): The override called next(), but the mock has no default handler for syncConnection",
+      "Handler error: POST /api/v1/connections/reset (resetConnection): The override called next(), but the mock has no default handler for resetConnection",
     ]);
   });
 
@@ -243,22 +203,19 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     backend.airbyte.override("getWorkspace", () => backend.airbyte.store.identity.workspace);
     backend.airbyte.failAll(errors.badGateway());
 
-    const config = await send(page, `${appOrigin}/api/v1/web_backend/config`, "GET");
-    const workspace = await send(page, `${appOrigin}/api/v1/workspaces/get`, "POST", { workspaceId: "any" });
-    const sync = await send(page, `${appOrigin}/api/v1/connections/sync`, "POST", { connectionId: "any" });
-    const securityCheck = await send(page, "https://oss.airbyte.com/security-check", "POST", { host: appOrigin });
+    const config = await send(page, "/api/v1/web_backend/config", "GET");
+    const workspace = await send(page, "/api/v1/workspaces/get", "POST", { workspaceId: "any" });
+    const reset = await send(page, "/api/v1/connections/reset", "POST", { connectionId: "any" });
+    const securityCheck = await send(page, "https://oss.airbyte.com/security-check", "POST", {
+      host: new URL(baseURL!).origin,
+    });
 
     // An operation without a default handler and an overridden operation fail the same way.
-    for (const response of [config, workspace, sync]) {
+    for (const response of [config, workspace, reset]) {
       expect(response).toEqual({ status: 502, contentType: "text/plain", text: "502 Bad Gateway" });
     }
     expect(securityCheck.status).toBe(200);
@@ -273,8 +230,8 @@ test.describe("Mock backend", () => {
       const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
       const page = await context.newPage();
       const input = scenario({ external: { securityCheck: answer } });
-      const { backend, appOrigin } = await installBackend(context, page, baseURL, input);
-      const host = { host: appOrigin };
+      const backend = await installBackend(context, page, baseURL, input);
+      const host = { host: new URL(baseURL!).origin };
 
       // "hang" never answers. send() stops waiting after 2 seconds and throws, so the result is "no answer".
       results.push(await send(page, "https://oss.airbyte.com/security-check", "POST", host).catch(() => "no answer"));
@@ -297,10 +254,10 @@ test.describe("Mock backend", () => {
     baseURL,
   }) => {
     const input = scenario({ connections: [pokeConnection], experiments: { asyncSchemaDiscovery: false } });
-    const { backend, appOrigin } = await installBackend(context, page, baseURL, input);
+    const backend = await installBackend(context, page, baseURL, input);
     const { connectionId, syncCatalog } = backend.airbyte.store.connections.get(pokeConnection);
     const getConnection = (withRefreshedCatalog: boolean) =>
-      send(page, `${appOrigin}/api/v1/web_backend/connections/get`, "POST", { connectionId, withRefreshedCatalog });
+      send(page, "/api/v1/web_backend/connections/get", "POST", { connectionId, withRefreshedCatalog });
     const refreshedCatalog = catalogs.pokeApi({ selected: true, withoutFields: { pokemon: ["base_experience"] } });
     const diff = { transforms: [] };
 
@@ -339,15 +296,10 @@ test.describe("Mock backend", () => {
   });
 
   test("answers a mapper validation with every mapper valid and no fields", async ({ context, page, baseURL }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
 
-    const response = await validateMappers(page, appOrigin, { connectionId });
+    const response = await validateMappers(page, { connectionId });
 
     expect(JSON.parse(response.text)).toEqual({
       initialFields: [],
@@ -357,19 +309,14 @@ test.describe("Mock backend", () => {
   });
 
   test("answers a mapper validation with the fields that allValid gives", async ({ context, page, baseURL }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
     const fields: FieldSpec[] = [
       { name: "name", type: "STRING", isSelectedPrimaryKey: false, isSelectedCursor: false },
     ];
     backend.airbyte.override("webBackendValidateMappers", mapperValidation.allValid(fields));
 
-    const response = await validateMappers(page, appOrigin, { connectionId });
+    const response = await validateMappers(page, { connectionId });
 
     expect(JSON.parse(response.text)).toEqual({
       initialFields: fields,
@@ -379,9 +326,9 @@ test.describe("Mock backend", () => {
   });
 
   test("answers 404 to a mapper validation for an unknown connection", async ({ context, page, baseURL }) => {
-    const { appOrigin } = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
+    await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
 
-    const response = await validateMappers(page, appOrigin, { connectionId: "c0000000-0000-4000-8000-000000000404" });
+    const response = await validateMappers(page, { connectionId: "c0000000-0000-4000-8000-000000000404" });
 
     expect(response.status).toBe(404);
   });
@@ -391,15 +338,10 @@ test.describe("Mock backend", () => {
     page,
     baseURL,
   }) => {
-    const { backend, appOrigin } = await installBackend(
-      context,
-      page,
-      baseURL,
-      scenario({ connections: [pokeConnection] })
-    );
+    const backend = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
     const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
 
-    const response = await validateMappers(page, appOrigin, {
+    const response = await validateMappers(page, {
       connectionId,
       streamDescriptor: { namespace: "public", name: "users" },
     });
@@ -412,9 +354,9 @@ test.describe("Mock backend", () => {
 
   test("starts an instance before setup, and the setup form completes it", async ({ context, page, baseURL }) => {
     const input = scenario({ instance: { initialSetupComplete: false } });
-    const { backend, appOrigin } = await installBackend(context, page, baseURL, input);
+    const backend = await installBackend(context, page, baseURL, input);
     const { userId } = backend.airbyte.store.identity.user;
-    const getInstance = () => send(page, `${appOrigin}/api/v1/instance_configuration`, "GET");
+    const getInstance = () => send(page, "/api/v1/instance_configuration", "GET");
     const setupForm = {
       email: "admin@example.com",
       organizationName: "ACME Corp",
@@ -424,12 +366,10 @@ test.describe("Mock backend", () => {
     };
 
     const before = JSON.parse((await getInstance()).text);
-    const setup = await send(page, `${appOrigin}/api/v1/instance_configuration/setup`, "POST", setupForm);
+    const setup = await send(page, "/api/v1/instance_configuration/setup", "POST", setupForm);
     const after = JSON.parse((await getInstance()).text);
-    const user = JSON.parse((await send(page, `${appOrigin}/api/v1/users/get`, "POST", { userId })).text);
-    const workspaces = JSON.parse(
-      (await send(page, `${appOrigin}/api/v1/workspaces/list_by_user_id`, "POST", { userId })).text
-    );
+    const user = JSON.parse((await send(page, "/api/v1/users/get", "POST", { userId })).text);
+    const workspaces = JSON.parse((await send(page, "/api/v1/workspaces/list_by_user_id", "POST", { userId })).text);
 
     expect(before).toMatchObject({ initialSetupComplete: false, defaultOrganizationEmail: "test@example.com" });
     expect(JSON.parse(setup.text)).toEqual(after);
@@ -442,6 +382,42 @@ test.describe("Mock backend", () => {
         anonymousDataCollection: true,
       }),
     ]);
+    expect(backend.problems()).toEqual([]);
+  });
+
+  test("serves the form of a marketplace definition, and saves a source that the webapp creates as a draft", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const backend = await installBackend(context, page, baseURL, scenario({ sourceDefinitions: [defs.pokeApiSource] }));
+    const { workspaceId } = backend.airbyte;
+    const { sourceDefinitionId } = defs.pokeApiSource.input.definition;
+
+    const definitions = (await post(page, "source_definitions/list_for_workspace", { workspaceId })).body;
+    const specification = (
+      await post(page, "source_definition_specifications/get", { workspaceId, sourceDefinitionId })
+    ).body;
+    const created = (
+      await post(page, "sources/create", {
+        workspaceId,
+        sourceDefinitionId,
+        name: "PokeAPI draft",
+        connectionConfiguration: { pokemon_name: "ditto" },
+        createAsDraft: true,
+      })
+    ).body;
+    const listed = (await post(page, "sources/list", { workspaceId })).body;
+
+    expect(definitions.sourceDefinitions).toEqual([expect.objectContaining({ sourceDefinitionId })]);
+    expect(specification.connectionSpecification.required).toEqual(["pokemon_name"]);
+    expect(created).toMatchObject({
+      sourceId: "50000000-0000-4000-8000-000000000001",
+      sourceName: "PokeAPI",
+      connectionConfiguration: { pokemon_name: "ditto" },
+      isDraft: true,
+    });
+    expect(listed.sources).toEqual([created]);
     expect(backend.problems()).toEqual([]);
   });
 });

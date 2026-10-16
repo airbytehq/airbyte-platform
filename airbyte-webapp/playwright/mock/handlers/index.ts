@@ -1,8 +1,11 @@
 import type { HandlerMap } from "./handler";
 
+import { builderHandlers } from "./builder";
+import { commandHandlers } from "./commands";
 import { connectionHandlers } from "./connections";
 import { connectorHandlers } from "./connectors";
 import { identityHandlers } from "./identity";
+import { jobHandlers } from "./jobs";
 import { mapperHandlers } from "./mappers";
 
 /**
@@ -14,4 +17,7 @@ export const defaultHandlers: HandlerMap = {
   ...connectorHandlers,
   ...connectionHandlers,
   ...mapperHandlers,
+  ...commandHandlers,
+  ...jobHandlers,
+  ...builderHandlers,
 };

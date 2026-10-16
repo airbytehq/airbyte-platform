@@ -1,6 +1,7 @@
 import type { HandlerMap } from "./handler";
 import type { Store, StoredConnection } from "../store";
 import type {
+  JobStatus,
   WebBackendConnectionListItem,
   WebBackendConnectionListRequestBody,
   WebBackendConnectionRead,
@@ -27,7 +28,24 @@ function asksForPageOrFilter({ cursor, sourceId, destinationId, filters }: WebBa
   return Boolean(cursor) || [sourceId, destinationId, ...Object.values(filters ?? {})].some(hasValue);
 }
 
-function toListItem(connection: Readonly<WebBackendConnectionRead>): WebBackendConnectionListItem {
+/**
+ * The fields of a connection that the server derives from its latest sync job. A connection without a job in the mock
+ * keeps the values that the scenario sets.
+ */
+function syncFields(store: Store, connection: Readonly<WebBackendConnectionRead>) {
+  const latest = store.jobs.latestJob(connection.connectionId);
+  if (!latest) {
+    const { latestSyncJobCreatedAt, latestSyncJobStatus, isSyncing } = connection;
+    return { latestSyncJobCreatedAt, latestSyncJobStatus, isSyncing };
+  }
+  return {
+    latestSyncJobCreatedAt: latest.job.createdAt,
+    latestSyncJobStatus: latest.job.status,
+    isSyncing: latest.job.status === "running",
+  };
+}
+
+function toListItem(store: Store, connection: Readonly<WebBackendConnectionRead>): WebBackendConnectionListItem {
   const { source, destination } = connection;
   return {
     connectionId: connection.connectionId,
@@ -47,9 +65,7 @@ function toListItem(connection: Readonly<WebBackendConnectionRead>): WebBackendC
       destinationDefinitionId: destination.destinationDefinitionId,
       destinationName: destination.destinationName,
     },
-    latestSyncJobCreatedAt: connection.latestSyncJobCreatedAt,
-    latestSyncJobStatus: connection.latestSyncJobStatus,
-    isSyncing: connection.isSyncing,
+    ...syncFields(store, connection),
     schemaChange: connection.schemaChange,
     sourceActorDefinitionVersion: connection.sourceActorDefinitionVersion,
     destinationActorDefinitionVersion: connection.destinationActorDefinitionVersion,
@@ -58,7 +74,10 @@ function toListItem(connection: Readonly<WebBackendConnectionRead>): WebBackendC
   };
 }
 
-/** Connection reads, lists, updates, and deletes. The mock has no jobs, so every connection is idle. */
+/**
+ * Connection reads, lists, updates, and deletes. Sync jobs and the connection status are in handlers/jobs.ts. The
+ * connection list and the status counts read the latest sync job of each connection.
+ */
 export const connectionHandlers: HandlerMap = {
   /**
    * With `withRefreshedCatalog`, the server discovers the source schema and diffs it against the connection. The mock
@@ -97,29 +116,35 @@ export const connectionHandlers: HandlerMap = {
       throw new Error("The mock does not support paging or filters on the connection list");
     }
     const connections = listedConnections(store);
-    return { connections: connections.map(toListItem), page_size: body.pageSize, num_connections: connections.length };
+    return {
+      connections: connections.map((connection) => toListItem(store, connection)),
+      page_size: body.pageSize,
+      num_connections: connections.length,
+    };
   },
 
+  /**
+   * Counts the connections as the server does (ConnectionServiceJooqImpl.getConnectionStatusCounts): a paused
+   * connection counts as paused, and every other connection counts by the status of its latest sync job.
+   */
   webBackendGetConnectionStatusCounts: ({ body, store }) => {
     if (isOtherWorkspace(store, body.workspaceId)) {
       return notFound();
     }
     const connections = listedConnections(store);
+    const jobStatuses = connections
+      .filter(({ status }) => status !== "inactive")
+      .map((connection) => syncFields(store, connection).latestSyncJobStatus);
+    const countOf = (...statuses: Array<JobStatus | undefined>) =>
+      jobStatuses.filter((status) => statuses.includes(status)).length;
     return {
-      running: 0,
-      queued: 0,
-      healthy: 0,
-      failed: 0,
-      paused: connections.filter(({ status }) => status === "inactive").length,
-      notSynced: connections.length,
+      running: countOf("running"),
+      queued: countOf("queued"),
+      healthy: countOf("succeeded"),
+      failed: countOf("failed", "cancelled", "incomplete"),
+      paused: connections.length - jobStatuses.length,
+      notSynced: countOf(undefined),
     };
-  },
-
-  getConnectionStatuses: ({ body, store }) => {
-    if (body.connectionIds.some((connectionId) => !store.connections.find(connectionId))) {
-      return notFound();
-    }
-    return body.connectionIds.map((connectionId) => ({ connectionId, connectionSyncStatus: "pending" }));
   },
 
   listConnectionEventsMinimal: ({ body, store }) =>

@@ -1,14 +1,17 @@
 import type { ConnectionHandle } from "./builders/connection";
 import type { Override } from "./handlers/handler";
+import type { CheckLifecycle, JobLifecycle } from "./lifecycle";
 import type { Recorder } from "./recorder";
 import type { Op } from "./routes";
 import type { Scenario } from "./scenario";
 import type { SchemaRefreshAnswer, Store } from "./store";
 import type { BrowserContext, Route } from "@playwright/test";
 
+import { createMockClock } from "./clock";
 import { findExternalHost } from "./external";
 import { defaultHandlers } from "./handlers";
 import { MockResponse } from "./handlers/handler";
+import { checkLifecycle, jobLifecycle } from "./lifecycle";
 import { createRecorder } from "./recorder";
 import { matchRoute } from "./routes";
 import { createStore } from "./store";
@@ -20,6 +23,10 @@ export interface MockAirbyte {
   readonly scenario: Scenario;
   readonly store: Store;
   readonly calls: Recorder;
+  /** Connection checks: hold one as running, then complete, fail or cancel it. See lifecycle.ts. */
+  readonly checks: CheckLifecycle;
+  /** Sync jobs: hold one as running, then complete, fail or cancel it. See lifecycle.ts. */
+  readonly jobs: JobLifecycle;
   /** ID of the scenario's workspace. */
   readonly workspaceId: string;
   /**
@@ -76,8 +83,9 @@ type UntypedHandler = (context: unknown) => unknown;
 
 export function createMockBackend(scenario: Scenario, options: MockBackendOptions) {
   const { appOrigin, apiOrigins } = options;
-  const store = createStore(scenario);
-  const { calls, record } = createRecorder();
+  const clock = createMockClock();
+  const store = createStore(scenario, clock.nowSeconds);
+  const { calls, record, nextCall } = createRecorder();
   const unexpected: string[] = [];
   const handlerErrors: string[] = [];
   const notFound: string[] = [];
@@ -148,8 +156,13 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
     return route.fulfill({ status, json: response ? response.json : reply });
   }
 
-  /** Routes every API call and every request to another origin. Same-origin assets pass through untouched. */
+  /**
+   * Sets the browser clock to MOCK_START_TIME (clock.ts) and routes every API call and every request to another
+   * origin. Same-origin assets pass through untouched.
+   */
   async function install(context: BrowserContext) {
+    await clock.install(context);
+
     const { experiments = {}, features = {} } = scenario.input;
     await context.addInitScript(
       ({ experiments, features }) => {
@@ -190,6 +203,8 @@ export function createMockBackend(scenario: Scenario, options: MockBackendOption
     scenario,
     store,
     calls,
+    checks: checkLifecycle(store.commands, { clock, nextCall }),
+    jobs: jobLifecycle(store.jobs, { clock, nextCall }),
     workspaceId,
     override: (op, handler) => {
       overrides.set(op, handler as UntypedHandler);

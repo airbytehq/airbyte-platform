@@ -1,11 +1,15 @@
+import type { BuilderProjects } from "./builderProjects";
 import type { ConnectionHandle } from "./builders/connection";
 import type {
   DestinationDefinitionInput,
   DestinationHandle,
+  SourceDefinitionHandle,
   SourceDefinitionInput,
   SourceHandle,
 } from "./builders/connectors";
 import type { Handle } from "./builders/handle";
+import type { Commands } from "./commands";
+import type { Jobs } from "./jobs";
 import type { Scenario } from "./scenario";
 import type {
   ActorDefinitionVersionRead,
@@ -20,7 +24,11 @@ import type {
   WorkspaceRead,
 } from "@src/core/api/types/AirbyteClient";
 
+import { createBuilderProjects } from "./builderProjects";
+import { MOCK_START_TIME } from "./clock";
+import { createCommands } from "./commands";
 import { ids } from "./ids";
+import { createJobs } from "./jobs";
 
 /**
  * One kind of entity in the mock store, such as connections. A read returns a copy that cannot be changed.
@@ -31,6 +39,8 @@ export interface Collection<Entity, Stored, H> {
   get(ref: H | string): Readonly<Entity>;
   find(ref: H | string): Readonly<Entity> | undefined;
   all(): ReadonlyArray<Readonly<Entity>>;
+  /** Adds an entity that the webapp created during the test. */
+  add(id: string, stored: Stored): Readonly<Entity>;
   update(ref: H | string, patch: Partial<Stored>): Readonly<Entity>;
 }
 
@@ -74,6 +84,12 @@ export interface Store {
     set(ref: ConnectionHandle | string, answer: SchemaRefreshAnswer): void;
     find(ref: ConnectionHandle | string): Readonly<SchemaRefreshAnswer> | undefined;
   };
+  /** Connection checks that the webapp started. */
+  readonly commands: Commands;
+  /** Sync jobs that the webapp started, and their timeline events. */
+  readonly jobs: Jobs;
+  /** Connector Builder projects that the webapp created. */
+  readonly builderProjects: BuilderProjects;
 }
 
 export function snapshot<T>(value: T): Readonly<T> {
@@ -128,6 +144,11 @@ class EntityCollection<Entity, Stored, H extends Handle<string, object>> impleme
 
   all() {
     return [...this.records.values()].map((stored) => snapshot(this.toEntity(stored)));
+  }
+
+  add(id: string, stored: Stored) {
+    this.records.set(id, structuredClone(stored));
+    return this.get(id);
   }
 
   update(ref: H | string, patch: Partial<Stored>) {
@@ -192,8 +213,14 @@ function createIdentity(scenario: Scenario): Identity {
   return { user, workspace, organization };
 }
 
-/** Builds a fresh store from a scenario. IDs follow the order in which the scenario lists the entities. */
-export function createStore(scenario: Scenario): Store {
+/**
+ * Builds a fresh store from a scenario. IDs follow the order in which the scenario lists the entities.
+ * `nowSeconds` gives the time for the timestamps the store writes. The mock backend passes the browser time.
+ */
+export function createStore(
+  scenario: Scenario,
+  nowSeconds = () => Math.floor(MOCK_START_TIME.getTime() / 1000)
+): Store {
   let identity = snapshot(createIdentity(scenario));
   const sourceDefinitions = new Map<string, SourceDefinitionInput>();
   const destinationDefinitions = new Map<string, DestinationDefinitionInput>();
@@ -247,6 +274,11 @@ export function createStore(scenario: Scenario): Store {
     seenDefinitionInputs.set(`${kind}:${id}`, def.input);
   }
 
+  function addSourceDefinition(def: SourceDefinitionHandle) {
+    assertOneDefinition("source", def.input.definition.sourceDefinitionId, def);
+    sourceDefinitions.set(def.input.definition.sourceDefinitionId, structuredClone(def.input));
+  }
+
   function addSource(handle: SourceHandle) {
     assertOneVariant(handle);
     const existingId = sources.idOf(handle);
@@ -255,9 +287,8 @@ export function createStore(scenario: Scenario): Store {
     }
 
     const { def, name, config } = handle.input;
-    assertOneDefinition("source", def.input.definition.sourceDefinitionId, def);
+    addSourceDefinition(def);
     const id = ids.source(sources.size + 1);
-    sourceDefinitions.set(def.input.definition.sourceDefinitionId, structuredClone(def.input));
     sources.addFromHandle(handle, id, {
       sourceId: id,
       sourceDefinitionId: def.input.definition.sourceDefinitionId,
@@ -294,6 +325,8 @@ export function createStore(scenario: Scenario): Store {
     });
     return id;
   }
+
+  (scenario.input.sourceDefinitions ?? []).forEach(addSourceDefinition);
 
   (scenario.input.connections ?? []).forEach((handle, index) => {
     if (connections.idOf(handle)) {
@@ -364,5 +397,17 @@ export function createStore(scenario: Scenario): Store {
         return answer && snapshot(answer);
       },
     },
+    commands: createCommands(scenario.input.outcomes?.check),
+    jobs: createJobs({
+      nowSeconds,
+      user: () => ({
+        id: identity.user.userId,
+        email: identity.user.email,
+        name: identity.user.name,
+        isDeleted: false,
+      }),
+      outcome: scenario.input.outcomes?.sync,
+    }),
+    builderProjects: createBuilderProjects(nowSeconds, scenario.input.outcomes?.streamRead),
   };
 }
