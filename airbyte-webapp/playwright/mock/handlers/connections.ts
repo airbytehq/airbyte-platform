@@ -16,16 +16,27 @@ function listedConnections(store: Store) {
 }
 
 /** The All Connections page always sends `filters`, with "", null, or [] for each filter that is not in use. */
-function hasValue(value: unknown) {
+function hasValue<T>(value: T): value is NonNullable<T> {
   return value != null && value !== "" && !(Array.isArray(value) && value.length === 0);
 }
 
 /**
- * True when the request asks for a later page or a filtered list. The mock always returns every connection, so it
- * cannot answer these requests correctly.
+ * True when the request asks for a later page or for a filter other than source and destination. The mock filters the
+ * list only by source and destination. It cannot page or apply the other filters, so it rejects these requests.
  */
-function asksForPageOrFilter({ cursor, sourceId, destinationId, filters }: WebBackendConnectionListRequestBody) {
-  return Boolean(cursor) || [sourceId, destinationId, ...Object.values(filters ?? {})].some(hasValue);
+function asksForPageOrFilter({ cursor, filters }: WebBackendConnectionListRequestBody) {
+  return Boolean(cursor) || Object.values(filters ?? {}).some(hasValue);
+}
+
+/** True when the connection uses one of the sources and one of the destinations the request names, if it names any. */
+function matchesActors(
+  connection: Readonly<WebBackendConnectionRead>,
+  { sourceId, destinationId }: WebBackendConnectionListRequestBody
+) {
+  return (
+    (!hasValue(sourceId) || sourceId.includes(connection.sourceId)) &&
+    (!hasValue(destinationId) || destinationId.includes(connection.destinationId))
+  );
 }
 
 /**
@@ -115,7 +126,7 @@ export const connectionHandlers: HandlerMap = {
     if (asksForPageOrFilter(body)) {
       throw new Error("The mock does not support paging or filters on the connection list");
     }
-    const connections = listedConnections(store);
+    const connections = listedConnections(store).filter((connection) => matchesActors(connection, body));
     return {
       connections: connections.map((connection) => toListItem(store, connection)),
       page_size: body.pageSize,

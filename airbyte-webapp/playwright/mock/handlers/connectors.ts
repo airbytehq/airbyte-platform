@@ -2,7 +2,6 @@ import type { HandlerMap } from "./handler";
 
 import { notFound } from "./handler";
 import { isOtherWorkspace } from "./identity";
-import { ids } from "../ids";
 import { actorDefinitionVersion } from "../store";
 
 /** A finished spec job. The server attaches one to every specification read. */
@@ -12,6 +11,26 @@ const specJobInfo = { id: "spec-job", configType: "get_spec", createdAt: 0, ende
 export const connectorHandlers: HandlerMap = {
   listSourcesForWorkspace: ({ body, store }) =>
     isOtherWorkspace(store, body.workspaceId) ? notFound() : { sources: [...store.sources.all()] },
+  getSource: ({ body, store }) => store.sources.find(body.sourceId) ?? notFound(),
+  updateSource: ({ body, store }) =>
+    store.sources.find(body.sourceId)
+      ? store.sources.update(body.sourceId, { name: body.name, connectionConfiguration: body.connectionConfiguration })
+      : notFound(),
+  /**
+   * The server answers 204, and reads and lists no longer find the source. The server also deletes the connections of
+   * the source (SourceHandler.kt). The mock refuses to delete a source that has connections (a handler error), because
+   * the pages of a deleted connection still read its source.
+   */
+  deleteSource: ({ body, store }) => {
+    if (!store.sources.find(body.sourceId)) {
+      return notFound();
+    }
+    if (store.connections.all().some(({ sourceId }) => sourceId === body.sourceId)) {
+      throw new Error(`The mock does not delete source ${body.sourceId}, because it has connections`);
+    }
+    store.sources.remove(body.sourceId);
+    return undefined;
+  },
 
   /** The create page saves a draft source (`createAsDraft: true`) before it checks the connection. */
   createSource: ({ body, store }) => {
@@ -19,7 +38,7 @@ export const connectorHandlers: HandlerMap = {
     if (!definition || isOtherWorkspace(store, body.workspaceId)) {
       return notFound();
     }
-    const sourceId = ids.source(store.sources.all().length + 1);
+    const sourceId = store.sources.nextId();
     return store.sources.add(sourceId, {
       sourceId,
       sourceDefinitionId: body.sourceDefinitionId,
@@ -29,6 +48,7 @@ export const connectorHandlers: HandlerMap = {
       connectionConfiguration: body.connectionConfiguration,
       createdAt: 0,
       isDraft: body.createAsDraft ?? false,
+      isEntitled: true,
     });
   },
 
@@ -86,6 +106,19 @@ export const connectorHandlers: HandlerMap = {
     return definition ? actorDefinitionVersion(definition.definition) : notFound();
   },
 
+  getSpecificationForSourceId: ({ body, store }) => {
+    const source = store.sources.find(body.sourceId);
+    const definition = source && store.definitions.source(source.sourceDefinitionId);
+    if (!source || !definition) {
+      return notFound();
+    }
+    return {
+      sourceDefinitionId: source.sourceDefinitionId,
+      documentationUrl: definition.definition.documentationUrl,
+      connectionSpecification: definition.specification,
+      jobInfo: specJobInfo,
+    };
+  },
   getSpecificationForDestinationId: ({ body, store }) => {
     const destination = store.destinations.find(body.destinationId);
     const definition = destination && store.definitions.destination(destination.destinationDefinitionId);

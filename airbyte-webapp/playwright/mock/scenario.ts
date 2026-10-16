@@ -1,5 +1,5 @@
 import type { ConnectionHandle } from "./builders/connection";
-import type { SourceDefinitionHandle } from "./builders/connectors";
+import type { SourceDefinitionHandle, SourceHandle } from "./builders/connectors";
 import type { CheckOutput } from "./commands";
 import type { SecurityCheckAnswer } from "./external";
 import type { SyncOutcome } from "./jobs";
@@ -23,6 +23,8 @@ export interface ScenarioInput {
   external?: { securityCheck?: SecurityCheckAnswer };
   /** Source definitions in the marketplace. The definitions of the sources in `connections` are added automatically. */
   sourceDefinitions?: SourceDefinitionHandle[];
+  /** Sources without a connection. The sources in `connections` are added automatically. */
+  sources?: SourceHandle[];
   /** Sources and destinations that a connection references are added automatically. */
   connections?: ConnectionHandle[];
   /** Experiment overrides, sent to the webapp as window._e2eOverwrites. */

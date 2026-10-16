@@ -39,9 +39,16 @@ export interface Collection<Entity, Stored, H> {
   get(ref: H | string): Readonly<Entity>;
   find(ref: H | string): Readonly<Entity> | undefined;
   all(): ReadonlyArray<Readonly<Entity>>;
-  /** Adds an entity that the webapp created during the test. */
+  /**
+   * Returns a new ID for the next entity. The number in the ID only goes up, so an entity that the test deleted
+   * never gives its ID to a new entity.
+   */
+  nextId(): string;
+  /** Adds an entity that the webapp created during the test. Throws when an entity with this ID exists. */
   add(id: string, stored: Stored): Readonly<Entity>;
   update(ref: H | string, patch: Partial<Stored>): Readonly<Entity>;
+  /** Removes an entity that the webapp deleted. Reads and lists no longer find it. Throws when it does not exist. */
+  remove(ref: H | string): void;
 }
 
 /** Stored connection fields. The source, destination and actor definition versions are derived on each read. */
@@ -108,19 +115,25 @@ class EntityCollection<Entity, Stored, H extends Handle<string, object>> impleme
   private readonly records = new Map<string, Stored>();
   private readonly idsByKey = new Map<string, string>();
   private readonly label: string;
+  private readonly makeId: (n: number) => string;
   private readonly toEntity: (stored: Stored) => Entity;
+  /** How many IDs nextId() has given. A delete does not lower it. */
+  private issuedIds = 0;
 
-  constructor(label: string, toEntity: (stored: Stored) => Entity) {
+  constructor(label: string, makeId: (n: number) => string, toEntity: (stored: Stored) => Entity) {
     this.label = label;
+    this.makeId = makeId;
     this.toEntity = toEntity;
   }
 
-  get size() {
-    return this.records.size;
+  nextId() {
+    this.issuedIds += 1;
+    return this.makeId(this.issuedIds);
   }
 
   /** Adds the entity that a scenario handle describes. */
   addFromHandle(handle: H, id: string, stored: Stored) {
+    this.assertNewId(id);
     this.idsByKey.set(handle.key, id);
     this.records.set(id, stored);
   }
@@ -147,6 +160,7 @@ class EntityCollection<Entity, Stored, H extends Handle<string, object>> impleme
   }
 
   add(id: string, stored: Stored) {
+    this.assertNewId(id);
     this.records.set(id, structuredClone(stored));
     return this.get(id);
   }
@@ -159,6 +173,20 @@ class EntityCollection<Entity, Stored, H extends Handle<string, object>> impleme
     }
     this.records.set(id, { ...stored, ...structuredClone(patch) });
     return this.get(id);
+  }
+
+  remove(ref: H | string) {
+    const id = this.idOf(ref);
+    if (!id || !this.records.delete(id)) {
+      throw new Error(`The mock store has no ${this.label} ${this.describe(ref)}`);
+    }
+  }
+
+  /** A second entity with the same ID would silently replace the first one, so fail the test instead. */
+  private assertNewId(id: string) {
+    if (this.records.has(id)) {
+      throw new Error(`The mock store already has a ${this.label} with ID ${id}`);
+    }
   }
 
   private findStored(ref: H | string) {
@@ -225,13 +253,15 @@ export function createStore(
   const sourceDefinitions = new Map<string, SourceDefinitionInput>();
   const destinationDefinitions = new Map<string, DestinationDefinitionInput>();
 
-  const sources = new EntityCollection<SourceRead, SourceRead, SourceHandle>("source", (stored) => stored);
+  const sources = new EntityCollection<SourceRead, SourceRead, SourceHandle>("source", ids.source, (stored) => stored);
   const destinations = new EntityCollection<DestinationRead, DestinationRead, DestinationHandle>(
     "destination",
+    ids.destination,
     (stored) => stored
   );
   const connections = new EntityCollection<WebBackendConnectionRead, StoredConnection, ConnectionHandle>(
     "connection",
+    ids.connection,
     (stored) => {
       const source = sources.get(stored.sourceId);
       const destination = destinations.get(stored.destinationId);
@@ -288,7 +318,7 @@ export function createStore(
 
     const { def, name, config } = handle.input;
     addSourceDefinition(def);
-    const id = ids.source(sources.size + 1);
+    const id = sources.nextId();
     sources.addFromHandle(handle, id, {
       sourceId: id,
       sourceDefinitionId: def.input.definition.sourceDefinitionId,
@@ -298,6 +328,8 @@ export function createStore(
       connectionConfiguration: structuredClone(config ?? {}),
       createdAt: 0,
       isDraft: false,
+      // OSS entitles every connector (SourceHandler.kt). The source page disables its controls without it.
+      isEntitled: true,
     });
     return id;
   }
@@ -311,7 +343,7 @@ export function createStore(
 
     const { def, name, config } = handle.input;
     assertOneDefinition("destination", def.input.definition.destinationDefinitionId, def);
-    const id = ids.destination(destinations.size + 1);
+    const id = destinations.nextId();
     destinationDefinitions.set(def.input.definition.destinationDefinitionId, structuredClone(def.input));
     destinations.addFromHandle(handle, id, {
       destinationId: id,
@@ -327,6 +359,7 @@ export function createStore(
   }
 
   (scenario.input.sourceDefinitions ?? []).forEach(addSourceDefinition);
+  (scenario.input.sources ?? []).forEach(addSource);
 
   (scenario.input.connections ?? []).forEach((handle, index) => {
     if (connections.idOf(handle)) {
@@ -338,7 +371,8 @@ export function createStore(
     const sourceName = sources.get(sourceId).name;
     const destinationName = destinations.get(destinationId).name;
 
-    connections.addFromHandle(handle, ids.connection(index + 1), {
+    const connectionId = connections.nextId();
+    connections.addFromHandle(handle, connectionId, {
       name: `${sourceName} → ${destinationName}`,
       scheduleType: "manual",
       status: "active",
@@ -350,7 +384,7 @@ export function createStore(
       tags: [],
       onDemandEnabled: false,
       ...structuredClone(fields),
-      connectionId: ids.connection(index + 1),
+      connectionId,
       catalogId: ids.catalog(index + 1),
       sourceId,
       destinationId,

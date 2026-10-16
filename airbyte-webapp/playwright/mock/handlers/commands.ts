@@ -23,6 +23,11 @@ export const commandHandlers: HandlerMap = {
     if (!command.output) {
       throw new Error(`The webapp read the output of check ${body.id} before the check was done`);
     }
+    // The server promotes a draft source when the webapp reads a succeeded check of it (CommandService.kt).
+    const source = command.request.actor_id ? store.sources.find(command.request.actor_id) : undefined;
+    if (command.output.status === "succeeded" && source?.isDraft) {
+      store.sources.update(source.sourceId, { isDraft: false });
+    }
     return { id: command.id, ...command.output };
   },
 

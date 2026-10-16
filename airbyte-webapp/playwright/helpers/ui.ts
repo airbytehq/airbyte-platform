@@ -179,31 +179,3 @@ export const performSecondTextEdit = async (page: Page, fieldName: string, newVa
   await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 60000 });
   await expect(page.locator(`input[value='${newValue}']`)).toBeVisible({ timeout: 10000 });
 };
-
-/**
- * Perform a second edit workflow on a dropdown field
- * Used to verify form remains functional after first successful update
- */
-export const performSecondDropdownEdit = async (page: Page, fieldTestId: string, newValue: string) => {
-  // Wait for success message to fade/reset (indicating form is ready for next edit)
-  await page.waitForTimeout(2000);
-
-  // Make another change to verify form is still functional
-  const dropdown = page.locator(`[data-testid='${fieldTestId}']`);
-  await dropdown.waitFor({ state: "visible", timeout: 10000 });
-  await dropdown.click();
-
-  // Select the new value from dropdown
-  const option = page.locator("li").filter({ hasText: newValue });
-  await option.waitFor({ state: "visible", timeout: 10000 });
-  await option.click();
-
-  // Verify button becomes enabled and submit the second change
-  await expect(page.locator("button[type=submit]")).toBeEnabled({ timeout: 10000 });
-  const submitButton = page.locator("button[type='submit']");
-  await submitButton.waitFor({ state: "visible", timeout: 10000 });
-  await submitButton.click();
-
-  await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 30000 });
-  await expect(page.locator(`[data-testid='${fieldTestId}']`)).toContainText(newValue, { timeout: 10000 });
-};

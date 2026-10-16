@@ -217,34 +217,6 @@ export const mockHelpers = {
     });
   },
 
-  // Mock failed connection check
-  mockFailedConnectionCheck: async (page: Page, connectorType: "source" | "destination") => {
-    const endpoint =
-      connectorType === "source"
-        ? "**/api/v1/scheduler/sources/check_connection"
-        : "**/api/v1/scheduler/destinations/check_connection";
-
-    await page.route(endpoint, (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          status: "failed",
-          message: "Something went wrong",
-          jobInfo: {
-            id: "test-job-id",
-            configType: `check_connection_${connectorType}`,
-            createdAt: Date.now(),
-            endedAt: Date.now() + 1000,
-            succeeded: false,
-            connectorConfigurationUpdated: false,
-            logs: { logLines: [] },
-          },
-        }),
-      });
-    });
-  },
-
   // Mock empty connector lists for redirect tests
   mockEmptyConnectorLists: async (page: Page, connectorType: "source" | "destination") => {
     const endpoint = connectorType === "source" ? "**/api/v1/sources/list" : "**/api/v1/destinations/list";

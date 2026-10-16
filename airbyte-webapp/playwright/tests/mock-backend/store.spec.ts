@@ -94,6 +94,20 @@ test.describe("Mock backend store", () => {
     expect(store.definitions.allSources()).toHaveLength(1);
   });
 
+  test("gives a new entity an ID that no deleted entity had, and fails on an add with an existing ID", () => {
+    const store = createStore(scenario({ sources: [pokeSource, pokeSource.copy()] }));
+    const first = store.sources.get(pokeSource);
+    const second = store.sources.all()[1];
+
+    store.sources.remove(first.sourceId);
+    const newId = store.sources.nextId();
+
+    expect(newId).toBe("50000000-0000-4000-8000-000000000003");
+    expect(() => store.sources.add(second.sourceId, second)).toThrow(
+      `The mock store already has a source with ID ${second.sourceId}`
+    );
+  });
+
   test("fails on a read of an entity that is not in the scenario", () => {
     const store = createStore(scenario({ connections: [pokeConnection] }));
 

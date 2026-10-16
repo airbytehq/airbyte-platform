@@ -8,7 +8,17 @@ import type { FieldSpec } from "@src/core/api/types/AirbyteClient";
 import { test, expect } from "@playwright/test";
 
 import { installBackend, post } from "./selfTest";
-import { catalogs, connection, defs, destination, errors, mapperValidation, scenario, source } from "../../mock";
+import {
+  catalogs,
+  checkOutput,
+  connection,
+  defs,
+  destination,
+  errors,
+  mapperValidation,
+  scenario,
+  source,
+} from "../../mock";
 import { createMockBackend } from "../../mock/backend";
 import { MockResponse } from "../../mock/handlers/handler";
 
@@ -45,6 +55,29 @@ function validateMappers(page: Page, body: object) {
     mappers: [{ id: "m1", type: "hashing", mapperConfiguration: { targetField: "name" } }],
     ...body,
   });
+}
+
+/** Saves a PokeAPI source as a draft, as the create page does before it checks the connection. Returns the source. */
+async function createDraftSource(page: Page, workspaceId: string) {
+  const created = await post(page, "sources/create", {
+    workspaceId,
+    sourceDefinitionId: defs.pokeApiSource.input.definition.sourceDefinitionId,
+    name: "PokeAPI draft",
+    connectionConfiguration: { pokemon_name: "ditto" },
+    createAsDraft: true,
+  });
+  return created.body;
+}
+
+/**
+ * Checks a source as the webapp does: it starts check "check-1", reads its status once, then reads its output. The
+ * mock ends the check when the webapp reads its status. Returns the output.
+ */
+async function checkSource(page: Page, sourceId: string) {
+  await post(page, "commands/run/check", { id: "check-1", actor_id: sourceId });
+  await post(page, "commands/status", { id: "check-1" });
+  const output = await post(page, "commands/output/check", { id: "check-1" });
+  return output.body;
 }
 
 test.describe("Mock backend", () => {
@@ -418,6 +451,97 @@ test.describe("Mock backend", () => {
       isDraft: true,
     });
     expect(listed.sources).toEqual([created]);
+    expect(backend.problems()).toEqual([]);
+  });
+
+  test("reads, updates and deletes a source, and fails to delete a source that has connections", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const pokeSource = pokeConnection.input.source;
+    const unusedSource = source({ def: defs.pokeApiSource, name: "Unused source" });
+    const backend = await installBackend(
+      context,
+      page,
+      baseURL,
+      scenario({ sources: [unusedSource], connections: [pokeConnection] })
+    );
+    const { workspaceId, store } = backend.airbyte;
+    const { sourceId } = store.sources.get(pokeSource);
+    const unusedSourceId = store.sources.get(unusedSource).sourceId;
+    const { connectionId } = store.connections.get(pokeConnection);
+
+    const read = await post(page, "sources/get", { sourceId });
+    const specification = await post(page, "source_definition_specifications/get_for_source", { sourceId });
+    const connectionsOfSource = await post(page, "web_backend/connections/list", {
+      workspaceId,
+      sourceId: [sourceId],
+    });
+    const connectionsOfUnused = await post(page, "web_backend/connections/list", {
+      workspaceId,
+      sourceId: [unusedSourceId],
+    });
+    const updated = await post(page, "sources/update", {
+      sourceId,
+      name: "Renamed",
+      connectionConfiguration: { pokemon_name: "ditto" },
+    });
+    const deleted = await post(page, "sources/delete", { sourceId: unusedSourceId });
+    const readAfterDelete = await post(page, "sources/get", { sourceId: unusedSourceId });
+    const deletedWithConnections = await post(page, "sources/delete", { sourceId });
+    const listed = await post(page, "sources/list", { workspaceId });
+
+    expect(read.body).toMatchObject({ sourceId, isDraft: false, isEntitled: true });
+    expect(specification.body).toMatchObject({ sourceDefinitionId: read.body.sourceDefinitionId });
+    expect(specification.body.connectionSpecification.required).toEqual(["pokemon_name"]);
+    expect(connectionsOfSource.body.connections).toEqual([expect.objectContaining({ connectionId })]);
+    expect(connectionsOfUnused.body.connections).toEqual([]);
+    expect(updated.body).toMatchObject({
+      sourceId,
+      name: "Renamed",
+      connectionConfiguration: { pokemon_name: "ditto" },
+    });
+    expect(deleted.status).toBe(204);
+    expect(readAfterDelete.status).toBe(404);
+    expect(deletedWithConnections.status).toBe(500);
+    expect(listed.body.sources.map(({ name }: { name: string }) => name)).toEqual(["Renamed"]);
+    expect(backend.problems()).toEqual([
+      `Handler error: POST /api/v1/sources/delete (deleteSource): The mock does not delete source ${sourceId}, because it has connections`,
+    ]);
+  });
+
+  test("promotes a draft source when the webapp reads a succeeded check of it", async ({ context, page, baseURL }) => {
+    const backend = await installBackend(context, page, baseURL, scenario({ sourceDefinitions: [defs.pokeApiSource] }));
+    const { workspaceId } = backend.airbyte;
+
+    const draft = await createDraftSource(page, workspaceId);
+    const output = await checkSource(page, draft.sourceId);
+    const listed = await post(page, "sources/list", { workspaceId });
+
+    expect(output).toEqual({ id: "check-1", status: "succeeded" });
+    expect(listed.body.sources).toEqual([expect.objectContaining({ sourceId: draft.sourceId, isDraft: false })]);
+    expect(backend.problems()).toEqual([]);
+  });
+
+  test("keeps a draft source a draft when the webapp reads a failed check of it", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const input = scenario({
+      sourceDefinitions: [defs.pokeApiSource],
+      outcomes: { check: checkOutput.failed({ message: "Bad credentials" }) },
+    });
+    const backend = await installBackend(context, page, baseURL, input);
+    const { workspaceId } = backend.airbyte;
+
+    const draft = await createDraftSource(page, workspaceId);
+    const output = await checkSource(page, draft.sourceId);
+    const listed = await post(page, "sources/list", { workspaceId });
+
+    expect(output).toMatchObject({ id: "check-1", status: "failed", message: "Bad credentials" });
+    expect(listed.body.sources).toEqual([expect.objectContaining({ sourceId: draft.sourceId, isDraft: true })]);
     expect(backend.problems()).toEqual([]);
   });
 });
