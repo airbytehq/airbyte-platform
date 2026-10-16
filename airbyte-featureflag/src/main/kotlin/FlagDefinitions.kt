@@ -200,8 +200,6 @@ object EnableStrictJsonDeserialization : Temporary<Boolean>(key = "platform.enab
 
 object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "license.allow-destination-object-storage-config", default = false)
 
-object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)
-
 object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso-config", default = false)
 
 object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)
