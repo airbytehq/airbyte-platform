@@ -15,6 +15,7 @@ import {
   useFusionActorSaving,
   fusionEnablementState,
 } from "core/api";
+import { useFormatError } from "core/errors";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -48,6 +49,7 @@ const ActorAgentAccessToggleContent: React.FC<
     actorType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
   );
   const { formatMessage } = useIntl();
+  const formatError = useFormatError();
   const { sources, destinations, isLoading, sourcesError, destinationsError } = useFusionWorkspaceConnectors(
     workspaceId,
     {
@@ -131,7 +133,9 @@ const ActorAgentAccessToggleContent: React.FC<
       setStatus("success");
     } catch (error) {
       setOptimisticEnabled(undefined);
-      setErrorMessage(error instanceof Error && error.message ? error.message : undefined);
+      const message = error instanceof Error ? formatError(error) : undefined;
+      // formatError's type allows rich-text output; the StatusIcon title only takes a string.
+      setErrorMessage(typeof message === "string" && message ? message : undefined);
       setStatus("warning");
     }
   };

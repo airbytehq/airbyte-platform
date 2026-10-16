@@ -9,6 +9,7 @@ import {
   useSetFusionActorEnablement,
   useFusionActorEnablement,
 } from "core/api";
+import { I18nError } from "core/errors";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { NotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
@@ -90,6 +91,7 @@ const messages = {
   "cloud.contextLayer.disableConfirm.submit": "Disable",
   "cloud.contextLayer.disableConfirm.dontAskAgain": "Don't ask again",
   "form.cancel": "Cancel",
+  "errors.messageOnly": "{message}",
 };
 
 const renderToggle = (component: React.ReactNode) =>
@@ -328,8 +330,11 @@ describe("ActorContextLayerToggles", () => {
     expect(await screen.findByTitle("Agent access updated.")).toBeInTheDocument();
   });
 
-  it("reverts the toggle and shows the mutation error when updating actor access fails", async () => {
-    const mutateAsync = jest.fn().mockRejectedValue(new Error("boom"));
+  it.each([
+    ["a plain error", new Error("boom"), "boom"],
+    ["a translatable error", new I18nError("errors.messageOnly", { message: "Invalid input" }), "Invalid input"],
+  ])("reverts the toggle and shows %s when updating actor access fails", async (_, error, expectedTitle) => {
+    const mutateAsync = jest.fn().mockRejectedValue(error);
     mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
     mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [
@@ -356,7 +361,7 @@ describe("ActorContextLayerToggles", () => {
     await waitFor(() => {
       expect(screen.getByRole("checkbox", { name: "Agent Access" })).toBeChecked();
     });
-    expect(await screen.findByTitle("boom")).toBeInTheDocument();
+    expect(await screen.findByTitle(expectedTitle)).toBeInTheDocument();
   });
 
   it("enables actor access without showing a confirmation modal", async () => {
