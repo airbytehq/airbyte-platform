@@ -64,24 +64,21 @@ pnpm test -- --serverHost="https://local.airbyte.dev" tests/builder tests/connec
 
 ## Running the test suite locally
 
-The full Playwright E2E test suite relies on two external Docker containers to be running:
+The full Playwright E2E test suite relies on an external Postgres container for connection tests.
 
-1. Postgres container for connection tests
-2. Dummy API for builder tests
-
-The simplest way to boot these up locally is to run the following command from `oss/airbyte-webapp/playwright`:
+The simplest way to boot it up locally is to run the following command from `oss/airbyte-webapp/playwright`:
 
 ```bash
 pnpm run setup
 ```
 
-After you are done running the tests, you can clean up both of these containers with
+After you are done running the tests, you can clean up the container with
 
 ```bash
 pnpm run cleanup
 ```
 
-The setup and cleanup scripts for both Postgres and Dummy API are located in `scripts/`. These scripts automatically detect whether you're running locally (Docker) or in CI (Kubernetes) and use the appropriate deployment method.
+The setup and cleanup scripts for Postgres are located in `scripts/`. These scripts automatically detect whether you're running locally (Docker) or in CI (Kubernetes) and use the appropriate deployment method.
 
 ## Test Reports
 

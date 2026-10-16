@@ -485,13 +485,11 @@ The most useful way to run tests locally is in Playwright's UI mode, which lets 
 This triggers headless runs: you won't have a live browser to interact with, just terminal output. This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode. This will print the same output you would see on CI.
 
 1. Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
-2. Run `make test.e2e.oss`. This will take care of running dependency scripts to spin up a source and destination db and dummy API, and run the Playwright tests.
+2. Run `make test.e2e.oss`. This will take care of running dependency scripts to spin up a source and destination db, and run the Playwright tests.
 
 #### Test setup
 
 When the tests are run as described above, the platform under test is started via kubernetes in the ab namespace. To test connections from real sources and destinations, additional docker containers are started for hosting these. For basic connections, additional postgres instances are started (`createdbsource` and `createdbdestination`).
-
-For testing the connector builder UI, a dummy api server based on a node script is started (`createdummyapi`). It is providing a simple http API with bearer authentication returning a few records of hardcoded data. By running it in the internal airbyte network, the connector builder server can access it under its container name.
 
 The tests instrument a browser to test the full functionality of Airbyte from the frontend, so other components of the platform (scheduler, worker, connector builder server) are also tested in a rudimentary way.
 

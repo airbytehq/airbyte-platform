@@ -6,8 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node ./scripts/run-playwright.js",
-    "setup": "./scripts/postgres-setup.sh && ./scripts/dummy-api-setup.sh",
-    "cleanup": "./scripts/postgres-cleanup.sh && ./scripts/dummy-api-cleanup.sh"
+    "setup": "./scripts/postgres-setup.sh",
+    "cleanup": "./scripts/postgres-cleanup.sh"
   },
   "keywords": [],
   "author": "",

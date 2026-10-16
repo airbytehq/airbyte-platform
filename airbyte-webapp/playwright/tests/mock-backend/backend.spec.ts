@@ -281,6 +281,36 @@ test.describe("Mock backend", () => {
     ]);
   });
 
+  test("passes the files of the Monaco code editor on to the network, and fails other files of the same CDN", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    // Stands in for the network, so that the test does not depend on the CDN. The mock passes requests on to it.
+    await context.route("https://cdn.jsdelivr.net/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/javascript", body: "// from the CDN" })
+    );
+    const backend = await installBackend(context, page, baseURL, scenario({}));
+    const get = (url: string) =>
+      page.evaluate(
+        (url) =>
+          fetch(url).then(
+            (response) => response.text(),
+            () => "failed"
+          ),
+        url
+      );
+
+    const monacoLoader = await get("https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/min/vs/loader.js");
+    const otherPackage = await get("https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js");
+
+    expect(monacoLoader).toBe("// from the CDN");
+    expect(otherPackage).toBe("failed");
+    expect(backend.problems()).toEqual([
+      "Unexpected request: GET https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js (external host)",
+    ]);
+  });
+
   test("answers a schema refresh with the onRefresh answer, and fails a refresh that has no answer", async ({
     context,
     page,

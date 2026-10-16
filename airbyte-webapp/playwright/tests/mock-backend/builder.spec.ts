@@ -83,6 +83,42 @@ test.describe("Mock backend Connector Builder", () => {
     expect(backend.problems()).toEqual([]);
   });
 
+  test("builds a read with one slice for each declared page, and a read that stopped at a failed request", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const pages = streamRead.pages({
+      pages: [[{ name: "abc" }], [{ name: "xxx" }]],
+      inferredSchema: { type: "object" },
+      limitReached: true,
+    });
+    const backend = await installBackend(context, page, baseURL, scenario({ outcomes: { streamRead: pages } }));
+    const { workspaceId } = backend.airbyte;
+    const { builderProjectId } = (
+      await post(page, "connector_builder_projects/create", { workspaceId, builderProject: { name: "A" } })
+    ).body;
+    const readBody = { workspaceId, builderProjectId, manifest, streamName: "A" };
+
+    const first = await post(page, "connector_builder_projects/read_stream", readBody);
+    backend.airbyte.override("readConnectorBuilderProjectStream", () =>
+      streamRead.failedRequest({ status: 403, body: { error: "Bad credentials" } })
+    );
+    const second = await post(page, "connector_builder_projects/read_stream", readBody);
+
+    expect(first.body).toMatchObject({ test_read_limit_reached: true, inferred_schema: { type: "object" } });
+    expect(
+      first.body.slices.map(({ pages }: { pages: Array<{ records: unknown[] }> }) =>
+        pages.map(({ records }) => records)
+      )
+    ).toEqual([[[{ name: "abc" }]], [[{ name: "xxx" }]]]);
+    expect(second.body.logs).toEqual([expect.objectContaining({ level: "ERROR" })]);
+    expect(second.body.slices[0].pages).toEqual([
+      expect.objectContaining({ records: [], response: { status: 403, body: '{"error":"Bad credentials"}' } }),
+    ]);
+    expect(backend.problems()).toEqual([]);
+  });
+
   test("fails the test on a test read when the scenario declares no result", async ({ context, page, baseURL }) => {
     const backend = await installBackend(context, page, baseURL, scenario({}));
     const { workspaceId } = backend.airbyte;

@@ -1,5 +1,6 @@
 import { Page } from "@playwright/test";
-import { getWorkspaceId } from "helpers/workspace";
+
+import { expect } from "../../mock";
 
 // Selects a dropdown option within a field container by clicking on a span first, then the target option
 export const selectDropdownOption = async (
@@ -45,16 +46,12 @@ export const fillInputByLabel = async (page: Page, fieldPath: string, value: str
   }
 };
 
-// Useful for ensuring that a name is unique from one test run to the next
-export const appendRandomString = (string: string) => {
-  const randomString = Math.random().toString(36).substring(2, 10);
-  return `${string} _${randomString}`;
-};
+// The name of the connector that initializeBuilderConnector starts
+export const BUILDER_CONNECTOR_NAME = "Items API";
 
-// Opens a builder connector project and configures the /items endpoint stream
-export const initializeBuilderConnector = async (page: Page) => {
+// Starts a new builder connector project from scratch, and names it
+export const initializeBuilderConnector = async (page: Page, workspaceId: string) => {
   // Navigate to the connector builder
-  const workspaceId = await getWorkspaceId(page);
   await page.goto(`/workspaces/${workspaceId}/connector-builder/create`, { timeout: 30000 });
 
   // Select the "Start from scratch" option
@@ -66,7 +63,7 @@ export const initializeBuilderConnector = async (page: Page) => {
   // Wait for the input to be ready before filling
   const connectorNameInput = page.locator('input[data-testid="connector-name-input"]');
   await connectorNameInput.waitFor({ state: "visible", timeout: 10000 });
-  await connectorNameInput.fill(appendRandomString("dummy_api"));
+  await connectorNameInput.fill(BUILDER_CONNECTOR_NAME);
 };
 
 // Configures the stream name and URL for the connector
@@ -76,14 +73,12 @@ export const configureStream = async (page: Page) => {
   await streamNameField.click();
   await streamNameField.fill("Items");
 
-  const dummyApiHost = getDummyApiHost();
-
   // Wait for URL field to be ready
   const urlField = page
     .locator('div[data-field-path="manifest.streams.0.retriever.requester.url"]')
     .locator("textarea");
   await urlField.waitFor({ state: "visible", timeout: 10000 });
-  await urlField.fill(`${dummyApiHost}/items/`);
+  await urlField.fill("https://api.example.com/items/");
 
   // Wait for field path input to be ready
   const fieldPathInput = page.locator(
@@ -91,13 +86,6 @@ export const configureStream = async (page: Page) => {
   );
   await fieldPathInput.waitFor({ state: "visible", timeout: 10000 });
   await fieldPathInput.fill("items");
-};
-
-const getDummyApiHost = () => {
-  const mockApiServerHost = process.env.MOCK_API_SERVER_HOST;
-  return (
-    mockApiServerHost || (process.platform === "darwin" ? "http://host.docker.internal:6767" : "http://172.17.0.1:6767")
-  );
 };
 
 // Configures a valid auth setup for the connector
@@ -206,27 +194,37 @@ export const configureListPartitionRouter = async (page: Page, numberOfParameter
   }
 };
 
-// By default, we set the URL to the dummy /items endpoint for tests during setup.
+// By default, we set the URL to the /items endpoint for tests during setup.
 // This function updates the queried endpoint when needed, without modifying the base URL.
+//
+// The URL field is a one-line Monaco editor. fill() is not reliable on it: it can insert the new URL next to the old
+// one. Monaco also adds " }}" after a typed "{{", so the function types the URL without the " }}" that closes a final
+// Jinja expression, and then checks the whole URL.
 export const updateUrlPath = async (page: Page, urlPath: string) => {
-  const urlPathField = page.locator('div[data-field-path="manifest.streams.0.retriever.requester.url"] textarea');
-  await urlPathField.click();
-
-  const currentUrl = await urlPathField.inputValue();
+  const field = page.locator('div[data-field-path="manifest.streams.0.retriever.requester.url"]');
+  const currentUrl = await field.locator("textarea").inputValue();
   const baseUrl = currentUrl.replace("/items/", "/");
   const newUrl = baseUrl + urlPath;
 
-  await urlPathField.fill(newUrl);
+  // ".view-lines" is the visible text of the Monaco editor. A click on it puts the cursor in the editor.
+  await field.locator(".view-lines").click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Shift+Home");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.insertText(newUrl.endsWith(" }}") ? newUrl.slice(0, -" }}".length) : newUrl);
+  // Close the suggestions that the builder shows inside a Jinja expression, so that no later key accepts one.
+  await page.keyboard.press("Escape");
+  await expect(field.locator("textarea")).toHaveValue(newUrl);
 };
 
-// Runs the stream test
+// Runs the stream test, and waits until the backend answers the test read request
 export const testStream = async (page: Page) => {
+  // Start to wait before the click, so that the wait also sees an answer that comes very quickly.
+  const readAnswered = page.waitForResponse((response) =>
+    response.url().endsWith("/connector_builder_projects/read_stream")
+  );
   await page.click('button[data-testid="read-stream"]');
-
-  // Wait for the test to complete by waiting for the button to stop being in loading state
-  await page
-    .locator('button[data-testid="read-stream"]:not([aria-busy="true"])')
-    .waitFor({ state: "visible", timeout: 10000 });
+  await readAnswered;
 };
 
 // Waits for the draft to save by waiting for the saving indicator to disappear
@@ -257,18 +255,14 @@ export const navigateToDetectedSchema = async (page: Page) => {
   await page.locator('[data-testid="tag-tab-detected-schema"]').click();
 };
 
-// Returns the name of the current builder connector
-export const getBuilderConnectorName = async (page: Page) => {
-  const name = await page.locator('button[data-testid="connector-name-label"]').first().textContent();
-  return name;
-};
-
 // TODO: Uncomment this when we add test cases for publish flow
 // const publishProject = async (page: Page) => {
 //   await page.click('button[data-testid="publish-button"]');
 //   await page.locator('[role="dialog"] button[type="submit"]').click();
 // };
 
+// The stream schema that the builder shows when it imports the schema that the server detected from the records abc
+// and def. The builder adds "additionalProperties": true to the detected schema.
 export const AUTO_IMPORTED_SCHEMA = `{
   "$schema": "http://json-schema.org/schema#",
   "additionalProperties": true,

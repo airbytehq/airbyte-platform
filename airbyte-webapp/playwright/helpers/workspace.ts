@@ -1,4 +1,4 @@
-import { APIRequestContext, Page, request } from "@playwright/test";
+import { APIRequestContext, request } from "@playwright/test";
 
 import { getApiBaseUrl } from "./api";
 
@@ -22,13 +22,6 @@ const fetchWorkspaceId = async (requestContext: APIRequestContext, apiBaseUrl: s
   }
 
   return workspaces[0].workspaceId;
-};
-
-export const getWorkspaceId = async (page: Page): Promise<string> => {
-  const serverHost = process.env.AIRBYTE_SERVER_HOST;
-  const apiBaseUrl = serverHost ? `${serverHost}/api/v1` : `${page.url().split("/").slice(0, 3).join("/")}/api/v1`;
-
-  return fetchWorkspaceId(page.request, apiBaseUrl);
 };
 
 /**
