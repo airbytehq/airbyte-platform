@@ -1,17 +1,10 @@
-import { APIRequestContext, Page, expect } from "@playwright/test";
+import { APIRequestContext } from "@playwright/test";
 import destinationIds from "@src/area/connector/utils/destinations.json";
 import sourceIds from "@src/area/connector/utils/sources.json";
 import { ActorListCursorPaginatedRequestBody } from "@src/core/api/generated/AirbyteClient.schemas";
 import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
-import { mockHelpers } from "./mocks";
-import {
-  fillFormField,
-  submitFormAndWaitForCreation,
-  navigateToConnectorCreation,
-  selectConnectorFromMarketplace,
-} from "./ui";
 
 // This file contains helper methods for connector CRUD operations
 
@@ -138,94 +131,3 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
 
 export const pokeSourceAPI = createConnectorAPI("source", "pokeapi");
 export const e2eDestinationAPI = createConnectorAPI("destination", "e2etesting");
-
-// UI helper functions for destination operations
-export const destinationUI = {
-  navigateToDestinationPage: async (page: Page, workspaceId: string) => {
-    await page.goto(`/workspaces/${workspaceId}/destination`, { timeout: 10000 });
-  },
-
-  createViaUI: async (page: Page, name: string, workspaceId: string) => {
-    // Setup all required mocks
-    await mockHelpers.mockEnterpriseConnectors(page);
-    await mockHelpers.mockConnectionCheck(page, "destination");
-
-    // Navigate to destination creation page
-    await navigateToConnectorCreation(page, "destination", workspaceId);
-
-    // Search for and select E2E Testing connector
-    await selectConnectorFromMarketplace(page, "end", "End-to-End Testing (/dev/null)");
-
-    // Fill in the destination name
-    await fillFormField(page, "input[name='name']", name);
-
-    // Submit and wait for creation
-    return await submitFormAndWaitForCreation(page, "destination");
-  },
-
-  updateDestination: async (
-    page: Page,
-    destinationName: string,
-    fieldName: string,
-    value: string,
-    workspaceId: string
-  ) => {
-    // Navigate to destinations page
-    await destinationUI.navigateToDestinationPage(page, workspaceId);
-
-    // Click on the destination by name - use the specific link within the destinations table
-    const destinationLink = page.getByTestId("destinationsTable").getByRole("link", { name: destinationName }).first();
-    await destinationLink.waitFor({ state: "visible", timeout: 15000 });
-    await destinationLink.click();
-
-    // Wait for the form to be fully loaded with existing values
-    await page.waitForSelector('div:has-text("Test Destination")', { timeout: 15000 });
-    await page.waitForSelector('div:has-text("Logging Configuration")', { timeout: 15000 });
-    await page.waitForSelector(`input[name='${fieldName}']`, { timeout: 15000 });
-
-    // Wait for the field to have the expected current value (100) before updating
-    await expect(page.locator(`input[name='${fieldName}']`)).toHaveValue("100", { timeout: 15000 });
-
-    // Update the field
-    const fieldInput = page.locator(`input[name='${fieldName}']`);
-    await fieldInput.waitFor({ state: "visible", timeout: 10000 });
-    await fieldInput.clear();
-    await fieldInput.fill(value);
-
-    // Submit the form
-    const submitButton = page.locator("button[type='submit']");
-    await submitButton.waitFor({ state: "visible", timeout: 10000 });
-    await submitButton.click();
-
-    // Wait for success indicator (can be either div or FlexContainer)
-    await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 90000 });
-  },
-
-  deleteDestination: async (page: Page, destinationName: string, workspaceId: string) => {
-    // Navigate to destinations page
-    await destinationUI.navigateToDestinationPage(page, workspaceId);
-
-    // Click on the destination by name - use the specific link within the destinations table
-    const destinationLink = page.getByTestId("destinationsTable").getByRole("link", { name: destinationName }).first();
-    await destinationLink.waitFor({ state: "visible", timeout: 15000 });
-    await destinationLink.click();
-
-    // Click delete button
-    const deleteButton = page.locator("button[data-id='open-delete-modal']");
-    await deleteButton.waitFor({ state: "visible", timeout: 10000 });
-    await deleteButton.click();
-
-    // Get the confirmation text from placeholder and enter it
-    const confirmationInput = page.locator("input[id='confirmation-text']");
-    await confirmationInput.waitFor({ state: "visible", timeout: 10000 });
-    const placeholder = await confirmationInput.getAttribute("placeholder");
-    if (placeholder) {
-      await confirmationInput.fill(placeholder);
-    }
-
-    // Confirm deletion
-    const confirmButton = page.locator("button[data-id='delete']");
-    await confirmButton.waitFor({ state: "visible", timeout: 10000 });
-    await confirmButton.click();
-  },
-};

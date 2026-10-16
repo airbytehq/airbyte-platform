@@ -53,6 +53,72 @@ const pokeApiSpecification = {
   },
 };
 
+/**
+ * The configuration form of destination-dev-null 0.9.6 ("End-to-End Testing (/dev/null)"), from
+ * oss/airbyte-config/specs/src/main/resources/seed/local_oss_registry.json. The test destination types are cut to
+ * Logging and Silent, and the logging types are cut to First N Entries.
+ */
+const e2eTestingSpecification = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  title: "E2E Test Destination Spec",
+  type: "object",
+  required: ["test_destination"],
+  additionalProperties: true,
+  properties: {
+    test_destination: {
+      title: "Test Destination",
+      description: "The type of destination to be used",
+      type: "object",
+      oneOf: [
+        {
+          title: "Logging",
+          type: "object",
+          required: ["test_destination_type", "logging_config"],
+          additionalProperties: true,
+          properties: {
+            test_destination_type: { type: "string", enum: ["LOGGING"], default: "LOGGING" },
+            logging_config: {
+              title: "Logging Configuration",
+              description: "Configurate how the messages are logged.",
+              type: "object",
+              oneOf: [
+                {
+                  title: "First N Entries",
+                  description: "Log first N entries per stream.",
+                  type: "object",
+                  required: ["logging_type", "max_entry_count"],
+                  additionalProperties: true,
+                  properties: {
+                    logging_type: { type: "string", enum: ["FirstN"], default: "FirstN" },
+                    max_entry_count: {
+                      title: "N",
+                      description: "Number of entries to log. The maximum is 1,000 entries.",
+                      type: "number",
+                      default: 100,
+                      minimum: 1,
+                      maximum: 1000,
+                      examples: [100],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          title: "Silent",
+          type: "object",
+          required: ["test_destination_type"],
+          additionalProperties: true,
+          properties: {
+            test_destination_type: { type: "string", enum: ["SILENT"], default: "SILENT" },
+          },
+        },
+      ],
+    },
+  },
+};
+
 const sourceDefinition = (input: SourceDefinitionInput) => createHandle("sourceDefinition", input);
 const destinationDefinition = (input: DestinationDefinitionInput) => createHandle("destinationDefinition", input);
 
@@ -90,8 +156,10 @@ export const defs = {
       dockerRepository: "airbyte/destination-e2e-test",
       dockerImageTag: "1.0.0",
       documentationUrl: "",
+      // Community connectors show in the Marketplace tab of the connector list.
+      supportLevel: "community",
     },
-    specification: emptySpecification,
+    specification: e2eTestingSpecification,
     supportedSyncModes: ["overwrite"],
   }),
   postgresDestination: destinationDefinition({

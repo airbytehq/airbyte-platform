@@ -57,26 +57,36 @@ function validateMappers(page: Page, body: object) {
   });
 }
 
-/** Saves a PokeAPI source as a draft, as the create page does before it checks the connection. Returns the source. */
-async function createDraftSource(page: Page, workspaceId: string) {
-  const created = await post(page, "sources/create", {
+/**
+ * Saves a PokeAPI source and an End-to-End Testing destination as drafts, as the create pages do before they check
+ * the connection. Returns their IDs.
+ */
+async function createDrafts(page: Page, workspaceId: string) {
+  const source = await post(page, "sources/create", {
     workspaceId,
     sourceDefinitionId: defs.pokeApiSource.input.definition.sourceDefinitionId,
     name: "PokeAPI draft",
     connectionConfiguration: { pokemon_name: "ditto" },
     createAsDraft: true,
   });
-  return created.body;
+  const destination = await post(page, "destinations/create", {
+    workspaceId,
+    destinationDefinitionId: defs.e2eTestingDestination.input.definition.destinationDefinitionId,
+    name: "E2E Testing draft",
+    connectionConfiguration: {},
+    createAsDraft: true,
+  });
+  return { sourceId: source.body.sourceId, destinationId: destination.body.destinationId };
 }
 
 /**
- * Checks a source as the webapp does: it starts check "check-1", reads its status once, then reads its output. The
- * mock ends the check when the webapp reads its status. Returns the output.
+ * Checks a source or a destination as the webapp does: it starts the check, reads its status once, then reads its
+ * output. The mock ends the check when the webapp reads its status. Returns the output.
  */
-async function checkSource(page: Page, sourceId: string) {
-  await post(page, "commands/run/check", { id: "check-1", actor_id: sourceId });
-  await post(page, "commands/status", { id: "check-1" });
-  const output = await post(page, "commands/output/check", { id: "check-1" });
+async function checkActor(page: Page, checkId: string, actorId: string) {
+  await post(page, "commands/run/check", { id: checkId, actor_id: actorId });
+  await post(page, "commands/status", { id: checkId });
+  const output = await post(page, "commands/output/check", { id: checkId });
   return output.body;
 }
 
@@ -541,37 +551,58 @@ test.describe("Mock backend", () => {
     ]);
   });
 
-  test("promotes a draft source when the webapp reads a succeeded check of it", async ({ context, page, baseURL }) => {
-    const backend = await installBackend(context, page, baseURL, scenario({ sourceDefinitions: [defs.pokeApiSource] }));
-    const { workspaceId } = backend.airbyte;
-
-    const draft = await createDraftSource(page, workspaceId);
-    const output = await checkSource(page, draft.sourceId);
-    const listed = await post(page, "sources/list", { workspaceId });
-
-    expect(output).toEqual({ id: "check-1", status: "succeeded" });
-    expect(listed.body.sources).toEqual([expect.objectContaining({ sourceId: draft.sourceId, isDraft: false })]);
-    expect(backend.problems()).toEqual([]);
-  });
-
-  test("keeps a draft source a draft when the webapp reads a failed check of it", async ({
+  test("promotes a draft source or destination when the webapp reads a succeeded check of it", async ({
     context,
     page,
     baseURL,
   }) => {
     const input = scenario({
       sourceDefinitions: [defs.pokeApiSource],
+      destinationDefinitions: [defs.e2eTestingDestination],
+    });
+    const backend = await installBackend(context, page, baseURL, input);
+    const { workspaceId } = backend.airbyte;
+
+    const drafts = await createDrafts(page, workspaceId);
+    const sourceOutput = await checkActor(page, "check-1", drafts.sourceId);
+    const destinationOutput = await checkActor(page, "check-2", drafts.destinationId);
+    const sources = await post(page, "sources/list", { workspaceId });
+    const destinations = await post(page, "destinations/list", { workspaceId });
+
+    expect(sourceOutput).toEqual({ id: "check-1", status: "succeeded" });
+    expect(destinationOutput).toEqual({ id: "check-2", status: "succeeded" });
+    expect(sources.body.sources).toEqual([expect.objectContaining({ sourceId: drafts.sourceId, isDraft: false })]);
+    expect(destinations.body.destinations).toEqual([
+      expect.objectContaining({ destinationId: drafts.destinationId, isDraft: false }),
+    ]);
+    expect(backend.problems()).toEqual([]);
+  });
+
+  test("keeps a draft source or destination a draft when the webapp reads a failed check of it", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const input = scenario({
+      sourceDefinitions: [defs.pokeApiSource],
+      destinationDefinitions: [defs.e2eTestingDestination],
       outcomes: { check: checkOutput.failed({ message: "Bad credentials" }) },
     });
     const backend = await installBackend(context, page, baseURL, input);
     const { workspaceId } = backend.airbyte;
 
-    const draft = await createDraftSource(page, workspaceId);
-    const output = await checkSource(page, draft.sourceId);
-    const listed = await post(page, "sources/list", { workspaceId });
+    const drafts = await createDrafts(page, workspaceId);
+    const sourceOutput = await checkActor(page, "check-1", drafts.sourceId);
+    const destinationOutput = await checkActor(page, "check-2", drafts.destinationId);
+    const sources = await post(page, "sources/list", { workspaceId });
+    const destinations = await post(page, "destinations/list", { workspaceId });
 
-    expect(output).toMatchObject({ id: "check-1", status: "failed", message: "Bad credentials" });
-    expect(listed.body.sources).toEqual([expect.objectContaining({ sourceId: draft.sourceId, isDraft: true })]);
+    expect(sourceOutput).toMatchObject({ id: "check-1", status: "failed", message: "Bad credentials" });
+    expect(destinationOutput).toMatchObject({ id: "check-2", status: "failed", message: "Bad credentials" });
+    expect(sources.body.sources).toEqual([expect.objectContaining({ sourceId: drafts.sourceId, isDraft: true })]);
+    expect(destinations.body.destinations).toEqual([
+      expect.objectContaining({ destinationId: drafts.destinationId, isDraft: true }),
+    ]);
     expect(backend.problems()).toEqual([]);
   });
 });

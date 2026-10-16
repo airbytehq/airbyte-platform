@@ -72,31 +72,6 @@ export const fillFormField = async (page: Page, selector: string, value: string)
 };
 
 /**
- * Submit form and wait for creation with URL validation
- * Specialized for connector creation workflows
- */
-export const submitFormAndWaitForCreation = async (
-  page: Page,
-  connectorType: "source" | "destination",
-  timeoutMs = 30000
-) => {
-  const submitButton = page.locator("button[type='submit']");
-  await submitButton.waitFor({ state: "visible", timeout: 10000 });
-  await submitButton.click();
-
-  // Wait for successful creation (URL should include connector UUID)
-  await expect(page).toHaveURL(new RegExp(`.*/${connectorType}/[a-f0-9-]{36}`), { timeout: timeoutMs });
-
-  // Extract the connector ID from the URL for cleanup tracking
-  const currentUrl = page.url();
-  const idMatch = currentUrl.match(new RegExp(`/${connectorType}/([a-f0-9-]{36})`));
-  if (idMatch) {
-    return idMatch[1]; // Return the connector ID
-  }
-  throw new Error(`Could not extract ${connectorType} UUID from URL for cleanup`);
-};
-
-/**
  * Navigate to connector creation page (handles both button click and manual navigation)
  * Flexible navigation that works whether "new connector" button exists or not
  */
@@ -145,37 +120,4 @@ export const selectConnectorFromMarketplace = async (page: Page, searchTerm: str
   const connectorButton = page.locator("button").filter({ hasText: connectorDisplayName });
   await connectorButton.waitFor({ state: "visible", timeout: 10000 });
   await connectorButton.click();
-};
-
-/**
- * Verify that a form update was successful
- * Checks for success indicator and expected field value
- */
-export const verifyUpdateSuccess = async (page: Page, expectedValue: string) => {
-  await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 15000 });
-  await expect(page.locator(`input[value='${expectedValue}']`)).toBeVisible({ timeout: 10000 });
-};
-
-/**
- * Perform a second edit workflow on a text input field
- * Used to verify form remains functional after first successful update
- */
-export const performSecondTextEdit = async (page: Page, fieldName: string, newValue: string) => {
-  // Wait for success message to fade/reset (indicating form is ready for next edit)
-  await page.waitForTimeout(2000);
-
-  // Make another change to verify form is still functional
-  const fieldInput = page.locator(`input[name='${fieldName}']`);
-  await fieldInput.waitFor({ state: "visible", timeout: 10000 });
-  await fieldInput.clear();
-  await fieldInput.fill(newValue);
-
-  // Verify button becomes enabled and submit the second change
-  await expect(page.locator("button[type=submit]")).toBeEnabled({ timeout: 10000 });
-  const submitButton = page.locator("button[type='submit']");
-  await submitButton.waitFor({ state: "visible", timeout: 10000 });
-  await submitButton.click();
-
-  await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 60000 });
-  await expect(page.locator(`input[value='${newValue}']`)).toBeVisible({ timeout: 10000 });
 };

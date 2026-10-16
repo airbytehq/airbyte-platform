@@ -1,4 +1,5 @@
 import type { HandlerMap } from "./handler";
+import type { Store } from "../store";
 
 import { notFound } from "./handler";
 import { isOtherWorkspace } from "./identity";
@@ -6,6 +7,24 @@ import { actorDefinitionVersion } from "../store";
 
 /** A finished spec job. The server attaches one to every specification read. */
 const specJobInfo = { id: "spec-job", configType: "get_spec", createdAt: 0, endedAt: 0, succeeded: true } as const;
+
+/**
+ * Deletes a source or a destination. The server answers 204, and reads and lists no longer find it. The server also
+ * deletes the connections of the source or destination (SourceHandler.kt, DestinationHandler.kt). The mock refuses to
+ * delete one that has connections (a handler error), because the pages of a deleted connection still read its source
+ * and destination.
+ */
+function deleteActor(store: Store, kind: "source" | "destination", actorId: string) {
+  const collection = kind === "source" ? store.sources : store.destinations;
+  if (!collection.find(actorId)) {
+    return notFound();
+  }
+  if (store.connections.all().some(({ sourceId, destinationId }) => [sourceId, destinationId].includes(actorId))) {
+    throw new Error(`The mock does not delete ${kind} ${actorId}, because it has connections`);
+  }
+  collection.remove(actorId);
+  return undefined;
+}
 
 /** Sources, destinations, and their definitions, versions and specifications. */
 export const connectorHandlers: HandlerMap = {
@@ -16,21 +35,7 @@ export const connectorHandlers: HandlerMap = {
     store.sources.find(body.sourceId)
       ? store.sources.update(body.sourceId, { name: body.name, connectionConfiguration: body.connectionConfiguration })
       : notFound(),
-  /**
-   * The server answers 204, and reads and lists no longer find the source. The server also deletes the connections of
-   * the source (SourceHandler.kt). The mock refuses to delete a source that has connections (a handler error), because
-   * the pages of a deleted connection still read its source.
-   */
-  deleteSource: ({ body, store }) => {
-    if (!store.sources.find(body.sourceId)) {
-      return notFound();
-    }
-    if (store.connections.all().some(({ sourceId }) => sourceId === body.sourceId)) {
-      throw new Error(`The mock does not delete source ${body.sourceId}, because it has connections`);
-    }
-    store.sources.remove(body.sourceId);
-    return undefined;
-  },
+  deleteSource: ({ body, store }) => deleteActor(store, "source", body.sourceId),
 
   /** The create page saves a draft source (`createAsDraft: true`) before it checks the connection. */
   createSource: ({ body, store }) => {
@@ -52,8 +57,42 @@ export const connectorHandlers: HandlerMap = {
     });
   },
 
+  listDestinationsForWorkspace: ({ body, store }) =>
+    isOtherWorkspace(store, body.workspaceId) ? notFound() : { destinations: [...store.destinations.all()] },
+  getDestination: ({ body, store }) => store.destinations.find(body.destinationId) ?? notFound(),
+  updateDestination: ({ body, store }) =>
+    store.destinations.find(body.destinationId)
+      ? store.destinations.update(body.destinationId, {
+          name: body.name,
+          connectionConfiguration: body.connectionConfiguration,
+        })
+      : notFound(),
+  deleteDestination: ({ body, store }) => deleteActor(store, "destination", body.destinationId),
+
+  /** The create page saves a draft destination (`createAsDraft: true`) before it checks the connection. */
+  createDestination: ({ body, store }) => {
+    const definition = store.definitions.destination(body.destinationDefinitionId);
+    if (!definition || isOtherWorkspace(store, body.workspaceId)) {
+      return notFound();
+    }
+    const destinationId = store.destinations.nextId();
+    return store.destinations.add(destinationId, {
+      destinationId,
+      destinationDefinitionId: body.destinationDefinitionId,
+      workspaceId: body.workspaceId,
+      name: body.name,
+      destinationName: definition.definition.name,
+      connectionConfiguration: body.connectionConfiguration,
+      createdAt: 0,
+      isDraft: body.createAsDraft ?? false,
+      isEntitled: true,
+    });
+  },
+
   /** Enterprise connectors are not in the OSS marketplace. */
   listEnterpriseSourceStubsForWorkspace: ({ body, store }) =>
+    isOtherWorkspace(store, body.workspaceId) ? notFound() : { enterpriseConnectorStubs: [] },
+  listEnterpriseDestinationStubsForWorkspace: ({ body, store }) =>
     isOtherWorkspace(store, body.workspaceId) ? notFound() : { enterpriseConnectorStubs: [] },
   getSourceDefinitionSpecification: ({ body, store }) => {
     const definition = store.definitions.source(body.sourceDefinitionId);
@@ -64,6 +103,19 @@ export const connectorHandlers: HandlerMap = {
       sourceDefinitionId: body.sourceDefinitionId,
       documentationUrl: definition.definition.documentationUrl,
       connectionSpecification: definition.specification,
+      jobInfo: specJobInfo,
+    };
+  },
+  getDestinationDefinitionSpecification: ({ body, store }) => {
+    const definition = store.definitions.destination(body.destinationDefinitionId);
+    if (!definition || isOtherWorkspace(store, body.workspaceId)) {
+      return notFound();
+    }
+    return {
+      destinationDefinitionId: body.destinationDefinitionId,
+      documentationUrl: definition.definition.documentationUrl,
+      connectionSpecification: definition.specification,
+      supportedDestinationSyncModes: definition.supportedSyncModes,
       jobInfo: specJobInfo,
     };
   },

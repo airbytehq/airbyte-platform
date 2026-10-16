@@ -1,6 +1,7 @@
 import type { BuilderProjects } from "./builderProjects";
 import type { ConnectionHandle } from "./builders/connection";
 import type {
+  DestinationDefinitionHandle,
   DestinationDefinitionInput,
   DestinationHandle,
   SourceDefinitionHandle,
@@ -334,6 +335,11 @@ export function createStore(
     return id;
   }
 
+  function addDestinationDefinition(def: DestinationDefinitionHandle) {
+    assertOneDefinition("destination", def.input.definition.destinationDefinitionId, def);
+    destinationDefinitions.set(def.input.definition.destinationDefinitionId, structuredClone(def.input));
+  }
+
   function addDestination(handle: DestinationHandle) {
     assertOneVariant(handle);
     const existingId = destinations.idOf(handle);
@@ -342,9 +348,8 @@ export function createStore(
     }
 
     const { def, name, config } = handle.input;
-    assertOneDefinition("destination", def.input.definition.destinationDefinitionId, def);
+    addDestinationDefinition(def);
     const id = destinations.nextId();
-    destinationDefinitions.set(def.input.definition.destinationDefinitionId, structuredClone(def.input));
     destinations.addFromHandle(handle, id, {
       destinationId: id,
       destinationDefinitionId: def.input.definition.destinationDefinitionId,
@@ -354,12 +359,16 @@ export function createStore(
       connectionConfiguration: structuredClone(config ?? {}),
       createdAt: 0,
       isDraft: false,
+      // OSS entitles every connector (DestinationHandler.kt). The destination page disables its controls without it.
+      isEntitled: true,
     });
     return id;
   }
 
   (scenario.input.sourceDefinitions ?? []).forEach(addSourceDefinition);
   (scenario.input.sources ?? []).forEach(addSource);
+  (scenario.input.destinationDefinitions ?? []).forEach(addDestinationDefinition);
+  (scenario.input.destinations ?? []).forEach(addDestination);
 
   (scenario.input.connections ?? []).forEach((handle, index) => {
     if (connections.idOf(handle)) {

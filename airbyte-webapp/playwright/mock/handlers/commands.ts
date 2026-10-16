@@ -1,6 +1,20 @@
 import type { HandlerMap } from "./handler";
+import type { Store } from "../store";
 
 import { notFound } from "./handler";
+
+/**
+ * The server promotes a draft source or destination when the webapp reads a succeeded check of it
+ * (CommandService.kt). A source or destination that is not a draft does not change.
+ */
+function promoteDraft(store: Store, actorId: string) {
+  if (store.sources.find(actorId)?.isDraft) {
+    store.sources.update(actorId, { isDraft: false });
+  }
+  if (store.destinations.find(actorId)?.isDraft) {
+    store.destinations.update(actorId, { isDraft: false });
+  }
+}
 
 /**
  * Connection checks. The webapp starts a check, polls its status every 2 seconds until it is done, then reads the
@@ -23,10 +37,8 @@ export const commandHandlers: HandlerMap = {
     if (!command.output) {
       throw new Error(`The webapp read the output of check ${body.id} before the check was done`);
     }
-    // The server promotes a draft source when the webapp reads a succeeded check of it (CommandService.kt).
-    const source = command.request.actor_id ? store.sources.find(command.request.actor_id) : undefined;
-    if (command.output.status === "succeeded" && source?.isDraft) {
-      store.sources.update(source.sourceId, { isDraft: false });
+    if (command.output.status === "succeeded" && command.request.actor_id) {
+      promoteDraft(store, command.request.actor_id);
     }
     return { id: command.id, ...command.output };
   },
