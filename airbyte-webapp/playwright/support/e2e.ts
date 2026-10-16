@@ -1,9 +1,7 @@
 import { Page } from "@playwright/test";
 import { Experiments } from "@src/core/services/Experiment/experiments";
-import { FeatureItem, FeatureSet } from "@src/core/services/features/types";
 
 export const featureFlags: Partial<Experiments> = {};
-export const featureServiceOverrides: FeatureSet = {};
 
 export const setServerFeatureFlags = async (flags: Record<string, string>) => {
   for (const [key, value] of Object.entries(flags)) {
@@ -48,7 +46,6 @@ export const setServerFeatureFlags = async (flags: Record<string, string>) => {
 
 // Set EXPERIMENT feature flags
 export const setFeatureFlags = (flags: Partial<Experiments>) => {
-  console.log("Setting feature flags:", flags);
   if (Object.keys(flags).length === 0) {
     Object.keys(featureFlags).forEach((key) => delete featureFlags[key as keyof Experiments]);
   } else {
@@ -56,42 +53,19 @@ export const setFeatureFlags = (flags: Partial<Experiments>) => {
   }
 };
 
-// Set FEATURE_SERVICE feature flags
-export const setFeatureServiceFlags = (flags: FeatureSet) => {
-  if (Object.keys(flags).length === 0) {
-    Object.keys(featureServiceOverrides).forEach((key) => delete featureServiceOverrides[key as FeatureItem]);
-  } else {
-    Object.assign(featureServiceOverrides, flags);
-  }
-};
-
 // Inject feature flags and style into the browser context before each test
 export async function injectFeatureFlagsAndStyle(page: Page) {
-  console.log("Injecting feature flags and style into browser context:", {
-    featureFlags,
-    featureServiceOverrides,
-  });
-
   await page.addInitScript(
-    ({ featureFlags, featureServiceOverrides }) => {
-      // Log in the browser context
-      console.log("E2E: Setting window._e2eOverwrites and window._e2eFeatureOverwrites", {
-        featureFlags,
-        featureServiceOverrides,
-      });
-
+    ({ featureFlags }) => {
       // Only set window._e2ePlaywrightEnvironment if we're actually overriding features
       // This prevents cross-test contamination where tests without overrides
       // would still be detected as "E2E environment" and get default flags
-      const hasFeatureOverrides =
-        (featureFlags && Object.keys(featureFlags).length > 0) ||
-        (featureServiceOverrides && Object.keys(featureServiceOverrides).length > 0);
+      const hasFeatureOverrides = featureFlags && Object.keys(featureFlags).length > 0;
       if (hasFeatureOverrides) {
         window._e2ePlaywrightEnvironment = true; // Mark as Playwright E2E environment only when needed
       }
 
       window._e2eOverwrites = featureFlags;
-      window._e2eFeatureOverwrites = featureServiceOverrides;
 
       // Hide the react-query devtool button during tests
       const style = document.createElement("style");
@@ -101,6 +75,6 @@ export async function injectFeatureFlagsAndStyle(page: Page) {
         `;
       document.head.appendChild(style);
     },
-    { featureFlags, featureServiceOverrides }
+    { featureFlags }
   );
 }

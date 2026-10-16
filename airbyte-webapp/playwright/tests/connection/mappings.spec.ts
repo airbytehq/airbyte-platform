@@ -1,169 +1,140 @@
-import { test, expect, Request } from "@playwright/test";
-import { SourceRead, DestinationRead, WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
+/**
+ * Connection Mappings Tests
+ *
+ * Tests the Mappings tab of a connection: the upsell when the plan does not include mappings, and the first mapping
+ * of a stream when it does.
+ *
+ * Every test runs against the mock backend in playwright/mock. Each test starts from the backend state in its own
+ * scenario, so no test depends on what an earlier test did. The scenario sets the mappings features of the webapp.
+ *
+ * Each test is one user journey. Its `test.step` blocks continue on the same page, in order. Checks that only read
+ * the page use `expect.soft`, so one failed check does not hide the checks after it. The check for the "saved"
+ * notification stays a normal `expect`, because the checks of the saved request need the save to be finished.
+ */
+
+import type { FieldSpec } from "@src/core/api/types/AirbyteClient";
+
 import { FeatureItem } from "@src/core/services/features/types";
 
-import { connectionAPI, connectionUI, connectionTestHelpers } from "../../helpers/connection";
-import { setupWorkspaceForTests } from "../../helpers/workspace";
-import { setFeatureFlags, setFeatureServiceFlags, injectFeatureFlagsAndStyle } from "../../support/e2e";
+import { catalogs, connection, defs, destination, expect, mapperValidation, scenario, source, test } from "../../mock";
 
-test.describe("Connection Mappings", () => {
-  // Uses environment-aware Postgres setup following dummy API pattern:
-  // - CI: Uses POSTGRES_TEST_HOST environment variable to connect to deployed postgres pods
-  // - Local: Falls back to platform-specific docker networking (host.docker.internal/172.17.0.1)
-  let workspaceId: string;
-  let postgresSource: SourceRead;
-  let postgresDestination: DestinationRead;
-  let connection: WebBackendConnectionRead;
+/**
+ * A Postgres → Postgres connection with every stream selected. Its catalog has the streams cars, cities and users in
+ * the namespace "public" (createMockPostgresCatalog in helpers/mocks.ts).
+ */
+const postgresConnection = connection({
+  source: source({ def: defs.postgresSource, name: "Postgres source" }),
+  destination: destination({ def: defs.postgresDestination, name: "Postgres destination" }),
+  catalog: catalogs.postgres({ selected: true }),
+});
 
-  test.beforeAll(async ({ request }) => {
-    workspaceId = await setupWorkspaceForTests();
+/** The fields of the users stream, as the server reports them for mapper validation. id is the primary key. */
+const usersFields: FieldSpec[] = [
+  { name: "email", type: "STRING", isSelectedPrimaryKey: false, isSelectedCursor: false },
+  { name: "id", type: "INTEGER", isSelectedPrimaryKey: true, isSelectedCursor: false },
+  { name: "name", type: "STRING", isSelectedPrimaryKey: false, isSelectedCursor: false },
+  { name: "updated_at", type: "TIMESTAMP_WITHOUT_TIMEZONE", isSelectedPrimaryKey: false, isSelectedCursor: false },
+];
 
-    // Create Postgres source and destination once for all mappings tests
-    // Uses the same Postgres setup as status tests - 'users' table already exists in postgres-test-data.sql
-    const testResources = await connectionTestHelpers.setupPostgresConnectionTest(
-      request,
-      workspaceId,
-      "Postgres source",
-      "Postgres destination"
-    );
+/**
+ * Mappings not in the plan
+ *
+ * The start state is the Postgres connection without mappings, in a workspace whose plan does not include mappings.
+ */
+test.describe(() => {
+  test.use({
+    airbyteScenario: scenario({ connections: [postgresConnection], features: { [FeatureItem.MappingsUI]: false } }),
+  });
 
-    postgresSource = testResources.source;
-    postgresDestination = testResources.destination;
+  test("see how to unlock mappings when the plan does not include them", async ({ page, airbyte }) => {
+    await test.step("open the Mappings tab", async () => {
+      await page.goto(airbyte.paths.connection(postgresConnection, "mappings"));
+    });
 
-    // Create connection once and reuse across tests (reduces schema discovery calls)
-    connection = await connectionAPI.create(request, postgresSource, postgresDestination, {
-      enableAllStreams: true,
-      useMockSchemaDiscovery: true,
+    await test.step("the upsell shows in place of the mapping form", async () => {
+      await expect.soft(page.getByTestId("mappings-upsell-empty-state")).toBeVisible();
+      await expect.soft(page).toHaveURL(/\/mappings$/);
+      await expect.soft(page.getByTestId("add-stream-for-mapping-combobox")).toHaveCount(0);
     });
   });
+});
 
-  test.afterEach(async () => {
-    // Clear feature flags to avoid pollution between tests
-    setFeatureFlags({});
-    setFeatureServiceFlags({});
+/**
+ * Mappings in the plan
+ *
+ * The start state is the Postgres connection without mappings, in a workspace whose plan includes mappings and
+ * advanced mappings. With advanced mappings, a new mapping hashes a field.
+ */
+test.describe(() => {
+  test.use({
+    airbyteScenario: scenario({
+      connections: [postgresConnection],
+      features: { [FeatureItem.MappingsUI]: true, [FeatureItem.AdvancedMappingsUI]: true },
+    }),
   });
 
-  test.afterAll(async ({ request }) => {
-    // Clean up resources using helper
-    await connectionTestHelpers.cleanupConnectionTest(request, {
-      connectionId: connection?.connectionId,
-      sourceId: postgresSource?.sourceId,
-      destinationId: postgresDestination?.destinationId,
+  test("add a first mapping that hashes a field of a stream", async ({ page, airbyte }) => {
+    const { connectionId } = airbyte.store.connections.get(postgresConnection);
+    // The field dropdown lists the fields from the mapper validation answer. The mock does not know the fields of a
+    // stream, so the test gives them.
+    airbyte.override("webBackendValidateMappers", mapperValidation.allValid(usersFields));
+    const fieldDropdown = page.getByPlaceholder("Select a field");
+
+    await test.step("open the Mappings tab", async () => {
+      await page.goto(airbyte.paths.connection(postgresConnection, "mappings"));
+      await expect(page.getByTestId("add-stream-for-mapping-combobox")).toBeVisible();
     });
-  });
 
-  test.describe("With experiment on but feature disabled", () => {
-    test("Shows upsell page if Feature is false", async ({ page, context }) => {
-      // Set feature flags
-      setFeatureFlags({});
-      setFeatureServiceFlags({ [FeatureItem.MappingsUI]: false }); // Disabled to show upsell
-
-      // Create a fresh page and inject feature flags into it
-      const newPage = await context.newPage();
-      await injectFeatureFlagsAndStyle(newPage);
-
-      await connectionUI.visit(newPage, connection, "mappings");
-
-      // Wait for upsell content to appear (since MAPPINGS_UI: false)
-      await newPage.waitForSelector('[data-testid*="upsell"], button:has-text("Unlock")', {
-        timeout: 20000,
-      });
-
-      await expect(newPage).toHaveURL(/\/mappings$/, { timeout: 10000 });
-      await expect(newPage.locator('[data-testid="mappings-upsell-empty-state"]')).toBeVisible({
-        timeout: 10000,
-      });
+    await test.step("add a mapping for the users stream", async () => {
+      await page.getByTestId("add-stream-for-mapping-combobox").click();
+      await page.getByRole("option", { name: "users" }).click();
+      // The webapp disables the field until it has validated the new mapping.
+      await expect.poll(() => airbyte.calls("webBackendValidateMappers").length).toBeGreaterThan(0);
+      await expect(fieldDropdown).toBeEnabled();
     });
-  });
 
-  test.describe("With experiment and feature both enabled", () => {
-    test("Allows configuring a first mapping", async ({ page, context }) => {
-      // Set feature flags
-      setFeatureFlags({});
-      // Both enabled so the default mapping is hashing (only a target field is required)
-      setFeatureServiceFlags({ [FeatureItem.MappingsUI]: true, [FeatureItem.AdvancedMappingsUI]: true });
+    await test.step("the new mapping has no field yet", async () => {
+      await expect.soft(fieldDropdown).toHaveValue("");
+    });
 
-      // Create a fresh page and inject feature flags into it
-      const newPage = await context.newPage();
-      await injectFeatureFlagsAndStyle(newPage);
-
-      // Set up API interceptors for mappings workflow
-      const validateMappersRequests: Request[] = [];
-      const updateConnectionRequests: Request[] = [];
-
-      // Intercept validate mappers requests
-      await newPage.route("**/api/v1/web_backend/mappers/validate", async (route) => {
-        validateMappersRequests.push(route.request());
-        await route.continue();
-      });
-
-      // Intercept update connection requests
-      await newPage.route("**/api/v1/web_backend/connections/update", async (route) => {
-        updateConnectionRequests.push(route.request());
-        await route.continue();
-      });
-
-      // Navigate to mappings page
-      await connectionUI.visit(newPage, connection, "mappings");
-
-      // Wait for mapping config content to appear (since MAPPINGS_UI: true)
-      await newPage.waitForSelector('[data-testid*="stream"], [data-testid*="combobox"], [data-testid*="add-stream"]', {
-        timeout: 20000,
-      });
-
-      // Click add stream dropdown and select users
-      await newPage.locator('[data-testid="add-stream-for-mapping-combobox"]').click();
-      await newPage.getByRole("option", { name: "users" }).click();
-
-      // Wait for the field dropdown to become visible and enabled after stream selection
-      const fieldDropdown = newPage.locator('input[placeholder="Select a field"]').first();
-      await expect(fieldDropdown).toBeVisible({ timeout: 10000 });
-      await expect(fieldDropdown).toBeEnabled({ timeout: 10000 });
-      await expect(fieldDropdown).toHaveValue("");
+    await test.step("hash the field name", async () => {
       await fieldDropdown.click();
+      await page.getByRole("option", { name: "name" }).click();
+      // The webapp validates the mapping again with the new field, and disables the field until the answer is in.
+      await expect
+        .poll(() => airbyte.calls.last("webBackendValidateMappers"))
+        .toMatchObject({ mappers: [{ mapperConfiguration: { targetField: "name" } }] });
+      await expect(fieldDropdown).toBeEnabled();
+    });
 
-      // Select "name" field
-      await newPage.getByRole("option", { name: "name" }).click();
-
-      // Wait for validation to complete - the field becomes disabled during validation
-      // and re-enabled when validation completes. This ensures the validation response
-      // has been processed and state updated before we submit.
-      await expect(fieldDropdown).toBeEnabled({ timeout: 10000 });
-
-      // Submit the mappings configuration
-      await newPage.locator('[data-testid="submit-mappings"]').click();
-
-      // Handle either refresh modal or clear streams modal (CI vs local differences)
-      const refreshModalSave = newPage.locator('[data-testid="refreshModal-save"]');
-      const clearStreamsSubmit = newPage.locator('[data-testid="resetModal-save"]');
-
-      // Wait for either modal to appear
-      let isRefreshModal = false;
-      try {
-        // Try refresh modal first (more specific selector)
-        await refreshModalSave.waitFor({ state: "visible", timeout: 15000 });
-        isRefreshModal = true;
-      } catch {
-        // If refresh modal not found, try clear streams modal
-        await clearStreamsSubmit.waitFor({ state: "visible", timeout: 15000 });
-
-        // Clear streams modal requires selecting the first radio button
-        // Use force click to bypass the wrapper div intercepting pointer events
-        await newPage.locator('[data-testid="radio-button-tile-shouldClear-saveWithClear"]').click({ force: true });
-      }
-
-      // Click the appropriate submit button
-      const modalButton = isRefreshModal ? refreshModalSave : clearStreamsSubmit;
-      await modalButton.waitFor({ state: "visible", timeout: 15000 });
-      await modalButton.click();
-
-      // Wait for connection update request
-      await expect.poll(() => updateConnectionRequests.length, { timeout: 10000 }).toBeGreaterThanOrEqual(1);
-
-      // Verify success notification
-      await expect(newPage.locator('[data-testid="notification-connection_settings_change_success"]')).toBeVisible({
-        timeout: 15000,
+    await test.step("the validation request hashes the field name of the users stream", async () => {
+      await expect.soft(fieldDropdown).toHaveValue("name");
+      expect.soft(airbyte.calls.last("webBackendValidateMappers")).toMatchObject({
+        connectionId,
+        streamDescriptor: { namespace: "public", name: "users" },
+        mappers: [{ type: "hashing", mapperConfiguration: { targetField: "name" } }],
       });
+    });
+
+    await test.step("save the mapping", async () => {
+      await page.getByTestId("submit-mappings").click();
+      // The destination supports refreshes, so the webapp recommends a refresh. Keep the default choice, refresh the
+      // stream. The update request then has skipReset: false.
+      await page.getByTestId("refreshModal-save").click();
+      await expect(page.getByTestId("notification-connection_settings_change_success")).toBeVisible();
+    });
+
+    await test.step("the update request saves a SHA-256 hashing mapper on name", async () => {
+      const updates = airbyte.calls("webBackendUpdateConnection");
+      expect.soft(updates).toHaveLength(1);
+      expect.soft(updates[0]).toMatchObject({ connectionId, skipReset: false });
+      expect.soft(catalogs.find(updates[0]?.syncCatalog, "public", "users").config?.mappers).toEqual([
+        {
+          id: expect.any(String),
+          type: "hashing",
+          mapperConfiguration: { targetField: "name", method: "SHA-256", fieldNameSuffix: "_hashed" },
+        },
+      ]);
     });
   });
 });

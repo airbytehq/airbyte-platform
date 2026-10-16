@@ -10,10 +10,9 @@ import { AirbyteCatalog, SyncMode } from "@src/core/api/types/AirbyteClient";
 // ============================================================================
 // These catalog creators are used in two different contexts across the test suite:
 //
-// 1. API-level mocking (APIRequestContext):
-//    - Used by connectionAPI.create(..., { useMockSchemaDiscovery: true })
-//    - Returns catalog directly, no HTTP call made
-//    - Use case: Test setup/scaffolding  (example: configuration.spec.ts)
+// 1. Mock backend (playwright/mock):
+//    - Used by catalogs.postgres() and catalogs.pokeApi() in mock/builders/catalogs.ts
+//    - Use case: the saved catalog of a connection in a scenario (example: syncCatalog.spec.ts)
 //
 // 2. Page-level mocking (Browser):
 //    - Used by mockHelpers.mockSchemaDiscovery(page, sourceType)

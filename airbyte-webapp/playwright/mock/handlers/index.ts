@@ -3,6 +3,7 @@ import type { HandlerMap } from "./handler";
 import { connectionHandlers } from "./connections";
 import { connectorHandlers } from "./connectors";
 import { identityHandlers } from "./identity";
+import { mapperHandlers } from "./mappers";
 
 /**
  * The closed set of operations the mock answers. A request for any other operation fails the test.
@@ -12,4 +13,5 @@ export const defaultHandlers: HandlerMap = {
   ...identityHandlers,
   ...connectorHandlers,
   ...connectionHandlers,
+  ...mapperHandlers,
 };

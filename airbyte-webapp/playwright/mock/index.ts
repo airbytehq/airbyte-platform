@@ -11,6 +11,7 @@ export { defs, source, destination } from "./builders/connectors";
 export { connection } from "./builders/connection";
 export { catalogs } from "./builders/catalogs";
 export { errors } from "./errors";
+export { mapperValidation } from "./handlers/mappers";
 export { ids } from "./ids";
 
 export type { MockAirbyte, ConnectionTab } from "./backend";

@@ -15,21 +15,6 @@ import {
 
 // This file contains helper methods for connector CRUD operations
 
-// Helper functions for Postgres configuration
-const getPostgresHost = () => {
-  const postgresTestHost = process.env.POSTGRES_TEST_HOST;
-  if (postgresTestHost) {
-    return postgresTestHost;
-  }
-  // Local development fallback
-  return process.platform === "darwin" ? "host.docker.internal" : "172.17.0.1";
-};
-
-const getPostgresPort = () => {
-  const postgresTestPort = process.env.POSTGRES_TEST_PORT;
-  return postgresTestPort ? parseInt(postgresTestPort, 10) : 5433;
-};
-
 // Connector configuration definitions for test connectors
 const CONNECTOR_CONFIGS = {
   source: {
@@ -40,36 +25,6 @@ const CONNECTOR_CONFIGS = {
       responseKey: "sources",
       defaultConfig: {
         pokemon_name: "venusaur",
-      },
-    },
-    faker: {
-      endpoint: "sources",
-      definitionId: sourceIds.Faker,
-      idField: "sourceId",
-      responseKey: "sources",
-      defaultConfig: {
-        count: 10,
-        seed: 12345,
-        records_per_sync: 10,
-        records_per_slice: 10,
-      },
-    },
-    postgres: {
-      endpoint: "sources",
-      definitionId: sourceIds.Postgres,
-      idField: "sourceId",
-      responseKey: "sources",
-      defaultConfig: {
-        ssl_mode: { mode: "disable" },
-        tunnel_method: { tunnel_method: "NO_TUNNEL" },
-        replication_method: { method: "Standard" },
-        ssl: false,
-        port: getPostgresPort(),
-        schemas: ["public"],
-        host: getPostgresHost(),
-        database: "airbyte_ci_source",
-        username: "postgres",
-        password: "secret_password",
       },
     },
   },
@@ -89,25 +44,15 @@ const CONNECTOR_CONFIGS = {
         },
       },
     },
-    postgres: {
-      endpoint: "destinations",
-      definitionId: destinationIds.Postgres,
-      idField: "destinationId",
-      responseKey: "destinations",
-      defaultConfig: {
-        ssl_mode: { mode: "disable" },
-        tunnel_method: { tunnel_method: "NO_TUNNEL" },
-        ssl: false,
-        port: getPostgresPort(), // Use same port as source, different database
-        schema: "public",
-        host: getPostgresHost(),
-        database: "airbyte_ci_destination",
-        username: "postgres",
-        password: "secret_password",
-      },
-    },
   },
 } as const;
+
+// One connector configuration of CONNECTOR_CONFIGS. Sources and destinations have no connector name in common, so the
+// lookup by name needs a type that covers both.
+type Configs = typeof CONNECTOR_CONFIGS;
+type ConnectorConfig =
+  | Configs["source"][keyof Configs["source"]]
+  | Configs["destination"][keyof Configs["destination"]];
 
 // Create a connector API interface for the specified connector type
 // This factory function generates type-safe API methods for sources or destinations
@@ -115,8 +60,10 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
   // Default to backwards compatible connectors
   const defaultConnector = connectorType === "source" ? "pokeapi" : "e2etesting";
   const selectedConnector = connectorName || defaultConnector;
-  const config =
-    CONNECTOR_CONFIGS[connectorType][selectedConnector as keyof (typeof CONNECTOR_CONFIGS)[typeof connectorType]];
+  const config = (CONNECTOR_CONFIGS[connectorType] as Record<string, ConnectorConfig | undefined>)[selectedConnector];
+  if (!config) {
+    throw new Error(`Unknown ${connectorType} connector "${selectedConnector}"`);
+  }
   const apiBaseUrl = getApiBaseUrl();
 
   return {
@@ -186,14 +133,11 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
 
 // Preconfigured connector APIs used in tests. Example usage:
 // await pokeSourceAPI.create(request, name, workspaceId)
-// await postgresSourceAPI.delete(request, sourceId)
+// await pokeSourceAPI.delete(request, sourceId)
 // await e2eDestinationAPI.list(request, workspaceId)
 
 export const pokeSourceAPI = createConnectorAPI("source", "pokeapi");
-export const fakerSourceAPI = createConnectorAPI("source", "faker");
-export const postgresSourceAPI = createConnectorAPI("source", "postgres");
 export const e2eDestinationAPI = createConnectorAPI("destination", "e2etesting");
-export const postgresDestinationAPI = createConnectorAPI("destination", "postgres");
 
 // UI helper functions for destination operations
 export const destinationUI = {

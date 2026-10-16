@@ -3,7 +3,6 @@ import {
   DestinationRead,
   SourceRead,
   WebBackendConnectionRead,
-  AirbyteCatalog,
   AirbyteStreamAndConfiguration,
   SyncMode,
   DestinationSyncMode,
@@ -11,14 +10,7 @@ import {
 } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
-import {
-  pokeSourceAPI,
-  fakerSourceAPI,
-  e2eDestinationAPI,
-  postgresSourceAPI,
-  postgresDestinationAPI,
-} from "./connectors";
-import { createMockPokeApiCatalog, createMockPostgresCatalog } from "./mocks";
+import { pokeSourceAPI, e2eDestinationAPI } from "./connectors";
 import { appendRandomString } from "./ui";
 
 /**
@@ -32,12 +24,12 @@ import { appendRandomString } from "./ui";
  * - connectionTestHelpers: Test setup helpers for creating connector pairs and cleanup
  * - connectionForm: Form interaction helpers for connection settings page
  *
- * Currently supported connector pairs: "poke-e2e", "faker-e2e", "postgres-postgres", "poke-postgres"
+ * Currently supported connector pairs: "poke-e2e"
  */
 
 // Type for connector API helpers - all have same structure
 type ConnectorAPI = typeof pokeSourceAPI;
-type ConnectorPair = "poke-e2e" | "faker-e2e" | "postgres-postgres" | "poke-postgres";
+type ConnectorPair = "poke-e2e";
 
 // Create connection API interface following the established connector pattern
 export const connectionAPI = {
@@ -45,86 +37,46 @@ export const connectionAPI = {
   create: async (
     request: APIRequestContext,
     source: SourceRead,
-    destination: DestinationRead,
-    options: {
-      enableAllStreams?: boolean;
-      nonBreakingChangesPreference?: "propagate_columns" | "propagate_fully" | "ignore" | "disable";
-      useMockSchemaDiscovery?: boolean;
-      mockSourceType?: "postgres" | "pokeapi";
-    } = {}
+    destination: DestinationRead
   ): Promise<WebBackendConnectionRead> => {
     const apiBaseUrl = getApiBaseUrl();
 
-    let typedCatalog: AirbyteCatalog;
-    let sourceCatalogId: string | undefined;
+    // First, discover the source schema
+    const discoverResponse = await request.post(`${apiBaseUrl}/sources/discover_schema`, {
+      data: {
+        sourceId: source.sourceId,
+        disable_cache: true,
+      },
+    });
 
-    // Optionally mock schema discovery to avoid overloading test databases in CI environments.
-    //
-    // In CI, concurrent test runs making real schema discovery calls can overwhelm
-    // external resources, causing timeouts and flaky test failures.
-    // See mocks.ts for more context
-
-    if (options.useMockSchemaDiscovery) {
-      const mockSourceType = options.mockSourceType || "postgres";
-      typedCatalog = mockSourceType === "postgres" ? createMockPostgresCatalog() : createMockPokeApiCatalog();
-    } else {
-      // First, discover the source schema
-      const discoverResponse = await request.post(`${apiBaseUrl}/sources/discover_schema`, {
-        data: {
-          sourceId: source.sourceId,
-          disable_cache: true,
-        },
-      });
-
-      if (!discoverResponse.ok()) {
-        const errorText = await discoverResponse.text().catch(() => "Unknown error");
-        throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
-      }
-
-      const discoverResult = (await discoverResponse.json()) as SourceDiscoverSchemaRead;
-      const catalog = discoverResult.catalog;
-      const catalogId = discoverResult.catalogId;
-
-      if (!catalog || !catalog.streams) {
-        console.error("Schema discovery failed - invalid catalog:", discoverResult);
-        throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
-      }
-
-      if (!catalogId) {
-        console.error("Schema discovery did not return catalogId:", discoverResult);
-        throw new Error(`Schema discovery missing catalogId: ${JSON.stringify(discoverResult)}`);
-      }
-
-      typedCatalog = catalog;
-      sourceCatalogId = catalogId;
+    if (!discoverResponse.ok()) {
+      const errorText = await discoverResponse.text().catch(() => "Unknown error");
+      throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
     }
 
-    // Prepare streams based on options
-    let streams: AirbyteStreamAndConfiguration[];
-    if (options.enableAllStreams) {
-      streams = typedCatalog.streams.map((stream) => ({
-        ...stream,
-        config: {
-          // When using mocks, preserve the config from the mock catalog (includes primaryKey, aliasName, etc.)
-          ...(options.useMockSchemaDiscovery ? stream.config : {}),
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.overwrite,
-          selected: true,
-        },
-      }));
-    } else {
-      // Default to no streams selected
-      streams = typedCatalog.streams.map((stream) => ({
-        ...stream,
-        config: {
-          // When using mocks, preserve the config from the mock catalog (includes primaryKey, aliasName, etc.)
-          ...(options.useMockSchemaDiscovery ? stream.config : {}),
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.overwrite,
-          selected: false,
-        },
-      }));
+    const discoverResult = (await discoverResponse.json()) as SourceDiscoverSchemaRead;
+    const catalog = discoverResult.catalog;
+    const catalogId = discoverResult.catalogId;
+
+    if (!catalog || !catalog.streams) {
+      console.error("Schema discovery failed - invalid catalog:", discoverResult);
+      throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
     }
+
+    if (!catalogId) {
+      console.error("Schema discovery did not return catalogId:", discoverResult);
+      throw new Error(`Schema discovery missing catalogId: ${JSON.stringify(discoverResult)}`);
+    }
+
+    // Select no stream
+    const streams: AirbyteStreamAndConfiguration[] = catalog.streams.map((stream) => ({
+      ...stream,
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+        selected: false,
+      },
+    }));
 
     // Create the connection
     const connectionData: Record<string, unknown> = {
@@ -134,17 +86,9 @@ export const connectionAPI = {
       syncCatalog: { streams },
       scheduleType: "manual",
       status: "active",
+      // For schema change detection
+      sourceCatalogId: catalogId,
     };
-
-    // Add optional fields
-    if (options.nonBreakingChangesPreference) {
-      connectionData.nonBreakingChangesPreference = options.nonBreakingChangesPreference;
-    }
-
-    // Add sourceCatalogId for schema change detection (only when not mocking)
-    if (sourceCatalogId) {
-      connectionData.sourceCatalogId = sourceCatalogId;
-    }
 
     const response = await request.post(`${apiBaseUrl}/web_backend/connections/create`, {
       data: connectionData,
@@ -339,24 +283,6 @@ export const connectionTestHelpers = {
         defaultSourcePrefix: "PokeAPI source",
         defaultDestinationPrefix: "E2E Testing destination",
       },
-      "faker-e2e": {
-        sourceAPI: fakerSourceAPI,
-        destinationAPI: e2eDestinationAPI,
-        defaultSourcePrefix: "Faker source",
-        defaultDestinationPrefix: "E2E Testing destination",
-      },
-      "postgres-postgres": {
-        sourceAPI: postgresSourceAPI,
-        destinationAPI: postgresDestinationAPI,
-        defaultSourcePrefix: "Postgres source",
-        defaultDestinationPrefix: "Postgres destination",
-      },
-      "poke-postgres": {
-        sourceAPI: pokeSourceAPI,
-        destinationAPI: postgresDestinationAPI,
-        defaultSourcePrefix: "PokeAPI source",
-        defaultDestinationPrefix: "Postgres destination",
-      },
     };
 
     const config = configs[connectorType];
@@ -381,28 +307,6 @@ export const connectionTestHelpers = {
     sourcePrefix?: string,
     destinationPrefix?: string
   ) => connectionTestHelpers.setupConnectors(request, workspaceId, "poke-e2e", sourcePrefix, destinationPrefix),
-
-  setupPostgresConnectionTest: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    sourcePrefix?: string,
-    destinationPrefix?: string
-  ) =>
-    connectionTestHelpers.setupConnectors(request, workspaceId, "postgres-postgres", sourcePrefix, destinationPrefix),
-
-  setupFakerConnectionTest: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    sourcePrefix?: string,
-    destinationPrefix?: string
-  ) => connectionTestHelpers.setupConnectors(request, workspaceId, "faker-e2e", sourcePrefix, destinationPrefix),
-
-  setupPokeApiPostgresConnectionTest: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    sourcePrefix?: string,
-    destinationPrefix?: string
-  ) => connectionTestHelpers.setupConnectors(request, workspaceId, "poke-postgres", sourcePrefix, destinationPrefix),
 
   // Cleanup connection test resources with smart connector deletion
   cleanupConnectionTest: async (

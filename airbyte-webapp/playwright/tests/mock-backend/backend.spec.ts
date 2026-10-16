@@ -3,10 +3,11 @@
  */
 import type { SchemaRefreshAnswer, Scenario } from "../../mock";
 import type { BrowserContext, Page } from "@playwright/test";
+import type { FieldSpec } from "@src/core/api/types/AirbyteClient";
 
 import { test, expect } from "@playwright/test";
 
-import { catalogs, connection, defs, destination, errors, scenario, source } from "../../mock";
+import { catalogs, connection, defs, destination, errors, mapperValidation, scenario, source } from "../../mock";
 import { createMockBackend } from "../../mock/backend";
 import { MockResponse } from "../../mock/handlers/handler";
 
@@ -43,6 +44,15 @@ function send(page: Page, url: string, method: string, body?: object) {
     },
     { url, method, body }
   );
+}
+
+/** Sends a mapper validation with one hashing mapper (ID m1) for the pokemon stream. The body replaces fields. */
+function validateMappers(page: Page, appOrigin: string, body: object) {
+  return send(page, `${appOrigin}/api/v1/web_backend/mappers/validate`, "POST", {
+    streamDescriptor: { name: "pokemon" },
+    mappers: [{ id: "m1", type: "hashing", mapperConfiguration: { targetField: "name" } }],
+    ...body,
+  });
 }
 
 test.describe("Mock backend", () => {
@@ -326,6 +336,78 @@ test.describe("Mock backend", () => {
     expect(() => backend.airbyte.schema.onRefresh(pokeConnection, answer)).toThrow(
       "Set experiments: { asyncSchemaDiscovery: false } in the scenario."
     );
+  });
+
+  test("answers a mapper validation with every mapper valid and no fields", async ({ context, page, baseURL }) => {
+    const { backend, appOrigin } = await installBackend(
+      context,
+      page,
+      baseURL,
+      scenario({ connections: [pokeConnection] })
+    );
+    const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
+
+    const response = await validateMappers(page, appOrigin, { connectionId });
+
+    expect(JSON.parse(response.text)).toEqual({
+      initialFields: [],
+      outputFields: [],
+      mappers: [{ id: "m1", inputFields: [], outputFields: [] }],
+    });
+  });
+
+  test("answers a mapper validation with the fields that allValid gives", async ({ context, page, baseURL }) => {
+    const { backend, appOrigin } = await installBackend(
+      context,
+      page,
+      baseURL,
+      scenario({ connections: [pokeConnection] })
+    );
+    const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
+    const fields: FieldSpec[] = [
+      { name: "name", type: "STRING", isSelectedPrimaryKey: false, isSelectedCursor: false },
+    ];
+    backend.airbyte.override("webBackendValidateMappers", mapperValidation.allValid(fields));
+
+    const response = await validateMappers(page, appOrigin, { connectionId });
+
+    expect(JSON.parse(response.text)).toEqual({
+      initialFields: fields,
+      outputFields: fields,
+      mappers: [{ id: "m1", inputFields: fields, outputFields: fields }],
+    });
+  });
+
+  test("answers 404 to a mapper validation for an unknown connection", async ({ context, page, baseURL }) => {
+    const { appOrigin } = await installBackend(context, page, baseURL, scenario({ connections: [pokeConnection] }));
+
+    const response = await validateMappers(page, appOrigin, { connectionId: "c0000000-0000-4000-8000-000000000404" });
+
+    expect(response.status).toBe(404);
+  });
+
+  test("fails the test on a mapper validation for a stream the connection does not have", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const { backend, appOrigin } = await installBackend(
+      context,
+      page,
+      baseURL,
+      scenario({ connections: [pokeConnection] })
+    );
+    const { connectionId } = backend.airbyte.store.connections.get(pokeConnection);
+
+    const response = await validateMappers(page, appOrigin, {
+      connectionId,
+      streamDescriptor: { namespace: "public", name: "users" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(backend.problems()).toEqual([
+      `Handler error: POST /api/v1/web_backend/mappers/validate (webBackendValidateMappers): Connection ${connectionId} has no stream public.users`,
+    ]);
   });
 
   test("starts an instance before setup, and the setup form completes it", async ({ context, page, baseURL }) => {
