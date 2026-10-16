@@ -491,7 +491,7 @@
   "connectionForm.runOnDemand.modal.body": "By proceeding, you acknowledge that this is an additional paid service and will incur charges. You confirm that you are authorized to approve this expense on behalf of your organization, and that your organization agrees to pay all associated fees in full in accordance with our billing terms.",
   "connectionForm.runOnDemand.modal.submit": "Authorize & Enable",
   "connectionForm.semanticSearch.title": "Semantic search",
-  "connectionForm.semanticSearch.description": "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency.",
+  "connectionForm.semanticSearch.description": "Airbyte will index eligible text data, allowing agents using the Airbyte MCP to search and reason about your data with greater accuracy and efficiency.",
   "connectionForm.semanticSearch.organizationOff": "Semantic search is off for this organization. An organization admin can turn it on in Context layer settings.",
   "connectionForm.semanticSearch.createFailed": "Connection created, but semantic search could not be turned on. You can turn it on in the connection settings.",
   "connectionForm.semanticSearch.backfillDate.title": "Semantic search backfill date",

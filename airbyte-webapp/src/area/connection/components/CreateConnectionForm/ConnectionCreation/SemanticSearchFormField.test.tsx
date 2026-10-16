@@ -222,7 +222,7 @@ describe("SemanticSearchFormField", () => {
     expect(screen.getByText("Semantic search")).toBeVisible();
     expect(
       screen.getByText(
-        "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency."
+        "Airbyte will index eligible text data, allowing agents using the Airbyte MCP to search and reason about your data with greater accuracy and efficiency."
       )
     ).toBeVisible();
   });
@@ -494,7 +494,7 @@ describe("SemanticSearchFormField", () => {
       expect(screen.getByText("Semantic search")).toBeVisible();
       expect(
         screen.getByText(
-          "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency."
+          "Airbyte will index eligible text data, allowing agents using the Airbyte MCP to search and reason about your data with greater accuracy and efficiency."
         )
       ).toBeVisible();
       const control = screen.getByRole("checkbox");
