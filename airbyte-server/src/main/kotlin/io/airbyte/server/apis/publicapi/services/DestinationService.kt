@@ -5,7 +5,6 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
@@ -13,6 +12,7 @@ import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.PartialDestinationUpdate
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -263,9 +263,8 @@ class DestinationServiceImpl(
 
   override fun getDestinationSyncModes(destinationRead: DestinationRead): List<DestinationSyncMode> {
     val destinationDefinitionId: UUID = destinationRead.destinationDefinitionId
-    val destinationDefinitionIdWithWorkspaceId = DestinationDefinitionIdWithWorkspaceId()
-    destinationDefinitionIdWithWorkspaceId.destinationDefinitionId = destinationDefinitionId
-    destinationDefinitionIdWithWorkspaceId.workspaceId = destinationRead.workspaceId
+    val destinationDefinitionIdWithWorkspaceId =
+      DestinationDefinitionIdWithWorkspaceId(destinationDefinitionId = destinationDefinitionId, workspaceId = destinationRead.workspaceId)
 
     val result =
       kotlin
@@ -277,6 +276,7 @@ class DestinationServiceImpl(
         }
 
     val destinationDefinitionSpecificationRead = result.getOrNull()!!
-    return destinationDefinitionSpecificationRead.supportedDestinationSyncModes!!
+    // Callers in the connection code still use the Java sync mode enum.
+    return destinationDefinitionSpecificationRead.supportedDestinationSyncModes!!.map { DestinationSyncMode.fromValue(it.value) }
   }
 }

@@ -39,7 +39,6 @@ import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.FailureOrigin
 import io.airbyte.api.model.generated.FailureType
@@ -86,6 +85,7 @@ import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
@@ -2020,10 +2020,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val supportedDestinationSyncModes =
         connectorSpecHandler
           .getDestinationSpecification(
-            DestinationDefinitionIdWithWorkspaceId()
-              .destinationDefinitionId(destinationDefinitionId)
-              .workspaceId(workspaceId),
+            DestinationDefinitionIdWithWorkspaceId(
+              destinationDefinitionId = destinationDefinitionId,
+              workspaceId = workspaceId,
+            ),
           ).supportedDestinationSyncModes
+          .orEmpty()
+          // the spec handler returns Kotlin models; the rest of this handler still uses the Java ones
+          .map { it.convertTo<DestinationSyncMode>() }
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
       val source = sourceService.getSourceConnection(connection.sourceId)
       val appliedDiff: CatalogDiff?

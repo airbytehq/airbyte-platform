@@ -33,8 +33,6 @@ import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
 import io.airbyte.api.model.generated.DestinationSearch
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.FieldAdd
@@ -75,6 +73,9 @@ import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.EntitlementService
@@ -264,6 +265,8 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import io.airbyte.api.server.generated.models.DestinationSyncMode as KotlinDestinationSyncMode
+import io.airbyte.api.server.generated.models.JobConfigType as KotlinJobConfigType
 
 internal class ConnectionsHandlerTest {
   private lateinit var jobPersistence: JobPersistence
@@ -5154,15 +5157,20 @@ internal class ConnectionsHandlerTest {
       whenever(sourceService.getSourceDefinitionFromConnection(connectionId)).thenReturn(sourceDefinition)
       whenever(
         connectorDefinitionSpecificationHandler.getDestinationSpecification(
-          DestinationDefinitionIdWithWorkspaceId()
-            .workspaceId(workspaceId)
-            .destinationDefinitionId(destinationDefinitionId),
+          DestinationDefinitionIdWithWorkspaceId(destinationDefinitionId = destinationDefinitionId, workspaceId = workspaceId),
         ),
       ).thenReturn(
-        DestinationDefinitionSpecificationRead().supportedDestinationSyncModes(
-          listOf(
-            DestinationSyncMode.OVERWRITE,
-          ),
+        DestinationDefinitionSpecificationRead(
+          destinationDefinitionId = destinationDefinitionId,
+          jobInfo =
+            SynchronousJobRead(
+              id = UUID.randomUUID(),
+              configType = KotlinJobConfigType.GET_SPEC,
+              createdAt = 0,
+              endedAt = 0,
+              succeeded = true,
+            ),
+          supportedDestinationSyncModes = listOf(KotlinDestinationSyncMode.OVERWRITE),
         ),
       )
       whenever(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId)

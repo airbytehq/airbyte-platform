@@ -7,8 +7,8 @@ package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.model.generated.EnterpriseConnectorStub
-import io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList
+import io.airbyte.api.server.generated.models.EnterpriseConnectorStub
+import io.airbyte.api.server.generated.models.EnterpriseConnectorStubsReadList
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ActorType
@@ -87,16 +87,21 @@ open class EnterpriseConnectorStubsHandler(
 
       return registryStubs
         .filter { it.type == expectedType }
-        .map {
-          EnterpriseConnectorStub().apply {
-            id = it.id
-            name = it.name
-            url = it.url
-            icon = it.icon
-            label = it.label
-            type = it.type
-            definitionId = it.definitionId
+        .mapNotNull {
+          // the API model requires these fields, so skip a registry entry that lacks them instead of failing the whole list
+          if (it.id == null || it.name == null || it.url == null || it.icon == null) {
+            logger.warn { "Skipping enterprise connector stub with missing fields: ${it.id}" }
+            return@mapNotNull null
           }
+          EnterpriseConnectorStub(
+            id = it.id,
+            name = it.name,
+            url = it.url,
+            icon = it.icon,
+            label = it.label,
+            type = it.type,
+            definitionId = it.definitionId,
+          )
         }
     } catch (error: Exception) {
       logger.error(error) { "Unexpected error fetching enterprise ${actorType}s" }
@@ -118,7 +123,7 @@ open class EnterpriseConnectorStubsHandler(
         }
 
       // only return stubs for connectors that the org is NOT entitled to
-      return EnterpriseConnectorStubsReadList().apply {
+      return EnterpriseConnectorStubsReadList(
         enterpriseConnectorStubs =
           connectorStubs.filter {
             if (it.definitionId == null) {
@@ -133,16 +138,18 @@ open class EnterpriseConnectorStubsHandler(
               }
 
             !isEntitled
-          }
-      }
+          },
+      )
     } catch (error: Exception) {
       logger.error(error) { "Unexpected error fetching enterprise ${actorType}s" }
-      return EnterpriseConnectorStubsReadList()
+      return EnterpriseConnectorStubsReadList(enterpriseConnectorStubs = emptyList())
     }
   }
 
   fun listEnterpriseSourceStubs(): EnterpriseConnectorStubsReadList =
-    EnterpriseConnectorStubsReadList().enterpriseConnectorStubs(listEnterpriseConnectorStubs(ActorType.SOURCE))
+    EnterpriseConnectorStubsReadList(
+      enterpriseConnectorStubs = listEnterpriseConnectorStubs(ActorType.SOURCE),
+    )
 
   fun listEnterpriseSourceStubsForWorkspace(workspaceId: UUID): EnterpriseConnectorStubsReadList =
     listEnterpriseConnectorStubsForWorkspace(workspaceId, ActorType.SOURCE)

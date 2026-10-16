@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
@@ -50,7 +48,7 @@ open class WebBackendCheckUpdatesHandler(
             .listDestinationDefinitions()
             .destinationDefinitions
             .stream()
-            .map { def: DestinationDefinitionRead -> java.util.Map.entry(def.destinationDefinitionId, def.dockerImageTag) }
+            .map { def -> java.util.Map.entry(def.destinationDefinitionId, def.dockerImageTag) }
             .toList()
       } catch (e: IOException) {
         log.error(e) { "Failed to get current list of standard destination definitions" }
@@ -87,7 +85,7 @@ open class WebBackendCheckUpdatesHandler(
             .listSourceDefinitions()
             .sourceDefinitions
             .stream()
-            .map { def: SourceDefinitionRead -> java.util.Map.entry(def.sourceDefinitionId, def.dockerImageTag) }
+            .map { def -> java.util.Map.entry(def.sourceDefinitionId, def.dockerImageTag) }
             .toList()
       } catch (e: IOException) {
         log.error(e) { "Failed to get current list of standard source definitions" }

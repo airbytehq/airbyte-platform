@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.CatalogConfigDiff
 import io.airbyte.api.model.generated.CatalogDiff
@@ -79,6 +80,8 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Function
 import java.util.stream.Collectors
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody as KotlinDestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody as KotlinSourceIdRequestBody
 
 /**
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
@@ -269,12 +272,19 @@ class WebBackendConnectionsHandler(
     // find any scheduled or past breaking changes to the connectors
     val sourceActorDefinitionVersionRead =
       actorDefinitionVersionHandler
-        .getActorDefinitionVersionForSourceId(SourceIdRequestBody().sourceId(source.sourceId))
+        .getActorDefinitionVersionForSourceId(
+          KotlinSourceIdRequestBody(sourceId = source.sourceId),
+        )
     val destinationActorDefinitionVersionRead =
       actorDefinitionVersionHandler
-        .getActorDefinitionVersionForDestinationId(DestinationIdRequestBody().destinationId(destination.destinationId))
-    webBackendConnectionRead.sourceActorDefinitionVersion = sourceActorDefinitionVersionRead
-    webBackendConnectionRead.destinationActorDefinitionVersion = destinationActorDefinitionVersionRead
+        .getActorDefinitionVersionForDestinationId(
+          KotlinDestinationIdRequestBody(destinationId = destination.destinationId),
+        )
+    // the version handler returns Kotlin models; WebBackendConnectionRead is still a Java model
+    webBackendConnectionRead.sourceActorDefinitionVersion =
+      Jsons.convertValue(sourceActorDefinitionVersionRead, ActorDefinitionVersionRead::class.java)
+    webBackendConnectionRead.destinationActorDefinitionVersion =
+      Jsons.convertValue(destinationActorDefinitionVersionRead, ActorDefinitionVersionRead::class.java)
 
     return webBackendConnectionRead
   }
@@ -295,10 +305,14 @@ class WebBackendConnectionsHandler(
     // find any scheduled or past breaking changes to the connectors
     val sourceActorDefinitionVersionRead =
       actorDefinitionVersionHandler
-        .getActorDefinitionVersionForSourceId(SourceIdRequestBody().sourceId(source!!.sourceId))
+        .getActorDefinitionVersionForSourceId(
+          KotlinSourceIdRequestBody(sourceId = source!!.sourceId),
+        )
     val destinationActorDefinitionVersionRead =
       actorDefinitionVersionHandler
-        .getActorDefinitionVersionForDestinationId(DestinationIdRequestBody().destinationId(destination!!.destinationId))
+        .getActorDefinitionVersionForDestinationId(
+          KotlinDestinationIdRequestBody(destinationId = destination!!.destinationId),
+        )
 
     val listItem =
       WebBackendConnectionListItem()
@@ -315,9 +329,11 @@ class WebBackendConnectionsHandler(
             .map { status: JobStatus -> status == JobStatus.running }
             .orElse(false),
         ).schemaChange(schemaChange)
-        .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
-        .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
-        .onDemandEnabled(connectionWithJobInfo.connection().onDemandEnabled ?: false)
+        .sourceActorDefinitionVersion(
+          Jsons.convertValue(sourceActorDefinitionVersionRead, ActorDefinitionVersionRead::class.java),
+        ).destinationActorDefinitionVersion(
+          Jsons.convertValue(destinationActorDefinitionVersionRead, ActorDefinitionVersionRead::class.java),
+        ).onDemandEnabled(connectionWithJobInfo.connection().onDemandEnabled ?: false)
         .tags(
           connectionWithJobInfo
             .connection()
@@ -628,7 +644,9 @@ class WebBackendConnectionsHandler(
     if (!streamsToReset.isEmpty()) {
       val destinationVersion =
         actorDefinitionVersionHandler
-          .getActorDefinitionVersionForDestinationId(DestinationIdRequestBody().destinationId(oldConnectionRead.destinationId))
+          .getActorDefinitionVersionForDestinationId(
+            KotlinDestinationIdRequestBody(destinationId = oldConnectionRead.destinationId),
+          )
       if (destinationVersion.supportsRefreshes) {
         eventRunner.refreshConnectionAsync(
           connectionId,

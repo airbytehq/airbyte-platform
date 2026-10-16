@@ -4,22 +4,25 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
-import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationDefinitionReadList
-import io.airbyte.api.model.generated.DestinationDefinitionUpdate
-import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
-import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
+import io.airbyte.api.server.generated.models.CustomDestinationDefinitionCreate
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.DestinationDefinitionUpdate
+import io.airbyte.api.server.generated.models.PrivateDestinationDefinitionRead
+import io.airbyte.api.server.generated.models.PrivateDestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.ReleaseStage
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SupportLevel
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
@@ -54,6 +57,7 @@ import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
@@ -93,25 +97,30 @@ open class DestinationDefinitionsHandler
       destinationVersion: ActorDefinitionVersion,
     ): DestinationDefinitionRead {
       try {
-        return DestinationDefinitionRead()
-          .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-          .name(standardDestinationDefinition.name)
-          .dockerRepository(destinationVersion.dockerRepository)
-          .dockerImageTag(destinationVersion.dockerImageTag)
-          .documentationUrl(URI(destinationVersion.documentationUrl))
-          .icon(standardDestinationDefinition.iconUrl)
-          .protocolVersion(destinationVersion.protocolVersion)
-          .supportLevel(apiPojoConverters.toApiSupportLevel(destinationVersion.supportLevel))
-          .releaseStage(apiPojoConverters.toApiReleaseStage(destinationVersion.releaseStage))
-          .releaseDate(apiPojoConverters.toLocalDate(destinationVersion.releaseDate))
-          .lastPublished(apiPojoConverters.toOffsetDateTime(destinationVersion.lastPublished))
-          .cdkVersion(destinationVersion.cdkVersion)
-          .metrics(standardDestinationDefinition.metrics)
-          .custom(standardDestinationDefinition.custom)
-          .enterprise(standardDestinationDefinition.enterprise)
-          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.resourceRequirements))
-          .language(destinationVersion.language)
-          .supportsDataActivation(destinationVersion.supportsDataActivation)
+        return DestinationDefinitionRead(
+          destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+          name = standardDestinationDefinition.name,
+          dockerRepository = destinationVersion.dockerRepository,
+          dockerImageTag = destinationVersion.dockerImageTag,
+          documentationUrl = URI(destinationVersion.documentationUrl),
+          icon = standardDestinationDefinition.iconUrl,
+          protocolVersion = destinationVersion.protocolVersion,
+          supportLevel = apiPojoConverters.toApiSupportLevel(destinationVersion.supportLevel).convertTo<SupportLevel>(),
+          releaseStage = apiPojoConverters.toApiReleaseStage(destinationVersion.releaseStage)?.convertTo<ReleaseStage>(),
+          releaseDate = apiPojoConverters.toLocalDate(destinationVersion.releaseDate),
+          lastPublished = apiPojoConverters.toOffsetDateTime(destinationVersion.lastPublished),
+          cdkVersion = destinationVersion.cdkVersion,
+          metrics = standardDestinationDefinition.metrics,
+          custom = standardDestinationDefinition.custom,
+          enterprise = standardDestinationDefinition.enterprise,
+          resourceRequirements =
+            Jsons.convertValue(
+              apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.resourceRequirements),
+              ScopedResourceRequirements::class.java,
+            ),
+          language = destinationVersion.language,
+          supportsDataActivation = destinationVersion.supportsDataActivation,
+        )
       } catch (e: URISyntaxException) {
         throw InternalServerKnownException("Unable to process retrieved latest destination definitions list", e)
       } catch (e: NullPointerException) {
@@ -138,7 +147,7 @@ open class DestinationDefinitionsHandler
               defIdToVersionMap[d.destinationDefinitionId]!!,
             )
           }.collect(Collectors.toList())
-      return DestinationDefinitionReadList().destinationDefinitions(reads)
+      return DestinationDefinitionReadList(destinationDefinitions = reads)
     }
 
     private fun getVersionsForDestinationDefinitions(
@@ -199,7 +208,7 @@ open class DestinationDefinitionsHandler
     fun listDestinationDefinitionsForWorkspace(
       workspaceIdActorDefinitionRequestBody: WorkspaceIdActorDefinitionRequestBody,
     ): DestinationDefinitionReadList =
-      if (workspaceIdActorDefinitionRequestBody.filterByUsed != null && workspaceIdActorDefinitionRequestBody.filterByUsed) {
+      if (workspaceIdActorDefinitionRequestBody.filterByUsed == true) {
         listDestinationDefinitionsUsedByWorkspace(workspaceIdActorDefinitionRequestBody.workspaceId)
       } else {
         listAllowedDestinationDefinitions(workspaceIdActorDefinitionRequestBody.workspaceId)
@@ -282,11 +291,12 @@ open class DestinationDefinitionsHandler
         defs
           .stream()
           .map { entry: Map.Entry<StandardDestinationDefinition, Boolean> ->
-            PrivateDestinationDefinitionRead()
-              .destinationDefinition(buildDestinationDefinitionRead(entry.key, defIdToVersionMap[entry.key.destinationDefinitionId]!!))
-              .granted(entry.value)
+            PrivateDestinationDefinitionRead(
+              destinationDefinition = buildDestinationDefinitionRead(entry.key, defIdToVersionMap[entry.key.destinationDefinitionId]!!),
+              granted = entry.value,
+            )
           }.collect(Collectors.toList())
-      return PrivateDestinationDefinitionReadList().destinationDefinitions(reads)
+      return PrivateDestinationDefinitionReadList(destinationDefinitions = reads)
     }
 
     fun getDestinationDefinition(
@@ -358,7 +368,7 @@ open class DestinationDefinitionsHandler
           icon = destinationDefCreate.icon,
           actorDefinitionVersion = actorDefinitionVersion,
           resourceRequirements = destinationDefCreate.resourceRequirements,
-          scopeId = scopeId,
+          scopeId = scopeId!!,
           scopeType = scopeType,
         )
 
@@ -381,7 +391,11 @@ open class DestinationDefinitionsHandler
           .withTombstone(false)
           .withPublic(false)
           .withCustom(true)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
+          .withResourceRequirements(
+            apiPojoConverters.scopedResourceReqsToInternal(
+              Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+            ),
+          )
 
       destinationService.writeCustomConnectorMetadata(
         destinationDefinition = destinationDefinition,
@@ -394,11 +408,9 @@ open class DestinationDefinitionsHandler
     }
 
     private fun resolveWorkspaceId(customDestinationDefinitionCreate: CustomDestinationDefinitionCreate): UUID {
-      if (customDestinationDefinitionCreate.workspaceId != null) {
-        return customDestinationDefinitionCreate.workspaceId
-      }
+      customDestinationDefinitionCreate.workspaceId?.let { return it }
       if (ScopeType.fromValue(customDestinationDefinitionCreate.scopeType.toString()) == ScopeType.WORKSPACE) {
-        return customDestinationDefinitionCreate.scopeId
+        return customDestinationDefinitionCreate.scopeId!!
       }
       throw UnprocessableEntityProblem(
         ProblemMessageData()
@@ -465,7 +477,9 @@ open class DestinationDefinitionsHandler
     ): StandardDestinationDefinition {
       val updatedResourceReqs =
         if (resourceRequirements != null) {
-          apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements)
+          apiPojoConverters.scopedResourceReqsToInternal(
+            Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+          )
         } else {
           currentDestination.resourceRequirements
         }
@@ -519,9 +533,10 @@ open class DestinationDefinitionsHandler
         actorDefinitionIdWithScope.scopeId,
         ScopeType.fromValue(actorDefinitionIdWithScope.scopeType.toString()),
       )
-      return PrivateDestinationDefinitionRead()
-        .destinationDefinition(buildDestinationDefinitionRead(standardDestinationDefinition, actorDefinitionVersion))
-        .granted(true)
+      return PrivateDestinationDefinitionRead(
+        destinationDefinition = buildDestinationDefinitionRead(standardDestinationDefinition, actorDefinitionVersion),
+        granted = true,
+      )
     }
 
     fun revokeDestinationDefinition(actorDefinitionIdWithScope: ActorDefinitionIdWithScope) {

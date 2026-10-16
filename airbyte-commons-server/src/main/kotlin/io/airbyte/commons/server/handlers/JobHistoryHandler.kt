@@ -29,6 +29,7 @@ import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.model.generated.WorkflowStateRead
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.JobConverter.Companion.getDebugJobInfoRead
@@ -450,11 +451,15 @@ class JobHistoryHandler(
     return destinationHandler.getDestination(destinationIdRequestBody)
   }
 
+  // the definitions handlers return Kotlin models; this handler still builds the Java ones
   private fun getSourceDefinitionRead(sourceRead: SourceRead): SourceDefinitionRead =
-    sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true)
+    Jsons.convertValue(sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true), SourceDefinitionRead::class.java)
 
   private fun getDestinationDefinitionRead(destinationRead: DestinationRead): DestinationDefinitionRead =
-    destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true)
+    Jsons.convertValue(
+      destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true),
+      DestinationDefinitionRead::class.java,
+    )
 
   private fun buildJobDebugInfoRead(jobInfoRead: JobInfoRead): JobDebugInfoRead {
     val configId = jobInfoRead.job.configId

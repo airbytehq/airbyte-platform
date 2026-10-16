@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ConnectionStream
-import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
@@ -45,7 +45,7 @@ class StreamRefreshesHandler(
     val destinationId = connectionService.getStandardSync(connectionId).destinationId
     val destinationDefinitionVersion =
       actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(
-        DestinationIdRequestBody().destinationId(destinationId),
+        DestinationIdRequestBody(destinationId = destinationId),
       )
     val shouldRunRefresh = destinationDefinitionVersion.supportsRefreshes
 

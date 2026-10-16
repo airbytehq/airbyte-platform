@@ -4,23 +4,25 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
-import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
-import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
-import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionRead.SourceTypeEnum
-import io.airbyte.api.model.generated.SourceDefinitionReadList
-import io.airbyte.api.model.generated.SourceDefinitionUpdate
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
+import io.airbyte.api.server.generated.models.CustomSourceDefinitionCreate
+import io.airbyte.api.server.generated.models.PrivateSourceDefinitionRead
+import io.airbyte.api.server.generated.models.PrivateSourceDefinitionReadList
+import io.airbyte.api.server.generated.models.ReleaseStage
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionReadList
+import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
+import io.airbyte.api.server.generated.models.SupportLevel
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
@@ -56,6 +58,7 @@ import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -93,26 +96,31 @@ open class SourceDefinitionsHandler
       sourceVersion: ActorDefinitionVersion,
     ): SourceDefinitionRead {
       try {
-        return SourceDefinitionRead()
-          .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-          .name(standardSourceDefinition.name)
-          .sourceType(getSourceType(standardSourceDefinition))
-          .dockerRepository(sourceVersion.dockerRepository)
-          .dockerImageTag(sourceVersion.dockerImageTag)
-          .documentationUrl(URI(sourceVersion.documentationUrl))
-          .icon(standardSourceDefinition.iconUrl)
-          .protocolVersion(sourceVersion.protocolVersion)
-          .supportLevel(apiPojoConverters.toApiSupportLevel(sourceVersion.supportLevel))
-          .releaseStage(apiPojoConverters.toApiReleaseStage(sourceVersion.releaseStage))
-          .releaseDate(apiPojoConverters.toLocalDate(sourceVersion.releaseDate))
-          .lastPublished(apiPojoConverters.toOffsetDateTime(sourceVersion.lastPublished))
-          .cdkVersion(sourceVersion.cdkVersion)
-          .metrics(standardSourceDefinition.metrics)
-          .custom(standardSourceDefinition.custom)
-          .enterprise(standardSourceDefinition.enterprise)
-          .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardSourceDefinition.resourceRequirements))
-          .maxSecondsBetweenMessages(standardSourceDefinition.maxSecondsBetweenMessages)
-          .language(sourceVersion.language)
+        return SourceDefinitionRead(
+          sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+          name = standardSourceDefinition.name,
+          sourceType = getSourceType(standardSourceDefinition),
+          dockerRepository = sourceVersion.dockerRepository,
+          dockerImageTag = sourceVersion.dockerImageTag,
+          documentationUrl = URI(sourceVersion.documentationUrl),
+          icon = standardSourceDefinition.iconUrl,
+          protocolVersion = sourceVersion.protocolVersion,
+          supportLevel = apiPojoConverters.toApiSupportLevel(sourceVersion.supportLevel).convertTo<SupportLevel>(),
+          releaseStage = apiPojoConverters.toApiReleaseStage(sourceVersion.releaseStage)?.convertTo<ReleaseStage>(),
+          releaseDate = apiPojoConverters.toLocalDate(sourceVersion.releaseDate),
+          lastPublished = apiPojoConverters.toOffsetDateTime(sourceVersion.lastPublished),
+          cdkVersion = sourceVersion.cdkVersion,
+          metrics = standardSourceDefinition.metrics,
+          custom = standardSourceDefinition.custom,
+          enterprise = standardSourceDefinition.enterprise,
+          resourceRequirements =
+            Jsons.convertValue(
+              apiPojoConverters.scopedResourceReqsToApi(standardSourceDefinition.resourceRequirements),
+              ScopedResourceRequirements::class.java,
+            ),
+          maxSecondsBetweenMessages = standardSourceDefinition.maxSecondsBetweenMessages,
+          language = sourceVersion.language,
+        )
       } catch (e: URISyntaxException) {
         throw InternalServerKnownException("Unable to process retrieved latest source definitions list", e)
       } catch (e: NullPointerException) {
@@ -154,7 +162,7 @@ open class SourceDefinitionsHandler
               defIdToVersionMap[d.sourceDefinitionId]!!,
             )
           }.collect(Collectors.toList())
-      return SourceDefinitionReadList().sourceDefinitions(reads)
+      return SourceDefinitionReadList(sourceDefinitions = reads)
     }
 
     fun listLatestSourceDefinitions(): SourceDefinitionReadList {
@@ -196,7 +204,7 @@ open class SourceDefinitionsHandler
     }
 
     fun listSourceDefinitionsForWorkspace(workspaceIdActorDefinitionRequestBody: WorkspaceIdActorDefinitionRequestBody): SourceDefinitionReadList =
-      if (workspaceIdActorDefinitionRequestBody.filterByUsed != null && workspaceIdActorDefinitionRequestBody.filterByUsed) {
+      if (workspaceIdActorDefinitionRequestBody.filterByUsed == true) {
         listSourceDefinitionsUsedByWorkspace(workspaceIdActorDefinitionRequestBody.workspaceId)
       } else {
         listAllowedSourceDefinitions(workspaceIdActorDefinitionRequestBody.workspaceId)
@@ -274,11 +282,12 @@ open class SourceDefinitionsHandler
         defs
           .stream()
           .map { entry: Map.Entry<StandardSourceDefinition, Boolean> ->
-            PrivateSourceDefinitionRead()
-              .sourceDefinition(buildSourceDefinitionRead(entry.key, defIdToVersionMap[entry.key.sourceDefinitionId]!!))
-              .granted(entry.value)
+            PrivateSourceDefinitionRead(
+              sourceDefinition = buildSourceDefinitionRead(entry.key, defIdToVersionMap[entry.key.sourceDefinitionId]!!),
+              granted = entry.value,
+            )
           }.collect(Collectors.toList())
-      return PrivateSourceDefinitionReadList().sourceDefinitions(reads)
+      return PrivateSourceDefinitionReadList(sourceDefinitions = reads)
     }
 
     fun getSourceDefinition(
@@ -348,7 +357,7 @@ open class SourceDefinitionsHandler
           icon = sourceDefinitionCreate.icon,
           actorDefinitionVersion = actorDefinitionVersion,
           resourceRequirements = sourceDefinitionCreate.resourceRequirements,
-          scopeId = scopeId,
+          scopeId = scopeId!!,
           scopeType = scopeType,
         )
 
@@ -371,7 +380,11 @@ open class SourceDefinitionsHandler
           .withTombstone(false)
           .withPublic(false)
           .withCustom(true)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
+          .withResourceRequirements(
+            apiPojoConverters.scopedResourceReqsToInternal(
+              Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+            ),
+          )
 
       sourceService.writeCustomConnectorMetadata(
         sourceDefinition = sourceDefinition,
@@ -384,11 +397,9 @@ open class SourceDefinitionsHandler
     }
 
     private fun resolveWorkspaceId(customSourceDefinitionCreate: CustomSourceDefinitionCreate): UUID {
-      if (customSourceDefinitionCreate.workspaceId != null) {
-        return customSourceDefinitionCreate.workspaceId
-      }
+      customSourceDefinitionCreate.workspaceId?.let { return it }
       if (ScopeType.fromValue(customSourceDefinitionCreate.scopeType.toString()) == ScopeType.WORKSPACE) {
-        return customSourceDefinitionCreate.scopeId
+        return customSourceDefinitionCreate.scopeId!!
       }
       throw UnprocessableEntityProblem(
         ProblemMessageData()
@@ -443,7 +454,9 @@ open class SourceDefinitionsHandler
     ): StandardSourceDefinition {
       val updatedResourceReqs =
         if (resourceRequirements != null) {
-          apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements)
+          apiPojoConverters.scopedResourceReqsToInternal(
+            Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+          )
         } else {
           currentSourceDefinition.resourceRequirements
         }
@@ -494,9 +507,10 @@ open class SourceDefinitionsHandler
         actorDefinitionIdWithScope.scopeId,
         ScopeType.fromValue(actorDefinitionIdWithScope.scopeType.toString()),
       )
-      return PrivateSourceDefinitionRead()
-        .sourceDefinition(buildSourceDefinitionRead(standardSourceDefinition, actorDefinitionVersion))
-        .granted(true)
+      return PrivateSourceDefinitionRead(
+        sourceDefinition = buildSourceDefinitionRead(standardSourceDefinition, actorDefinitionVersion),
+        granted = true,
+      )
     }
 
     fun revokeSourceDefinition(actorDefinitionIdWithScope: ActorDefinitionIdWithScope) {
@@ -508,11 +522,11 @@ open class SourceDefinitionsHandler
     }
 
     companion object {
-      private fun getSourceType(standardSourceDefinition: StandardSourceDefinition): SourceTypeEnum? {
+      private fun getSourceType(standardSourceDefinition: StandardSourceDefinition): SourceDefinitionRead.SourceType? {
         if (standardSourceDefinition.sourceType == null) {
           return null
         }
-        return SourceTypeEnum.fromValue(standardSourceDefinition.sourceType.value())
+        return standardSourceDefinition.sourceType.convertTo<SourceDefinitionRead.SourceType>()
       }
     }
   }

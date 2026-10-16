@@ -7,15 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate
-import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
-import io.airbyte.api.model.generated.DestinationDefinitionCreate
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationDefinitionUpdate
-import io.airbyte.api.model.generated.SourceDefinitionCreate
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionUpdate
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectDetails
@@ -23,8 +14,17 @@ import io.airbyte.api.server.generated.models.ConnectorBuilderProjectIdWithWorks
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectRead
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectWithWorkspaceId
 import io.airbyte.api.server.generated.models.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.server.generated.models.CustomDestinationDefinitionCreate
+import io.airbyte.api.server.generated.models.CustomSourceDefinitionCreate
 import io.airbyte.api.server.generated.models.DeclarativeSourceDefinitionCreateManifestRequestBody
 import io.airbyte.api.server.generated.models.DeclarativeSourceManifest
+import io.airbyte.api.server.generated.models.DestinationDefinitionCreate
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionUpdate
+import io.airbyte.api.server.generated.models.SourceDefinitionCreate
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
@@ -168,7 +168,7 @@ class DefinitionsController(
     if (def.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE) {
       throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom == true)
 
     sourceDefinitionsHandler.deleteSourceDefinition(definitionId)
     def.toPublicApiModel().ok()
@@ -203,7 +203,7 @@ class DefinitionsController(
     definitionId: UUID,
   ) = wrap {
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom == true)
     destinationDefinitionsHandler.deleteDestinationDefinition(definitionId)
     def.toPublicApiModel().ok()
   }
@@ -218,7 +218,7 @@ class DefinitionsController(
     // and other details are taken into account.
     val defs =
       sourceDefinitionsHandler
-        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
         .sourceDefinitions
 
     val def = defs.firstOrNull { it.sourceDefinitionId == definitionId }
@@ -257,7 +257,7 @@ class DefinitionsController(
     // and other details are taken into account.
     val defs =
       destinationDefinitionsHandler
-        .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+        .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
         .destinationDefinitions
 
     val def = defs.firstOrNull { it.destinationDefinitionId == definitionId }
@@ -274,7 +274,7 @@ class DefinitionsController(
 
       DefinitionsResponse(
         sourceDefinitionsHandler
-          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
           .sourceDefinitions
           .filter { it.dockerRepository != AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE }
           .map { it.toPublicApiModel() },
@@ -287,7 +287,7 @@ class DefinitionsController(
 
       DeclarativeSourceDefinitionsResponse(
         sourceDefinitionsHandler
-          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
           .sourceDefinitions
           .filter { it.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE }
           .map {
@@ -308,7 +308,7 @@ class DefinitionsController(
 
       DefinitionsResponse(
         destinationDefinitionsHandler
-          .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+          .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
           .destinationDefinitions
           .map { it.toPublicApiModel() },
       ).ok()
@@ -326,15 +326,16 @@ class DefinitionsController(
     }
 
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom == true)
 
     sourceDefinitionsHandler
       .updateSourceDefinition(
-        SourceDefinitionUpdate()
-          .sourceDefinitionId(definitionId)
-          .name(updateDefinitionRequest.name)
-          .dockerImageTag(updateDefinitionRequest.dockerImageTag)
-          .workspaceId(workspaceId),
+        SourceDefinitionUpdate(
+          sourceDefinitionId = definitionId,
+          name = updateDefinitionRequest.name,
+          dockerImageTag = updateDefinitionRequest.dockerImageTag,
+          workspaceId = workspaceId,
+        ),
       ).toPublicApiModel()
       .ok()
   }
@@ -397,15 +398,16 @@ class DefinitionsController(
       )
     }
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom == true)
 
     destinationDefinitionsHandler
       .updateDestinationDefinition(
-        DestinationDefinitionUpdate()
-          .destinationDefinitionId(definitionId)
-          .name(updateDefinitionRequest.name)
-          .dockerImageTag(updateDefinitionRequest.dockerImageTag)
-          .workspaceId(workspaceId),
+        DestinationDefinitionUpdate(
+          destinationDefinitionId = definitionId,
+          name = updateDefinitionRequest.name,
+          dockerImageTag = updateDefinitionRequest.dockerImageTag,
+          workspaceId = workspaceId,
+        ),
       ).toPublicApiModel()
       .ok()
   }
@@ -478,7 +480,7 @@ private fun SourceDefinitionRead.toPublicApiModel(): DefinitionResponse =
     name = this.name,
     dockerRepository = this.dockerRepository,
     dockerImageTag = this.dockerImageTag,
-    documentationUrl = this.documentationUrl.toString(),
+    documentationUrl = this.documentationUrl?.toString(),
   )
 
 private fun DestinationDefinitionRead.toPublicApiModel(): DefinitionResponse =
@@ -491,26 +493,28 @@ private fun DestinationDefinitionRead.toPublicApiModel(): DefinitionResponse =
   )
 
 private fun CreateDefinitionRequest.toCustomSourceDefinitionCreate(workspaceId: UUID) =
-  CustomSourceDefinitionCreate()
-    .workspaceId(workspaceId)
-    .sourceDefinition(
-      SourceDefinitionCreate()
-        .name(this.name)
-        .dockerImageTag(this.dockerImageTag)
-        .dockerRepository(this.dockerRepository)
-        .documentationUrl(this.documentationUrl ?: URI.create("")),
-    )
+  CustomSourceDefinitionCreate(
+    workspaceId = workspaceId,
+    sourceDefinition =
+      SourceDefinitionCreate(
+        name = this.name,
+        dockerImageTag = this.dockerImageTag,
+        dockerRepository = this.dockerRepository,
+        documentationUrl = this.documentationUrl ?: URI.create(""),
+      ),
+  )
 
 private fun CreateDefinitionRequest.toCustomDestinationDefinitionCreate(workspaceId: UUID) =
-  CustomDestinationDefinitionCreate()
-    .workspaceId(workspaceId)
-    .destinationDefinition(
-      DestinationDefinitionCreate()
-        .name(this.name)
-        .dockerImageTag(this.dockerImageTag)
-        .dockerRepository(this.dockerRepository)
-        .documentationUrl(this.documentationUrl ?: URI.create("")),
-    )
+  CustomDestinationDefinitionCreate(
+    workspaceId = workspaceId,
+    destinationDefinition =
+      DestinationDefinitionCreate(
+        name = this.name,
+        dockerImageTag = this.dockerImageTag,
+        dockerRepository = this.dockerRepository,
+        documentationUrl = this.documentationUrl ?: URI.create(""),
+      ),
+  )
 
 private fun ConnectorBuilderProjectRead.toPublicApi() =
   DeclarativeSourceDefinitionResponse(

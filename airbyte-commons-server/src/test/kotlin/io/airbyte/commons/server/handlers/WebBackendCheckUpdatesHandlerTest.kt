@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationDefinitionReadList
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionReadList
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionReadList
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.io.IOException
+import java.net.URI
 import java.util.Map
 import java.util.UUID
 
@@ -177,7 +178,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
     Mockito
       .`when`(sourceDefinitionsHandler!!.listSourceDefinitions())
       .thenReturn(
-        SourceDefinitionReadList().sourceDefinitions(
+        SourceDefinitionReadList(
           currentSources
             .stream()
             .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
@@ -202,7 +203,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
     Mockito
       .`when`(destinationDefinitionsHandler!!.listDestinationDefinitions())
       .thenReturn(
-        DestinationDefinitionReadList().destinationDefinitions(
+        DestinationDefinitionReadList(
           currentDestinations
             .stream()
             .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
@@ -231,9 +232,13 @@ internal class WebBackendCheckUpdatesHandlerTest {
       .withDockerImageTag(idImageTagEntry.value)
 
   private fun createDestinationDef(idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>): DestinationDefinitionRead =
-    DestinationDefinitionRead()
-      .destinationDefinitionId(idImageTagEntry.key)
-      .dockerImageTag(idImageTagEntry.value)
+    DestinationDefinitionRead(
+      destinationDefinitionId = idImageTagEntry.key!!,
+      name = "test",
+      dockerRepository = "repo",
+      dockerImageTag = idImageTagEntry.value!!,
+      documentationUrl = URI.create("https://docs.airbyte.com"),
+    )
 
   private fun createRegistrySourceDef(idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>): ConnectorRegistrySourceDefinition =
     ConnectorRegistrySourceDefinition()
@@ -241,7 +246,10 @@ internal class WebBackendCheckUpdatesHandlerTest {
       .withDockerImageTag(idImageTagEntry.value)
 
   private fun createSourceDef(idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>): SourceDefinitionRead =
-    SourceDefinitionRead()
-      .sourceDefinitionId(idImageTagEntry.key)
-      .dockerImageTag(idImageTagEntry.value)
+    SourceDefinitionRead(
+      sourceDefinitionId = idImageTagEntry.key!!,
+      name = "test",
+      dockerRepository = "repo",
+      dockerImageTag = idImageTagEntry.value!!,
+    )
 }

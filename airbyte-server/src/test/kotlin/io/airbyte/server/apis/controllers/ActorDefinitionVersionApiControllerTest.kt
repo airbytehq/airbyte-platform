@@ -4,9 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -24,6 +25,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -46,23 +48,34 @@ internal class ActorDefinitionVersionApiControllerTest {
   @Test
   fun testGetActorDefinitionForSource() {
     every { actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(any()) } returns
-      ActorDefinitionVersionRead() andThenThrows
+      actorDefinitionVersionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/actor_definition_versions/get_for_source"
 
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody(sourceId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody(sourceId = UUID.randomUUID()))))
   }
 
   @Test
   fun testGetActorDefinitionForDestination() {
-    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns ActorDefinitionVersionRead() andThenThrows
+    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns actorDefinitionVersionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/actor_definition_versions/get_for_destination"
 
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationIdRequestBody(destinationId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody(destinationId = UUID.randomUUID()))))
   }
 }
+
+private fun actorDefinitionVersionRead() =
+  ActorDefinitionVersionRead(
+    dockerRepository = "repo",
+    dockerImageTag = "0.1.0",
+    supportsRefreshes = false,
+    isVersionOverrideApplied = false,
+    supportState = SupportState.SUPPORTED,
+    supportsFileTransfer = false,
+    supportsDataActivation = false,
+  )

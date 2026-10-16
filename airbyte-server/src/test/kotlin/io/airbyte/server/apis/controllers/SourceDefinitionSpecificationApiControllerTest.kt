@@ -4,8 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.SourceDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -23,6 +25,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -48,11 +51,34 @@ internal class SourceDefinitionSpecificationApiControllerTest {
       connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(
         any(),
       )
-    } returns SourceDefinitionSpecificationRead() andThenThrows
+    } returns sourceDefinitionSpecificationRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/source_definition_specifications/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = UUID.randomUUID(), workspaceId = UUID.randomUUID())),
+      ),
+    )
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(
+        HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = UUID.randomUUID(), workspaceId = UUID.randomUUID())),
+      ),
+    )
   }
 }
+
+private fun sourceDefinitionSpecificationRead() =
+  SourceDefinitionSpecificationRead(
+    sourceDefinitionId = UUID.randomUUID(),
+    jobInfo =
+      SynchronousJobRead(
+        id = UUID.randomUUID(),
+        configType = JobConfigType.GET_SPEC,
+        createdAt = 0,
+        endedAt = 0,
+        succeeded = true,
+      ),
+  )

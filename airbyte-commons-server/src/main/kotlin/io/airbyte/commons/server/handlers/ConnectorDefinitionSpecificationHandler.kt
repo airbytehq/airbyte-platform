@@ -4,14 +4,16 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AdvancedAuth
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
-import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.AdvancedAuth
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.SourceDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.OauthModelConverter.getAdvancedAuth
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata.Companion.mock
@@ -27,11 +29,13 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.EntitledConnectorSpec
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.UUID
+import io.airbyte.api.server.generated.models.DestinationSyncMode as KotlinDestinationSyncMode
 
 /**
  * This class is responsible for getting the specification for a given connector. It is used by the
@@ -153,28 +157,18 @@ open class ConnectorDefinitionSpecificationHandler(
     workspaceId: UUID,
   ): SourceDefinitionSpecificationRead {
     val spec = entitledConnectorSpec.spec
-    val specRead =
-      SourceDefinitionSpecificationRead()
-        .jobInfo(jobConverter.getSynchronousJobRead(mock(JobConfig.ConfigType.GET_SPEC)))
-        .connectionSpecification(spec.connectionSpecification)
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
+    val advancedAuth = getKotlinAdvancedAuth(spec)
+    val globalCredentialsAvailable =
+      advancedAuth?.let { oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinition.sourceDefinitionId).isPresent }
 
-    if (spec.documentationUrl != null) {
-      specRead.documentationUrl(spec.documentationUrl.toString())
-    }
-
-    val advancedAuth = getAdvancedAuth(spec)
-    advancedAuth.ifPresent { advancedAuth: AdvancedAuth? ->
-      specRead.advancedAuth =
-        advancedAuth
-    }
-    if (advancedAuth.isPresent) {
-      val sourceOAuthParameter =
-        oAuthService.getSourceOAuthParameterOptional(workspaceId, sourceDefinition.sourceDefinitionId)
-      specRead.advancedAuthGlobalCredentialsAvailable = sourceOAuthParameter.isPresent
-    }
-
-    return specRead
+    return SourceDefinitionSpecificationRead(
+      jobInfo = getSpecJobInfo(),
+      connectionSpecification = spec.connectionSpecification,
+      sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+      documentationUrl = spec.documentationUrl?.toString(),
+      advancedAuth = advancedAuth,
+      advancedAuthGlobalCredentialsAvailable = globalCredentialsAvailable,
+    )
   }
 
   @InternalForTesting
@@ -185,55 +179,56 @@ open class ConnectorDefinitionSpecificationHandler(
     workspaceId: UUID,
   ): DestinationDefinitionSpecificationRead {
     val spec = entitledConnectorSpec.spec
-    val specRead =
-      DestinationDefinitionSpecificationRead()
-        .jobInfo(jobConverter.getSynchronousJobRead(mock(JobConfig.ConfigType.GET_SPEC)))
-        .supportedDestinationSyncModes(getFinalDestinationSyncModes(spec.supportedDestinationSyncModes, supportsRefreshes))
-        .connectionSpecification(spec.connectionSpecification)
-        .documentationUrl(spec.documentationUrl.toString())
-        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+    val advancedAuth = getKotlinAdvancedAuth(spec)
+    val globalCredentialsAvailable =
+      advancedAuth?.let { oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinition.destinationDefinitionId).isPresent }
 
-    val advancedAuth = getAdvancedAuth(spec)
-    advancedAuth.ifPresent { advancedAuth: AdvancedAuth? ->
-      specRead.advancedAuth =
-        advancedAuth
-    }
-    if (advancedAuth.isPresent) {
-      val destinationOAuthParameter =
-        oAuthService.getDestinationOAuthParameterOptional(workspaceId, destinationDefinition.destinationDefinitionId)
-      specRead.advancedAuthGlobalCredentialsAvailable = destinationOAuthParameter.isPresent
-    }
-
-    return specRead
+    return DestinationDefinitionSpecificationRead(
+      jobInfo = getSpecJobInfo(),
+      supportedDestinationSyncModes = getFinalDestinationSyncModes(spec.supportedDestinationSyncModes, supportsRefreshes),
+      connectionSpecification = spec.connectionSpecification,
+      documentationUrl = spec.documentationUrl.toString(),
+      destinationDefinitionId = destinationDefinition.destinationDefinitionId,
+      advancedAuth = advancedAuth,
+      advancedAuthGlobalCredentialsAvailable = globalCredentialsAvailable,
+    )
   }
+
+  // JobConverter and OauthModelConverter still build the Java models. Convert through JSON, not by enum name:
+  // the logs field is untyped in Kotlin, and AdvancedAuth's flow-type constants are named differently.
+  private fun getSpecJobInfo(): SynchronousJobRead =
+    Jsons.convertValue(jobConverter.getSynchronousJobRead(mock(JobConfig.ConfigType.GET_SPEC)), SynchronousJobRead::class.java)
+
+  private fun getKotlinAdvancedAuth(spec: ConnectorSpecification): AdvancedAuth? =
+    getAdvancedAuth(spec).orElse(null)?.let { Jsons.convertValue(it, AdvancedAuth::class.java) }
 
   private fun getFinalDestinationSyncModes(
     syncModes: List<DestinationSyncMode>,
     supportsRefreshes: Boolean,
-  ): List<io.airbyte.api.model.generated.DestinationSyncMode> {
-    val finalSyncModes: MutableList<io.airbyte.api.model.generated.DestinationSyncMode> = ArrayList()
+  ): List<KotlinDestinationSyncMode> {
+    val finalSyncModes: MutableList<KotlinDestinationSyncMode> = ArrayList()
     var hasDedup = false
     var hasOverwrite = false
     for (syncMode in syncModes) {
       when (syncMode) {
-        DestinationSyncMode.APPEND -> finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
+        DestinationSyncMode.APPEND -> finalSyncModes.add(KotlinDestinationSyncMode.APPEND)
         DestinationSyncMode.APPEND_DEDUP -> {
-          finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.APPEND_DEDUP)
+          finalSyncModes.add(KotlinDestinationSyncMode.APPEND_DEDUP)
           hasDedup = true
         }
 
         DestinationSyncMode.OVERWRITE -> {
-          finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE)
+          finalSyncModes.add(KotlinDestinationSyncMode.OVERWRITE)
           hasOverwrite = true
         }
 
-        DestinationSyncMode.UPDATE -> finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.UPDATE)
-        DestinationSyncMode.SOFT_DELETE -> finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.SOFT_DELETE)
+        DestinationSyncMode.UPDATE -> finalSyncModes.add(KotlinDestinationSyncMode.UPDATE)
+        DestinationSyncMode.SOFT_DELETE -> finalSyncModes.add(KotlinDestinationSyncMode.SOFT_DELETE)
         else -> throw IllegalStateException("Unexpected value: $syncMode")
       }
     }
     if (supportsRefreshes && hasDedup && hasOverwrite) {
-      finalSyncModes.add(io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE_DEDUP)
+      finalSyncModes.add(KotlinDestinationSyncMode.OVERWRITE_DEDUP)
     }
     return finalSyncModes
   }

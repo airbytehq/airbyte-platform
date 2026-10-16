@@ -4,12 +4,15 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.model.generated.JobConfigType
+import io.airbyte.api.model.generated.SynchronousJobRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.JobConverter
+import io.airbyte.commons.server.scheduler.SynchronousJobMetadata
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.DestinationOAuthParameter
@@ -41,6 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.api.server.generated.models.DestinationSyncMode as KotlinDestinationSyncMode
 
 /**
  * Unit tests for [ConnectorDefinitionSpecificationHandler].
@@ -60,6 +64,14 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   fun setup() {
     actorDefinitionVersionHelper = mockk()
     jobConverter = mockk(relaxed = true)
+    // the handler converts this to the Kotlin model through JSON, so it must be a real object, not a relaxed mock
+    every { jobConverter.getSynchronousJobRead(any<SynchronousJobMetadata>()) } returns
+      SynchronousJobRead()
+        .id(UUID.randomUUID())
+        .configType(JobConfigType.GET_SPEC)
+        .createdAt(0)
+        .endedAt(0)
+        .succeeded(true)
     sourceService = mockk()
     destinationService = mockk()
     oAuthService = mockk()
@@ -90,8 +102,7 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     val organizationId = UUID.randomUUID()
     val destinationDefinitionId = UUID.randomUUID()
     val destinationIdRequestBody =
-      DestinationIdRequestBody()
-        .destinationId(destinationId)
+      DestinationIdRequestBody(destinationId = destinationId)
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -122,24 +133,24 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
     verify { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId) }
     verify { connectorEntitlementSerivce.getEntitledConnectorSpec(OrganizationId(organizationId), destinationVersion) }
-    Assertions.assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.connectionSpecification)
+    Assertions.assertEquals(CONNECTOR_SPECIFICATION.connectionSpecification, response.connectionSpecification)
   }
 
   @Test
   fun testGetSourceSpecWithoutDocs() {
     val workspaceId = UUID.randomUUID()
     val sourceDefinitionIdWithWorkspaceId =
-      SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(workspaceId)
+      SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = UUID.randomUUID(), workspaceId = workspaceId)
 
     val sourceDefinition =
       StandardSourceDefinition()
         .withName(NAME)
-        .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.getSourceDefinitionId())
+        .withSourceDefinitionId(sourceDefinitionIdWithWorkspaceId.sourceDefinitionId)
     every { sourceService.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.sourceDefinitionId) } returns sourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
-        sourceDefinitionIdWithWorkspaceId.getWorkspaceId(),
+        sourceDefinitionIdWithWorkspaceId.workspaceId,
       )
     } returns
       ActorDefinitionVersion()
@@ -154,7 +165,7 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
     verify { sourceService.getStandardSourceDefinition(sourceDefinitionIdWithWorkspaceId.sourceDefinitionId) }
     verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, sourceDefinitionIdWithWorkspaceId.workspaceId) }
-    Assertions.assertEquals(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL.getConnectionSpecification(), response.connectionSpecification)
+    Assertions.assertEquals(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL.connectionSpecification, response.connectionSpecification)
   }
 
   @Test
@@ -164,8 +175,7 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     val sourceDefinitionId = UUID.randomUUID()
 
     val sourceIdRequestBody =
-      SourceIdRequestBody()
-        .sourceId(sourceId)
+      SourceIdRequestBody(sourceId = sourceId)
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -187,13 +197,16 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     val response = connectorDefinitionSpecificationHandler.getSpecificationForSourceId(sourceIdRequestBody)
 
     verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId) }
-    Assertions.assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.connectionSpecification)
+    Assertions.assertEquals(CONNECTOR_SPECIFICATION.connectionSpecification, response.connectionSpecification)
   }
 
   @Test
   fun testGetDestinationSpec() {
     val destinationDefinitionIdWithWorkspaceId =
-      DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID())
+      DestinationDefinitionIdWithWorkspaceId(
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+      )
 
     val organizationId = UUID.randomUUID()
     every { workspaceHelper.getOrganizationForWorkspace(destinationDefinitionIdWithWorkspaceId.workspaceId) } returns organizationId
@@ -211,7 +224,7 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
-        destinationDefinitionIdWithWorkspaceId.getWorkspaceId(),
+        destinationDefinitionIdWithWorkspaceId.workspaceId,
       )
     } returns (destinationVersion)
 
@@ -221,14 +234,14 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     verify { destinationService.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.destinationDefinitionId) }
     verify { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destinationDefinitionIdWithWorkspaceId.workspaceId) }
     verify { connectorEntitlementSerivce.getEntitledConnectorSpec(OrganizationId(organizationId), destinationVersion) }
-    Assertions.assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.connectionSpecification)
+    Assertions.assertEquals(CONNECTOR_SPECIFICATION.connectionSpecification, response.connectionSpecification)
   }
 
   @Test
   fun testGetSourceSpec() {
     val workspaceId = UUID.randomUUID()
     val sourceDefinitionIdWithWorkspaceId =
-      SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(workspaceId)
+      SourceDefinitionIdWithWorkspaceId(sourceDefinitionId = UUID.randomUUID(), workspaceId = workspaceId)
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -260,7 +273,10 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   fun testDestinationSyncModeEnrichment(supportsRefreshes: Boolean) {
     val workspaceId = UUID.randomUUID()
     val destinationDefinitionIdWithWorkspaceId =
-      DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(workspaceId)
+      DestinationDefinitionIdWithWorkspaceId(
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = workspaceId,
+      )
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -307,12 +323,12 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
         .assertThatCollection(response.supportedDestinationSyncModes)
         .containsExactlyInAnyOrderElementsOf(
           listOf(
-            io.airbyte.api.model.generated.DestinationSyncMode.APPEND,
-            io.airbyte.api.model.generated.DestinationSyncMode.APPEND_DEDUP,
-            io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE,
-            io.airbyte.api.model.generated.DestinationSyncMode.SOFT_DELETE,
-            io.airbyte.api.model.generated.DestinationSyncMode.UPDATE,
-            io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE_DEDUP,
+            KotlinDestinationSyncMode.APPEND,
+            KotlinDestinationSyncMode.APPEND_DEDUP,
+            KotlinDestinationSyncMode.OVERWRITE,
+            KotlinDestinationSyncMode.SOFT_DELETE,
+            KotlinDestinationSyncMode.UPDATE,
+            KotlinDestinationSyncMode.OVERWRITE_DEDUP,
           ),
         )
     } else {
@@ -320,11 +336,11 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
         .assertThatCollection(response.supportedDestinationSyncModes)
         .containsExactlyInAnyOrderElementsOf(
           listOf(
-            io.airbyte.api.model.generated.DestinationSyncMode.APPEND,
-            io.airbyte.api.model.generated.DestinationSyncMode.APPEND_DEDUP,
-            io.airbyte.api.model.generated.DestinationSyncMode.OVERWRITE,
-            io.airbyte.api.model.generated.DestinationSyncMode.UPDATE,
-            io.airbyte.api.model.generated.DestinationSyncMode.SOFT_DELETE,
+            KotlinDestinationSyncMode.APPEND,
+            KotlinDestinationSyncMode.APPEND_DEDUP,
+            KotlinDestinationSyncMode.OVERWRITE,
+            KotlinDestinationSyncMode.UPDATE,
+            KotlinDestinationSyncMode.SOFT_DELETE,
           ),
         )
     }
@@ -335,7 +351,10 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   fun testDestinationSyncModeEnrichmentWithoutOverwrite(supportsRefreshes: Boolean) {
     val workspaceId = UUID.randomUUID()
     val destinationDefinitionIdWithWorkspaceId =
-      DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(workspaceId)
+      DestinationDefinitionIdWithWorkspaceId(
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = workspaceId,
+      )
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -378,8 +397,8 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
       .assertThatCollection(response.supportedDestinationSyncModes)
       .containsExactlyInAnyOrderElementsOf(
         listOf(
-          io.airbyte.api.model.generated.DestinationSyncMode.APPEND,
-          io.airbyte.api.model.generated.DestinationSyncMode.APPEND_DEDUP,
+          KotlinDestinationSyncMode.APPEND,
+          KotlinDestinationSyncMode.APPEND_DEDUP,
         ),
       )
   }
@@ -397,7 +416,10 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     } returns (if (advancedAuthGlobalCredentialsAvailable) Optional.of(DestinationOAuthParameter()) else Optional.empty())
 
     val destinationDefinitionIdWithWorkspaceId =
-      DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(destinationDefinitionId).workspaceId(workspaceId)
+      DestinationDefinitionIdWithWorkspaceId(
+        destinationDefinitionId = destinationDefinitionId,
+        workspaceId = workspaceId,
+      )
     val destinationDefinition =
       StandardDestinationDefinition()
         .withName(NAME)
@@ -430,7 +452,10 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
       (if (advancedAuthGlobalCredentialsAvailable) Optional.of(SourceOAuthParameter()) else Optional.empty())
 
     val sourceDefinitionIdWithWorkspaceId =
-      SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(sourceDefinitionId).workspaceId(workspaceId)
+      SourceDefinitionIdWithWorkspaceId(
+        sourceDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+      )
     val sourceDefinition =
       StandardSourceDefinition()
         .withName(NAME)

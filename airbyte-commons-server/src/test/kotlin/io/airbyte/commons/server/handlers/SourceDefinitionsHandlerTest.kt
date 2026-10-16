@@ -4,19 +4,18 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
-import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
-import io.airbyte.api.model.generated.JobTypeResourceLimit
-import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionCreate
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
+import io.airbyte.api.server.generated.models.CustomSourceDefinitionCreate
+import io.airbyte.api.server.generated.models.PrivateSourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionCreate
+import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons.clone
@@ -78,6 +77,11 @@ import java.time.LocalDate
 import java.util.Date
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.api.server.generated.models.ReleaseStage as KotlinReleaseStage
+import io.airbyte.api.server.generated.models.ResourceRequirements as KotlinResourceRequirements
+import io.airbyte.api.server.generated.models.ScopeType as KotlinScopeType
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as KotlinScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SupportLevel as KotlinSupportLevel
 
 internal class SourceDefinitionsHandlerTest {
   private lateinit var actorDefinitionService: ActorDefinitionService
@@ -234,88 +238,91 @@ internal class SourceDefinitionsHandlerTest {
     )
 
     val expectedSourceDefinitionRead1 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .cdkVersion(null)
-        .lastPublished(null)
-        .metrics(null)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        cdkVersion = null,
+        lastPublished = null,
+        metrics = null,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedSourceDefinitionRead2 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition2.sourceDefinitionId)
-        .name(sourceDefinition2.name)
-        .dockerRepository(sourceDefinitionVersion2.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion2.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion2.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion2.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion2.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion2.releaseDate))
-        .cdkVersion(null)
-        .lastPublished(null)
-        .metrics(null)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition2.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion2.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition2.sourceDefinitionId,
+        name = sourceDefinition2.name,
+        dockerRepository = sourceDefinitionVersion2.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion2.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion2.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion2.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion2.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion2.releaseDate),
+        cdkVersion = null,
+        lastPublished = null,
+        metrics = null,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition2.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion2.language,
+      )
 
     val expectedSourceDefinitionReadWithOpts =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinitionWithOptionals.sourceDefinitionId)
-        .name(sourceDefinitionWithOptionals.name)
-        .dockerRepository(sourceDefinitionVersionWithOptionals.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersionWithOptionals.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersionWithOptionals.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersionWithOptionals.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersionWithOptionals.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersionWithOptionals.releaseDate))
-        .cdkVersion(sourceDefinitionVersionWithOptionals.cdkVersion)
-        .lastPublished(apiPojoConverters.toOffsetDateTime(sourceDefinitionVersionWithOptionals.lastPublished))
-        .metrics(sourceDefinitionWithOptionals.metrics)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersionWithOptionals.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinitionWithOptionals.sourceDefinitionId,
+        name = sourceDefinitionWithOptionals.name,
+        dockerRepository = sourceDefinitionVersionWithOptionals.dockerRepository,
+        dockerImageTag = sourceDefinitionVersionWithOptionals.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersionWithOptionals.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersionWithOptionals.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersionWithOptionals.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersionWithOptionals.releaseDate),
+        cdkVersion = sourceDefinitionVersionWithOptionals.cdkVersion,
+        lastPublished = apiPojoConverters.toOffsetDateTime(sourceDefinitionVersionWithOptionals.lastPublished),
+        metrics = sourceDefinitionWithOptionals.metrics,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersionWithOptionals.language,
+      )
 
     val actualSourceDefinitionReadList = sourceDefinitionsHandler.listSourceDefinitions()
 
@@ -373,57 +380,59 @@ internal class SourceDefinitionsHandlerTest {
     ).thenReturn(mapOf(sourceDefinition.sourceDefinitionId to true))
 
     val expectedSourceDefinitionRead1 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedSourceDefinitionRead2 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition2.sourceDefinitionId)
-        .name(sourceDefinition2.name)
-        .dockerRepository(sourceDefinitionVersion2.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion2.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion2.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion2.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion2.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion2.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition2.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion2.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition2.sourceDefinitionId,
+        name = sourceDefinition2.name,
+        dockerRepository = sourceDefinitionVersion2.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion2.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion2.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion2.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion2.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion2.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition2.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion2.language,
+      )
 
     val actualSourceDefinitionReadList =
-      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
 
     Assertions.assertEquals(
       listOf<SourceDefinitionRead?>(expectedSourceDefinitionRead1, expectedSourceDefinitionRead2),
@@ -493,7 +502,7 @@ internal class SourceDefinitionsHandlerTest {
     )
 
     val actualSourceDefinitionReadList =
-      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
 
     val expectedIds =
       listOf(sourceDefinition.sourceDefinitionId, sourceDefinition2.sourceDefinitionId)
@@ -562,7 +571,7 @@ internal class SourceDefinitionsHandlerTest {
     )
 
     val actualSourceDefinitionReadList =
-      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
+      sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
 
     val expectedIds =
       listOf(sourceDefinition.sourceDefinitionId, sourceDefinition2.sourceDefinitionId)
@@ -602,64 +611,66 @@ internal class SourceDefinitionsHandlerTest {
     ).thenReturn(listOf(sourceDefinitionVersion, sourceDefinitionVersion2))
 
     val expectedSourceDefinitionRead1 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedSourceDefinitionRead2 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition2.sourceDefinitionId)
-        .name(sourceDefinition2.name)
-        .dockerRepository(sourceDefinitionVersion2.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion2.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion2.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion2.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion2.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion2.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition2.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion2.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition2.sourceDefinitionId,
+        name = sourceDefinition2.name,
+        dockerRepository = sourceDefinitionVersion2.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion2.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion2.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion2.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion2.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion2.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition2.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion2.language,
+      )
 
     val expectedSourceDefinitionOptInRead1 =
-      PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead1).granted(false)
+      PrivateSourceDefinitionRead(sourceDefinition = expectedSourceDefinitionRead1, granted = false)
 
     val expectedSourceDefinitionOptInRead2 =
-      PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead2).granted(true)
+      PrivateSourceDefinitionRead(sourceDefinition = expectedSourceDefinitionRead2, granted = true)
 
     val actualSourceDefinitionOptInReadList =
       sourceDefinitionsHandler.listPrivateSourceDefinitions(
-        WorkspaceIdRequestBody().workspaceId(workspaceId),
+        WorkspaceIdRequestBody(workspaceId = workspaceId),
       )
 
     Assertions.assertEquals(
@@ -677,29 +688,30 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(sourceDefinitionVersion)
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val actualSourceDefinitionRead =
       sourceDefinitionsHandler.getSourceDefinition(sourceDefinition.sourceDefinitionId, true)
@@ -714,9 +726,10 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(false)
 
     val sourceDefinitionIdWithWorkspaceId =
-      SourceDefinitionIdWithWorkspaceId()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .workspaceId(workspaceId)
+      SourceDefinitionIdWithWorkspaceId(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     Assertions.assertThrows(
       IdNotFoundKnownException::class.java,
@@ -736,10 +749,11 @@ internal class SourceDefinitionsHandlerTest {
       false,
     )
     val actorDefinitionIdWithScopeForWorkspace =
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(workspaceId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = workspaceId,
+        scopeType = KotlinScopeType.WORKSPACE,
+      )
     Assertions.assertThrows(
       IdNotFoundKnownException::class.java,
     ) { sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForWorkspace) }
@@ -754,10 +768,11 @@ internal class SourceDefinitionsHandlerTest {
       false,
     )
     val actorDefinitionIdWithScopeForOrganization =
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(organizationId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = organizationId,
+        scopeType = KotlinScopeType.ORGANIZATION,
+      )
     Assertions.assertThrows(
       IdNotFoundKnownException::class.java,
     ) { sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForOrganization) }
@@ -774,34 +789,36 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(sourceDefinitionVersion)
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val sourceDefinitionIdWithWorkspaceId =
-      SourceDefinitionIdWithWorkspaceId()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .workspaceId(workspaceId)
+      SourceDefinitionIdWithWorkspaceId(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        workspaceId = workspaceId,
+      )
 
     val actualSourceDefinitionRead =
       sourceDefinitionsHandler
@@ -835,35 +852,37 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(sourceDefinitionVersion)
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val actorDefinitionIdWithScopeForWorkspace =
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(workspaceId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = workspaceId,
+        scopeType = KotlinScopeType.WORKSPACE,
+      )
 
     val actualSourceDefinitionReadForWorkspace =
       sourceDefinitionsHandler.getSourceDefinitionForScope(
@@ -872,10 +891,11 @@ internal class SourceDefinitionsHandlerTest {
     Assertions.assertEquals(expectedSourceDefinitionRead, actualSourceDefinitionReadForWorkspace)
 
     val actorDefinitionIdWithScopeForOrganization =
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(organizationId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = organizationId,
+        scopeType = KotlinScopeType.ORGANIZATION,
+      )
 
     val actualSourceDefinitionReadForOrganization =
       sourceDefinitionsHandler.getSourceDefinitionForScope(
@@ -893,57 +913,56 @@ internal class SourceDefinitionsHandlerTest {
     whenever<UUID?>(uuidSupplier.get()).thenReturn(newSourceDefinition.sourceDefinitionId)
 
     val create =
-      SourceDefinitionCreate()
-        .name(newSourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(newSourceDefinition.icon)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(newSourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        )
+      SourceDefinitionCreate(
+        name = newSourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = newSourceDefinition.icon,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = newSourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+      )
 
     val customCreate =
-      CustomSourceDefinitionCreate()
-        .sourceDefinition(create)
-        .workspaceId(workspaceId)
+      CustomSourceDefinitionCreate(sourceDefinition = create, workspaceId = workspaceId)
 
     whenever(
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
         create.dockerRepository,
         create.dockerImageTag,
         create.documentationUrl,
-        customCreate.workspaceId,
+        workspaceId,
       ),
     ).thenReturn(sourceDefinitionVersion)
 
     val expectedRead =
-      SourceDefinitionRead()
-        .name(newSourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .sourceDefinitionId(newSourceDefinition.sourceDefinitionId)
-        .icon(null)
-        .protocolVersion(DEFAULT_PROTOCOL_VERSION)
-        .custom(true)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.COMMUNITY)
-        .releaseStage(io.airbyte.api.model.generated.ReleaseStage.CUSTOM)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(newSourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        name = newSourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        sourceDefinitionId = newSourceDefinition.sourceDefinitionId,
+        icon = null,
+        protocolVersion = DEFAULT_PROTOCOL_VERSION,
+        custom = true,
+        supportLevel = KotlinSupportLevel.COMMUNITY,
+        releaseStage = KotlinReleaseStage.CUSTOM,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = newSourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val actualRead = sourceDefinitionsHandler.createCustomSourceDefinition(customCreate)
 
@@ -952,7 +971,7 @@ internal class SourceDefinitionsHandlerTest {
       create.dockerRepository,
       create.dockerImageTag,
       create.documentationUrl,
-      customCreate.workspaceId,
+      workspaceId,
     )
     verify(sourceService).writeCustomConnectorMetadata(
       newSourceDefinition
@@ -976,28 +995,29 @@ internal class SourceDefinitionsHandlerTest {
     whenever<UUID?>(uuidSupplier.get()).thenReturn(newSourceDefinition.sourceDefinitionId)
 
     val create =
-      SourceDefinitionCreate()
-        .name(newSourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(newSourceDefinition.icon)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(newSourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        )
+      SourceDefinitionCreate(
+        name = newSourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = newSourceDefinition.icon,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = newSourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+      )
 
     val customCreateForWorkspace =
-      CustomSourceDefinitionCreate()
-        .sourceDefinition(create)
-        .scopeId(workspaceId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
-        .workspaceId(null) // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
+      CustomSourceDefinitionCreate(
+        sourceDefinition = create,
+        scopeId = workspaceId,
+        scopeType = KotlinScopeType.WORKSPACE,
+        workspaceId = null,
+      ) // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
 
     whenever(
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
@@ -1009,26 +1029,27 @@ internal class SourceDefinitionsHandlerTest {
     ).thenReturn(sourceDefinitionVersion)
 
     val expectedRead =
-      SourceDefinitionRead()
-        .name(newSourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .sourceDefinitionId(newSourceDefinition.sourceDefinitionId)
-        .icon(null)
-        .protocolVersion(DEFAULT_PROTOCOL_VERSION)
-        .custom(true)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.COMMUNITY)
-        .releaseStage(io.airbyte.api.model.generated.ReleaseStage.CUSTOM)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(newSourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        name = newSourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        sourceDefinitionId = newSourceDefinition.sourceDefinitionId,
+        icon = null,
+        protocolVersion = DEFAULT_PROTOCOL_VERSION,
+        custom = true,
+        supportLevel = KotlinSupportLevel.COMMUNITY,
+        releaseStage = KotlinReleaseStage.CUSTOM,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = newSourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val actualRead =
       sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForWorkspace)
@@ -1061,19 +1082,19 @@ internal class SourceDefinitionsHandlerTest {
     // CustomSourceDefinitionCreate()
     // .sourceDefinition(create)
     // .scopeId(organizationId)
-    // .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+    // .scopeType(KotlinScopeType.ORGANIZATION);
     //
-    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(),
-    // create.getDockerImageTag(),
-    // create.getDocumentationUrl(),
+    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.dockerRepository,
+    // create.dockerImageTag,
+    // create.documentationUrl,
     // null))
     // .thenReturn(sourceDefinitionVersion);
     //
     // sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForOrganization);
     //
-    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(),
-    // create.getDockerImageTag(),
-    // create.getDocumentationUrl(),
+    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.dockerRepository,
+    // create.dockerImageTag,
+    // create.documentationUrl,
     // null);
     // verify(sourceService).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
     // sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
@@ -1092,33 +1113,31 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinitionVersion = generateVersionFromSourceDefinition(newSourceDefinition)
 
     val create =
-      SourceDefinitionCreate()
-        .name(newSourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(newSourceDefinition.icon)
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(newSourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        )
+      SourceDefinitionCreate(
+        name = newSourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = newSourceDefinition.icon,
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = newSourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+      )
 
     val customCreate =
-      CustomSourceDefinitionCreate()
-        .sourceDefinition(create)
-        .workspaceId(workspaceId)
+      CustomSourceDefinitionCreate(sourceDefinition = create, workspaceId = workspaceId)
 
     whenever<ActorDefinitionVersion?>(
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
         create.dockerRepository,
         create.dockerImageTag,
         create.documentationUrl,
-        customCreate.workspaceId,
+        workspaceId,
       ),
     ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
 
@@ -1131,7 +1150,7 @@ internal class SourceDefinitionsHandlerTest {
       create.dockerRepository,
       create.dockerImageTag,
       create.documentationUrl,
-      customCreate.workspaceId,
+      workspaceId,
     )
     verify(sourceService, never()).writeCustomConnectorMetadata(
       any(),
@@ -1191,36 +1210,38 @@ internal class SourceDefinitionsHandlerTest {
 
     val sourceRead =
       sourceDefinitionsHandler.updateSourceDefinition(
-        SourceDefinitionUpdate()
-          .sourceDefinitionId(this.sourceDefinition.sourceDefinitionId)
-          .dockerImageTag(newDockerImageTag)
-          .workspaceId(workspaceId),
+        SourceDefinitionUpdate(
+          sourceDefinitionId = this.sourceDefinition.sourceDefinitionId,
+          dockerImageTag = newDockerImageTag,
+          workspaceId = workspaceId,
+        ),
       )
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(newDockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = newDockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     Assertions.assertEquals(expectedSourceDefinitionRead, sourceRead)
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
@@ -1310,10 +1331,11 @@ internal class SourceDefinitionsHandlerTest {
       UnsupportedProtocolVersionException::class.java,
     ) {
       sourceDefinitionsHandler.updateSourceDefinition(
-        SourceDefinitionUpdate()
-          .sourceDefinitionId(this.sourceDefinition.sourceDefinitionId)
-          .dockerImageTag(newDockerImageTag)
-          .workspaceId(workspaceId),
+        SourceDefinitionUpdate(
+          sourceDefinitionId = this.sourceDefinition.sourceDefinitionId,
+          dockerImageTag = newDockerImageTag,
+          workspaceId = workspaceId,
+        ),
       )
     }
 
@@ -1364,9 +1386,11 @@ internal class SourceDefinitionsHandlerTest {
 
     Assertions.assertThrows(BadRequestProblem::class.java) {
       sourceDefinitionsHandler.updateSourceDefinition(
-        SourceDefinitionUpdate()
-          .sourceDefinitionId(this.sourceDefinition.sourceDefinitionId)
-          .dockerImageTag(newDockerImageTag),
+        SourceDefinitionUpdate(
+          sourceDefinitionId = this.sourceDefinition.sourceDefinitionId,
+          dockerImageTag = newDockerImageTag,
+          workspaceId = UUID.randomUUID(),
+        ),
       )
     }
     verify(sourceService, never()).writeConnectorMetadata(
@@ -1407,39 +1431,41 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(sourceDefinitionVersion)
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedPrivateSourceDefinitionRead =
-      PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead).granted(true)
+      PrivateSourceDefinitionRead(sourceDefinition = expectedSourceDefinitionRead, granted = true)
 
     val actualPrivateSourceDefinitionRead =
       sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(
-        ActorDefinitionIdWithScope()
-          .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-          .scopeId(workspaceId)
-          .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE),
+        ActorDefinitionIdWithScope(
+          actorDefinitionId = sourceDefinition.sourceDefinitionId,
+          scopeId = workspaceId,
+          scopeType = KotlinScopeType.WORKSPACE,
+        ),
       )
 
     Assertions.assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead)
@@ -1456,39 +1482,41 @@ internal class SourceDefinitionsHandlerTest {
       .thenReturn(sourceDefinitionVersion)
 
     val expectedSourceDefinitionRead =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedPrivateSourceDefinitionRead =
-      PrivateSourceDefinitionRead().sourceDefinition(expectedSourceDefinitionRead).granted(true)
+      PrivateSourceDefinitionRead(sourceDefinition = expectedSourceDefinitionRead, granted = true)
 
     val actualPrivateSourceDefinitionRead =
       sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(
-        ActorDefinitionIdWithScope()
-          .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-          .scopeId(organizationId)
-          .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION),
+        ActorDefinitionIdWithScope(
+          actorDefinitionId = sourceDefinition.sourceDefinitionId,
+          scopeId = organizationId,
+          scopeType = KotlinScopeType.ORGANIZATION,
+        ),
       )
 
     Assertions.assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead)
@@ -1503,19 +1531,21 @@ internal class SourceDefinitionsHandlerTest {
   @DisplayName("revokeSourceDefinition should correctly delete a workspace grant and organization grant")
   fun testRevokeSourceDefinition() {
     sourceDefinitionsHandler.revokeSourceDefinition(
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(workspaceId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE),
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = workspaceId,
+        scopeType = KotlinScopeType.WORKSPACE,
+      ),
     )
     verify(actorDefinitionService)
       .deleteActorDefinitionWorkspaceGrant(sourceDefinition.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
 
     sourceDefinitionsHandler.revokeSourceDefinition(
-      ActorDefinitionIdWithScope()
-        .actorDefinitionId(sourceDefinition.sourceDefinitionId)
-        .scopeId(organizationId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION),
+      ActorDefinitionIdWithScope(
+        actorDefinitionId = sourceDefinition.sourceDefinitionId,
+        scopeId = organizationId,
+        scopeType = KotlinScopeType.ORGANIZATION,
+      ),
     )
     verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
       sourceDefinition.sourceDefinitionId,
@@ -1558,7 +1588,7 @@ internal class SourceDefinitionsHandlerTest {
         ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDefinition),
       )
 
-    Assertions.assertEquals(expectedRead.supportLevel, io.airbyte.api.model.generated.SupportLevel.NONE)
+    Assertions.assertEquals(expectedRead.supportLevel, KotlinSupportLevel.NONE)
   }
 
   @Nested
@@ -1658,58 +1688,60 @@ internal class SourceDefinitionsHandlerTest {
     ).thenReturn(mapOf(sourceDefinition.sourceDefinitionId to true))
 
     val expectedSourceDefinitionRead1 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .name(sourceDefinition.name)
-        .dockerRepository(sourceDefinitionVersion.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        name = sourceDefinition.name,
+        dockerRepository = sourceDefinitionVersion.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion.language,
+      )
 
     val expectedSourceDefinitionRead2 =
-      SourceDefinitionRead()
-        .sourceDefinitionId(sourceDefinition2.sourceDefinitionId)
-        .name(sourceDefinition2.name)
-        .dockerRepository(sourceDefinitionVersion2.dockerRepository)
-        .dockerImageTag(sourceDefinitionVersion2.dockerImageTag)
-        .documentationUrl(URI(sourceDefinitionVersion2.documentationUrl))
-        .icon(ICON_URL)
-        .supportLevel(
-          io.airbyte.api.model.generated.SupportLevel
-            .fromValue(sourceDefinitionVersion2.supportLevel.value()),
-        ).releaseStage(
-          io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(sourceDefinitionVersion2.releaseStage.value()),
-        ).releaseDate(LocalDate.parse(sourceDefinitionVersion2.releaseDate))
-        .resourceRequirements(
-          io.airbyte.api.model.generated
-            .ScopedResourceRequirements()
-            ._default(
-              io.airbyte.api.model.generated
-                .ResourceRequirements()
-                .cpuRequest(sourceDefinition2.resourceRequirements.default.cpuRequest),
-            ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(sourceDefinitionVersion2.language)
+      SourceDefinitionRead(
+        sourceDefinitionId = sourceDefinition2.sourceDefinitionId,
+        name = sourceDefinition2.name,
+        dockerRepository = sourceDefinitionVersion2.dockerRepository,
+        dockerImageTag = sourceDefinitionVersion2.dockerImageTag,
+        documentationUrl = URI(sourceDefinitionVersion2.documentationUrl),
+        icon = ICON_URL,
+        supportLevel =
+          KotlinSupportLevel
+            .decode(sourceDefinitionVersion2.supportLevel.value()),
+        releaseStage =
+          KotlinReleaseStage
+            .decode(sourceDefinitionVersion2.releaseStage.value()),
+        releaseDate = LocalDate.parse(sourceDefinitionVersion2.releaseDate),
+        resourceRequirements =
+          KotlinScopedResourceRequirements(
+            default =
+              KotlinResourceRequirements(
+                cpuRequest = sourceDefinition2.resourceRequirements.default.cpuRequest,
+              ),
+            jobSpecific = emptyList(),
+          ),
+        language = sourceDefinitionVersion2.language,
+      )
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler
-        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false))
+        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId, filterByUsed = false))
 
     Assertions.assertEquals(
       listOf<SourceDefinitionRead?>(expectedSourceDefinitionRead1, expectedSourceDefinitionRead2),
@@ -1737,7 +1769,7 @@ internal class SourceDefinitionsHandlerTest {
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler
-        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true))
+        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId, filterByUsed = true))
 
     val expectedIds = listOf(usedSourceDefinition.sourceDefinitionId)
     Assertions.assertEquals(expectedIds.size, actualSourceDefinitionReadList.sourceDefinitions.size)
@@ -1794,7 +1826,7 @@ internal class SourceDefinitionsHandlerTest {
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler
-        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false))
+        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId, filterByUsed = false))
 
     val expectedIds =
       listOf(sourceDefinition.sourceDefinitionId, sourceDefinition2.sourceDefinitionId)

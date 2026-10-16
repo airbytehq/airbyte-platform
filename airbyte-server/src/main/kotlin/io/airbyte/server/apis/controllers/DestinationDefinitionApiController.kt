@@ -4,20 +4,20 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.DestinationDefinitionApi
-import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
-import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody
-import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationDefinitionReadList
-import io.airbyte.api.model.generated.DestinationDefinitionUpdate
-import io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList
-import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
-import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
-import io.airbyte.api.model.generated.ScopeType
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.apis.DestinationDefinitionApi
+import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
+import io.airbyte.api.server.generated.models.CustomDestinationDefinitionCreate
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.DestinationDefinitionUpdate
+import io.airbyte.api.server.generated.models.EnterpriseConnectorStubsReadList
+import io.airbyte.api.server.generated.models.PrivateDestinationDefinitionRead
+import io.airbyte.api.server.generated.models.PrivateDestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.ScopeType
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -30,14 +30,13 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.concurrent.Callable
 
-@Controller("/api/v1/destination_definitions")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class DestinationDefinitionApiController(
@@ -45,25 +44,22 @@ open class DestinationDefinitionApiController(
   private val accessValidator: ActorDefinitionAccessValidator,
   private val enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler,
 ) : DestinationDefinitionApi {
-  @Post(uri = "/create_custom")
   @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createCustomDestinationDefinition(
-    @Body customDestinationDefinitionCreate: CustomDestinationDefinitionCreate,
-  ): DestinationDefinitionRead? {
+    @Body customDestinationDefinitionCreate: CustomDestinationDefinitionCreate?,
+  ): DestinationDefinitionRead {
     // legacy calls contain workspace id instead of scope id and scope type
-    if (customDestinationDefinitionCreate.workspaceId != null) {
-      customDestinationDefinitionCreate.setScopeType(ScopeType.WORKSPACE)
-      customDestinationDefinitionCreate.scopeId = customDestinationDefinitionCreate.workspaceId
-    }
+    val request =
+      customDestinationDefinitionCreate!!.let {
+        if (it.workspaceId != null) it.copy(scopeType = ScopeType.WORKSPACE, scopeId = it.workspaceId) else it
+      }
     return execute {
-      destinationDefinitionsHandler.createCustomDestinationDefinition(
-        customDestinationDefinitionCreate,
-      )
+      destinationDefinitionsHandler.createCustomDestinationDefinition(request)
     }
   }
 
-  @Post(uri = "/delete") // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
@@ -77,12 +73,11 @@ open class DestinationDefinitionApiController(
     }
   }
 
-  @Post(uri = "/get")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestinationDefinition(
     @Body destinationDefinitionIdRequestBody: DestinationDefinitionIdRequestBody,
-  ): DestinationDefinitionRead? =
+  ): DestinationDefinitionRead =
     execute {
       destinationDefinitionsHandler.getDestinationDefinition(
         destinationDefinitionIdRequestBody.destinationDefinitionId,
@@ -90,99 +85,90 @@ open class DestinationDefinitionApiController(
       )
     }
 
-  @Post("/get_for_scope")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestinationDefinitionForScope(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
-  ): DestinationDefinitionRead? =
+  ): DestinationDefinitionRead =
     execute {
       destinationDefinitionsHandler.getDestinationDefinitionForScope(
         actorDefinitionIdWithScope,
       )
     }
 
-  @Post(uri = "/get_for_workspace")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestinationDefinitionForWorkspace(
     @Body destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
-  ): DestinationDefinitionRead? =
+  ): DestinationDefinitionRead =
     execute {
       destinationDefinitionsHandler.getDestinationDefinitionForWorkspace(
         destinationDefinitionIdWithWorkspaceId,
       )
     }
 
-  @Post(uri = "/grant_definition")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun grantDestinationDefinition(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
-  ): PrivateDestinationDefinitionRead? =
+  ): PrivateDestinationDefinitionRead =
     execute {
       destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(
         actorDefinitionIdWithScope,
       )
     }
 
-  @Post(uri = "/list")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listDestinationDefinitions(): DestinationDefinitionReadList? =
+  override fun listDestinationDefinitions(): DestinationDefinitionReadList =
     execute(
       Callable {
         destinationDefinitionsHandler.listDestinationDefinitions()
       },
     )
 
-  @Post(uri = "/list_for_workspace")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDestinationDefinitionsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody,
-  ): io.airbyte.api.model.generated.DestinationDefinitionReadList? =
+    @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody?,
+  ): DestinationDefinitionReadList =
     execute {
       destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(
-        workspaceIdRequestBody,
+        workspaceIdRequestBody!!,
       )
     }
 
-  @Post(uri = "/list_enterprise_stubs_for_workspace")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listEnterpriseDestinationStubsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): EnterpriseConnectorStubsReadList? =
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
+  ): EnterpriseConnectorStubsReadList =
     execute {
       enterpriseConnectorStubsHandler.listEnterpriseDestinationStubsForWorkspace(
-        workspaceIdRequestBody.workspaceId,
+        workspaceIdRequestBody!!.workspaceId,
       )
     }
 
-  @Post(uri = "/list_latest")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listLatestDestinationDefinitions(): DestinationDefinitionReadList? =
+  override fun listLatestDestinationDefinitions(): DestinationDefinitionReadList =
     execute(
       Callable {
         destinationDefinitionsHandler.listLatestDestinationDefinitions()
       },
     )
 
-  @Post(uri = "/list_private")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listPrivateDestinationDefinitions(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): PrivateDestinationDefinitionReadList? =
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
+  ): PrivateDestinationDefinitionReadList =
     execute {
       destinationDefinitionsHandler.listPrivateDestinationDefinitions(
-        workspaceIdRequestBody,
+        workspaceIdRequestBody!!,
       )
     }
 
-  @Post(uri = "/revoke_definition")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun revokeDestinationDefinition(
@@ -194,12 +180,12 @@ open class DestinationDefinitionApiController(
     }
   }
 
-  @Post(uri = "/update") // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDestinationDefinition(
     @Body destinationDefinitionUpdate: DestinationDefinitionUpdate,
-  ): DestinationDefinitionRead? {
+  ): DestinationDefinitionRead {
     accessValidator.validateWriteAccess(destinationDefinitionUpdate.destinationDefinitionId)
     return execute {
       destinationDefinitionsHandler.updateDestinationDefinition(

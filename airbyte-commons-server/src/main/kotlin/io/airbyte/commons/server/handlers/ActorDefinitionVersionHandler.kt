@@ -4,14 +4,18 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBody
-import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody
-import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse
-import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.GetActorDefinitionVersionDefaultRequestBody
+import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionRequestBody
+import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionResponse
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SupportLevel
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper
@@ -80,7 +84,7 @@ open class ActorDefinitionVersionHandler
 
     fun resolveActorDefinitionVersionByTag(resolveVersionReq: ResolveActorDefinitionVersionRequestBody): ResolveActorDefinitionVersionResponse {
       val actorDefinitionId = resolveVersionReq.actorDefinitionId
-      val actorType = apiPojoConverters.toInternalActorType(resolveVersionReq.actorType)
+      val actorType = resolveVersionReq.actorType.convertTo<io.airbyte.config.ActorType>()
       val defaultVersion = getDefaultVersion(actorType, actorDefinitionId)
 
       val optResolvedVersion =
@@ -103,14 +107,15 @@ open class ActorDefinitionVersionHandler
 
       val resolvedVersion = optResolvedVersion.get()
 
-      return ResolveActorDefinitionVersionResponse()
-        .versionId(resolvedVersion.versionId)
-        .dockerImageTag(resolvedVersion.dockerImageTag)
-        .dockerRepository(resolvedVersion.dockerRepository)
-        .supportRefreshes(resolvedVersion.supportsRefreshes)
-        .supportFileTransfer(resolvedVersion.supportsFileTransfer)
-        .supportDataActivation(resolvedVersion.supportsDataActivation)
-        .connectorIPCOptions(resolvedVersion.connectorIPCOptions)
+      return ResolveActorDefinitionVersionResponse(
+        versionId = resolvedVersion.versionId,
+        dockerImageTag = resolvedVersion.dockerImageTag,
+        dockerRepository = resolvedVersion.dockerRepository,
+        supportRefreshes = resolvedVersion.supportsRefreshes,
+        supportFileTransfer = resolvedVersion.supportsFileTransfer,
+        supportDataActivation = resolvedVersion.supportsDataActivation,
+        connectorIPCOptions = resolvedVersion.connectorIPCOptions,
+      )
     }
 
     @WithSpan
@@ -130,27 +135,27 @@ open class ActorDefinitionVersionHandler
     @InternalForTesting
     fun createActorDefinitionVersionRead(versionWithOverrideStatus: ActorDefinitionVersionWithOverrideStatus): ActorDefinitionVersionRead {
       val actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion
-      val advRead =
-        ActorDefinitionVersionRead()
-          .dockerRepository(actorDefinitionVersion.dockerRepository)
-          .dockerImageTag(actorDefinitionVersion.dockerImageTag)
-          .supportsRefreshes(actorDefinitionVersion.supportsRefreshes)
-          .supportState(apiPojoConverters.toApiSupportState(actorDefinitionVersion.supportState))
-          .supportLevel(apiPojoConverters.toApiSupportLevel(actorDefinitionVersion.supportLevel))
-          .cdkVersion(actorDefinitionVersion.cdkVersion)
-          .lastPublished(apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.lastPublished))
-          .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied)
-          .supportsFileTransfer(actorDefinitionVersion.supportsFileTransfer)
-          .supportsDataActivation(actorDefinitionVersion.supportsDataActivation)
-          .connectorIPCOptions(actorDefinitionVersion.connectorIPCOptions)
-
+      // ApiPojoConverters and the helper still build Java models; convert them at this boundary
       val breakingChanges =
-        actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion)
-      breakingChanges.ifPresent { breakingChanges: ActorDefinitionVersionBreakingChanges? ->
-        advRead.breakingChanges =
-          breakingChanges
-      }
+        actorDefinitionHandlerHelper
+          .getVersionBreakingChanges(actorDefinitionVersion)
+          .orElse(null)
+          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
-      return advRead
+      return ActorDefinitionVersionRead(
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportsRefreshes = actorDefinitionVersion.supportsRefreshes,
+        // support_state is a NOT NULL column
+        supportState = apiPojoConverters.toApiSupportState(actorDefinitionVersion.supportState)!!.convertTo<SupportState>(),
+        supportLevel = apiPojoConverters.toApiSupportLevel(actorDefinitionVersion.supportLevel).convertTo<SupportLevel>(),
+        cdkVersion = actorDefinitionVersion.cdkVersion,
+        lastPublished = apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.lastPublished),
+        isVersionOverrideApplied = versionWithOverrideStatus.isOverrideApplied,
+        supportsFileTransfer = actorDefinitionVersion.supportsFileTransfer,
+        supportsDataActivation = actorDefinitionVersion.supportsDataActivation,
+        connectorIPCOptions = actorDefinitionVersion.connectorIPCOptions,
+        breakingChanges = breakingChanges,
+      )
     }
   }

@@ -61,7 +61,9 @@ class EnterpriseConnectorStubsHandlerTest {
 
   @Test
   fun testListEnterpriseSourceStubs_Success() {
-    val mockJsonResponse = "[{\"name\":\"Test Source\",\"type\":\"enterprise_source\",\"id\":\"test-id\",\"unknownField\":\"value\"}]"
+    val mockJsonResponse =
+      "[{\"name\":\"Test Source\",\"type\":\"enterprise_source\",\"id\":\"test-id\",\"url\":\"https://example.com/test-id\"," +
+        "\"icon\":\"https://example.com/test-id.svg\",\"unknownField\":\"value\"}]"
     mockWebServer.enqueue(
       MockResponse()
         .setResponseCode(200)
@@ -75,6 +77,38 @@ class EnterpriseConnectorStubsHandlerTest {
     assertEquals(1, result.enterpriseConnectorStubs.size)
     assertEquals("Test Source", result.enterpriseConnectorStubs[0].name)
     assertEquals("test-id", result.enterpriseConnectorStubs[0].id)
+  }
+
+  @Test
+  fun testListEnterpriseSourceStubs_SkipsStubMissingRequiredFields() {
+    val mockJsonResponse =
+      """
+      [
+        {
+          "name": "Complete",
+          "type": "enterprise_source",
+          "id": "complete-id",
+          "url": "https://example.com",
+          "icon": "https://example.com/icon.svg"
+        },
+        {
+          "name": "No Icon",
+          "type": "enterprise_source",
+          "id": "no-icon-id",
+          "url": "https://example.com"
+        }
+      ]
+      """.trimIndent()
+    mockWebServer.enqueue(
+      MockResponse()
+        .setResponseCode(200)
+        .setBody(mockJsonResponse)
+        .addHeader("Content-Type", "application/json"),
+    )
+
+    val result = enterpriseConnectorHandler.listEnterpriseSourceStubs()
+
+    assertEquals(listOf("complete-id"), result.enterpriseConnectorStubs.map { it.id })
   }
 
   @Test
@@ -131,17 +165,23 @@ class EnterpriseConnectorStubsHandlerTest {
           "name": "Test Source",
           "type": "enterprise_source",
           "id": "test-id",
+          "url": "https://example.com/test-id",
+          "icon": "https://example.com/test-id.svg",
           "definitionId": "$unlicensedDefinitionId"
         },
         {
           "name": "Test Fake Source",
           "type": "enterprise_source",
-          "id": "test-fake-id"
+          "id": "test-fake-id",
+          "url": "https://example.com/test-fake-id",
+          "icon": "https://example.com/test-fake-id.svg"
         },
         {
           "name": "Test Already Licensed Source",
           "type": "enterprise_source",
           "id": "test-other-id",
+          "url": "https://example.com/test-other-id",
+          "icon": "https://example.com/test-other-id.svg",
           "definitionId": "$licensedDefinitionId"
         }
       ]
@@ -188,6 +228,8 @@ class EnterpriseConnectorStubsHandlerTest {
           "name": "Test Source",
           "type": "enterprise_source",
           "id": "test-id",
+          "url": "https://example.com/test-id",
+          "icon": "https://example.com/test-id.svg",
           "definitionId": "$definitionId"
         }
       ]
@@ -229,17 +271,23 @@ class EnterpriseConnectorStubsHandlerTest {
           "name": "Test Destination",
           "type": "enterprise_destination",
           "id": "test-dest-id",
+          "url": "https://example.com/test-dest-id",
+          "icon": "https://example.com/test-dest-id.svg",
           "definitionId": "$unlicensedDefinitionId"
         },
         {
           "name": "Test Fake Destination",
           "type": "enterprise_destination",
-          "id": "test-fake-dest-id"
+          "id": "test-fake-dest-id",
+          "url": "https://example.com/test-fake-dest-id",
+          "icon": "https://example.com/test-fake-dest-id.svg"
         },
         {
           "name": "Test Already Licensed Destination",
           "type": "enterprise_destination",
           "id": "test-other-dest-id",
+          "url": "https://example.com/test-other-dest-id",
+          "icon": "https://example.com/test-other-dest-id.svg",
           "definitionId": "$licensedDefinitionId"
         }
       ]
@@ -286,6 +334,8 @@ class EnterpriseConnectorStubsHandlerTest {
           "name": "Test Destination",
           "type": "enterprise_destination",
           "id": "test-dest-id",
+          "url": "https://example.com/test-dest-id",
+          "icon": "https://example.com/test-dest-id.svg",
           "definitionId": "$definitionId"
         }
       ]

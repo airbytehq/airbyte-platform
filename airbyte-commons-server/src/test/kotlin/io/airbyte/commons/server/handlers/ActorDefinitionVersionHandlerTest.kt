@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody
-import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SupportState
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionRequestBody
+import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionResponse
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.NotFoundException
@@ -37,8 +37,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito
+import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges as JavaActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.ActorType as KotlinActorType
+import io.airbyte.api.server.generated.models.SupportLevel as KotlinSupportLevel
 
 internal class ActorDefinitionVersionHandlerTest {
   private var mSourceService: SourceService? = null
@@ -110,19 +114,20 @@ internal class ActorDefinitionVersionHandlerTest {
         ),
       ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
 
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
     val actorDefinitionVersionRead =
       actorDefinitionVersionHandler!!.getActorDefinitionVersionForSourceId(sourceIdRequestBody)
     val expectedRead =
-      ActorDefinitionVersionRead()
-        .isVersionOverrideApplied(isVersionOverrideApplied)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
-        .supportState(SupportState.SUPPORTED)
-        .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(false)
-        .supportsFileTransfer(false)
-        .supportsDataActivation(false)
+      ActorDefinitionVersionRead(
+        isVersionOverrideApplied = isVersionOverrideApplied,
+        supportLevel = KotlinSupportLevel.NONE,
+        supportState = SupportState.SUPPORTED,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportsRefreshes = false,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
     Mockito.verify<SourceService?>(mSourceService).getSourceConnection(sourceId)
@@ -162,19 +167,20 @@ internal class ActorDefinitionVersionHandlerTest {
         ),
       ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
 
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
     val actorDefinitionVersionRead =
       actorDefinitionVersionHandler!!.getActorDefinitionVersionForDestinationId(destinationIdRequestBody)
     val expectedRead =
-      ActorDefinitionVersionRead()
-        .isVersionOverrideApplied(isVersionOverrideApplied)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
-        .supportState(SupportState.SUPPORTED)
-        .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(false)
-        .supportsFileTransfer(false)
-        .supportsDataActivation(false)
+      ActorDefinitionVersionRead(
+        isVersionOverrideApplied = isVersionOverrideApplied,
+        supportLevel = KotlinSupportLevel.NONE,
+        supportState = SupportState.SUPPORTED,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportsRefreshes = false,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
     Mockito.verify<DestinationService?>(mDestinationService).getDestinationConnection(destinationId)
@@ -213,19 +219,20 @@ internal class ActorDefinitionVersionHandlerTest {
         ),
       ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
 
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
     val actorDefinitionVersionRead =
       actorDefinitionVersionHandler!!.getActorDefinitionVersionForDestinationId(destinationIdRequestBody)
     val expectedRead =
-      ActorDefinitionVersionRead()
-        .isVersionOverrideApplied(isVersionOverrideApplied)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
-        .supportState(SupportState.SUPPORTED)
-        .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
-        .supportsFileTransfer(false)
-        .supportsDataActivation(false)
+      ActorDefinitionVersionRead(
+        isVersionOverrideApplied = isVersionOverrideApplied,
+        supportLevel = KotlinSupportLevel.NONE,
+        supportState = SupportState.SUPPORTED,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportsRefreshes = actorDefinitionVersion.supportsRefreshes,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
     Mockito.verify<DestinationService?>(mDestinationService).getDestinationConnection(destinationId)
@@ -242,7 +249,12 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @Test
   fun testCreateActorDefinitionVersionReadWithBreakingChange() {
-    val breakingChanges = Mockito.mock(ActorDefinitionVersionBreakingChanges::class.java)
+    // The helper still returns the Java model; the handler converts it to the Kotlin one.
+    val javaBreakingChanges =
+      JavaActorDefinitionVersionBreakingChanges()
+        .upcomingBreakingChanges(emptyList())
+        .minUpgradeDeadline(LocalDate.of(2026, 1, 1))
+    val breakingChanges = ActorDefinitionVersionBreakingChanges(upcomingBreakingChanges = emptyList(), minUpgradeDeadline = LocalDate.of(2026, 1, 1))
 
     val actorDefinitionVersion = createActorDefinitionVersion().withSupportState(ActorDefinitionVersion.SupportState.DEPRECATED)
     Mockito
@@ -251,7 +263,7 @@ internal class ActorDefinitionVersionHandlerTest {
           actorDefinitionVersion,
         ),
       ).thenReturn(
-        Optional.of(breakingChanges),
+        Optional.of(javaBreakingChanges),
       )
 
     val versionWithOverrideStatus =
@@ -260,16 +272,17 @@ internal class ActorDefinitionVersionHandlerTest {
       actorDefinitionVersionHandler!!.createActorDefinitionVersionRead(versionWithOverrideStatus)
 
     val expectedRead =
-      ActorDefinitionVersionRead()
-        .isVersionOverrideApplied(false)
-        .supportLevel(io.airbyte.api.model.generated.SupportLevel.NONE)
-        .supportState(SupportState.DEPRECATED)
-        .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportsRefreshes(false)
-        .breakingChanges(breakingChanges)
-        .supportsFileTransfer(false)
-        .supportsDataActivation(false)
+      ActorDefinitionVersionRead(
+        isVersionOverrideApplied = false,
+        supportLevel = KotlinSupportLevel.NONE,
+        supportState = SupportState.DEPRECATED,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportsRefreshes = false,
+        breakingChanges = breakingChanges,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
     Mockito.verify<ActorDefinitionHandlerHelper?>(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion)
@@ -284,46 +297,48 @@ internal class ActorDefinitionVersionHandlerTest {
     val actorDefinitionId = UUID.randomUUID()
     val actorDefinitionVersion = createActorDefinitionVersion()
     val resolveActorDefinitionVersionResponse =
-      ResolveActorDefinitionVersionResponse()
-        .versionId(actorDefinitionVersion.getVersionId())
-        .dockerRepository(actorDefinitionVersion.getDockerRepository())
-        .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
-        .supportRefreshes(false)
-        .supportFileTransfer(false)
-        .supportDataActivation(false)
+      ResolveActorDefinitionVersionResponse(
+        versionId = actorDefinitionVersion.versionId,
+        dockerRepository = actorDefinitionVersion.dockerRepository,
+        dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        supportRefreshes = false,
+        supportFileTransfer = false,
+        supportDataActivation = false,
+      )
 
     Mockito
       .`when`(mSourceService!!.getStandardSourceDefinition(actorDefinitionId))
-      .thenReturn(clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()))
+      .thenReturn(clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.versionId))
     Mockito
-      .`when`(mActorDefinitionService!!.getActorDefinitionVersion(actorDefinitionVersion.getVersionId()))
+      .`when`(mActorDefinitionService!!.getActorDefinitionVersion(actorDefinitionVersion.versionId))
       .thenReturn(actorDefinitionVersion)
     Mockito
       .`when`(
         mActorDefinitionVersionResolver!!.resolveVersionForTag(
           actorDefinitionId,
           ActorType.SOURCE,
-          actorDefinitionVersion.getDockerRepository(),
-          actorDefinitionVersion.getDockerImageTag(),
+          actorDefinitionVersion.dockerRepository,
+          actorDefinitionVersion.dockerImageTag,
         ),
       ).thenReturn(Optional.of<ActorDefinitionVersion>(actorDefinitionVersion))
 
     val resolvedActorDefinitionVersion =
       actorDefinitionVersionHandler!!.resolveActorDefinitionVersionByTag(
-        ResolveActorDefinitionVersionRequestBody()
-          .actorDefinitionId(actorDefinitionId)
-          .actorType(io.airbyte.api.model.generated.ActorType.SOURCE)
-          .dockerImageTag(actorDefinitionVersion.getDockerImageTag()),
+        ResolveActorDefinitionVersionRequestBody(
+          actorDefinitionId = actorDefinitionId,
+          actorType = KotlinActorType.SOURCE,
+          dockerImageTag = actorDefinitionVersion.dockerImageTag,
+        ),
       )
 
     Assertions.assertEquals(resolveActorDefinitionVersionResponse, resolvedActorDefinitionVersion)
     Mockito.verify<ActorDefinitionVersionResolver?>(mActorDefinitionVersionResolver).resolveVersionForTag(
       actorDefinitionId,
       ActorType.SOURCE,
-      actorDefinitionVersion.getDockerRepository(),
-      actorDefinitionVersion.getDockerImageTag(),
+      actorDefinitionVersion.dockerRepository,
+      actorDefinitionVersion.dockerImageTag,
     )
-    Mockito.verify<ActorDefinitionService?>(mActorDefinitionService).getActorDefinitionVersion(actorDefinitionVersion.getVersionId())
+    Mockito.verify<ActorDefinitionService?>(mActorDefinitionService).getActorDefinitionVersion(actorDefinitionVersion.versionId)
     Mockito.verifyNoMoreInteractions(mActorDefinitionVersionResolver)
     Mockito.verifyNoMoreInteractions(mActorDefinitionService)
     Mockito.verifyNoInteractions(mActorDefinitionVersionHelper)
@@ -355,10 +370,11 @@ internal class ActorDefinitionVersionHandlerTest {
       ).thenReturn(Optional.empty<ActorDefinitionVersion>())
 
     val resolveVersionRequestBody =
-      ResolveActorDefinitionVersionRequestBody()
-        .actorDefinitionId(actorDefinitionId)
-        .actorType(io.airbyte.api.model.generated.ActorType.SOURCE)
-        .dockerImageTag(dockerImageTag)
+      ResolveActorDefinitionVersionRequestBody(
+        actorDefinitionId = actorDefinitionId,
+        actorType = KotlinActorType.SOURCE,
+        dockerImageTag = dockerImageTag,
+      )
 
     val exception =
       Assertions.assertThrows(

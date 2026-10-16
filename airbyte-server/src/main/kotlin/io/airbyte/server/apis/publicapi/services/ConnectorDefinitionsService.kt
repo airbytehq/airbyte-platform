@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationDefinitionReadList
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceDefinitionReadList
-import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
+import io.airbyte.api.server.generated.models.DestinationDefinitionReadList
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SourceDefinitionReadList
+import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.publicApi.server.generated.models.ConnectorDefinitionResponse
@@ -40,7 +40,7 @@ class ConnectorDefinitionsServiceImpl(
         if (workspaceId != null) {
           return sourceDefinitionsHandler
             .listSourceDefinitionsForWorkspace(
-              WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId),
+              WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId),
             ).toPublicApiModel()
         }
         return sourceDefinitionsHandler.listPublicSourceDefinitions().toPublicApiModel()
@@ -49,7 +49,7 @@ class ConnectorDefinitionsServiceImpl(
         if (workspaceId != null) {
           return destinationDefinitionsHandler
             .listDestinationDefinitionsForWorkspace(
-              WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId),
+              WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId),
             ).toPublicApiModel()
         }
         return destinationDefinitionsHandler.listPublicDestinationDefinitions().toPublicApiModel()

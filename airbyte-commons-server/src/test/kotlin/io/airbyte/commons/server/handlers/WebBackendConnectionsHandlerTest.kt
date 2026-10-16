@@ -51,6 +51,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
@@ -136,6 +137,7 @@ import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead as KotlinActorDefinitionVersionRead
 
 internal class WebBackendConnectionsHandlerTest {
   private lateinit var actorDefinitionVersionHandler: ActorDefinitionVersionHandler
@@ -360,8 +362,8 @@ internal class WebBackendConnectionsHandlerTest {
     every { actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any()) } returns mockADVWithOverrideStatus
     every { actorDefinitionVersionHelper.getSourceVersion(any(), any(), any()) } returns mockADV
     every { actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()) } returns mockADV
-    every { actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(any()) } returns ActorDefinitionVersionRead()
-    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns ActorDefinitionVersionRead()
+    every { actorDefinitionVersionHandler.getActorDefinitionVersionForSourceId(any()) } returns actorDefinitionVersionRead()
+    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns actorDefinitionVersionRead()
 
     every { destinationCatalogGenerator.generateDestinationCatalog(any()) } answers {
       CatalogGenerationResult(firstArg(), mapOf())
@@ -465,15 +467,17 @@ internal class WebBackendConnectionsHandlerTest {
       )
 
     expectedListItem =
-      ConnectionHelpers.generateExpectedWebBackendConnectionListItem(
-        standardSync,
-        sourceRead,
-        destinationRead,
-        false,
-        jobRead.job.createdAt,
-        jobRead.job.status,
-        SchemaChange.NO_CHANGE,
-      )
+      ConnectionHelpers
+        .generateExpectedWebBackendConnectionListItem(
+          standardSync,
+          sourceRead,
+          destinationRead,
+          false,
+          jobRead.job.createdAt,
+          jobRead.job.status,
+          SchemaChange.NO_CHANGE,
+        ).sourceActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
+        .destinationActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
 
     expected =
       expectedWebBackendConnectionReadObject(
@@ -615,8 +619,8 @@ internal class WebBackendConnectionsHandlerTest {
       ).notifySchemaChanges(false)
       .notifySchemaChangesByEmail(true)
       .onDemandEnabled(connectionRead.onDemandEnabled ?: false)
-      .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
-      .destinationActorDefinitionVersion(ActorDefinitionVersionRead())
+      .sourceActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
+      .destinationActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
 
   @Test
   fun testGetWorkspaceState() {
@@ -1390,7 +1394,7 @@ internal class WebBackendConnectionsHandlerTest {
   @ValueSource(booleans = [true, false])
   fun testUpdateConnectionWithUpdatedSchemaPerStream(useRefresh: Boolean) {
     every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns
-      ActorDefinitionVersionRead().supportsRefreshes(useRefresh)
+      actorDefinitionVersionRead(supportsRefreshes = useRefresh)
 
     val updateBody =
       WebBackendConnectionUpdate()
@@ -1953,3 +1957,14 @@ internal class WebBackendConnectionsHandlerTest {
     }
   }
 }
+
+private fun actorDefinitionVersionRead(supportsRefreshes: Boolean = false) =
+  KotlinActorDefinitionVersionRead(
+    dockerRepository = "repo",
+    dockerImageTag = "0.1.0",
+    supportsRefreshes = supportsRefreshes,
+    isVersionOverrideApplied = false,
+    supportState = SupportState.SUPPORTED,
+    supportsFileTransfer = false,
+    supportsDataActivation = false,
+  )

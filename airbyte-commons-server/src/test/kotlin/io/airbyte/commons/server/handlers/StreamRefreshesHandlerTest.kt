@@ -4,10 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ConnectionStream
-import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.RefreshMode
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
@@ -174,7 +175,18 @@ internal class StreamRefreshesHandlerTest {
 
   fun mockSupportRefresh(supportRefresh: Boolean) {
     every { connectionService.getStandardSync(connectionId) } returns StandardSync().withDestinationId(destinationId)
-    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(DestinationIdRequestBody().destinationId(destinationId)) } returns
-      ActorDefinitionVersionRead().supportsRefreshes(supportRefresh)
+    every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(DestinationIdRequestBody(destinationId = destinationId)) } returns
+      actorDefinitionVersionRead(supportsRefreshes = supportRefresh)
   }
 }
+
+private fun actorDefinitionVersionRead(supportsRefreshes: Boolean = false) =
+  ActorDefinitionVersionRead(
+    dockerRepository = "repo",
+    dockerImageTag = "0.1.0",
+    supportsRefreshes = supportsRefreshes,
+    isVersionOverrideApplied = false,
+    supportState = SupportState.SUPPORTED,
+    supportsFileTransfer = false,
+    supportsDataActivation = false,
+  )

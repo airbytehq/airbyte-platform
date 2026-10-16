@@ -4,13 +4,15 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ActorDefinitionCreateRequest
-import io.airbyte.api.model.generated.ActorDefinitionCreateResponse
-import io.airbyte.api.model.generated.ActorDefinitionMetadata
-import io.airbyte.api.model.generated.ActorDefinitionResultResponse
-import io.airbyte.api.model.generated.ActorDefinitionUpdateRequest
-import io.airbyte.api.model.generated.ActorDefinitionUpdateResponse
-import io.airbyte.api.model.generated.ActorUpdateRequest
+import io.airbyte.api.model.generated.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.ActorDefinitionCreateRequest
+import io.airbyte.api.server.generated.models.ActorDefinitionCreateResponse
+import io.airbyte.api.server.generated.models.ActorDefinitionMetadata
+import io.airbyte.api.server.generated.models.ActorDefinitionResultResponse
+import io.airbyte.api.server.generated.models.ActorDefinitionUpdateRequest
+import io.airbyte.api.server.generated.models.ActorDefinitionUpdateResponse
+import io.airbyte.api.server.generated.models.ActorUpdateRequest
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
@@ -29,9 +31,9 @@ import jakarta.inject.Singleton
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
-import io.airbyte.api.model.generated.FailureOrigin as ApiFailureOrigin
-import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
-import io.airbyte.api.model.generated.FailureType as ApiFailureType
+import io.airbyte.api.server.generated.models.FailureOrigin as ApiFailureOrigin
+import io.airbyte.api.server.generated.models.FailureReason as ApiFailureReason
+import io.airbyte.api.server.generated.models.FailureType as ApiFailureType
 
 /**
  * Handler for unified actor definition operations (sources and destinations).
@@ -67,7 +69,7 @@ class ActorDefinitionsHandler(
             shouldFetchSpec = true,
             dockerImage = actorDefinitionCreateRequest.actorDefinition.dockerRepository,
             dockerImageTag = actorDefinitionCreateRequest.actorDefinition.dockerImageTag,
-            workspaceId = actorDefinitionCreateRequest.workspaceId,
+            workspaceId = requireNotNull(actorDefinitionCreateRequest.workspaceId) { "workspaceId is required" },
           ),
         specMetadata =
           SpecMetadata(
@@ -76,13 +78,16 @@ class ActorDefinitionsHandler(
             documentationUrl = actorDefinitionCreateRequest.actorDefinition.documentationUrl.toString(),
             resourceRequirements =
               apiToPojoConverters.scopedResourceReqsToInternal(
-                actorDefinitionCreateRequest.actorDefinition.resourceRequirements,
+                Jsons.convertValue(
+                  actorDefinitionCreateRequest.actorDefinition.resourceRequirements,
+                  ScopedResourceRequirements::class.java,
+                ),
               ),
           ),
       )
     temporalClient.submitActorDefinitionUpdateAsync(input)
 
-    return ActorDefinitionCreateResponse().requestId(requestId)
+    return ActorDefinitionCreateResponse(requestId = requestId)
   }
 
   /**
@@ -133,7 +138,7 @@ class ActorDefinitionsHandler(
       )
     temporalClient.submitActorDefinitionUpdateAsync(input)
 
-    return ActorDefinitionUpdateResponse().requestId(requestId)
+    return ActorDefinitionUpdateResponse(requestId = requestId)
   }
 
   private fun getActorDefinitionVersionId(actorDefinitionId: UUID): UUID =
@@ -179,9 +184,10 @@ class ActorDefinitionsHandler(
       return ActorDefinitionFinishResult(null, specResult.failureReason)
     }
 
+    val existingActorDefinitionId = actorUpdateRequest.actorDefinitionId
     return try {
       val actorDefinitionId =
-        if (actorUpdateRequest.actorDefinitionId == null) {
+        if (existingActorDefinitionId == null) {
           finishCreate(
             actorType = actorType,
             spec = specResult.spec ?: throw IllegalStateException("Spec not found"),
@@ -193,7 +199,7 @@ class ActorDefinitionsHandler(
         } else {
           finishUpdate(
             actorType = actorType,
-            actorDefinitionId = actorUpdateRequest.actorDefinitionId,
+            actorDefinitionId = existingActorDefinitionId,
             spec = specResult.spec,
             imageTag = actorUpdateRequest.imageTag,
             actorDefinitionMetadata = actorDefinitionMetadata,
@@ -203,11 +209,12 @@ class ActorDefinitionsHandler(
     } catch (e: Exception) {
       ActorDefinitionFinishResult(
         null,
-        ApiFailureReason()
-          .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
-          .failureType(ApiFailureType.SYSTEM_ERROR)
-          .internalMessage(e.message ?: "Unknown error occurred during actor definition finish")
-          .timestamp(Instant.now().toEpochMilli()),
+        ApiFailureReason(
+          timestamp = Instant.now().toEpochMilli(),
+          failureOrigin = ApiFailureOrigin.AIRBYTE_PLATFORM,
+          failureType = ApiFailureType.SYSTEM_ERROR,
+          internalMessage = e.message ?: "Unknown error occurred during actor definition finish",
+        ),
       )
     }
   }
@@ -227,14 +234,14 @@ class ActorDefinitionsHandler(
           spec = spec,
           dockerRepository = imageName,
           dockerImageTag = imageTag,
-          documentationUrl = actorDefinitionMetadata.documentationUrl,
+          documentationUrl = requireNotNull(actorDefinitionMetadata.documentationUrl) { "documentationUrl is required" },
         ).withActorDefinitionId(actorDefinitionId)
 
     return when (actorType) {
       ActorType.SOURCE ->
         sourceDefinitionsHandler
           .saveCustomSourceDefinition(
-            name = actorDefinitionMetadata.name,
+            name = requireNotNull(actorDefinitionMetadata.name) { "name is required" },
             icon = actorDefinitionMetadata.icon,
             actorDefinitionVersion = adv,
             resourceRequirements = actorDefinitionMetadata.resourceRequirements,
@@ -244,7 +251,7 @@ class ActorDefinitionsHandler(
       ActorType.DESTINATION ->
         destinationDefinitionsHandler
           .saveCustomDestinationDefinition(
-            name = actorDefinitionMetadata.name,
+            name = requireNotNull(actorDefinitionMetadata.name) { "name is required" },
             icon = actorDefinitionMetadata.icon,
             actorDefinitionVersion = adv,
             resourceRequirements = actorDefinitionMetadata.resourceRequirements,
@@ -313,11 +320,12 @@ class ActorDefinitionsHandler(
       if (commandOutput == null) {
         SpecResult(
           null,
-          ApiFailureReason()
-            .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
-            .failureType(ApiFailureType.SYSTEM_ERROR)
-            .internalMessage("Command output not found for commandId: $commandId")
-            .timestamp(Instant.now().toEpochMilli()),
+          ApiFailureReason(
+            timestamp = Instant.now().toEpochMilli(),
+            failureOrigin = ApiFailureOrigin.AIRBYTE_PLATFORM,
+            failureType = ApiFailureType.SYSTEM_ERROR,
+            internalMessage = "Command output not found for commandId: $commandId",
+          ),
         )
       } else if (commandOutput.spec == null) {
         // If the command has a failure reason, convert it to API FailureReason
@@ -326,14 +334,15 @@ class ActorDefinitionsHandler(
           if (commandOutput.failureReason != null) {
             // Convert from config.FailureReason to API FailureReason
             // This already has proper origin/type set from the launcher/workload
-            apiToPojoConverters.failureReasonToApi(commandOutput.failureReason)
+            Jsons.convertValue(apiToPojoConverters.failureReasonToApi(commandOutput.failureReason), ApiFailureReason::class.java)
           } else {
             // Fallback if no failure reason was provided
-            ApiFailureReason()
-              .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
-              .failureType(ApiFailureType.SYSTEM_ERROR)
-              .internalMessage("Failed to retrieve spec for image: $imageName:$imageTag")
-              .timestamp(Instant.now().toEpochMilli())
+            ApiFailureReason(
+              timestamp = Instant.now().toEpochMilli(),
+              failureOrigin = ApiFailureOrigin.AIRBYTE_PLATFORM,
+              failureType = ApiFailureType.SYSTEM_ERROR,
+              internalMessage = "Failed to retrieve spec for image: $imageName:$imageTag",
+            )
           }
         SpecResult(null, apiFailureReason)
       } else {
@@ -342,11 +351,12 @@ class ActorDefinitionsHandler(
     } catch (e: Exception) {
       SpecResult(
         null,
-        ApiFailureReason()
-          .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
-          .failureType(ApiFailureType.SYSTEM_ERROR)
-          .internalMessage(e.message ?: "Unknown error retrieving spec for image: $imageName:$imageTag")
-          .timestamp(Instant.now().toEpochMilli()),
+        ApiFailureReason(
+          timestamp = Instant.now().toEpochMilli(),
+          failureOrigin = ApiFailureOrigin.AIRBYTE_PLATFORM,
+          failureType = ApiFailureType.SYSTEM_ERROR,
+          internalMessage = e.message ?: "Unknown error retrieving spec for image: $imageName:$imageTag",
+        ),
       )
     }
 
@@ -359,17 +369,18 @@ class ActorDefinitionsHandler(
   fun getActorDefinitionResult(requestId: String): ActorDefinitionResultResponse {
     val output =
       temporalClient.tryGetActorDefinitionWorkflowResult(requestId)
-        ?: return ActorDefinitionResultResponse().status(ActorDefinitionResultResponse.StatusEnum.RUNNING)
-    return ActorDefinitionResultResponse()
-      .status(
+        ?: return ActorDefinitionResultResponse(status = ActorDefinitionResultResponse.Status.RUNNING)
+    return ActorDefinitionResultResponse(
+      status =
         if (output.actorDefinitionId !=
           null
         ) {
-          ActorDefinitionResultResponse.StatusEnum.SUCCEEDED
+          ActorDefinitionResultResponse.Status.SUCCEEDED
         } else {
-          ActorDefinitionResultResponse.StatusEnum.FAILED
+          ActorDefinitionResultResponse.Status.FAILED
         },
-      ).actorDefinitionId(output.actorDefinitionId)
-      .failureReason(apiToPojoConverters.failureReasonToApi(output.failureReason))
+      actorDefinitionId = output.actorDefinitionId,
+      failureReason = Jsons.convertValue(apiToPojoConverters.failureReasonToApi(output.failureReason), ApiFailureReason::class.java),
+    )
   }
 }
