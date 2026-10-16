@@ -1,143 +1,21 @@
 import { APIRequestContext, Page, expect } from "@playwright/test";
-import {
-  DestinationRead,
-  SourceRead,
-  WebBackendConnectionRead,
-  AirbyteStreamAndConfiguration,
-  SyncMode,
-  DestinationSyncMode,
-  SourceDiscoverSchemaRead,
-} from "@src/core/api/types/AirbyteClient";
+import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
-import { pokeSourceAPI, e2eDestinationAPI } from "./connectors";
-import { appendRandomString } from "./ui";
 
 /**
  * Connection Test Helpers
  *
  * This file contains a set of helpers for wiring up connections in our Playwright tests:
  *
- * - connectionAPI: CRUD operations for connections (create, delete, get, update)
+ * - connectionAPI: connection updates through the API
  * - connectionUI: UI navigation and interaction helpers (visit pages, start/cancel syncs, verify status)
  * - jobUI: Job event and modal helpers for timeline/status tests
- * - connectionTestHelpers: Test setup helpers for creating connector pairs and cleanup
  * - connectionForm: Form interaction helpers for connection settings page
- *
- * Currently supported connector pairs: "poke-e2e"
  */
-
-// Type for connector API helpers - all have same structure
-type ConnectorAPI = typeof pokeSourceAPI;
-type ConnectorPair = "poke-e2e";
 
 // Create connection API interface following the established connector pattern
 export const connectionAPI = {
-  // Create a new connection between source and destination
-  create: async (
-    request: APIRequestContext,
-    source: SourceRead,
-    destination: DestinationRead
-  ): Promise<WebBackendConnectionRead> => {
-    const apiBaseUrl = getApiBaseUrl();
-
-    // First, discover the source schema
-    const discoverResponse = await request.post(`${apiBaseUrl}/sources/discover_schema`, {
-      data: {
-        sourceId: source.sourceId,
-        disable_cache: true,
-      },
-    });
-
-    if (!discoverResponse.ok()) {
-      const errorText = await discoverResponse.text().catch(() => "Unknown error");
-      throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
-    }
-
-    const discoverResult = (await discoverResponse.json()) as SourceDiscoverSchemaRead;
-    const catalog = discoverResult.catalog;
-    const catalogId = discoverResult.catalogId;
-
-    if (!catalog || !catalog.streams) {
-      console.error("Schema discovery failed - invalid catalog:", discoverResult);
-      throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
-    }
-
-    if (!catalogId) {
-      console.error("Schema discovery did not return catalogId:", discoverResult);
-      throw new Error(`Schema discovery missing catalogId: ${JSON.stringify(discoverResult)}`);
-    }
-
-    // Select no stream
-    const streams: AirbyteStreamAndConfiguration[] = catalog.streams.map((stream) => ({
-      ...stream,
-      config: {
-        syncMode: SyncMode.full_refresh,
-        destinationSyncMode: DestinationSyncMode.overwrite,
-        selected: false,
-      },
-    }));
-
-    // Create the connection
-    const connectionData: Record<string, unknown> = {
-      name: `${source.name} → ${destination.name}`,
-      sourceId: source.sourceId,
-      destinationId: destination.destinationId,
-      syncCatalog: { streams },
-      scheduleType: "manual",
-      status: "active",
-      // For schema change detection
-      sourceCatalogId: catalogId,
-    };
-
-    const response = await request.post(`${apiBaseUrl}/web_backend/connections/create`, {
-      data: connectionData,
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Failed to create connection: ${response.status()}`);
-    }
-
-    const result = await response.json();
-    return result as WebBackendConnectionRead;
-  },
-
-  // Delete a connection
-  delete: async (request: APIRequestContext, connectionId: string): Promise<void> => {
-    const apiBaseUrl = getApiBaseUrl();
-
-    const response = await request.post(`${apiBaseUrl}/connections/delete`, {
-      data: { connectionId },
-      timeout: 30_000,
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Failed to delete connection: ${response.status()}`);
-    }
-  },
-
-  // Get a connection (with optional schema refresh)
-  get: async (
-    request: APIRequestContext,
-    connectionId: string,
-    options: { withRefreshedCatalog?: boolean } = {}
-  ): Promise<WebBackendConnectionRead> => {
-    const apiBaseUrl = getApiBaseUrl();
-
-    const response = await request.post(`${apiBaseUrl}/web_backend/connections/get`, {
-      data: {
-        connectionId,
-        withRefreshedCatalog: options.withRefreshedCatalog ?? false,
-      },
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Failed to get connection: ${response.status()}`);
-    }
-
-    return await response.json();
-  },
-
   // Update a connection
   update: async (
     request: APIRequestContext,
@@ -254,103 +132,6 @@ export const jobUI = {
   // Verify job logs modal is open
   verifyLogsModal: async (page: Page): Promise<void> => {
     return expect(page.locator("[data-testid='job-logs-modal']")).toBeVisible({ timeout: 30000 });
-  },
-};
-
-// Test setup helpers for connection tests
-export const connectionTestHelpers = {
-  // Unified connector setup with programmatic pairing
-  setupConnectors: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    connectorType: ConnectorPair = "poke-e2e",
-    sourcePrefix?: string,
-    destinationPrefix?: string
-  ) => {
-    // Determine connector APIs and default names based on type
-    const configs: Record<
-      ConnectorPair,
-      {
-        sourceAPI: ConnectorAPI;
-        destinationAPI: ConnectorAPI;
-        defaultSourcePrefix: string;
-        defaultDestinationPrefix: string;
-      }
-    > = {
-      "poke-e2e": {
-        sourceAPI: pokeSourceAPI,
-        destinationAPI: e2eDestinationAPI,
-        defaultSourcePrefix: "PokeAPI source",
-        defaultDestinationPrefix: "E2E Testing destination",
-      },
-    };
-
-    const config = configs[connectorType];
-    const sourceName = appendRandomString(sourcePrefix ?? config.defaultSourcePrefix);
-    const destinationName = appendRandomString(destinationPrefix ?? config.defaultDestinationPrefix);
-
-    const source = (await config.sourceAPI.create(request, sourceName, workspaceId)) as SourceRead;
-    const destination = (await config.destinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
-
-    return {
-      source,
-      destination,
-      sourceId: source.sourceId,
-      destinationId: destination.destinationId,
-    };
-  },
-
-  // Backward compatibility aliases (delegate to unified function)
-  setupConnectionTest: async (
-    request: APIRequestContext,
-    workspaceId: string,
-    sourcePrefix?: string,
-    destinationPrefix?: string
-  ) => connectionTestHelpers.setupConnectors(request, workspaceId, "poke-e2e", sourcePrefix, destinationPrefix),
-
-  // Cleanup connection test resources with smart connector deletion
-  cleanupConnectionTest: async (
-    request: APIRequestContext,
-    resources: {
-      connectionId?: string;
-      sourceId?: string;
-      destinationId?: string;
-    }
-  ) => {
-    const { connectionId, sourceId, destinationId } = resources;
-
-    // Helper to attempt deletion and log warnings
-    const tryDelete = async (deleteFunc: () => Promise<void>, resourceType: string, resourceId: string) => {
-      try {
-        await deleteFunc();
-      } catch (error) {
-        console.warn(`⚠️ Failed to clean up ${resourceType} ${resourceId}:`, error);
-      }
-    };
-
-    // Delete connection first (depends on source/destination)
-    if (connectionId) {
-      await tryDelete(() => connectionAPI.delete(request, connectionId), "connection", connectionId);
-    }
-
-    // Delete source and destination in parallel. Every connector API variant issues the same
-    // sources/delete or destinations/delete request (CONNECTOR_CONFIGS share endpoint and idField),
-    // so one delete per actor works regardless of which connector type the test created. Duplicate
-    // concurrent deletes of the same actor can hang server-side and time out the afterAll hook.
-    const cleanupPromises: Array<Promise<void>> = [];
-
-    if (sourceId) {
-      cleanupPromises.push(tryDelete(() => pokeSourceAPI.delete(request, sourceId), "source", sourceId));
-    }
-
-    if (destinationId) {
-      cleanupPromises.push(
-        tryDelete(() => e2eDestinationAPI.delete(request, destinationId), "destination", destinationId)
-      );
-    }
-
-    // Wait for all cleanup operations to complete
-    await Promise.allSettled(cleanupPromises);
   },
 };
 
