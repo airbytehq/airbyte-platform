@@ -9,6 +9,7 @@ export {
 } from "./ActorContextLayerToggles";
 export { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 export { ContextLayerPage, ContextLayerConnectorsPage } from "./ContextLayerPage";
+export { EnableDirectAccessPage } from "./EnableDirectAccessPage";
 export { InstallMcpPage } from "./InstallMcpPage";
 export {
   SemanticSearchBackfillDate,

@@ -1,0 +1,37 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  max-width: 800px;
+  padding: variables.$spacing-xl;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+}
+
+.terms {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
+  padding: variables.$spacing-md;
+  border: 1px solid colors.$grey-200;
+  border-radius: 4px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: variables.$spacing-sm;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: variables.$spacing-sm;
+}

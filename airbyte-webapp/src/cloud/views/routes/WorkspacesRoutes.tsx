@@ -44,6 +44,7 @@ const SelectSourcePage = React.lazy(() => import("pages/source/SelectSourcePage"
 const SourceItemPage = React.lazy(() => import("pages/source/SourceItemPage"));
 const SourceConnectionsPage = React.lazy(() => import("pages/source/SourceConnectionsPage"));
 const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsPage"));
+const EnableDirectAccessPage = React.lazy(() => import("cloud/components/AgentsOptIn/EnableDirectAccessPage"));
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
 const ConnectorBuilderRoutes = React.lazy(() => import("pages/connectorBuilder/ConnectorBuilderRoutes"));
@@ -82,6 +83,10 @@ export const WorkspacesRoutes: React.FC = () => {
           path={`${DestinationPaths.EnterpriseDestination}/:id`}
           element={<EnterpriseStubConnectorPage connectorType="destination" />}
         />
+        <Route
+          path={`:destinationId/${DestinationPaths.EnableDirectAccess}`}
+          element={<EnableDirectAccessPage actorType="destination" />}
+        />
         <Route path={DestinationPaths.Root} element={<DestinationItemPage />}>
           <Route index element={<DestinationSettingsPage />} />
           <Route path={DestinationPaths.Connections} element={<DestinationConnectionsPage />} />
@@ -94,6 +99,10 @@ export const WorkspacesRoutes: React.FC = () => {
         <Route
           path={`${SourcePaths.EnterpriseSource}/:id`}
           element={<EnterpriseStubConnectorPage connectorType="source" />}
+        />
+        <Route
+          path={`:sourceId/${SourcePaths.EnableDirectAccess}`}
+          element={<EnableDirectAccessPage actorType="source" />}
         />
         <Route path={SourcePaths.Root} element={<SourceItemPage />}>
           <Route index element={<SourceSettingsPage />} />

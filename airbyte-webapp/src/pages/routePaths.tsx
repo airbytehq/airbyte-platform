@@ -21,6 +21,7 @@ export enum ContextLayerRoutePaths {
 export enum DestinationPaths {
   Root = ":destinationId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Connections = "connections",
+  EnableDirectAccess = "enable-direct-access",
   EnterpriseDestination = "enterprise",
   SelectDestinationNew = "new-destination",
   DestinationNew = "new-destination/:destinationDefinitionId",
@@ -29,6 +30,7 @@ export enum DestinationPaths {
 export enum SourcePaths {
   Root = ":sourceId/*", // currently our tabs rely on this * wildcard to detect which tab is currently active
   Connections = "connections",
+  EnableDirectAccess = "enable-direct-access",
   EnterpriseSource = "enterprise",
   SelectSourceNew = "new-source",
   SourceNew = "new-source/:sourceDefinitionId",

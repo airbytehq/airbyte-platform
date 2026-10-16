@@ -9,6 +9,7 @@ export interface LinkProps {
   opensInNewTab?: boolean;
   variant?: "default" | "primary" | "button" | "buttonPrimary";
   onClick?: ComponentProps<typeof ReactRouterLink>["onClick"];
+  rel?: ComponentProps<typeof ReactRouterLink>["rel"];
   title?: string;
   state?: unknown;
 }
