@@ -22888,6 +22888,13 @@ components:
           search_time_ms,
         ]
       properties:
+        index_id:
+          type: string
+          format: uuid
+        segment_versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchSegmentVersion"
         source_id:
           type: string
           format: uuid
@@ -22908,6 +22915,18 @@ components:
         search_time_ms:
           type: integer
           format: int64
+    FusionSearchSegmentVersion:
+      type: object
+      required: [segment_id, serving_version]
+      properties:
+        segment_id:
+          type: string
+          format: uuid
+        serving_version:
+          type: integer
+          format: int64
+          nullable: true
+          description: Published version of this active segment, or null before publication.
     FusionSearchStatusResponse:
       type: object
       required: [sources]
@@ -22916,6 +22935,53 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FusionSearchStatusSource"
+        destinations:
+          description: The destinations of the listed connections and of the status's actor's enabled connections.
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchStatusDestination"
+    FusionSearchStatusDestination:
+      type: object
+      required: [destination_id, needs_backfill]
+      properties:
+        destination_id:
+          type: string
+          format: uuid
+        needs_backfill:
+          description: >-
+            Existing destination tables were found when indexing was enabled; request a backfill to index that history.
+            Turning indexing on does not start one. Set while any indexing-enabled connection to the destination has a stream
+            that needs a backfill.
+          type: boolean
+    FusionSearchStatusGaps:
+      type: object
+      required: [count, stuck, oldest_at]
+      properties:
+        count:
+          description: Minibatches of synced input whose records have not reached the searchable index version.
+          type: integer
+          format: int64
+        stuck:
+          description: Gaps the backend no longer retries on its own; they need an operator replay or a backfill.
+          type: integer
+          format: int64
+        oldest_at:
+          description: When the oldest gap's input first arrived for indexing; null without gaps.
+          type: string
+          format: date-time
+          nullable: true
+    FusionSearchStatusPublicationHold:
+      type: object
+      required: [since, reason]
+      properties:
+        since:
+          description: When search started serving an older version while a newer one waits for optimization.
+          type: string
+          format: date-time
+        reason:
+          description: Why the newer version waits, e.g. `fts_unindexed` or `vector_unindexed`.
+          type: string
+          nullable: true
     FusionSearchStatusSource:
       type: object
       required: [source_id, destination_id, connection_id, streams]
@@ -22929,10 +22995,19 @@ components:
         connection_id:
           type: string
           format: uuid
+        needs_backfill:
+          description: >-
+            At least one of the connection's streams needs a backfill (see each stream's needs_backfill): history found when
+            indexing was enabled on the connection that no completed backfill run has indexed yet.
+          type: boolean
         streams:
           type: array
           items:
             $ref: "#/components/schemas/FusionSearchStatusStream"
+        gaps:
+          description: The gaps of every index of the connection's streams.
+          allOf:
+            - $ref: "#/components/schemas/FusionSearchStatusGaps"
     FusionSearchStatusStream:
       type: object
       required: [name, backfill, indexes]
@@ -22942,6 +23017,13 @@ components:
           nullable: true
         name:
           type: string
+        needs_backfill:
+          description: >-
+            The destination warehouse already held this stream's table when indexing was enabled on its connection, and that
+            history is not indexed yet: set until a backfill run of the stream completes. Turning indexing on does not start
+            one; `backfill` tells a requested or running backfill from none. A flagged stream is listed even before it has an
+            index.
+          type: boolean
         backfill:
           description: Null when backfill is disabled.
           nullable: true
@@ -22951,6 +23033,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FusionSearchStatusIndex"
+        gaps:
+          description: The gaps of every index of the stream.
+          allOf:
+            - $ref: "#/components/schemas/FusionSearchStatusGaps"
     FusionSearchStatusBackfill:
       type: object
       required:
@@ -22996,6 +23082,16 @@ components:
         status:
           type: string
           enum: [starting, running, finalizing, complete, failed, cancelled]
+        error_code:
+          description: >-
+            Why a failed run failed: a destination cause such as `nothing_to_backfill`, otherwise `system_error`;
+            null unless failed.
+          type: string
+          nullable: true
+        error:
+          description: The failure's code with a fixed explanation. Warehouse error text is never included; null unless failed.
+          type: string
+          nullable: true
     FusionSearchStatusIndex:
       type: object
       required:
@@ -23010,6 +23106,13 @@ components:
           storage_size_mb,
         ]
       properties:
+        index_id:
+          type: string
+          format: uuid
+        segment_versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchSegmentVersion"
         type:
           type: string
           enum: [keyword, semantic]
@@ -23035,6 +23138,32 @@ components:
         storage_size_mb:
           type: number
           format: double
+        stats_error:
+          description: >-
+            Set when the counts are approximate: `stored_totals_missing` when the index has no complete stored totals
+            (counts are zeros), or, with live stats, the executor's error for the index (counts fall back to the
+            stored totals, or zeros).
+          type: string
+          nullable: true
+        gaps:
+          $ref: "#/components/schemas/FusionSearchStatusGaps"
+        publication_held:
+          description: >-
+            Set while newly synced records are indexed but not yet searchable, until optimization finishes or a time cap
+            passes. With several segments, the earliest of their holds.
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/FusionSearchStatusPublicationHold"
+        held_records:
+          description: >-
+            Records written to a held (not yet searchable) version beyond the published one, summed over segments; 0 when
+            nothing is held. A segment whose held or published count is not measured yet adds 0.
+          type: integer
+          format: int64
+        segments:
+          description: The index's active hash segments; each is a dataset the totals above add up.
+          type: integer
+          format: int64
     FusionConnectionBackfillRequest:
       type: object
       additionalProperties: false
@@ -23047,7 +23176,9 @@ components:
             minLength: 1
           minItems: 1
         start_time:
-          description: Backfill only rows extracted at or after this time. Omitted or null backfills the whole history.
+          description: >-
+            Backfill only rows whose cursor field (a top-level timestamp or date) is at or after this time; streams without
+            such a cursor are backfilled in full. Omitted or null, the whole history. Regular syncs index all data regardless.
           type: string
           format: date-time
           nullable: true
