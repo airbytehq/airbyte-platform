@@ -24,10 +24,6 @@ import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorUpdate
 import io.airbyte.data.services.shared.ConnectorVersionKey
-import io.airbyte.featureflag.ANONYMOUS
-import io.airbyte.featureflag.TestClient
-import io.airbyte.featureflag.UseBreakingChangeScopes
-import io.airbyte.featureflag.Workspace
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -55,11 +51,9 @@ internal class ActorDefinitionVersionUpdaterTest {
   private val connectionService = mockk<ConnectionService>()
   private val actorDefinitionService = mockk<ActorDefinitionService>(relaxed = true)
   private val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
-  private val featureFlagClient = mockk<TestClient>()
   private val connectionTimelineEventService = mockk<ConnectionTimelineEventService>()
   private val actorDefinitionVersionUpdater =
     ActorDefinitionVersionUpdater(
-      featureFlagClient,
       connectionService,
       actorDefinitionService,
       scopedConfigurationService,
@@ -136,10 +130,6 @@ internal class ActorDefinitionVersionUpdaterTest {
   @ValueSource(booleans = [true, false])
   fun testScopedImpactAffectsBreakingChangeImpact(actorIsInBreakingChangeScope: Boolean) {
     every {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-    } returns true
-
-    every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID)
     } returns Optional.of(DEFAULT_VERSION)
 
@@ -167,7 +157,6 @@ internal class ActorDefinitionVersionUpdaterTest {
     )
 
     verifyAll {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID)
       actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID)
       connectionService.actorSyncsAnyListedStream(actorId, listOf("affected_stream"))
@@ -218,13 +207,8 @@ internal class ActorDefinitionVersionUpdaterTest {
     }
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testGetActorsAffectedByBreakingChange(useBreakingChangeScopes: Boolean) {
-    every {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-    } returns useBreakingChangeScopes
-
+  @Test
+  fun testGetActorsAffectedByBreakingChange() {
     val actorSyncingAffectedStreamId = UUID.randomUUID()
     val actorNotSyncingAffectedStreamId = UUID.randomUUID()
 
@@ -242,13 +226,7 @@ internal class ActorDefinitionVersionUpdaterTest {
         STREAM_SCOPED_BREAKING_CHANGE,
       )
 
-    if (useBreakingChangeScopes) {
-      // Affected actors depend on scopes
-      assertEquals(setOf(actorSyncingAffectedStreamId), actorsAffectedByBreakingChange)
-    } else {
-      // All actors are affected by breaking change
-      assertEquals(setOf(actorSyncingAffectedStreamId, actorNotSyncingAffectedStreamId), actorsAffectedByBreakingChange)
-    }
+    assertEquals(setOf(actorSyncingAffectedStreamId), actorsAffectedByBreakingChange)
   }
 
   @ParameterizedTest
@@ -421,10 +399,6 @@ internal class ActorDefinitionVersionUpdaterTest {
 
   @Test
   fun testProcessBreakingChangesForUpgrade() {
-    every {
-      featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))
-    } returns true
-
     val pinnedActorId = UUID.randomUUID()
     val withImpactedStreamActorId = UUID.randomUUID()
     val noImpactedStreamActorId = UUID.randomUUID()

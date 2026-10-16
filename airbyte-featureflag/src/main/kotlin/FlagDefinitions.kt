@@ -40,12 +40,6 @@ object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destinatio
 
 object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
 
-object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.notifyOnConnectorBreakingChanges", default = true)
-
-object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
-
-object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakingChangeScopes", default = true)
-
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
@@ -82,8 +76,6 @@ object SocketFormat : Temporary<String>(key = "platform.socket-format", default 
 
 object SocketCount : Temporary<Int>(key = "platform.socket-count", default = -1)
 
-object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
-
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
 
 object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-resource-overrides", default = "")
@@ -91,8 +83,6 @@ object OrchestratorResourceOverrides : Temporary<String>(key = "orchestrator-res
 object SourceResourceOverrides : Temporary<String>(key = "source-resource-overrides", default = "")
 
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
-
-object ShouldWaitForMainContainersOnReplication : Temporary<Boolean>(key = "platform.should-wait-for-main-containers-on-replication", default = true)
 
 object CheckImagePullBackoff : Temporary<Boolean>(key = "platform.check-image-pull-backoff", default = false)
 

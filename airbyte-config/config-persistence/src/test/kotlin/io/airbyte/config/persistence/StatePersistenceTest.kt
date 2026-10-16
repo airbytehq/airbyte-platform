@@ -87,7 +87,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     connectionService = Mockito.mock(ConnectionService::class.java)
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService!!,
         ActorDefinitionServiceJooqImpl(database),
         Mockito.mock(ScopedConfigurationService::class.java),

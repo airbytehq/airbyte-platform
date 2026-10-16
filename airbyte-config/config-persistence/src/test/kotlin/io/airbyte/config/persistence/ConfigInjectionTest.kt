@@ -87,7 +87,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
         secretPersistenceConfigService,
         connectionService,
         ActorDefinitionVersionUpdater(
-          featureFlagClient,
           connectionService,
           actorDefinitionService,
           scopedConfigurationService,

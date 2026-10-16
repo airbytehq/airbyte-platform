@@ -82,7 +82,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
           secretPersistenceConfigService,
           connectionService,
           ActorDefinitionVersionUpdater(
-            featureFlagClient,
             connectionService,
             actorDefinitionService,
             scopedConfigurationService,
@@ -99,7 +98,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
           featureFlagClient,
           connectionService,
           ActorDefinitionVersionUpdater(
-            featureFlagClient,
             connectionService,
             actorDefinitionService,
             scopedConfigurationService,

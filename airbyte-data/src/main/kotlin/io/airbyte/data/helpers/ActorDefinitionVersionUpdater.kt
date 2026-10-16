@@ -28,10 +28,6 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorUpdate
 import io.airbyte.data.services.shared.ConnectorVersionKey
-import io.airbyte.featureflag.ANONYMOUS
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseBreakingChangeScopes
-import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
@@ -45,7 +41,6 @@ private val STABLE_VERSION_TAG_PATTERN = Regex("""^\d+\.\d+\.\d+$""")
 
 @Singleton
 class ActorDefinitionVersionUpdater(
-  private val featureFlagClient: FeatureFlagClient,
   private val connectionService: ConnectionService,
   private val actorDefinitionService: ActorDefinitionService,
   private val scopedConfigurationService: ScopedConfigurationService,
@@ -652,10 +647,6 @@ class ActorDefinitionVersionUpdater(
     actorIds: Set<UUID>,
     breakingChange: ActorDefinitionBreakingChange,
   ): Set<UUID> {
-    if (!featureFlagClient.boolVariation(UseBreakingChangeScopes, Workspace(ANONYMOUS))) {
-      return actorIds
-    }
-
     val scopedImpact = breakingChange.scopedImpact
     if (breakingChange.scopedImpact == null || breakingChange.scopedImpact.isEmpty()) {
       return actorIds

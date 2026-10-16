@@ -165,7 +165,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     actorDefinitionService = spy(ActorDefinitionServiceJooqImpl(database!!))
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,

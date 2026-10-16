@@ -17,10 +17,6 @@ import io.airbyte.config.persistence.BreakingChangesHelper
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.featureflag.ANONYMOUS
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate
-import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.LocalDate
@@ -44,7 +40,6 @@ class SupportStateUpdater(
   private val airbyteEdition: AirbyteEdition,
   private val breakingChangesHelper: BreakingChangesHelper,
   private val breakingChangeNotificationHelper: BreakingChangeNotificationHelper,
-  private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
   }
@@ -380,10 +375,7 @@ class SupportStateUpdater(
 
   private fun shouldNotifyBreakingChanges(): Boolean {
     // we only want to notify about these on Cloud
-    return (
-      airbyteEdition == AirbyteEdition.CLOUD &&
-        featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate, Workspace(ANONYMOUS))
-    )
+    return airbyteEdition == AirbyteEdition.CLOUD
   }
 
   /**

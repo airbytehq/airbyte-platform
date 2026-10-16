@@ -107,7 +107,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
           secretPersistenceConfigService,
           connectionService,
           ActorDefinitionVersionUpdater(
-            featureFlagClient,
             connectionService,
             actorDefinitionService,
             scopedConfigurationService,
@@ -124,7 +123,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
           featureFlagClient,
           connectionService,
           ActorDefinitionVersionUpdater(
-            featureFlagClient,
             connectionService,
             actorDefinitionService,
             scopedConfigurationService,

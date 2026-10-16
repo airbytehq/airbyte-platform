@@ -93,7 +93,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     actorDefinitionVersionUpdater =
       spy(
         ActorDefinitionVersionUpdater(
-          featureFlagClient,
           connectionService!!,
           actorDefinitionService!!,
           scopedConfigurationService,

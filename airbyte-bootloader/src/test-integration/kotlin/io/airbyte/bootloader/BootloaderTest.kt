@@ -150,7 +150,6 @@ internal class BootloaderTest {
     val actorPaginationServiceHelper: ActorServicePaginationHelper = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
@@ -222,7 +221,6 @@ internal class BootloaderTest {
     val breakingChangeNotificationHelper =
       BreakingChangeNotificationHelper(
         workspaceService,
-        featureFlagClient,
       )
     val breakingChangeHelper = BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService)
     val supportStateUpdater =
@@ -233,7 +231,6 @@ internal class BootloaderTest {
         airbyteEdition,
         breakingChangeHelper,
         breakingChangeNotificationHelper,
-        featureFlagClient,
       )
     val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
     val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator =
@@ -350,7 +347,6 @@ internal class BootloaderTest {
     val actorServicePaginationHelper: ActorServicePaginationHelper = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
@@ -413,7 +409,6 @@ internal class BootloaderTest {
     val breakingChangeNotificationHelper =
       BreakingChangeNotificationHelper(
         workspaceService,
-        featureFlagClient,
       )
     val breakingChangesHelper = BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService)
     val supportStateUpdater =
@@ -424,7 +419,6 @@ internal class BootloaderTest {
         airbyteEdition,
         breakingChangesHelper,
         breakingChangeNotificationHelper,
-        featureFlagClient,
       )
     val protocolVersionChecker =
       ProtocolVersionChecker(
@@ -671,7 +665,6 @@ internal class BootloaderTest {
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,

@@ -68,7 +68,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,

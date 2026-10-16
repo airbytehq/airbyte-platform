@@ -92,7 +92,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     val actorDefinitionService: ActorDefinitionService = ActorDefinitionServiceJooqImpl(database!!)
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,

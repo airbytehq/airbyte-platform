@@ -9,9 +9,6 @@ import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.config.Notification
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
-import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.MetricClient
 import io.airbyte.notification.CustomerioNotificationClient
 import io.airbyte.notification.NotificationClient
@@ -48,22 +45,18 @@ class BreakingChangeNotificationHelper {
 
   private val workspaceService: WorkspaceService
   private val notificationClient: NotificationClient
-  private val featureFlagClient: FeatureFlagClient
 
-  constructor(workspaceService: WorkspaceService, featureFlagClient: FeatureFlagClient, metricClient: MetricClient? = null) {
+  constructor(workspaceService: WorkspaceService, metricClient: MetricClient? = null) {
     this.workspaceService = workspaceService
-    this.featureFlagClient = featureFlagClient
     this.notificationClient = CustomerioNotificationClient(metricClient = metricClient)
   }
 
   @InternalForTesting
   internal constructor(
     workspaceService: WorkspaceService,
-    featureFlagClient: FeatureFlagClient,
     notificationClient: NotificationClient,
   ) {
     this.workspaceService = workspaceService
-    this.featureFlagClient = featureFlagClient
     this.notificationClient = notificationClient
   }
 
@@ -155,10 +148,6 @@ class BreakingChangeNotificationHelper {
     val receiverEmails: MutableList<String> = ArrayList()
 
     for (workspace in workspaces) {
-      if (!featureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, Workspace(workspace.workspaceId))) {
-        continue
-      }
-
       val notificationSettings = workspace.notificationSettings
 
       val notificationItem =

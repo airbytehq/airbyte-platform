@@ -18,10 +18,6 @@ import io.airbyte.config.persistence.BreakingChangesHelper.WorkspaceBreakingChan
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.featureflag.ANONYMOUS
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate
-import io.airbyte.featureflag.Workspace
 import io.mockk.Called
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -44,8 +40,6 @@ internal class SupportStateUpdaterTest {
 
   @BeforeEach
   fun setup() {
-    val featureFlagClient: FeatureFlagClient = mockk()
-    every { featureFlagClient.boolVariation(NotifyBreakingChangesOnSupportStateUpdate, Workspace(ANONYMOUS)) } returns true
     supportStateUpdater =
       SupportStateUpdater(
         mActorDefinitionService,
@@ -54,7 +48,6 @@ internal class SupportStateUpdaterTest {
         Configs.AirbyteEdition.CLOUD,
         mBreakingChangesHelper,
         mBreakingChangeNotificationHelper,
-        featureFlagClient,
       )
 
     justRun { mActorDefinitionService.setActorDefinitionVersionSupportStates(any(), any()) }

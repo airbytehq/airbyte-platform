@@ -70,7 +70,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
 
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,

@@ -11,7 +11,6 @@ import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.ProfilingMode
-import io.airbyte.featureflag.ShouldWaitForMainContainersOnReplication
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricAttribute
@@ -170,7 +169,6 @@ internal class KubePodClientTest {
     every { featureFlagClient.boolVariation(EnableAsyncProfiler, any()) } returns false
     every { featureFlagClient.stringVariation(ProfilingMode, any()) } returns "cpu"
     every { featureFlagClient.boolVariation(SocketTest, any()) } returns false
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns true
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
@@ -357,7 +355,7 @@ internal class KubePodClientTest {
   }
 
   @Test
-  fun `launchReplication waits for main containers when feature flag is enabled`() {
+  fun `launchReplication waits for main containers`() {
     val syncPayload = SyncPayload(replInput)
     every { mapper.toKubeInput(WORKLOAD_ID, syncPayload, any()) } returns replicationKubeInput
     every {
@@ -379,41 +377,10 @@ internal class KubePodClientTest {
         any(),
       )
     } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns true
 
     client.launchReplication(syncPayload, replLauncherInput)
 
     verify(exactly = 1) { launcher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  fun `launchReplication skips waiting for main containers when feature flag is disabled`() {
-    val syncPayload = SyncPayload(replInput)
-    every { mapper.toKubeInput(WORKLOAD_ID, syncPayload, any()) } returns replicationKubeInput
-    every {
-      replicationPodFactory.create(
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-      )
-    } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns false
-
-    client.launchReplication(syncPayload, replLauncherInput)
-
-    verify(exactly = 0) { launcher.waitForPodReadyOrTerminalByPod(any(), any()) }
   }
 
   @Test
@@ -439,7 +406,6 @@ internal class KubePodClientTest {
         any(),
       )
     } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns true
     every { launcher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws
       ImagePullException("Failed to pull image", KubeCommandType.WAIT_MAIN)
 
@@ -549,7 +515,7 @@ internal class KubePodClientTest {
   }
 
   @Test
-  fun `launchReset waits for main containers when feature flag is enabled`() {
+  fun `launchReset waits for main containers`() {
     val syncPayload = SyncPayload(replInput)
     every { mapper.toKubeInput(WORKLOAD_ID, syncPayload, any()) } returns replicationKubeInput
     every {
@@ -568,38 +534,10 @@ internal class KubePodClientTest {
         any(),
       )
     } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns true
 
     client.launchReset(syncPayload, replLauncherInput)
 
     verify(exactly = 1) { launcher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
-  }
-
-  @Test
-  fun `launchReset skips waiting for main containers when feature flag is disabled`() {
-    val syncPayload = SyncPayload(replInput)
-    every { mapper.toKubeInput(WORKLOAD_ID, syncPayload, any()) } returns replicationKubeInput
-    every {
-      replicationPodFactory.createReset(
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-        any(),
-      )
-    } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns false
-
-    client.launchReset(syncPayload, replLauncherInput)
-
-    verify(exactly = 0) { launcher.waitForPodReadyOrTerminalByPod(any(), any()) }
   }
 
   @Test
@@ -622,7 +560,6 @@ internal class KubePodClientTest {
         any(),
       )
     } returns pod
-    every { featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, any()) } returns true
     every { launcher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) } throws
       ImagePullException("Failed to pull image", KubeCommandType.WAIT_MAIN)
 

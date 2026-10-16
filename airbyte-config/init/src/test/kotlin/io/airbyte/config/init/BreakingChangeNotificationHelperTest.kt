@@ -13,15 +13,11 @@ import io.airbyte.config.NotificationSettings
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
-import io.airbyte.featureflag.Workspace
 import io.airbyte.notification.NotificationClient
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import io.mockk.verifySequence
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -29,45 +25,11 @@ import java.util.UUID
 internal class BreakingChangeNotificationHelperTest {
   private val mWorkspaceService: WorkspaceService = mockk()
   private val mNotificationClient: NotificationClient = mockk()
-  private val mFeatureFlagClient: FeatureFlagClient = mockk()
   private lateinit var breakingChangeNotificationHelper: BreakingChangeNotificationHelper
 
   @BeforeEach
   fun setup() {
-    breakingChangeNotificationHelper = BreakingChangeNotificationHelper(mWorkspaceService, mFeatureFlagClient, mNotificationClient)
-
-    every { mFeatureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, any()) } returns true
-  }
-
-  @Test
-  fun `no notifications should be sent if the feature flag is disabled`() {
-    every { mFeatureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, Workspace(WORKSPACE_ID_1)) } returns false
-    every { mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) } returns
-      listOf(
-        StandardWorkspace()
-          .withWorkspaceId(WORKSPACE_ID_1)
-          .withEmail(WORKSPACE_EMAIL_1)
-          .withNotificationSettings(
-            NotificationSettings()
-              .withSendOnBreakingChangeSyncsDisabled(
-                NotificationItem()
-                  .withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO)),
-              ),
-          ),
-      )
-    val notifications =
-      listOf(BreakingChangeNotificationData(ActorType.SOURCE, CONNECTOR_NAME, listOf(WORKSPACE_ID_1), ActorDefinitionBreakingChange()))
-
-    breakingChangeNotificationHelper.notifyDeprecatedSyncs(notifications)
-    breakingChangeNotificationHelper.notifyDisabledSyncs(notifications)
-
-    verify(exactly = 2) { mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) }
-    verifySequence {
-      mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
-      mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false)
-    }
-    confirmVerified(mWorkspaceService)
-    confirmVerified(mNotificationClient)
+    breakingChangeNotificationHelper = BreakingChangeNotificationHelper(mWorkspaceService, mNotificationClient)
   }
 
   @Test

@@ -10,7 +10,6 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ProfilingMode
-import io.airbyte.featureflag.ShouldWaitForMainContainersOnReplication
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -125,10 +124,7 @@ class KubePodClient(
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
 
     // Wait for main containers to be ready or terminal to detect image pull errors early
-    val shouldWait = featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, Connection(replicationInput.connectionId))
-    if (shouldWait) {
-      waitForMainContainersReady(pod)
-    }
+    waitForMainContainersReady(pod)
   }
 
   @WithSpan(LAUNCH_RESET_OPERATION_NAME)
@@ -187,10 +183,7 @@ class KubePodClient(
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
 
     // Wait for main containers to be ready or terminal to detect image pull errors early
-    val shouldWait = featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, Connection(replicationInput.connectionId))
-    if (shouldWait) {
-      waitForMainContainersReady(pod)
-    }
+    waitForMainContainersReady(pod)
   }
 
   fun launchCheck(

@@ -48,7 +48,6 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
