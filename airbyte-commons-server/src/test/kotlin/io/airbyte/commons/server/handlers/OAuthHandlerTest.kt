@@ -25,6 +25,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
@@ -874,6 +875,31 @@ internal class OAuthHandlerTest {
 
     Assertions.assertEquals(1, resultScopes.size())
     Assertions.assertEquals("write", resultScopes[0]["scope"].asText())
+  }
+
+  /**
+   * Saved OAuth responses are read back later from the secret store (SourceHandler.hydrateOAuthResponseSecret), and pods
+   * running the previous release read them during a deploy. The saved JSON must keep the snake_case field names.
+   */
+  @Test
+  fun `writeOAuthResponseSecret saves the response with the snake_case field names readers expect`() {
+    val workspaceId = UUID.randomUUID()
+    val secretPersistence = mockk<SecretPersistence>()
+    every { secretPersistenceService.getPersistenceFromWorkspaceId(any()) } returns secretPersistence
+    val storedPayload = slot<String>()
+    every { secretsRepositoryWriter.store(any(), capture(storedPayload), secretPersistence) } answers { firstArg() }
+
+    handler.writeOAuthResponseSecret(
+      workspaceId,
+      mapToCompleteOAuthResponse(mapOf("access_token" to "token", "refresh_token" to "refresh")),
+    )
+
+    val saved = deserialize(storedPayload.captured)
+    // request_error is empty here, so it may be saved as null or left out; both read back the same way
+    Assertions.assertEquals(setOf("request_succeeded", "auth_payload"), saved.fieldNames().asSequence().toSet() - "request_error")
+    Assertions.assertTrue(saved["request_error"]?.isNull ?: true)
+    Assertions.assertTrue(saved["request_succeeded"].asBoolean())
+    Assertions.assertEquals(jsonNode(mapOf("access_token" to "token", "refresh_token" to "refresh")), saved["auth_payload"])
   }
 
   companion object {

@@ -29,6 +29,7 @@ import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDI
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons.clone
+import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -1800,6 +1801,40 @@ internal class SourceHandlerTest {
         .get("client_id") as ObjectNode
     ).set<JsonNode>("path_in_connector_config", jsonNode(listOf(LWA_APP_ID_FIELD)))
     return spec
+  }
+
+  /**
+   * Secrets saved by OAuthHandler.writeOAuthResponseSecret are read back here when a source is created or updated with a
+   * secretId. These payloads are in the saved format, so they must keep loading when the API models change.
+   */
+  @ParameterizedTest
+  @ValueSource(
+    strings = [
+      // the format saved today: every field present, request_error null
+      """{"request_succeeded":true,"request_error":null,"auth_payload":{"access_token":"token","refresh_token":"refresh"}}""",
+      // request_error left out entirely
+      """{"request_succeeded":true,"auth_payload":{"access_token":"token","refresh_token":"refresh"}}""",
+    ],
+  )
+  fun `hydrateOAuthResponseSecret reads saved OAuth responses`(savedPayload: String) {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
+    every { secretsRepositoryReader.fetchJsonSecretFromSecretPersistence(any(), secretPersistence) } returns deserialize(savedPayload)
+
+    val authPayload = sourceHandler.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, UUID.randomUUID())
+
+    Assertions.assertEquals(jsonNode(mapOf("access_token" to "token", "refresh_token" to "refresh")), authPayload)
+  }
+
+  @Test
+  fun `hydrateOAuthResponseSecret keeps nested values in a saved OAuth response`() {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
+    val savedPayload =
+      """{"request_succeeded":true,"request_error":null,"auth_payload":{"credentials":{"access_token":"token","expires_in":3600},"scopes":["read","write"]}}"""
+    every { secretsRepositoryReader.fetchJsonSecretFromSecretPersistence(any(), secretPersistence) } returns deserialize(savedPayload)
+
+    val authPayload = sourceHandler.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, UUID.randomUUID())
+
+    Assertions.assertEquals(deserialize(savedPayload)["auth_payload"], authPayload)
   }
 
   companion object {
