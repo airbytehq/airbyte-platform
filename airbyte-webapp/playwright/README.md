@@ -8,11 +8,12 @@ This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Pl
 - `helpers/` - Contains re-usable helper methods for tests.
 - `playwright.config.ts` - Default Playwright configuration (for running against OSS).
 - `playwright.cloud-config.ts` - Configuration for running tests against the Airbyte Cloud environment.
-- `scripts/` - Contains helper script to run Playwright tests with various options, as well as setup/cleanup scripts for external test dependencies
+- `mock/` - The mock backend. It answers every API call of the OSS tests, so they need no deployed backend.
+- `scripts/` - The helper script that runs the tests, and the `setup`/`cleanup` scripts that deploy a test Postgres. The Postgres scripts serve CI only: the OSS tests do not use that Postgres, so you do not need to run them locally.
 
 ## Running Tests using the Helper Script
 
-You can use the helper script to point the e2e tests against a specific server and webapp. For example, if you are running cloud locally and would like to run the cloud e2e tests against that, you can run:
+You can use the helper script to point the cloud e2e tests at a specific server and webapp. For example, if you are running cloud locally and would like to run the cloud e2e tests against that, you can run:
 
 ```bash
 pnpm test -- --cloud --serverHost=https://local.airbyte.dev --webappUrl=https://localhost:3000
@@ -29,11 +30,11 @@ pnpm test -- --cloud --serverHost=https://local.airbyte.dev --webappUrl=https://
   Run cloud E2E tests using the cloud config (runs only the tests in `/cloud`).
 
 - `--serverHost <url>`  
-  Server host to use (defaults to frontend-dev).  
+  Cloud only. Server host for the cloud tests (defaults to frontend-dev).  
   Example: `https://frontend-dev-cloud.airbyte.com` or `https://local.airbyte.dev`
 
 - `--webappUrl <url>`  
-  Webapp environment to use (ie, the baseURL for Playwright tests).
+  Cloud only. Webapp URL for the cloud tests (the baseURL of the cloud config).  
   Example: `https://localhost:3000` or `https://localhost:3001`
 
 - `--debug`  
@@ -54,31 +55,17 @@ You can run a subset of tests by passing test paths as arguments:
 
 ```bash
 # Single test path
-pnpm test -- --serverHost="https://local.airbyte.dev" tests/builder
+pnpm test -- tests/builder
 
 # Multiple test paths
-pnpm test -- --serverHost="https://local.airbyte.dev" tests/builder tests/connector-crud
+pnpm test -- tests/builder tests/connector-crud
 ```
 
-> **Important:** Test paths must come **after** all the flags/options. The script automatically ensures the setup project runs first to handle authentication.
+> **Important:** Test paths must come **after** all the flags/options.
 
 ## Running the test suite locally
 
-The full Playwright E2E test suite relies on an external Postgres container for connection tests.
-
-The simplest way to boot it up locally is to run the following command from `oss/airbyte-webapp/playwright`:
-
-```bash
-pnpm run setup
-```
-
-After you are done running the tests, you can clean up the container with
-
-```bash
-pnpm run cleanup
-```
-
-The setup and cleanup scripts for Postgres are located in `scripts/`. These scripts automatically detect whether you're running locally (Docker) or in CI (Kubernetes) and use the appropriate deployment method.
+The OSS tests need no backend and no other services. `pnpm test` starts the webapp dev server, and the mock backend in `mock/` answers every API call.
 
 ## Test Reports
 

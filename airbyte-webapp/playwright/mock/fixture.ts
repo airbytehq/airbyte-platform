@@ -7,11 +7,14 @@ import { createMockBackend } from "./backend";
 import environments from "../../environments.json";
 
 /**
- * Origins that serve the Airbyte API during a test run: the webapp origin, the server host the live tests use,
- * and the API URL of the dev server. playwright.config.ts starts the dev server with `pnpm start local`.
+ * Origins that serve the Airbyte API during a test run:
+ * - `baseURL`: the webapp itself.
+ * - `REACT_APP_API_URL`: the API URL that CI sets. When it is set, the webapp calls it, with the dev server and with
+ *   the production build.
+ * - `environments.local.apiUrl`: the API URL that the webapp calls when `REACT_APP_API_URL` is not set.
  */
 function apiOrigins(baseURL: string) {
-  const urls = [baseURL, process.env.AIRBYTE_SERVER_HOST, process.env.REACT_APP_API_URL, environments.local.apiUrl];
+  const urls = [baseURL, process.env.REACT_APP_API_URL, environments.local.apiUrl];
   return [...new Set(urls.filter((url): url is string => !!url).map((url) => new URL(url).origin))];
 }
 
@@ -31,7 +34,6 @@ interface MockOptions {
  */
 export const test = base.extend<{ airbyte: MockAirbyte } & MockOptions>({
   airbyteScenario: [undefined, { option: true }],
-  storageState: { cookies: [], origins: [] },
   serviceWorkers: "block",
 
   airbyte: async ({ airbyteScenario, baseURL, context }, use, testInfo) => {

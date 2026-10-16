@@ -127,29 +127,6 @@ tasks.register<PnpmTask>("test") {
     outputs.upToDateWhen { true }
 }
 
-tasks.register<PnpmTask>("cypress") {
-    dependsOn("pnpmInstall")
-
-    /*
-    If the cypressWebappKey property has been set from the outside via the workflow file
-    we'll record the cypress session, otherwise we're not recording
-     */
-    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args =
-    if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
-        val group = System.getenv("CYPRESS_GROUP") ?: "default-group"
-        listOf("run", "cypress:run", "--record", "--group", group)
-    } else {
-        listOf("run", "cypress:run")
-    }
-
-    /*
-    Mark the outputs as never up to date, to ensure we always run the tests.
-    We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
-     */
-    outputs.upToDateWhen { false }
-}
-
 tasks.register<PnpmTask>("licenseCheck") {
     dependsOn("pnpmInstall")
 

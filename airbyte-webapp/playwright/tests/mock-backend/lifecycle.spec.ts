@@ -87,9 +87,6 @@ async function timeline(page: Page): Promise<Array<{ eventType: string; user?: s
 }
 
 test.describe("Mock backend lifecycles", () => {
-  // These tests use no deployed backend, so they do not use the signed-in state of the setup project.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test("starts the browser clock at the fixed start time, then lets it run", async ({ context, page, baseURL }) => {
     await installBackend(context, page, baseURL, connectionScenario);
 

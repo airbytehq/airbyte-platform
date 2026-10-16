@@ -10,9 +10,6 @@ import { scenario, streamRead } from "../../mock";
 const manifest = { version: "6.0.0", type: "DeclarativeSource", streams: [{ name: "Items" }] };
 
 test.describe("Mock backend Connector Builder", () => {
-  // These tests use no deployed backend, so they do not use the signed-in state of the setup project.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test("saves the draft and the testing values of a project, and returns both on a read", async ({
     context,
     page,

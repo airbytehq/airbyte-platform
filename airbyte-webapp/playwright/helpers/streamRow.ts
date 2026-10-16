@@ -135,16 +135,6 @@ export const streamRow = {
   },
 
   /**
-   * Checks if the stream is currently expanded
-   */
-  isExpanded: async (page: Page, namespace: string, streamName: string): Promise<boolean> => {
-    const streamRowLoc = streamRow.getStreamRow(page, namespace, streamName);
-    const expandButton = streamRowLoc.locator('button[data-testid="expand-collapse-stream-btn"]');
-    const ariaExpanded = await expandButton.getAttribute("aria-expanded");
-    return ariaExpanded === "true";
-  },
-
-  /**
    * Checks if the expand/collapse button is enabled (clickable)
    */
   isExpandButtonEnabled: async (page: Page, namespace: string, streamName: string): Promise<boolean> => {
@@ -198,15 +188,6 @@ export const streamRow = {
   },
 
   /**
-   * Gets the currently selected sync mode display text
-   */
-  getSelectedSyncModeText: async (page: Page, namespace: string, streamName: string): Promise<string> => {
-    const syncModeButton = streamRow.getSyncModeButton(page, namespace, streamName);
-    const text = await syncModeButton.textContent();
-    return text || "";
-  },
-
-  /**
    * Verifies that the selected sync mode matches the expected values
    */
   verifySelectedSyncMode: async (
@@ -247,15 +228,6 @@ export const streamRow = {
 
     // Close the multi-select dropdown with ESC key
     return pkCell.press("Escape");
-  },
-
-  /**
-   * Gets the selected primary key display text
-   */
-  getSelectedPK: async (page: Page, namespace: string, streamName: string): Promise<string> => {
-    const pkCell = streamRow.getPKCell(page, namespace, streamName);
-    const text = await pkCell.textContent();
-    return text || "";
   },
 
   /**
@@ -311,15 +283,6 @@ export const streamRow = {
 
     const option = listbox.getByRole("option", { name: cursor, exact: true });
     return option.click({ timeout: 5000 });
-  },
-
-  /**
-   * Gets the selected cursor field display text
-   */
-  getSelectedCursor: async (page: Page, namespace: string, streamName: string): Promise<string> => {
-    const cursorCell = streamRow.getCursorCell(page, namespace, streamName);
-    const text = await cursorCell.textContent();
-    return text || "";
   },
 
   /**
@@ -501,14 +464,5 @@ export const streamRow = {
   isStreamVisible: async (page: Page, namespace: string, streamName: string): Promise<boolean> => {
     const streamRowLoc = streamRow.getStreamRow(page, namespace, streamName);
     return streamRowLoc.isVisible();
-  },
-
-  /**
-   * Checks if a stream row exists in the DOM (may not be visible)
-   */
-  streamExists: async (page: Page, namespace: string, streamName: string): Promise<boolean> => {
-    const streamRowLoc = streamRow.getStreamRow(page, namespace, streamName);
-    const count = await streamRowLoc.count();
-    return count > 0;
   },
 };

@@ -18,29 +18,6 @@ export interface SyncModeValue {
 export type SyncModeDisplayString = string;
 
 /**
- * Common sync mode combinations for convenience
- * Matches the SUPPORTED_MODES in the webapp
- */
-export const CommonSyncModes = {
-  FULL_REFRESH_OVERWRITE: {
-    syncMode: SyncMode.full_refresh,
-    destinationSyncMode: DestinationSyncMode.overwrite,
-  } as SyncModeValue,
-  FULL_REFRESH_APPEND: {
-    syncMode: SyncMode.full_refresh,
-    destinationSyncMode: DestinationSyncMode.append,
-  } as SyncModeValue,
-  INCREMENTAL_APPEND: {
-    syncMode: SyncMode.incremental,
-    destinationSyncMode: DestinationSyncMode.append,
-  } as SyncModeValue,
-  INCREMENTAL_DEDUP: {
-    syncMode: SyncMode.incremental,
-    destinationSyncMode: DestinationSyncMode.append_dedup,
-  } as SyncModeValue,
-} as const;
-
-/**
  * Navigate to connection configuration page and wait for streams table to load
  */
 export const navigateToConnectionConfig = async (
@@ -157,13 +134,6 @@ export const clickButtonBypassingOverlay = async (
 };
 
 /**
- * Find a stream row by namespace and stream name
- */
-export const findStreamRow = (page: Page, namespace: string, streamName: string) => {
-  return page.locator(`[data-testid="row-depth-1-stream-${namespace}.${streamName}"]`);
-};
-
-/**
  * Filter streams by name and find a specific stream row
  */
 export const filterAndFindStream = async (
@@ -185,63 +155,6 @@ export const filterAndFindStream = async (
   }
 
   return streamRow;
-};
-
-/**
- * Enable/disable a stream by toggling its checkbox
- */
-export const toggleStreamEnabled = async (
-  page: Page,
-  namespace: string,
-  streamName: string,
-  enabled: boolean,
-  options: { timeout?: number } = {}
-) => {
-  const { timeout = 10000 } = options;
-  const streamRow = findStreamRow(page, namespace, streamName);
-  const checkbox = streamRow.locator('input[data-testid="sync-stream-checkbox"]');
-
-  const isCurrentlyChecked = await checkbox.isChecked();
-  if (isCurrentlyChecked !== enabled) {
-    await checkbox.click({ timeout });
-  }
-};
-
-/**
- * Expand/collapse a stream row
- */
-export const toggleStreamExpanded = async (
-  page: Page,
-  namespace: string,
-  streamName: string,
-  options: { timeout?: number } = {}
-) => {
-  const { timeout = 10000 } = options;
-  const streamRow = findStreamRow(page, namespace, streamName);
-  const expandButton = streamRow.locator('[data-testid="expand-stream-btn"]');
-  await expandButton.click({ timeout });
-};
-
-/**
- * Toggle field selection within a stream
- */
-export const toggleFieldEnabled = async (
-  page: Page,
-  namespace: string,
-  streamName: string,
-  fieldName: string,
-  enabled: boolean,
-  options: { timeout?: number } = {}
-) => {
-  const { timeout = 10000 } = options;
-  const streamRow = findStreamRow(page, namespace, streamName);
-  const fieldRow = streamRow.locator(`[data-testid="row-depth-2-field-${fieldName}"]`);
-  const fieldCheckbox = fieldRow.locator('input[data-testid="sync-field-checkbox"]');
-
-  const isCurrentlyChecked = await fieldCheckbox.isChecked();
-  if (isCurrentlyChecked !== enabled) {
-    await fieldCheckbox.click({ timeout });
-  }
 };
 
 /**

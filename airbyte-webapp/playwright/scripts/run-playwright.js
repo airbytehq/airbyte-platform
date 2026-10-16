@@ -16,14 +16,14 @@ const optionator = require("optionator")({
     {
       option: "serverHost",
       type: "String",
-      description: "Server host to use. defaults to frontend-dev.",
+      description: "Server host for the cloud tests. defaults to frontend-dev.",
       default: "https://frontend-dev-cloud.airbyte.com",
       example: "https://frontend-dev-cloud.airbyte.com or https://local.airbyte.dev",
     },
     {
       option: "webappUrl",
       type: "String",
-      description: "Webapp environment to use.",
+      description: "Webapp URL for the cloud tests.",
       example: "https://localhost:3000 or https://localhost:3001",
     },
     {
@@ -67,19 +67,18 @@ async function main() {
     // Extract any additional arguments (test paths) that weren't parsed as options
     const additionalArgs = options._;
 
-    if (options.cloud) {
-      command.push("--config=playwright.cloud-config.ts");
-    }
-
     // Set environment variables for the test run
     const envVars = [];
 
-    if (options.webappUrl) {
-      envVars.push(`AIRBYTE_WEBAPP_URL=${options.webappUrl}`);
-    }
-
-    if (options.serverHost) {
+    if (options.cloud) {
+      command.push("--config=playwright.cloud-config.ts");
       envVars.push(`AIRBYTE_SERVER_HOST=${options.serverHost}`);
+      if (options.webappUrl) {
+        envVars.push(`AIRBYTE_WEBAPP_URL=${options.webappUrl}`);
+      }
+    } else if (filteredArgs.some((arg) => arg.startsWith("--serverHost") || arg.startsWith("--webappUrl"))) {
+      // The OSS tests use a mock backend and always run the webapp on https://localhost:3000.
+      console.warn("⚠️ --serverHost and --webappUrl have no effect without --cloud.");
     }
 
     // Prepend environment variables to the command
@@ -112,9 +111,6 @@ async function main() {
         process.exit(1);
       }
 
-      // When targeting specific tests, force setup to still run first
-      command.push("--project=setup");
-      command.push("--project=oss-acceptance");
       command.push(...testPaths);
     }
 

@@ -91,9 +91,6 @@ async function checkActor(page: Page, checkId: string, actorId: string) {
 }
 
 test.describe("Mock backend", () => {
-  // These tests use no deployed backend, so they do not use the signed-in state of the setup project.
-  test.use({ storageState: { cookies: [], origins: [] } });
-
   test("fails the test on a request that no handler answers, naming method, path and operationId", async ({
     context,
     page,
@@ -270,7 +267,7 @@ test.describe("Mock backend", () => {
     const answers = ["closed", "open", "default_auth", "fail", "hang"] as const;
     const results = [];
     for (const answer of answers) {
-      const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const context = await browser.newContext();
       const page = await context.newPage();
       const input = scenario({ external: { securityCheck: answer } });
       const backend = await installBackend(context, page, baseURL, input);

@@ -11,7 +11,7 @@ const localUrls = {
 
 export default defineConfig({
   testDir: "./tests",
-  testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
+  testIgnore: ["cloud/**", "**/cloud/**"],
   // Writes the route table of the mock backend. It runs after the dev server has generated the API client.
   globalSetup: "./scripts/generate-mock-routes.js",
   fullyParallel: true,
@@ -49,19 +49,12 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    // Setup project - runs first for authentication
-    { name: "setup", testMatch: /.*\.setup\.ts/ },
     // OSS Acceptance tests
     {
       name: "oss-acceptance",
-      use: {
-        ...devices["Desktop Chrome"],
-        // Use signed-in state.
-        storageState: ".auth/user.json",
-      },
+      use: { ...devices["Desktop Chrome"] },
       // Must include top-level testIgnore patterns plus schema exclusion
-      testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
-      dependencies: ["setup"],
+      testIgnore: ["cloud/**", "**/cloud/**"],
     },
   ],
 });

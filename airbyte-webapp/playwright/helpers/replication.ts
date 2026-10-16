@@ -316,23 +316,6 @@ export const streamsTable = {
   },
 
   /**
-   * Checks if the namespace checkbox is checked
-   */
-  isNamespaceCheckboxChecked: async (page: Page): Promise<boolean> => {
-    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
-    return namespaceCheckbox.isChecked();
-  },
-
-  /**
-   * Checks if the namespace checkbox is in mixed/indeterminate state
-   */
-  isNamespaceCheckboxMixed: async (page: Page): Promise<boolean> => {
-    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
-    const ariaChecked = await namespaceCheckbox.getAttribute("aria-checked");
-    return ariaChecked === "mixed";
-  },
-
-  /**
    * Gets the namespace stream count text (e.g., "3 streams" or "1 / 3 streams")
    */
   getNamespaceStreamCount: async (page: Page): Promise<string> => {
@@ -367,21 +350,6 @@ export const streamsTable = {
     const tabButton = page.locator(`button[data-id="${tabId}"]`);
     await tabButton.click({ timeout: 10000 });
     await waitForTableRender(page);
-  },
-
-  /**
-   * Checks if a filter tab is active (selected)
-   */
-  isFilterTabActive: async (page: Page, tab: "all" | "enabledStreams" | "disabledStreams"): Promise<boolean> => {
-    const tabId = {
-      all: "all-step",
-      enabledStreams: "enabledstreams-step",
-      disabledStreams: "disabledstreams-step",
-    }[tab];
-
-    const tabButton = page.locator(`button[data-id="${tabId}"]`);
-    const className = await tabButton.getAttribute("class");
-    return className?.includes("active") || false;
   },
 
   /**
@@ -494,14 +462,6 @@ export const streamsTable = {
     const button = page.locator('button[data-testid="expand-collapse-all-streams-btn"]');
     const count = await button.count();
     return count > 0;
-  },
-
-  /**
-   * Clicks the expand/collapse all streams button
-   */
-  clickExpandCollapseAllStreamsButton: async (page: Page): Promise<void> => {
-    const button = page.locator('button[data-testid="expand-collapse-all-streams-btn"]');
-    return button.click({ timeout: 10000 });
   },
 
   /**

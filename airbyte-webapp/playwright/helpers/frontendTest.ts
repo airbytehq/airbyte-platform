@@ -6,7 +6,6 @@ import { createMockAirbyte } from "./mockApi";
 
 export const test = base.extend<{ airbyte: MockAirbyte; airbyteScenario: MockAirbyteScenario | undefined }>({
   airbyteScenario: [undefined, { option: true }],
-  storageState: { cookies: [], origins: [] },
   serviceWorkers: "block",
   airbyte: async ({ airbyteScenario }, use) => {
     if (!airbyteScenario) {

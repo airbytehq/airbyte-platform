@@ -1,46 +1,15 @@
-import { APIRequestContext, Page, expect } from "@playwright/test";
+import { Page, expect } from "@playwright/test";
 import { WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
-
-import { getApiBaseUrl } from "./api";
 
 /**
  * Connection Test Helpers
  *
  * This file contains a set of helpers for wiring up connections in our Playwright tests:
  *
- * - connectionAPI: connection updates through the API
  * - connectionUI: UI navigation and interaction helpers (visit pages, start/cancel syncs, verify status)
  * - jobUI: Job event and modal helpers for timeline/status tests
  * - connectionForm: Form interaction helpers for connection settings page
  */
-
-// Create connection API interface following the established connector pattern
-export const connectionAPI = {
-  // Update a connection
-  update: async (
-    request: APIRequestContext,
-    connectionId: string,
-    updates: Partial<WebBackendConnectionRead>
-  ): Promise<WebBackendConnectionRead> => {
-    const apiBaseUrl = getApiBaseUrl();
-
-    // Merge updates with current connection
-    const updateData = {
-      ...updates,
-      connectionId,
-    };
-
-    const response = await request.post(`${apiBaseUrl}/web_backend/connections/update`, {
-      data: updateData,
-    });
-
-    if (!response.ok()) {
-      throw new Error(`Failed to update connection: ${response.status()}`);
-    }
-
-    return await response.json();
-  },
-};
 
 // UI navigation helpers for connection pages
 export const connectionUI = {
@@ -61,18 +30,6 @@ export const connectionUI = {
   // Start a manual sync
   startManualSync: async (page: Page): Promise<void> => {
     return page.locator("[data-testid='manual-sync-button']").click();
-  },
-
-  // Start a manual reset (for tests that need it)
-  startManualReset: async (page: Page): Promise<void> => {
-    // Open the dropdown menu
-    await page.locator("[data-testid='job-history-dropdown-menu']").click();
-
-    // Click reset option
-    await page.locator("[data-testid='reset-data-dropdown-option']").click();
-
-    // Confirm the reset
-    return page.locator("[data-id='clear-data']").click();
   },
 
   // Cancel an ongoing sync
@@ -165,19 +122,6 @@ export const connectionForm = {
     await expect(button).toContainText(scheduleType, { timeout: 5000 });
   },
 
-  // Select basic schedule interval (e.g., "1-hours", "24-hours")
-  selectBasicScheduleData: async (page: Page, interval: string): Promise<void> => {
-    const button = page.locator('[data-testid="basic-schedule-listbox-button"]');
-
-    // Click to open the dropdown
-    await button.click();
-
-    // Find the option using data-testid and click it (this dropdown may have many options)
-    const option = page.locator(`[data-testid="frequency-${interval.toLowerCase()}-option"]`);
-    await option.waitFor({ state: "visible", timeout: 5000 });
-    await option.click();
-  },
-
   // Setup destination namespace with custom format
   setupDestinationNamespaceCustomFormat: async (page: Page, customValue: string): Promise<void> => {
     const namespaceButton = page.locator('[data-testid="namespace-definition-listbox-button"]');
@@ -223,21 +167,6 @@ export const connectionForm = {
   // Wait for and verify success notification
   verifySuccessNotification: async (page: Page): Promise<void> => {
     return expect(page.locator("text=Your changes were saved!")).toBeVisible({ timeout: 10000 });
-  },
-
-  // Complete namespace update flow: open advanced, set custom format, verify preview
-  updateDestinationNamespaceCustom: async (page: Page, customValue: string, expectedPreview: string): Promise<void> => {
-    await connectionForm.toggleAdvancedSettings(page);
-    await connectionForm.setupDestinationNamespaceCustomFormat(page, customValue);
-    const preview = page.locator('[data-testid="custom-namespace-preview"]');
-    return expect(preview).toHaveText(expectedPreview, { timeout: 5000 });
-  },
-
-  // Complete prefix update flow: set prefix, verify preview
-  updateStreamPrefix: async (page: Page, prefix: string): Promise<void> => {
-    await connectionForm.setStreamPrefix(page, prefix);
-    const prefixPreview = page.locator('[data-testid="stream-prefix-preview"]');
-    return expect(prefixPreview).toContainText(prefix, { timeout: 5000 });
   },
 
   // Verify a preview element contains expected text

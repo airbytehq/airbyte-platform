@@ -61,7 +61,6 @@ cypress.env.json
 /playwright/playwright-report/
 /playwright/blob-report/
 /playwright/playwright/.cache/
-/playwright/tests/cloud/embedded/.embedded-env.json
 
 # Route table of the Playwright mock backend, generated from the API client
 /playwright/mock/generated/
