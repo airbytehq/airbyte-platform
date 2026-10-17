@@ -275,3 +275,11 @@ object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.exte
  * Remove once the Retool form is retired and every organization is on the platform settings.
  */
 object EnableBillingNotificationSettings : Temporary<Boolean>(key = "platform.billing-notification-settings", default = false)
+
+/**
+ * Cloud gate for custom docker image connector definitions. Evaluated with the calling user (email attribute),
+ * the workspace and its organization, so the approved-customer targeting can be expressed on any of the three.
+ * Instance admins bypass it. Community edition never evaluates it.
+ * Temporary on purpose: the approved list moves to a Stigg entitlement, and this flag is removed with that change.
+ */
+object AllowCustomDockerConnectors : Temporary<Boolean>(key = "platform.allow-custom-docker-connectors", default = false)
