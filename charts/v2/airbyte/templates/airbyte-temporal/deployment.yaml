@@ -51,6 +51,9 @@ spec:
       {{- if .Values.temporal.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.temporal.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
 {{- if .Values.temporal.extraInitContainers }}
       initContainers:
 {{- toYaml .Values.temporal.extraInitContainers | nindent 6 }}

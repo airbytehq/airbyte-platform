@@ -50,6 +50,9 @@ spec:
       {{- if .Values.keycloak.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.keycloak.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
