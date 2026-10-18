@@ -12,11 +12,23 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.workloadApiServer.service.type }}
+  {{- with .Values.workloadApiServer.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- if and .Values.workloadApiServer.service.externalTrafficPolicy (or (eq .Values.workloadApiServer.service.type "NodePort") (eq .Values.workloadApiServer.service.type "LoadBalancer")) }}
+  externalTrafficPolicy: {{ .Values.workloadApiServer.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.workloadApiServer.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
   ports:
     - port: {{ .Values.workloadApiServer.service.port }}
       targetPort: http
       protocol: TCP
       name: http
+      {{- with .Values.workloadApiServer.service.appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
     {{- if .Values.workloadApiServer.extraSelectorLabels }}
