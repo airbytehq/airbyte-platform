@@ -9,7 +9,7 @@ import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { ContextLayerPage } from "pages/ContextLayerPage/ContextLayerPage";
+import { ContextLayerLayout } from "pages/ContextLayerPage/ContextLayerLayout";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
@@ -62,7 +62,7 @@ export const OrganizationRoutes: React.FC = () => {
       {isCloudApp && (
         <>
           <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
-          <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
+          <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerLayout />}>
             <Route index element={<OrganizationContextLayerPage />} />
             <Route path={ContextLayerRoutePaths.AgentAccess} element={<OrganizationContextLayerConnectorsPage />} />
             {showSemanticSearch && (

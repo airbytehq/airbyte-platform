@@ -98,8 +98,8 @@ jest.mock("pages/workspaces/OrganizationWorkspacesPage", () => ({
   default: () => <div data-testid="organization-workspaces-page" />,
 }));
 
-jest.mock("pages/ContextLayerPage/ContextLayerPage", () => ({
-  ContextLayerPage: () => {
+jest.mock("pages/ContextLayerPage/ContextLayerLayout", () => ({
+  ContextLayerLayout: () => {
     const { Outlet: MockOutlet } = jest.requireActual("react-router-dom");
     return <MockOutlet />;
   },

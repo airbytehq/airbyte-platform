@@ -8,7 +8,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { useAgentsProvisioningStatusQuery } from "core/api";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
-import { ContextLayerPage } from "./ContextLayerPage";
+import { ContextLayerLayout } from "./ContextLayerLayout";
 
 jest.mock("area/organization/utils", () => ({
   useCurrentOrganizationId: jest.fn(() => "test-organization-id"),
@@ -34,7 +34,7 @@ const mockUseAgentsProvisioningStatusQuery = useAgentsProvisioningStatusQuery as
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 
 const renderAt = async (path: string) =>
-  render(<ContextLayerPage />, {
+  render(<ContextLayerLayout />, {
     wrapper: ({ children }) => (
       <TestWrapper route={path}>
         <Routes>
@@ -49,7 +49,7 @@ const renderAt = async (path: string) =>
     ),
   });
 
-describe("ContextLayerPage", () => {
+describe("ContextLayerLayout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseCurrentOrganizationId.mockReturnValue("test-organization-id");

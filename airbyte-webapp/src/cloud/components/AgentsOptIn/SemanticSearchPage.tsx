@@ -21,9 +21,9 @@ import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import {
   ColumnHeader,
+  ContextLayerAvailabilityGuard,
   ContextLayerLoadError,
   ContextLayerSettingsEmptyState,
-  ContextLayerUnavailable,
 } from "./ContextLayerPage";
 import {
   SemanticSearchBackfillDate,
@@ -33,7 +33,6 @@ import {
 } from "./SemanticSearchBackfill";
 import styles from "./SemanticSearchPage.module.scss";
 import { SemanticSearchSwitch } from "./SemanticSearchSwitch";
-import { useContextLayerEligibility } from "./useContextLayerEligibility";
 import { ContextLayerWorkspace, useContextLayerWorkspaces } from "./useContextLayerWorkspaces";
 
 interface WorkspaceConnectionInventory {
@@ -379,26 +378,10 @@ const SemanticSearchSettingSection: React.FC = () => {
   );
 };
 
-const SemanticSearchPageContent: React.FC = () => {
-  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
-
-  if (isCloudApp && statusQuery.isInitialLoading) {
-    return <LoadingPage />;
-  }
-  if (isCloudApp && statusQuery.isError) {
-    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
-  }
-  if (!isCloudApp || !isEligible || !status) {
-    return <ContextLayerUnavailable />;
-  }
-
-  return <SemanticSearchSettingSection />;
-};
-
 export const SemanticSearchPage: React.FC = () => {
   return (
     <React.Suspense fallback={<LoadingPage />}>
-      <SemanticSearchPageContent />
+      <ContextLayerAvailabilityGuard>{() => <SemanticSearchSettingSection />}</ContextLayerAvailabilityGuard>
     </React.Suspense>
   );
 };

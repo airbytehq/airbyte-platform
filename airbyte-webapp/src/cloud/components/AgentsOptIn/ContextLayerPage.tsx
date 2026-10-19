@@ -21,6 +21,7 @@ import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { getOrganizationUsagePath } from "cloud/views/settings/routePaths";
 import {
+  AgentsProvisioningStatus,
   useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
   useFusionWorkspaceConnectors,
@@ -122,22 +123,10 @@ const WorkspaceConnectorTable: React.FC<{
       id: "agentAccess",
       meta: { thClassName: styles.controlColumn, tdClassName: styles.controlColumn },
       header: () => (
-        <FlexContainer alignItems="center" gap="sm">
-          <FormattedMessage id="cloud.contextLayer.setup.agentAccess.title" />
-          <Tooltip
-            control={
-              <button
-                type="button"
-                className={styles.infoTooltipButton}
-                aria-label={formatMessage({ id: "cloud.contextLayer.agentAccess.tooltip" })}
-              >
-                <Icon type="infoOutline" size="xs" />
-              </button>
-            }
-          >
-            <FormattedMessage id="cloud.contextLayer.agentAccess.tooltip" />
-          </Tooltip>
-        </FlexContainer>
+        <ColumnHeader
+          titleId="cloud.contextLayer.setup.agentAccess.title"
+          tooltipId="cloud.contextLayer.agentAccess.tooltip"
+        />
       ),
       cell: ({ row: { original: connector } }) => {
         const key = `${workspace.workspaceId}:${connector.kind}:${connector.id}`;
@@ -396,11 +385,12 @@ const WorkspaceConnectorAccess: React.FC = () => {
   );
 };
 
-const ContextLayerToggle: React.FC<{ enabled: boolean; disabled: boolean; onClick?: () => void }> = ({
-  enabled,
-  disabled,
-  onClick,
-}) => {
+const ContextLayerToggle: React.FC<{
+  enabled: boolean;
+  disabled: boolean;
+  canManage: boolean;
+  onToggle: () => void;
+}> = ({ enabled, disabled, canManage, onToggle }) => {
   const { formatMessage } = useIntl();
 
   return (
@@ -411,8 +401,8 @@ const ContextLayerToggle: React.FC<{ enabled: boolean; disabled: boolean; onClic
       <Switch
         size="sm"
         checked={enabled}
-        disabled={disabled || !onClick}
-        onChange={onClick}
+        disabled={disabled || !canManage}
+        onChange={canManage ? onToggle : undefined}
         aria-label={formatMessage({ id: "cloud.contextLayer.organizationAgentAccess.title" })}
       />
     </div>
@@ -636,6 +626,24 @@ export const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRet
   );
 };
 
+export const ContextLayerAvailabilityGuard: React.FC<{
+  children: (status: AgentsProvisioningStatus) => React.ReactNode;
+}> = ({ children }) => {
+  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
+
+  if (isCloudApp && statusQuery.isInitialLoading) {
+    return <LoadingPage />;
+  }
+  if (isCloudApp && statusQuery.isError) {
+    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
+  }
+  if (!isCloudApp || !isEligible || !status) {
+    return <ContextLayerUnavailable />;
+  }
+
+  return <>{children(status)}</>;
+};
+
 export const ContextLayerSettingsEmptyState: React.FC<{ title: React.ReactNode; description: React.ReactNode }> = ({
   title,
   description,
@@ -664,7 +672,7 @@ export const ContextLayerSettingsEmptyState: React.FC<{ title: React.ReactNode; 
 
 const ContextLayerPageContent: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
+  const { isEligible } = useContextLayerEligibility();
   const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
   const enrollOrganization = useEnrollOrganizationInAgents();
   const enableWorkspaceActors = useEnableFusionWorkspaceActors();
@@ -681,16 +689,6 @@ const ContextLayerPageContent: React.FC = () => {
     enabled: isEligible,
   });
   const [isEnabling, setIsEnabling] = useState(false);
-
-  if (isCloudApp && statusQuery.isInitialLoading) {
-    return <LoadingPage />;
-  }
-  if (isCloudApp && statusQuery.isError) {
-    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
-  }
-  if (!isCloudApp || !isEligible || !status) {
-    return <ContextLayerUnavailable />;
-  }
 
   const enableAgentAccess = async () => {
     let enrolled = false;
@@ -766,77 +764,69 @@ const ContextLayerPageContent: React.FC = () => {
   };
 
   return (
-    <div className={styles.page}>
-      <FlexContainer direction="column" gap="xl">
-        <div className={styles.header}>
-          <Heading as="h1" size="md">
-            <FormattedMessage id="cloud.contextLayer.title" />
-          </Heading>
-          <Text className={styles.subtitle}>
-            {status.is_enrolled ? (
-              <>
-                <FormattedMessage id="cloud.contextLayer.subtitle.enabled" />
-                {canViewOrganizationSettings && canViewOrganizationUsage && (
-                  <>
-                    {" "}
-                    <Link to={getOrganizationUsagePath(organizationId)}>
-                      <FormattedMessage id="cloud.contextLayer.subtitle.viewUsage" />
-                    </Link>
-                  </>
-                )}
-              </>
-            ) : (
-              <FormattedMessage id="cloud.contextLayer.subtitle" />
-            )}
-          </Text>
-        </div>
-        <Card dataTestId="context-layer-card">
-          <div className={styles.cardContent}>
-            <ContextLayerToggle
-              enabled={status.is_enrolled}
-              disabled={isEnabling}
-              onClick={
-                canManageOrganizationPermissions
-                  ? status.is_enrolled
-                    ? openDisableConfirmation
-                    : () => void enableAgentAccess()
-                  : undefined
-              }
-            />
-            <Text>
-              <FormattedMessage id="cloud.contextLayer.organizationAgentAccess.description" />
-            </Text>
-            {!status.is_enrolled && !canManageOrganizationPermissions && (
-              <div data-testid="context-layer-admin-required">
-                <Text color="grey">
-                  <FormattedMessage id="cloud.contextLayer.enable.adminRequired" />
-                </Text>
-                <Text color="grey" size="sm">
-                  <FormattedMessage id="cloud.contextLayer.enable.adminRequired.description" />
+    <ContextLayerAvailabilityGuard>
+      {(status) => {
+        const toggleAgentAccess = status.is_enrolled ? openDisableConfirmation : () => void enableAgentAccess();
+
+        return (
+          <div className={styles.page}>
+            <FlexContainer direction="column" gap="xl">
+              <div className={styles.header}>
+                <Heading as="h1" size="md">
+                  <FormattedMessage id="cloud.contextLayer.title" />
+                </Heading>
+                <Text className={styles.subtitle}>
+                  {status.is_enrolled ? (
+                    <>
+                      <FormattedMessage id="cloud.contextLayer.subtitle.enabled" />
+                      {canViewOrganizationSettings && canViewOrganizationUsage && (
+                        <>
+                          {" "}
+                          <Link to={getOrganizationUsagePath(organizationId)}>
+                            <FormattedMessage id="cloud.contextLayer.subtitle.viewUsage" />
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <FormattedMessage id="cloud.contextLayer.subtitle" />
+                  )}
                 </Text>
               </div>
-            )}
+              <Card dataTestId="context-layer-card">
+                <div className={styles.cardContent}>
+                  <ContextLayerToggle
+                    enabled={status.is_enrolled}
+                    disabled={isEnabling}
+                    canManage={canManageOrganizationPermissions}
+                    onToggle={toggleAgentAccess}
+                  />
+                  <Text>
+                    <FormattedMessage id="cloud.contextLayer.organizationAgentAccess.description" />
+                  </Text>
+                  {!status.is_enrolled && !canManageOrganizationPermissions && (
+                    <div data-testid="context-layer-admin-required">
+                      <Text color="grey">
+                        <FormattedMessage id="cloud.contextLayer.enable.adminRequired" />
+                      </Text>
+                      <Text color="grey" size="sm">
+                        <FormattedMessage id="cloud.contextLayer.enable.adminRequired.description" />
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              </Card>
+              {showSemanticSearch && <SemanticSearchCard isReadOnly={!canManageOrganizationPermissions} />}
+            </FlexContainer>
           </div>
-        </Card>
-        {showSemanticSearch && <SemanticSearchCard isReadOnly={!canManageOrganizationPermissions} />}
-      </FlexContainer>
-    </div>
+        );
+      }}
+    </ContextLayerAvailabilityGuard>
   );
 };
 
-const ContextLayerConnectorsPageContent: React.FC = () => {
+const ContextLayerConnectorsPageContent: React.FC<{ status: AgentsProvisioningStatus }> = ({ status }) => {
   const organizationId = useCurrentOrganizationId();
-  const { isCloudApp, statusQuery, status, isEligible } = useContextLayerEligibility();
-
-  if (isCloudApp && statusQuery.isInitialLoading) {
-    return <LoadingPage />;
-  }
-  if (isCloudApp && statusQuery.isError) {
-    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
-  }
-  if (!isCloudApp || !isEligible || !status) {
-    return <ContextLayerUnavailable />;
-  }
 
   if (!status.is_enrolled) {
     return (
@@ -875,7 +865,9 @@ export const ContextLayerPage: React.FC = () => {
 export const ContextLayerConnectorsPage: React.FC = () => {
   return (
     <React.Suspense fallback={<LoadingPage />}>
-      <ContextLayerConnectorsPageContent />
+      <ContextLayerAvailabilityGuard>
+        {(status) => <ContextLayerConnectorsPageContent status={status} />}
+      </ContextLayerAvailabilityGuard>
     </React.Suspense>
   );
 };

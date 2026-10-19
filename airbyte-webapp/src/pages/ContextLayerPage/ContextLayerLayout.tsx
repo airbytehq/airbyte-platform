@@ -47,7 +47,7 @@ const ContextLayerNavigation: React.FC = () => {
   );
 };
 
-export const ContextLayerPage: React.FC = () => {
+export const ContextLayerLayout: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
   const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
