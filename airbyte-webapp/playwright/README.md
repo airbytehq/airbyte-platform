@@ -1,6 +1,6 @@
-# Playwright E2E Tests
+# Playwright Acceptance Tests
 
-This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Playwright](https://playwright.dev/).
+This directory contains the acceptance tests of the Airbyte webapp, written with [Playwright](https://playwright.dev/). The OSS tests run against the mock backend in `mock/`. The Cloud tests in `tests/cloud/` sign in to a real Cloud environment, so they are end-to-end tests.
 
 ## Structure
 
@@ -9,7 +9,7 @@ This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Pl
 - `playwright.config.ts` - Default Playwright configuration (for running against OSS).
 - `playwright.cloud-config.ts` - Configuration for running tests against the Airbyte Cloud environment.
 - `mock/` - The mock backend. It answers every API call of the OSS tests, so they need no deployed backend.
-- `scripts/` - The helper script that runs the tests, and the `setup`/`cleanup` scripts that deploy a test Postgres. The Postgres scripts serve CI only: the OSS tests do not use that Postgres, so you do not need to run them locally.
+- `scripts/` - Contains the helper script to run Playwright tests with various options, and the script that writes the route table of the mock backend.
 
 ## Running Tests using the Helper Script
 
@@ -67,9 +67,23 @@ pnpm test -- tests/builder tests/connector-crud
 
 The OSS tests need no backend and no other services. `pnpm test` starts the webapp dev server, and the mock backend in `mock/` answers every API call.
 
+## When CI runs the tests
+
+Two CI jobs run the OSS tests. Both use the mock backend and install no OSS release.
+
+- **`OSS FE Acceptance`** (`.github/workflows/pr-test-fe-acceptance.yml`):
+  - **PR Build:** when a pull request changes files that match the `workflow`, `frontend` or `frontendServers` path filter.
+  - **Merge: Build:** on each push to `master` that starts a merge build. Merge: Build skips pushes that only change paths in its `paths-ignore` list, such as `docs/**` or most of `.github/**`.
+- **`OSS FE Acceptance on stage`** (`.github/workflows/test-oss-fe-acceptance-stage.yml`): during the stage deploy of Deploy to Stage + Prod, when the deploy runs its tests (`run_tests: true`, the default). The job is non-blocking: a failure does not stop the deploy. The production deploy runs no Playwright tests.
+
+Each job reports its tests to Datadog Test Optimization: `OSS FE Acceptance` as the service `oss-fe-acceptance-test`, and `OSS FE Acceptance on stage` as `stage-oss-fe-acceptance-test`.
+
 ## Test Reports
 
-Test reports from CI runs are stored in a GCS bucket, and are viewable in the Playwright job from the `Generate Playwright report and trace links` step. For local runs, to access and view a report from the latest local run, use:
+- **`OSS FE Acceptance`:** the job uploads the report and the traces to a GCS bucket. Open them from the links in the `Generate Playwright report and trace links` step. The report is also a run artifact, `playwright-report-oss`.
+- **`OSS FE Acceptance on stage`:** the report is a run artifact, `playwright-report-oss-stage`. This job does not upload to GCS.
+
+To view the report of the latest local run, use:
 
 ```bash
 pnpm exec playwright show-report

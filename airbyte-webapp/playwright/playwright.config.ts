@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// The fe-e2e-playwright-test CI job sets PLAYWRIGHT_PRODUCTION_BUILD=true to test a production build of the webapp.
+// The OSS FE Acceptance CI jobs, on pull requests, merges and stage, set PLAYWRIGHT_PRODUCTION_BUILD=true to test a production build of the webapp.
 // The dev server compiles each module on request, which makes every page load slow.
 const productionBuild = process.env.PLAYWRIGHT_PRODUCTION_BUILD === "true";
 // The backend URLs that `pnpm start local` gives to Vite (scripts/start-dev.js, environments.json).

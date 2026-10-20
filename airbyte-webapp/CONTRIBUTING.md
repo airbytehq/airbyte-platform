@@ -467,17 +467,21 @@ To run unit tests interactively, use `pnpm test`. To start a one-off headless ru
 `pnpm test:ci` instead. Unit test files are located in the same directory as the module
 they're testing, using the `.test.ts` extension.
 
-### End-to-end (e2e) tests with Playwright
+### Acceptance tests with Playwright
 
-End-to-end tests are written using [Playwright](https://playwright.dev/). The test suite can be found in the `/playwright` directory. For detailed instructions on running and debugging Playwright tests, please refer to the [Playwright README](/playwright/README.md).
+Acceptance tests are written using [Playwright](https://playwright.dev/). The test suite can be found in the `/playwright` directory. For detailed instructions on running and debugging Playwright tests, please refer to the [Playwright README](playwright/README.md).
 
 #### Running the tests locally
 
 The OSS tests answer every API call from a mock backend (`playwright/mock/`). They need no deployed Airbyte and no other services. Run these commands from `oss/airbyte-webapp/playwright`:
 
 - `pnpm test` runs the tests headless against the webapp dev server.
-- `PLAYWRIGHT_PRODUCTION_BUILD=true pnpm test` runs the tests against a production build of the webapp. The pull request CI job runs the tests this way.
+- `PLAYWRIGHT_PRODUCTION_BUILD=true pnpm test` runs the tests against a production build of the webapp. The CI jobs run the tests this way.
 - `pnpm test -- --ui` opens Playwright's UI mode. There you can select tests, watch the browser, and use the Playwright inspector.
+
+#### Running the tests in CI
+
+CI runs these tests in two jobs. `OSS FE Acceptance` runs on PR Build for frontend changes and on merge builds of `master`. `OSS FE Acceptance on stage` runs during the stage deploy. The [Playwright README](playwright/README.md#when-ci-runs-the-tests) lists the exact triggers.
 
 ## Mocking APIs and features in development
 
