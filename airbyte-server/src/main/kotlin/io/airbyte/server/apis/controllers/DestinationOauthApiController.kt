@@ -4,12 +4,14 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.DestinationOauthApi
-import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.DestinationOauthConsentRequest
-import io.airbyte.api.model.generated.OAuthConsentRead
-import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.apis.DestinationOauthApi
+import io.airbyte.api.server.generated.models.CompleteDestinationOAuthRequest
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.DestinationOauthConsentRequest
+import io.airbyte.api.server.generated.models.OAuthConsentRead
+import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -20,18 +22,16 @@ import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/destination_oauths")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DestinationOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : DestinationOauthApi {
-  @Post("/complete_oauth")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -40,9 +40,14 @@ class DestinationOauthApiController(
   )
   override fun completeDestinationOAuth(
     @Body completeDestinationOAuthRequest: CompleteDestinationOAuthRequest,
-  ): CompleteOAuthResponse? = execute { oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest) }
+  ): CompleteOAuthResponse {
+    // the spec leaves redirectUrl optional, but every OAuth flow needs it to finish
+    if (completeDestinationOAuthRequest.redirectUrl == null) {
+      throw BadRequestProblem(ProblemMessageData().message("redirectUrl is required"))
+    }
+    return execute { oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest) }
+  }
 
-  @Post("/get_consent_url")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -51,9 +56,8 @@ class DestinationOauthApiController(
   )
   override fun getDestinationOAuthConsent(
     @Body destinationOauthConsentRequest: DestinationOauthConsentRequest,
-  ): OAuthConsentRead? = execute { oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest) }
+  ): OAuthConsentRead = execute { oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest) }
 
-  @Post("/oauth_params/create")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(

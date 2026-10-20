@@ -6,13 +6,13 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.model.generated.ActorTypeEnum
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.CompleteSourceOauthRequest
-import io.airbyte.api.model.generated.OAuthScopeItem
-import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
-import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
-import io.airbyte.api.model.generated.SourceOAuthScopesRead
-import io.airbyte.api.model.generated.SourceOAuthScopesRequest
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.CompleteSourceOauthRequest
+import io.airbyte.api.server.generated.models.OAuthScopeItem
+import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRead
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -108,14 +108,12 @@ internal class OAuthHandlerTest {
   @Test
   fun setSourceInstancewideOauthParams() {
     val sourceDefId = UUID.randomUUID()
-    val params: MutableMap<String?, Any?> = HashMap()
+    val params = mutableMapOf<String, Any>()
     params.put(CLIENT_ID_KEY, CLIENT_ID)
     params.put(CLIENT_SECRET_KEY, CLIENT_SECRET)
 
     val actualRequest =
-      SetInstancewideSourceOauthParamsRequestBody()
-        .sourceDefinitionId(sourceDefId)
-        .params(params)
+      SetInstancewideSourceOauthParamsRequestBody(sourceDefinitionId = sourceDefId, params = params)
 
     // Mock the method that's called inside setSourceInstancewideOauthParams
     every { oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.empty<UUID>(), Optional.empty<UUID>(), sourceDefId) } returns
@@ -133,14 +131,15 @@ internal class OAuthHandlerTest {
   @Test
   fun setDestinationInstancewideOauthParams() {
     val destinationDefId = UUID.randomUUID()
-    val params: MutableMap<String?, Any?> = HashMap()
+    val params = mutableMapOf<String, Any>()
     params.put(CLIENT_ID_KEY, CLIENT_ID)
     params.put(CLIENT_SECRET_KEY, CLIENT_SECRET)
 
     val actualRequest =
-      SetInstancewideDestinationOauthParamsRequestBody()
-        .destinationDefinitionId(destinationDefId)
-        .params(params)
+      SetInstancewideDestinationOauthParamsRequestBody(
+        destinationDefinitionId = destinationDefId,
+        params = params,
+      )
 
     // Mock the method that's called inside setDestinationInstancewideOauthParams
     every { oauthService.getDestinationOAuthParamByDefinitionIdOptional(Optional.empty<UUID>(), Optional.empty<UUID>(), destinationDefId) } returns
@@ -312,9 +311,7 @@ internal class OAuthHandlerTest {
 
     // This is being created without returnSecretCoordinate set intentionally
     val completeSourceOauthRequest =
-      CompleteSourceOauthRequest()
-        .sourceDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
+      CompleteSourceOauthRequest(sourceDefinitionId = sourceDefinitionId, workspaceId = workspaceId)
 
     val handlerSpy: OAuthHandler = spyk(handler)
 
@@ -329,19 +326,17 @@ internal class OAuthHandlerTest {
     verify { handlerSpy.completeSourceOAuth(completeSourceOauthRequest) }
     verify(exactly = 0) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
 
-    completeSourceOauthRequest.returnSecretCoordinate(true)
+    // the request is immutable, so each case uses a copy with returnSecretCoordinate set
+    val withSecretCoordinate = completeSourceOauthRequest.copy(returnSecretCoordinate = true)
+    handlerSpy.completeSourceOAuthHandleReturnSecret(withSecretCoordinate)
 
-    handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest)
+    verify { handlerSpy.completeSourceOAuth(withSecretCoordinate) }
+    verify(exactly = 1) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
 
-    verify(exactly = 2) { handlerSpy.completeSourceOAuth(completeSourceOauthRequest) }
-    verify { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
+    handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest.copy(returnSecretCoordinate = false))
 
-    completeSourceOauthRequest.returnSecretCoordinate(false)
-
-    handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest)
-
-    verify(exactly = 3) { handlerSpy.completeSourceOAuth(completeSourceOauthRequest) }
-    verify { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
+    verify(exactly = 3) { handlerSpy.completeSourceOAuth(any<CompleteSourceOauthRequest>()) }
+    verify(exactly = 1) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
   }
 
   @Test
@@ -350,10 +345,11 @@ internal class OAuthHandlerTest {
     val workspaceId = UUID.randomUUID()
 
     val completeSourceOauthRequest =
-      CompleteSourceOauthRequest()
-        .sourceDefinitionId(sourceDefinitionId)
-        .workspaceId(workspaceId)
-        .returnSecretCoordinate(true)
+      CompleteSourceOauthRequest(
+        sourceDefinitionId = sourceDefinitionId,
+        workspaceId = workspaceId,
+        returnSecretCoordinate = true,
+      )
 
     val handlerSpy: OAuthHandler = spyk(handler)
 
@@ -374,8 +370,8 @@ internal class OAuthHandlerTest {
     verify(exactly = 0) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
     // The failure response is surfaced so callers can report the real OAuth error.
     Assertions.assertEquals(failedResponse, result)
-    Assertions.assertEquals(false, result?.requestSucceeded)
-    Assertions.assertEquals("access_denied", result?.requestError)
+    Assertions.assertEquals(false, result.requestSucceeded)
+    Assertions.assertEquals("access_denied", result.requestError)
   }
 
   @Test
@@ -542,12 +538,12 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val result = handler.getSourceOAuthScopes(request)
 
-    Assertions.assertEquals(listOf(OAuthScopeItem().scope("read"), OAuthScopeItem().scope("chat")), result.scopes)
+    Assertions.assertEquals(listOf(OAuthScopeItem(scope = "read"), OAuthScopeItem(scope = "chat")), result.scopes)
     Assertions.assertEquals(emptyList<OAuthScopeItem>(), result.optionalScopes)
-    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategyEnum.SPACE, result.scopeJoinStrategy)
+    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategy.SPACE, result.scopeJoinStrategy)
   }
 
   @Test
@@ -566,7 +562,7 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val exception =
       Assertions.assertThrows(ConfigNotFoundException::class.java) {
         handler.getSourceOAuthScopes(request)
@@ -592,11 +588,11 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val result = handler.getSourceOAuthScopes(request)
 
-    Assertions.assertEquals(listOf(OAuthScopeItem().scope("read")), result.scopes)
-    Assertions.assertEquals(listOf(OAuthScopeItem().scope("admin:read")), result.optionalScopes)
+    Assertions.assertEquals(listOf(OAuthScopeItem(scope = "read")), result.scopes)
+    Assertions.assertEquals(listOf(OAuthScopeItem(scope = "admin:read")), result.optionalScopes)
   }
 
   @Test
@@ -616,10 +612,10 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val result = handler.getSourceOAuthScopes(request)
 
-    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategyEnum.COMMA, result.scopeJoinStrategy)
+    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategy.COMMA, result.scopeJoinStrategy)
   }
 
   @Test
@@ -639,7 +635,7 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     Assertions.assertThrows(IllegalArgumentException::class.java) {
       handler.getSourceOAuthScopes(request)
     }
@@ -652,7 +648,7 @@ internal class OAuthHandlerTest {
     val spec = ConnectorSpecification()
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val exception =
       Assertions.assertThrows(ConfigNotFoundException::class.java) {
         handler.getSourceOAuthScopes(request)
@@ -678,10 +674,10 @@ internal class OAuthHandlerTest {
       )
     mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
 
-    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val request = SourceOAuthScopesRequest(sourceDefinitionId = sourceDefId, workspaceId = workspaceId)
     val result = handler.getSourceOAuthScopes(request)
 
-    Assertions.assertEquals(listOf(OAuthScopeItem().scope("new_read"), OAuthScopeItem().scope("new_chat")), result.scopes)
+    Assertions.assertEquals(listOf(OAuthScopeItem(scope = "new_read"), OAuthScopeItem(scope = "new_chat")), result.scopes)
   }
 
   // --- applyRequestedScopes tests ---

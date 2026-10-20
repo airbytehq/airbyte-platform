@@ -802,8 +802,7 @@ open class ConnectorBuilderProjectsHandler
           existingHydratedTestingValues,
         )
 
-      // TODO: OAuthHelper still builds the Java model, shared with OAuthHandler; drop this conversion when they move to Kotlin
-      return Jsons.convertValue(mapToCompleteOAuthResponse(result), CompleteOAuthResponse::class.java)
+      return mapToCompleteOAuthResponse(result)
     }
 
     private fun getManifestForProject(project: ConnectorBuilderProject): JsonNode =

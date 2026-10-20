@@ -5,8 +5,8 @@
 package io.airbyte.server.apis.publicapi.services
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.OAuthConsentRead
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.OAuthConsentRead
 import io.airbyte.publicApi.server.generated.models.ActorTypeEnum
 import io.micronaut.http.HttpResponse
 import jakarta.validation.constraints.NotBlank

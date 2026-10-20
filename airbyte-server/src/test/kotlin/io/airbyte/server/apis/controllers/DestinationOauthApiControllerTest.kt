@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.DestinationOauthConsentRequest
-import io.airbyte.api.model.generated.OAuthConsentRead
-import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.CompleteDestinationOAuthRequest
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.DestinationOauthConsentRequest
+import io.airbyte.api.server.generated.models.OAuthConsentRead
+import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -17,6 +17,7 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 internal class DestinationOauthApiControllerTest {
   private lateinit var controller: DestinationOauthApiController
@@ -29,9 +30,19 @@ internal class DestinationOauthApiControllerTest {
 
   @Test
   fun testCompleteDestinationOAuth() {
-    every { oAuthHandler.completeDestinationOAuth(any()) } returns CompleteOAuthResponse() andThenThrows ConfigNotFoundException("", "")
+    every {
+      oAuthHandler.completeDestinationOAuth(
+        any(),
+      )
+    } returns CompleteOAuthResponse(requestSucceeded = true, authPayload = emptyMap()) andThenThrows
+      ConfigNotFoundException("", "")
 
-    val request = CompleteDestinationOAuthRequest()
+    val request =
+      CompleteDestinationOAuthRequest(
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        redirectUrl = "https://example.com/callback",
+      )
     val result = controller.completeDestinationOAuth(request)
     Assertions.assertNotNull(result)
 
@@ -42,9 +53,15 @@ internal class DestinationOauthApiControllerTest {
 
   @Test
   fun testGetDestinationOAuthConsent() {
-    every { oAuthHandler.getDestinationOAuthConsent(any()) } returns OAuthConsentRead() andThenThrows ConfigNotFoundException("", "")
+    every { oAuthHandler.getDestinationOAuthConsent(any()) } returns OAuthConsentRead(consentUrl = "https://example.com/consent") andThenThrows
+      ConfigNotFoundException("", "")
 
-    val request = DestinationOauthConsentRequest()
+    val request =
+      DestinationOauthConsentRequest(
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        redirectUrl = "https://example.com/callback",
+      )
     val result = controller.getDestinationOAuthConsent(request)
     Assertions.assertNotNull(result)
 
@@ -57,7 +74,7 @@ internal class DestinationOauthApiControllerTest {
   fun testSetInstancewideDestinationOauthParams() {
     every { oAuthHandler.setDestinationInstancewideOauthParams(any()) } returns Unit
 
-    val request = SetInstancewideDestinationOauthParamsRequestBody()
+    val request = SetInstancewideDestinationOauthParamsRequestBody(destinationDefinitionId = UUID.randomUUID(), params = mapOf("client_id" to "id"))
     controller.setInstancewideDestinationOauthParams(request)
   }
 }

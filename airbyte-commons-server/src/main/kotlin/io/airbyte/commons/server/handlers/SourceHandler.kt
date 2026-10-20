@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceSnippetRead
@@ -15,6 +14,7 @@ import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
 import io.airbyte.api.server.generated.models.DiscoverCatalogResult
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.PartialSourceUpdate

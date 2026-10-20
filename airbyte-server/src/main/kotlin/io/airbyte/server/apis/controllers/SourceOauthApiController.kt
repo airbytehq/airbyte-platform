@@ -4,16 +4,18 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.SourceOauthApi
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.CompleteSourceOauthRequest
-import io.airbyte.api.model.generated.EmbeddedSourceOauthConsentRequest
-import io.airbyte.api.model.generated.OAuthConsentRead
-import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
-import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
-import io.airbyte.api.model.generated.SourceOAuthScopesRead
-import io.airbyte.api.model.generated.SourceOAuthScopesRequest
-import io.airbyte.api.model.generated.SourceOauthConsentRequest
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.apis.SourceOauthApi
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.CompleteSourceOauthRequest
+import io.airbyte.api.server.generated.models.EmbeddedSourceOauthConsentRequest
+import io.airbyte.api.server.generated.models.OAuthConsentRead
+import io.airbyte.api.server.generated.models.RevokeSourceOauthTokensRequest
+import io.airbyte.api.server.generated.models.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRead
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRequest
+import io.airbyte.api.server.generated.models.SourceOauthConsentRequest
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -26,16 +28,14 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 
-@Controller("/api/v1/source_oauths")
+@Controller
 @RequiresIntent(Intent.RunOAuthFlow)
 class SourceOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : SourceOauthApi {
-  @Post("/complete_oauth")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -43,14 +43,18 @@ class SourceOauthApiController(
   )
   override fun completeSourceOAuth(
     @Body completeSourceOauthRequest: CompleteSourceOauthRequest,
-  ): CompleteOAuthResponse? =
-    execute {
+  ): CompleteOAuthResponse {
+    // the spec leaves redirectUrl optional, but every OAuth flow needs it to finish
+    if (completeSourceOauthRequest.redirectUrl == null) {
+      throw BadRequestProblem(ProblemMessageData().message("redirectUrl is required"))
+    }
+    return execute {
       oAuthHandler.completeSourceOAuthHandleReturnSecret(
         completeSourceOauthRequest,
       )
     }
+  }
 
-  @Post("/get_embedded_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -60,20 +64,16 @@ class SourceOauthApiController(
     @Body embeddedSourceOauthConsentRequest: EmbeddedSourceOauthConsentRequest,
   ): OAuthConsentRead {
     val sourceOauthConsentRequest =
-      SourceOauthConsentRequest().let {
-        it.sourceDefinitionId = embeddedSourceOauthConsentRequest.sourceDefinitionId
-        it.workspaceId = embeddedSourceOauthConsentRequest.workspaceId
-        it.redirectUrl = embeddedSourceOauthConsentRequest.redirectUrl
-        it.sourceId = embeddedSourceOauthConsentRequest.sourceId
-
-        it.setoAuthInputConfiguration(Jsons.emptyObject())
-
-        it
-      }
-    return getSourceOAuthConsent(sourceOauthConsentRequest)!! // getSourceOAuthConsent returns a nullable for unknown reasons
+      SourceOauthConsentRequest(
+        sourceDefinitionId = embeddedSourceOauthConsentRequest.sourceDefinitionId,
+        workspaceId = embeddedSourceOauthConsentRequest.workspaceId,
+        redirectUrl = embeddedSourceOauthConsentRequest.redirectUrl,
+        sourceId = embeddedSourceOauthConsentRequest.sourceId,
+        oAuthInputConfiguration = Jsons.emptyObject(),
+      )
+    return getSourceOAuthConsent(sourceOauthConsentRequest)
   }
 
-  @Post("/get_scopes")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -81,9 +81,8 @@ class SourceOauthApiController(
   )
   override fun getSourceOAuthScopes(
     @Body request: SourceOAuthScopesRequest,
-  ): SourceOAuthScopesRead? = execute { oAuthHandler.getSourceOAuthScopes(request) }
+  ): SourceOAuthScopesRead = execute { oAuthHandler.getSourceOAuthScopes(request) }
 
-  @Post("/get_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -91,9 +90,8 @@ class SourceOauthApiController(
   )
   override fun getSourceOAuthConsent(
     @Body sourceOauthConsentRequest: SourceOauthConsentRequest,
-  ): OAuthConsentRead? = execute { oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest) }
+  ): OAuthConsentRead = execute { oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest) }
 
-  @Post("/revoke")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -108,7 +106,6 @@ class SourceOauthApiController(
     }
   }
 
-  @Post("/oauth_params/create")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(

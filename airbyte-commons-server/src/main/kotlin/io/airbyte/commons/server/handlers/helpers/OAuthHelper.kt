@@ -7,7 +7,7 @@ package io.airbyte.commons.server.handlers.helpers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.BooleanNode
 import com.fasterxml.jackson.databind.node.TextNode
-import io.airbyte.api.model.generated.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
 import io.airbyte.commons.json.Jsons
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 
@@ -53,28 +53,12 @@ object OAuthHelper {
    * @return complete oauth response
    */
   @JvmStatic
-  fun mapToCompleteOAuthResponse(input: Map<String, Any>): CompleteOAuthResponse {
-    val response = CompleteOAuthResponse()
-    response.authPayload = HashMap()
-
-    if (input.containsKey("request_succeeded")) {
-      response.requestSucceeded = "true" == input["request_succeeded"]
-    } else {
-      response.requestSucceeded = true
-    }
-
-    if (input.containsKey("request_error")) {
-      response.requestError = input["request_error"].toString()
-    }
-
-    input.forEach { (k: String?, v: Any?) ->
-      if ("request_succeeded" != k && "request_error" != k) {
-        response.authPayload[k] = v
-      }
-    }
-
-    return response
-  }
+  fun mapToCompleteOAuthResponse(input: Map<String, Any>): CompleteOAuthResponse =
+    CompleteOAuthResponse(
+      requestSucceeded = if (input.containsKey("request_succeeded")) "true" == input["request_succeeded"] else true,
+      requestError = if (input.containsKey("request_error")) input["request_error"].toString() else null,
+      authPayload = input.filterKeys { it != "request_succeeded" && it != "request_error" },
+    )
 
   /**
    * Update the oauthUserInputFromConnectorConfigSpecification to allow for additional properties. The

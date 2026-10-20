@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.amazonaws.util.json.Jackson
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
@@ -14,18 +12,18 @@ import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody
 import io.airbyte.api.model.generated.ActorTypeEnum
-import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest
-import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.CompleteSourceOauthRequest
-import io.airbyte.api.model.generated.DestinationOauthConsentRequest
-import io.airbyte.api.model.generated.OAuthConsentRead
-import io.airbyte.api.model.generated.OAuthScopeItem
-import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
-import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
-import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
-import io.airbyte.api.model.generated.SourceOAuthScopesRead
-import io.airbyte.api.model.generated.SourceOAuthScopesRequest
-import io.airbyte.api.model.generated.SourceOauthConsentRequest
+import io.airbyte.api.server.generated.models.CompleteDestinationOAuthRequest
+import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.CompleteSourceOauthRequest
+import io.airbyte.api.server.generated.models.DestinationOauthConsentRequest
+import io.airbyte.api.server.generated.models.OAuthConsentRead
+import io.airbyte.api.server.generated.models.OAuthScopeItem
+import io.airbyte.api.server.generated.models.RevokeSourceOauthTokensRequest
+import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRead
+import io.airbyte.api.server.generated.models.SourceOAuthScopesRequest
+import io.airbyte.api.server.generated.models.SourceOauthConsentRequest
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
@@ -159,12 +157,15 @@ open class OAuthHandler(
 
       val oAuthInputConfigurationForConsent: JsonNode
 
-      if (sourceOauthConsentRequest.sourceId == null) {
-        oAuthInputConfigurationForConsent = sourceOauthConsentRequest.getoAuthInputConfiguration()
+      // oAuthInputConfiguration is optional in the spec; an empty object is the same default the embedded consent route uses
+      val oAuthInputConfiguration = sourceOauthConsentRequest.oAuthInputConfiguration ?: Jsons.emptyObject()
+      val sourceId = sourceOauthConsentRequest.sourceId
+      if (sourceId == null) {
+        oAuthInputConfigurationForConsent = oAuthInputConfiguration
       } else {
         val sourceConnection: SourceConnection
         try {
-          sourceConnection = sourceService.getSourceConnection(sourceOauthConsentRequest.sourceId)
+          sourceConnection = sourceService.getSourceConnection(sourceId)
         } catch (e: ConfigNotFoundException) {
           throw ConfigNotFoundException(e.type, e.configId)
         }
@@ -180,34 +181,36 @@ open class OAuthHandler(
           getOAuthInputConfigurationForConsent(
             spec,
             hydratedSourceConfig,
-            sourceOauthConsentRequest.getoAuthInputConfiguration(),
+            oAuthInputConfiguration,
           )
       }
 
       val oAuthInputConfigValues = Jsons.mergeNodes(sourceOAuthParamConfig, oAuthInputConfigurationForConsent)
 
       result =
-        OAuthConsentRead().consentUrl(
-          oAuthFlowImplementation!!.getSourceConsentUrl(
-            sourceOauthConsentRequest.workspaceId,
-            sourceOauthConsentRequest.sourceDefinitionId,
-            sourceOauthConsentRequest.redirectUrl,
-            oAuthInputConfigValues,
-            effectiveOauthConfigSpec,
-            oAuthInputConfigValues,
-          ),
+        OAuthConsentRead(
+          consentUrl =
+            oAuthFlowImplementation!!.getSourceConsentUrl(
+              sourceOauthConsentRequest.workspaceId,
+              sourceOauthConsentRequest.sourceDefinitionId,
+              sourceOauthConsentRequest.redirectUrl,
+              oAuthInputConfigValues,
+              effectiveOauthConfigSpec,
+              oAuthInputConfigValues,
+            ),
         )
     } else {
       result =
-        OAuthConsentRead().consentUrl(
-          oAuthFlowImplementation!!.getSourceConsentUrl(
-            sourceOauthConsentRequest.workspaceId,
-            sourceOauthConsentRequest.sourceDefinitionId,
-            sourceOauthConsentRequest.redirectUrl,
-            Jsons.emptyObject(),
-            null,
-            sourceOAuthParamConfig,
-          ),
+        OAuthConsentRead(
+          consentUrl =
+            oAuthFlowImplementation!!.getSourceConsentUrl(
+              sourceOauthConsentRequest.workspaceId,
+              sourceOauthConsentRequest.sourceDefinitionId,
+              sourceOauthConsentRequest.redirectUrl,
+              Jsons.emptyObject(),
+              null,
+              sourceOAuthParamConfig,
+            ),
         )
     }
     try {
@@ -275,12 +278,15 @@ open class OAuthHandler(
 
       val oAuthInputConfigurationForConsent: JsonNode
 
-      if (destinationOauthConsentRequest.destinationId == null) {
-        oAuthInputConfigurationForConsent = destinationOauthConsentRequest.getoAuthInputConfiguration()
+      // oAuthInputConfiguration is optional in the spec; an empty object is the same default the embedded consent route uses
+      val oAuthInputConfiguration = destinationOauthConsentRequest.oAuthInputConfiguration ?: Jsons.emptyObject()
+      val destinationId = destinationOauthConsentRequest.destinationId
+      if (destinationId == null) {
+        oAuthInputConfigurationForConsent = oAuthInputConfiguration
       } else {
         val destinationConnection: DestinationConnection
         try {
-          destinationConnection = destinationService.getDestinationConnection(destinationOauthConsentRequest.destinationId)
+          destinationConnection = destinationService.getDestinationConnection(destinationId)
         } catch (e: ConfigNotFoundException) {
           throw ConfigNotFoundException(e.type, e.configId)
         }
@@ -296,34 +302,36 @@ open class OAuthHandler(
           getOAuthInputConfigurationForConsent(
             spec,
             hydratedDestinationConfig,
-            destinationOauthConsentRequest.getoAuthInputConfiguration(),
+            oAuthInputConfiguration,
           )
       }
 
       val oAuthInputConfigValues = Jsons.mergeNodes(destinationOAuthParamConfig, oAuthInputConfigurationForConsent)
 
       result =
-        OAuthConsentRead().consentUrl(
-          oAuthFlowImplementation!!.getDestinationConsentUrl(
-            destinationOauthConsentRequest.workspaceId,
-            destinationOauthConsentRequest.destinationDefinitionId,
-            destinationOauthConsentRequest.redirectUrl,
-            oAuthInputConfigValues,
-            spec.advancedAuth.oauthConfigSpecification,
-            oAuthInputConfigValues,
-          ),
+        OAuthConsentRead(
+          consentUrl =
+            oAuthFlowImplementation!!.getDestinationConsentUrl(
+              destinationOauthConsentRequest.workspaceId,
+              destinationOauthConsentRequest.destinationDefinitionId,
+              destinationOauthConsentRequest.redirectUrl,
+              oAuthInputConfigValues,
+              spec.advancedAuth.oauthConfigSpecification,
+              oAuthInputConfigValues,
+            ),
         )
     } else {
       result =
-        OAuthConsentRead().consentUrl(
-          oAuthFlowImplementation!!.getDestinationConsentUrl(
-            destinationOauthConsentRequest.workspaceId,
-            destinationOauthConsentRequest.destinationDefinitionId,
-            destinationOauthConsentRequest.redirectUrl,
-            Jsons.emptyObject(),
-            null,
-            destinationOAuthParamConfig,
-          ),
+        OAuthConsentRead(
+          consentUrl =
+            oAuthFlowImplementation!!.getDestinationConsentUrl(
+              destinationOauthConsentRequest.workspaceId,
+              destinationOauthConsentRequest.destinationDefinitionId,
+              destinationOauthConsentRequest.redirectUrl,
+              Jsons.emptyObject(),
+              null,
+              destinationOAuthParamConfig,
+            ),
         )
     }
     try {
@@ -346,10 +354,10 @@ open class OAuthHandler(
    * set, persists the response as a secret and returns a `secretId`. A failed/denied completion is
    * not persisted; the failure response is returned unchanged so callers can surface the error.
    */
-  fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse? {
+  fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse {
     val completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest)
     // A denied flow (request_succeeded=false) carries no credentials, so don't mint a secretId for it.
-    return if (completeSourceOauthRequest.returnSecretCoordinate && completeOAuthResponse.requestSucceeded != false) {
+    return if (completeSourceOauthRequest.returnSecretCoordinate == true && completeOAuthResponse.requestSucceeded) {
       writeOAuthResponseSecret(completeSourceOauthRequest.workspaceId, completeOAuthResponse)
     } else {
       completeOAuthResponse
@@ -400,12 +408,15 @@ open class OAuthHandler(
 
       val oAuthInputConfigurationForConsent: JsonNode
 
-      if (completeSourceOauthRequest.sourceId == null) {
-        oAuthInputConfigurationForConsent = completeSourceOauthRequest.getoAuthInputConfiguration()
+      // oAuthInputConfiguration is optional in the spec; an empty object is the same default the embedded consent route uses
+      val oAuthInputConfiguration = completeSourceOauthRequest.oAuthInputConfiguration ?: Jsons.emptyObject()
+      val sourceId = completeSourceOauthRequest.sourceId
+      if (sourceId == null) {
+        oAuthInputConfigurationForConsent = oAuthInputConfiguration
       } else {
         val sourceConnection: SourceConnection
         try {
-          sourceConnection = sourceService.getSourceConnection(completeSourceOauthRequest.sourceId)
+          sourceConnection = sourceService.getSourceConnection(sourceId)
         } catch (e: ConfigNotFoundException) {
           throw ConfigNotFoundException(e.type, e.configId)
         }
@@ -421,7 +432,7 @@ open class OAuthHandler(
           getOAuthInputConfigurationForConsent(
             spec,
             hydratedSourceConfig,
-            completeSourceOauthRequest.getoAuthInputConfiguration(),
+            oAuthInputConfiguration,
           )
       }
 
@@ -431,8 +442,8 @@ open class OAuthHandler(
         oAuthFlowImplementation!!.completeSourceOAuth(
           completeSourceOauthRequest.workspaceId,
           completeSourceOauthRequest.sourceDefinitionId,
-          completeSourceOauthRequest.queryParams,
-          completeSourceOauthRequest.redirectUrl,
+          completeSourceOauthRequest.queryParams ?: emptyMap(),
+          requireNotNull(completeSourceOauthRequest.redirectUrl) { "redirectUrl is required" },
           oAuthInputConfigValues,
           effectiveOauthConfigSpec,
           oAuthInputConfigValues,
@@ -443,8 +454,8 @@ open class OAuthHandler(
         oAuthFlowImplementation!!.completeSourceOAuth(
           completeSourceOauthRequest.workspaceId,
           completeSourceOauthRequest.sourceDefinitionId,
-          completeSourceOauthRequest.queryParams,
-          completeSourceOauthRequest.redirectUrl,
+          completeSourceOauthRequest.queryParams ?: emptyMap(),
+          requireNotNull(completeSourceOauthRequest.redirectUrl) { "redirectUrl is required" },
           sourceOAuthParamConfig,
         )
     }
@@ -499,12 +510,15 @@ open class OAuthHandler(
 
       val oAuthInputConfigurationForConsent: JsonNode
 
-      if (completeDestinationOAuthRequest.destinationId == null) {
-        oAuthInputConfigurationForConsent = completeDestinationOAuthRequest.getoAuthInputConfiguration()
+      // oAuthInputConfiguration is optional in the spec; an empty object is the same default the embedded consent route uses
+      val oAuthInputConfiguration = completeDestinationOAuthRequest.oAuthInputConfiguration ?: Jsons.emptyObject()
+      val destinationId = completeDestinationOAuthRequest.destinationId
+      if (destinationId == null) {
+        oAuthInputConfigurationForConsent = oAuthInputConfiguration
       } else {
         val destinationConnection: DestinationConnection
         try {
-          destinationConnection = destinationService.getDestinationConnection(completeDestinationOAuthRequest.destinationId)
+          destinationConnection = destinationService.getDestinationConnection(destinationId)
         } catch (e: ConfigNotFoundException) {
           throw ConfigNotFoundException(e.type, e.configId)
         }
@@ -521,7 +535,7 @@ open class OAuthHandler(
           getOAuthInputConfigurationForConsent(
             spec,
             hydratedDestinationConfig,
-            completeDestinationOAuthRequest.getoAuthInputConfiguration(),
+            oAuthInputConfiguration,
           )
       }
 
@@ -531,8 +545,8 @@ open class OAuthHandler(
         oAuthFlowImplementation!!.completeDestinationOAuth(
           completeDestinationOAuthRequest.workspaceId,
           completeDestinationOAuthRequest.destinationDefinitionId,
-          completeDestinationOAuthRequest.queryParams,
-          completeDestinationOAuthRequest.redirectUrl,
+          completeDestinationOAuthRequest.queryParams ?: emptyMap(),
+          requireNotNull(completeDestinationOAuthRequest.redirectUrl) { "redirectUrl is required" },
           oAuthInputConfigValues,
           oauthConfigSpecification,
           oAuthInputConfigValues,
@@ -543,8 +557,8 @@ open class OAuthHandler(
         oAuthFlowImplementation!!.completeDestinationOAuth(
           completeDestinationOAuthRequest.workspaceId,
           completeDestinationOAuthRequest.destinationDefinitionId,
-          completeDestinationOAuthRequest.queryParams,
-          completeDestinationOAuthRequest.redirectUrl,
+          completeDestinationOAuthRequest.queryParams ?: emptyMap(),
+          requireNotNull(completeDestinationOAuthRequest.redirectUrl) { "redirectUrl is required" },
           destinationOAuthParamConfig,
         )
     }
@@ -655,13 +669,15 @@ open class OAuthHandler(
 
     val optionalScopesList = extractScopesList(specNode, "optional_scopes")
     val joinStrategyText = specNode.path("scopes_join_strategy").asText("space")
-    val joinStrategy = SourceOAuthScopesRead.ScopeJoinStrategyEnum.fromValue(joinStrategyText)
+    val joinStrategy =
+      SourceOAuthScopesRead.ScopeJoinStrategy.entries.firstOrNull { it.value == joinStrategyText }
+        ?: throw IllegalArgumentException("Unexpected value '$joinStrategyText'")
 
-    return SourceOAuthScopesRead().apply {
-      scopes = scopesList
-      optionalScopes = optionalScopesList
-      scopeJoinStrategy = joinStrategy
-    }
+    return SourceOAuthScopesRead(
+      scopes = scopesList,
+      optionalScopes = optionalScopesList,
+      scopeJoinStrategy = joinStrategy,
+    )
   }
 
   private fun extractScopesList(
@@ -673,7 +689,7 @@ open class OAuthHandler(
     return node
       .mapNotNull { item ->
         val text = item.path("scope").asText("")
-        if (text.isNotEmpty()) OAuthScopeItem().scope(text) else null
+        if (text.isNotEmpty()) OAuthScopeItem(scope = text) else null
       }
   }
 
@@ -795,20 +811,16 @@ open class OAuthHandler(
     workspaceId: UUID,
     payload: CompleteOAuthResponse?,
   ): CompleteOAuthResponse {
-    try {
-      val payloadString = Jackson.getObjectMapper().writeValueAsString(payload)
-      val secretCoordinate: AirbyteManagedSecretCoordinate
-      val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceId))
-      secretCoordinate =
-        secretsRepositoryWriter.store(
-          generateOAuthSecretCoordinate(workspaceId),
-          payloadString,
-          secretPersistence,
-        )
-      return mapToCompleteOAuthResponse(mapOf("secretId" to secretCoordinate.fullCoordinate))
-    } catch (e: JsonProcessingException) {
-      throw RuntimeException("Json object could not be written to string.", e)
-    }
+    // the payload is a Kotlin model, so it needs the Kotlin-aware mapper to keep its snake_case field names
+    val payloadString = Jsons.serialize(payload)
+    val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceId))
+    val secretCoordinate =
+      secretsRepositoryWriter.store(
+        generateOAuthSecretCoordinate(workspaceId),
+        payloadString,
+        secretPersistence,
+      )
+    return mapToCompleteOAuthResponse(mapOf("secretId" to secretCoordinate.fullCoordinate))
   }
 
   /**
