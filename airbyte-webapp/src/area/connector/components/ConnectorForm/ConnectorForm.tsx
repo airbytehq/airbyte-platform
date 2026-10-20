@@ -31,6 +31,11 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   connectorId?: string;
   trackDirtyChanges?: boolean;
   canEdit: boolean;
+  /**
+   * Components that read or fill the form from code, such as the connector setup agent's tools.
+   * They render inside the form's providers and take no place in its layout.
+   */
+  formAutomation?: React.ReactNode;
 }
 
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
@@ -47,6 +52,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     selectedConnectorDefinitionSpecification,
     connectorId,
     canEdit,
+    formAutomation,
   } = props;
 
   const { formFields, initialValues, validationSchema, groups } = useBuildForm(
@@ -99,6 +105,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
         connectorId={connectorId}
       >
         <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
+        {formAutomation}
       </ConnectorFormContextProvider>
     </Form>
   );

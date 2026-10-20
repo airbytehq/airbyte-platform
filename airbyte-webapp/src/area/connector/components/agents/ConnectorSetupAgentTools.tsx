@@ -13,7 +13,7 @@ import { type ConnectorCardValues, type ConnectorFormValues } from "area/connect
 import { ActorType } from "core/api/types/AirbyteClient";
 import { type ConnectorT } from "core/domain/connector";
 
-type AgentConnectorValues = ConnectorCardValues & { createAsDraft?: true; setupFlow: "agent" };
+export type AgentConnectorValues = ConnectorCardValues & { createAsDraft?: true; setupFlow: "agent" };
 
 interface ConnectorSetupAgentToolsProps<T extends ConnectorT> {
   actorDefinitionId?: string;

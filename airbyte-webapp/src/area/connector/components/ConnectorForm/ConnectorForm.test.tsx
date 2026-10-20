@@ -4,6 +4,7 @@ import { getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-lib
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
+import { useFormContext } from "react-hook-form";
 
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
@@ -16,6 +17,7 @@ import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
 
+import { useConnectorForm } from "./connectorFormContext";
 import { ConnectorFormValues } from "./types";
 import { DocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
 
@@ -286,11 +288,13 @@ describe("Connector form", () => {
     propertiesOverride,
     specificationOverride,
     features,
+    formAutomation,
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
     features?: FeatureItem[];
+    formAutomation?: React.ReactNode;
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
@@ -302,6 +306,7 @@ describe("Connector form", () => {
         }}
         isEditMode={Boolean(formValuesOverride)}
         renderFooter={() => <button type="submit">Submit</button>}
+        formAutomation={formAutomation}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
           {
@@ -345,6 +350,18 @@ describe("Connector form", () => {
     // IntersectionObserver isn't available in test environment but is used by headless-ui dialog
     // used for this component
     useMockIntersectionObserver();
+  });
+
+  it("renders formAutomation inside the form and connector form contexts", async () => {
+    const FormAutomationProbe = () => {
+      const { getValues } = useFormContext<ConnectorFormValues>();
+      const { formType } = useConnectorForm();
+      return <span data-testid="form-automation">{`${formType}:${getValues("name")}`}</span>;
+    };
+
+    await renderForm({ formAutomation: <FormAutomationProbe /> });
+
+    expect(screen.getByTestId("form-automation")).toHaveTextContent("source:test-name");
   });
 
   describe("should display json schema specs", () => {

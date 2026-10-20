@@ -1,5 +1,3 @@
-import type { SourceSetupFlow } from "./SourceFormWithAgent";
-
 import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -11,9 +9,10 @@ import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
+import { ConnectorSetupViews } from "area/connector/components/agents/ConnectorSetupViews";
 import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
-import { ConnectionConfiguration } from "area/connector/types";
+import { ConnectionConfiguration, ConnectorSetupFlow } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { SourceContextLayerOptIn } from "cloud/components/AgentsOptIn";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
@@ -26,7 +25,7 @@ import {
   useSourceDefinitionList,
   useUpdateSource,
 } from "core/api";
-import { SourceRead } from "core/api/types/AirbyteClient";
+import { ActorType, SourceRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -38,7 +37,6 @@ import { RoutePaths, SourcePaths } from "pages/routePaths";
 
 import styles from "./CreateSourcePage.module.scss";
 import { SourceForm } from "./SourceForm";
-import { SourceFormWithAgent } from "./SourceFormWithAgent";
 
 export const CreateSourcePage: React.FC = () => {
   const params = useParams<{ workspaceId: string }>();
@@ -48,7 +46,7 @@ export const CreateSourcePage: React.FC = () => {
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
   const [isAgentView, setIsAgentView] = useState(false);
 
-  const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
+  const { data: sourceDefinitionSpecification } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
   const { mutateAsync: updateSource } = useUpdateSource();
@@ -70,11 +68,10 @@ export const CreateSourcePage: React.FC = () => {
   const selectedSourceDefinition = sourceDefinitions.find((s) => s.sourceDefinitionId === sourceDefinitionId);
   const isCustomConnector = selectedSourceDefinition?.custom === true;
 
-  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec && !isCustomConnector;
-  const shouldShowAgentView = showAgentToggle && isAgentView;
+  const isAgentAvailable = isAgentAssistedSetupEnabled && !isCustomConnector && Boolean(sourceDefinitionSpecification);
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW, {
-    agent_toggle_available: showAgentToggle,
+    agent_toggle_available: isAgentAvailable,
   });
 
   const navigate = useNavigate();
@@ -93,7 +90,7 @@ export const CreateSourcePage: React.FC = () => {
     name: string;
     serviceType: string;
     connectionConfiguration: ConnectionConfiguration;
-    setupFlow?: SourceSetupFlow;
+    setupFlow?: ConnectorSetupFlow;
   }) => {
     const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
     if (!connector) {
@@ -132,7 +129,7 @@ export const CreateSourcePage: React.FC = () => {
       name: string;
       serviceType: string;
       connectionConfiguration: ConnectionConfiguration;
-      setupFlow?: SourceSetupFlow;
+      setupFlow?: ConnectorSetupFlow;
     },
     existingDraft?: SourceRead
   ) => {
@@ -148,7 +145,7 @@ export const CreateSourcePage: React.FC = () => {
 
   const onSourceDraftPromoted = async (
     source: SourceRead,
-    values: { serviceType: string; setupFlow?: SourceSetupFlow }
+    values: { serviceType: string; setupFlow?: ConnectorSetupFlow }
   ) => {
     const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
     if (!connector) {
@@ -193,71 +190,69 @@ export const CreateSourcePage: React.FC = () => {
     }
   }, [isConnectorBuilderGenerateFromParamsEnabled]);
 
+  const renderSetupForm = (formAutomation?: React.ReactNode) => (
+    <ConnectorDocumentationWrapper>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <SourceForm
+          onSubmit={onSubmitSourceStep}
+          onSaveDraft={onSaveSourceDraft}
+          onDraftPromoted={onSourceDraftPromoted}
+          sourceDefinitions={sourceDefinitions}
+          selectedSourceDefinitionId={sourceDefinitionId}
+          contextLayerOptIn={
+            <SourceContextLayerOptIn
+              sourceDefinitionId={selectedSourceDefinition?.sourceDefinitionId}
+              value={agentAccessEnabled}
+              onChange={setAgentAccessEnabled}
+            />
+          }
+          formAutomation={formAutomation}
+        />
+        <CloudInviteUsersHint connectorType="source" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
+  );
+
+  const agentSetup = isAgentAssistedSetupEnabled
+    ? {
+        actorType: ActorType.source,
+        actorDefinitionId: sourceDefinitionId,
+        connectionSpecification: sourceDefinitionSpecification?.connectionSpecification,
+        isAvailable: isAgentAvailable,
+        onSubmit: onSubmitSourceStep,
+        onSaveDraft: onSaveSourceDraft,
+        onDraftPromoted: onSourceDraftPromoted,
+      }
+    : undefined;
+
   return (
     <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
-      {isAgentAssistedSetupEnabled ? (
-        <div className={styles.pageContainer}>
-          <div className={styles.headerWrapper}>
-            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-            {showAgentToggle && (
-              <div className={styles.toggleWrapper}>
-                <ViewToggleButton
-                  leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
-                  rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
-                  isRightSelected={!isAgentView}
-                  onClick={() => setIsAgentView(!isAgentView)}
-                />
-              </div>
-            )}
-          </div>
-          <div className={styles.contentWrapper}>
-            <SourceFormWithAgent
-              isAgentView={shouldShowAgentView}
-              onSubmit={onSubmitSourceStep}
-              sourceDefinitions={sourceDefinitions}
-              selectedSourceDefinitionId={sourceDefinitionId}
-              contextLayerOptIn={
-                <SourceContextLayerOptIn
-                  sourceDefinitionId={selectedSourceDefinition?.sourceDefinitionId}
-                  value={agentAccessEnabled}
-                  onChange={setAgentAccessEnabled}
-                />
-              }
-              onSaveDraft={onSaveSourceDraft}
-              onDraftPromoted={onSourceDraftPromoted}
-            />
-          </div>
-        </div>
-      ) : (
-        <ConnectorDocumentationWrapper>
+      <div className={styles.pageContainer}>
+        <div className={styles.headerWrapper}>
           <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-          <FormPageContent>
-            <FlexContainer justifyContent="flex-start">
-              <Box mb="md">
-                <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-                  <FormattedMessage id="connectorBuilder.backButtonLabel" />
-                </Button>
-              </Box>
-            </FlexContainer>
-            <SourceForm
-              onSubmit={onSubmitSourceStep}
-              onSaveDraft={onSaveSourceDraft}
-              onDraftPromoted={onSourceDraftPromoted}
-              sourceDefinitions={sourceDefinitions}
-              selectedSourceDefinitionId={sourceDefinitionId}
-              contextLayerOptIn={
-                <SourceContextLayerOptIn
-                  sourceDefinitionId={selectedSourceDefinition?.sourceDefinitionId}
-                  value={agentAccessEnabled}
-                  onChange={setAgentAccessEnabled}
-                />
-              }
-            />
-            <CloudInviteUsersHint connectorType="source" />
-          </FormPageContent>
-        </ConnectorDocumentationWrapper>
-      )}
+          {isAgentAvailable && (
+            <div className={styles.toggleWrapper}>
+              <ViewToggleButton
+                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                isRightSelected={!isAgentView}
+                onClick={() => setIsAgentView(!isAgentView)}
+              />
+            </div>
+          )}
+        </div>
+        <div className={styles.contentWrapper}>
+          <ConnectorSetupViews agent={agentSetup} isAgentView={isAgentView} renderSetupForm={renderSetupForm} />
+        </div>
+      </div>
     </>
   );
 };

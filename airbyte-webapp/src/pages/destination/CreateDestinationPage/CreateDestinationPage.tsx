@@ -1,5 +1,3 @@
-import type { DestinationSetupFlow } from "./DestinationFormWithAgent";
-
 import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -11,10 +9,11 @@ import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
+import { ConnectorSetupViews } from "area/connector/components/agents/ConnectorSetupViews";
 import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { DestinationForm } from "area/connector/components/destination/DestinationForm";
-import { ConnectionConfiguration } from "area/connector/types";
+import { ConnectionConfiguration, ConnectorSetupFlow } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { DestinationContextLayerOptIn } from "cloud/components/AgentsOptIn";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
@@ -27,7 +26,7 @@ import {
   useSetFusionActorEnablement,
   useUpdateDestination,
 } from "core/api";
-import { DestinationRead } from "core/api/types/AirbyteClient";
+import { ActorType, DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -38,7 +37,6 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateDestinationPage.module.scss";
-import { DestinationFormWithAgent } from "./DestinationFormWithAgent";
 
 export const CreateDestinationPage: React.FC = () => {
   const { destinationDefinitionId, workspaceId } = useParams<{
@@ -67,7 +65,9 @@ export const CreateDestinationPage: React.FC = () => {
 
   const [isAgentView, setIsAgentView] = useState(false);
 
-  const { isLoading: isLoadingSpec } = useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId || null);
+  const { data: destinationDefinitionSpecification } = useGetDestinationDefinitionSpecificationAsync(
+    destinationDefinitionId || null
+  );
 
   // Disable agent for custom connectors since they don't exist in our registry
   // and we don't have access to their specs when the agent is initialized
@@ -76,14 +76,14 @@ export const CreateDestinationPage: React.FC = () => {
   );
   const isCustomConnector = selectedDestinationDefinition?.custom === true;
 
-  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec && !isCustomConnector;
-  const shouldShowAgentView = showAgentToggle && isAgentView;
+  const isAgentAvailable =
+    isAgentAssistedSetupEnabled && !isCustomConnector && Boolean(destinationDefinitionSpecification);
 
   const onSubmitDestinationForm = async (values: {
     name: string;
     serviceType: string;
     connectionConfiguration: ConnectionConfiguration;
-    setupFlow?: DestinationSetupFlow;
+    setupFlow?: ConnectorSetupFlow;
   }) => {
     const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
     if (!connector) {
@@ -124,7 +124,7 @@ export const CreateDestinationPage: React.FC = () => {
       name: string;
       serviceType: string;
       connectionConfiguration: ConnectionConfiguration;
-      setupFlow?: DestinationSetupFlow;
+      setupFlow?: ConnectorSetupFlow;
     },
     existingDraft?: DestinationRead
   ) => {
@@ -140,7 +140,7 @@ export const CreateDestinationPage: React.FC = () => {
 
   const onDestinationDraftPromoted = async (
     destination: DestinationRead,
-    values: { serviceType: string; setupFlow?: DestinationSetupFlow }
+    values: { serviceType: string; setupFlow?: ConnectorSetupFlow }
   ) => {
     const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
     if (!connector) {
@@ -196,71 +196,69 @@ export const CreateDestinationPage: React.FC = () => {
     }
   }, [isConnectorBuilderGenerateFromParamsEnabled]);
 
+  const renderSetupForm = (formAutomation?: React.ReactNode) => (
+    <ConnectorDocumentationWrapper>
+      <FormPageContent>
+        <FlexContainer justifyContent="flex-start">
+          <Box mb="md">
+            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          </Box>
+        </FlexContainer>
+        <DestinationForm
+          onSubmit={onSubmitDestinationForm}
+          onSaveDraft={onSaveDestinationDraft}
+          onDraftPromoted={onDestinationDraftPromoted}
+          destinationDefinitions={destinationDefinitions}
+          selectedDestinationDefinitionId={destinationDefinitionId}
+          contextLayerOptIn={
+            <DestinationContextLayerOptIn
+              destinationDefinitionId={destinationDefinitionId}
+              value={contextLayerAgentAccess}
+              onChange={setContextLayerAgentAccess}
+            />
+          }
+          formAutomation={formAutomation}
+        />
+        <CloudInviteUsersHint connectorType="destination" />
+      </FormPageContent>
+    </ConnectorDocumentationWrapper>
+  );
+
+  const agentSetup = isAgentAssistedSetupEnabled
+    ? {
+        actorType: ActorType.destination,
+        actorDefinitionId: destinationDefinitionId,
+        connectionSpecification: destinationDefinitionSpecification?.connectionSpecification,
+        isAvailable: isAgentAvailable,
+        onSubmit: onSubmitDestinationForm,
+        onSaveDraft: onSaveDestinationDraft,
+        onDraftPromoted: onDestinationDraftPromoted,
+      }
+    : undefined;
+
   return (
     <>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
-      {isAgentAssistedSetupEnabled ? (
-        <div className={styles.pageContainer}>
-          <div className={styles.headerWrapper}>
-            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-            {showAgentToggle && (
-              <div className={styles.toggleWrapper}>
-                <ViewToggleButton
-                  leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
-                  rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
-                  isRightSelected={!isAgentView}
-                  onClick={() => setIsAgentView(!isAgentView)}
-                />
-              </div>
-            )}
-          </div>
-          <div className={styles.contentWrapper}>
-            <DestinationFormWithAgent
-              isAgentView={shouldShowAgentView}
-              onSubmit={onSubmitDestinationForm}
-              destinationDefinitions={destinationDefinitions}
-              selectedDestinationDefinitionId={destinationDefinitionId}
-              contextLayerOptIn={
-                <DestinationContextLayerOptIn
-                  destinationDefinitionId={destinationDefinitionId}
-                  value={contextLayerAgentAccess}
-                  onChange={setContextLayerAgentAccess}
-                />
-              }
-              onSaveDraft={onSaveDestinationDraft}
-              onDraftPromoted={onDestinationDraftPromoted}
-            />
-          </div>
-        </div>
-      ) : (
-        <ConnectorDocumentationWrapper>
+      <div className={styles.pageContainer}>
+        <div className={styles.headerWrapper}>
           <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-          <FormPageContent>
-            <FlexContainer justifyContent="flex-start">
-              <Box mb="md">
-                <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-                  <FormattedMessage id="connectorBuilder.backButtonLabel" />
-                </Button>
-              </Box>
-            </FlexContainer>
-            <DestinationForm
-              onSubmit={onSubmitDestinationForm}
-              onSaveDraft={onSaveDestinationDraft}
-              onDraftPromoted={onDestinationDraftPromoted}
-              destinationDefinitions={destinationDefinitions}
-              selectedDestinationDefinitionId={destinationDefinitionId}
-              contextLayerOptIn={
-                <DestinationContextLayerOptIn
-                  destinationDefinitionId={destinationDefinitionId}
-                  value={contextLayerAgentAccess}
-                  onChange={setContextLayerAgentAccess}
-                />
-              }
-            />
-            <CloudInviteUsersHint connectorType="destination" />
-          </FormPageContent>
-        </ConnectorDocumentationWrapper>
-      )}
+          {isAgentAvailable && (
+            <div className={styles.toggleWrapper}>
+              <ViewToggleButton
+                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                isRightSelected={!isAgentView}
+                onClick={() => setIsAgentView(!isAgentView)}
+              />
+            </div>
+          )}
+        </div>
+        <div className={styles.contentWrapper}>
+          <ConnectorSetupViews agent={agentSetup} isAgentView={isAgentView} renderSetupForm={renderSetupForm} />
+        </div>
+      </div>
     </>
   );
 };

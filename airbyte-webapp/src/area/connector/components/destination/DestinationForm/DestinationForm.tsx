@@ -2,10 +2,6 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
-import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
-import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
-
 import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm";
 import { ConnectionConfiguration } from "area/connector/types";
@@ -26,6 +22,7 @@ interface DestinationFormProps {
   selectedDestinationDefinitionId?: string;
   leftFooterSlot?: React.ReactNode;
   contextLayerOptIn?: React.ReactNode;
+  formAutomation?: React.ReactNode;
   onSaveDraft?: (values: DestinationFormValues, existingDraft?: DestinationRead) => Promise<DestinationRead>;
   onDraftPromoted?: (draft: DestinationRead, values: DestinationFormValues) => Promise<void> | void;
 }
@@ -44,6 +41,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   selectedDestinationDefinitionId,
   leftFooterSlot = null,
   contextLayerOptIn,
+  formAutomation,
   onSaveDraft,
   onDraftPromoted,
 }) => {
@@ -70,23 +68,9 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       destinationDefinitionId: destinationDefinitionSpecification?.destinationDefinitionId,
     });
 
-  const HeaderBlock = () => {
-    return (
-      <FlexContainer justifyContent="space-between">
-        <Heading as="h3" size="sm">
-          <FormattedMessage id="onboarding.createDestination" />
-        </Heading>
-        {selectedDestinationDefinitionId && (
-          <ConnectorDefinitionBranding destinationDefinitionId={selectedDestinationDefinitionId} />
-        )}
-      </FlexContainer>
-    );
-  };
-
   return (
     <ConnectorCard
       formType="destination"
-      headerBlock={<HeaderBlock />}
       description={<FormattedMessage id="destinations.description" />}
       isLoading={isLoading}
       fetchingConnectorError={destinationDefinitionError instanceof Error ? destinationDefinitionError : null}
@@ -99,6 +83,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       supportLevel={selectedDestinationDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
       leftFooterSlot={leftFooterSlot}
+      formAutomation={formAutomation}
     />
   );
 };

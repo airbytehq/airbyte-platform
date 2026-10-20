@@ -2,12 +2,11 @@ import { InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient }
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { ConnectionConfiguration } from "area/connector/types";
+import { ConnectionConfiguration, ConnectorSetupFlow } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { isDefined } from "core/utils/common";
-import { SourceSetupFlow } from "pages/source/CreateSourcePage/SourceFormWithAgent";
 
 import { useCancelCommand, pollCommandUntilResolved } from "./commands";
 import { useRemoveConnectionsFromList } from "./connections";
@@ -71,7 +70,7 @@ interface ValuesProps {
   serviceType?: string;
   connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
-  setupFlow?: SourceSetupFlow;
+  setupFlow?: ConnectorSetupFlow;
   createAsDraft?: boolean;
 }
 

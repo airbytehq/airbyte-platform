@@ -2,10 +2,6 @@ import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
-import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
-import { FlexContainer } from "components/ui/Flex";
-import { Heading } from "components/ui/Heading";
-
 import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { ConnectionConfiguration } from "area/connector/types";
@@ -26,6 +22,7 @@ interface SourceFormProps {
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
   contextLayerOptIn?: React.ReactNode;
+  formAutomation?: React.ReactNode;
   onSaveDraft?: (values: SourceFormValues, existingDraft?: SourceRead) => Promise<SourceRead>;
   onDraftPromoted?: (draft: SourceRead, values: SourceFormValues) => Promise<void> | void;
 }
@@ -43,6 +40,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
   sourceDefinitions,
   selectedSourceDefinitionId,
   contextLayerOptIn,
+  formAutomation,
   onSaveDraft,
   onDraftPromoted,
 }) => {
@@ -68,22 +66,10 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
     });
 
-  const HeaderBlock = () => {
-    return (
-      <FlexContainer justifyContent="space-between">
-        <Heading as="h3" size="sm">
-          <FormattedMessage id="onboarding.createSource" />
-        </Heading>
-        {selectedSourceDefinitionId && <ConnectorDefinitionBranding sourceDefinitionId={selectedSourceDefinitionId} />}
-      </FlexContainer>
-    );
-  };
-
   return (
     <ConnectorCard
       formType="source"
       description={<FormattedMessage id="sources.description" />}
-      headerBlock={<HeaderBlock />}
       isLoading={isLoading}
       fetchingConnectorError={sourceDefinitionError instanceof Error ? sourceDefinitionError : null}
       availableConnectorDefinitions={sourceDefinitions}
@@ -95,6 +81,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       supportLevel={selectedSourceDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
       leftFooterSlot={selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}
+      formAutomation={formAutomation}
     />
   );
 };

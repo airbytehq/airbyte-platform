@@ -64,6 +64,8 @@ interface ConnectorCardBaseProps<T extends ConnectorT> {
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
   preFooterSlot?: React.ReactNode;
+  /** Reaches ConnectorForm through the props spread. Renders inside the form context, outside the footer. */
+  formAutomation?: React.ReactNode;
   hideCopyConfig?: boolean;
   skipCheckConnection?: boolean;
   onSaveDraft?: (values: ConnectorCardValues, existingDraft?: T) => Promise<T>;
