@@ -447,7 +447,7 @@ class CommandApiController(
     }
 
   @InternalForTesting
-  internal inline fun <reified IdType> resolveWorkspaceId(id: IdType): UUID =
+  internal final inline fun <reified IdType> resolveWorkspaceId(id: IdType): UUID =
     when (id) {
       is ActorId -> actorRepository.findByActorId(id.value)?.workspaceId
       is CommandId -> commandService.get(commandId = id.value)?.workspaceId
@@ -457,7 +457,7 @@ class CommandApiController(
     } ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
 
   @InternalForTesting
-  internal inline fun <reified IdType, T> withRoleValidation(
+  internal final inline fun <reified IdType, T> withRoleValidation(
     id: IdType,
     role: String,
     call: () -> T,
@@ -474,7 +474,7 @@ class CommandApiController(
   }
 
   @InternalForTesting
-  internal inline fun <reified IdType, T> withRoleValidation(
+  internal final inline fun <reified IdType, T> withRoleValidation(
     id: IdType,
     roles: Set<String>,
     call: () -> T,

@@ -27,7 +27,7 @@ class RouteAccessMetadataTest {
   @Test
   fun `wrong access policies and unverified SHARED routes are rejected from real route metadata`() {
     context().start().use { context ->
-      val inventory = RouteAccessInventory(context.getBean(Router::class.java))
+      val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
 
       fun errors(suffix: String) =
         inventory.violations(
@@ -37,14 +37,14 @@ class RouteAccessMetadataTest {
           },
         )
       assertTrue(errors("/public-protected").any { it.contains("conflicts") })
-      assertTrue(errors("/shared").any { it.contains("business guard") })
+      assertTrue(errors("/shared").any { it.contains("concrete DI rule") })
     }
   }
 
   @Test
   fun `inherited operations are inventoried but an override cannot borrow its parents declaration`() {
     context(replacement = true).start().use { context ->
-      val inventory = RouteAccessInventory(context.getBean(Router::class.java))
+      val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
       val inherited = inventory.routes().filter { it.httpMethodName == "GET" && it.uriMatchTemplate.toString().endsWith("/inherited") }
       assertEquals(1, inherited.size)
       assertTrue(inventory.violations(inherited.single()).isEmpty())
@@ -57,7 +57,7 @@ class RouteAccessMetadataTest {
   @Test
   fun `an undeclared Config route using a workload URL is still managed`() {
     context().start().use { context ->
-      val inventory = RouteAccessInventory(context.getBean(Router::class.java))
+      val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
       val route =
         inventory.routes().single {
           it.httpMethodName == "GET" && it.uriMatchTemplate.toString() == "/api/v1/workload/config-fixture"
@@ -69,7 +69,7 @@ class RouteAccessMetadataTest {
   @Test
   fun `an empty router has an empty inventory`() {
     context(empty = true).start().use { context ->
-      val inventory = RouteAccessInventory(context.getBean(Router::class.java))
+      val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
       inventory.validate()
       assertEquals(emptyList<RouteAccessEntry>(), routeAccessEntries(inventory))
     }

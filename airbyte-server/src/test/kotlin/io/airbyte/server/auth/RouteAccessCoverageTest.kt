@@ -78,7 +78,7 @@ class RouteAccessCoverageTest {
             }
           }
         context.start()
-        val inventory = RouteAccessInventory(context.getBean(Router::class.java))
+        val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
         assertTrue(inventory.routes().size > 400, "Coverage must use all real OSS controllers")
         val allManagedControllerRoutes =
           context

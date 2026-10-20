@@ -20,67 +20,41 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.filters.AuthenticationFetcher
 import io.micronaut.security.rules.SecurityRule
-import io.micronaut.security.rules.SecurityRuleResult
 import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.reactivestreams.Publisher
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
 
 class RouteAccessHttpTest {
-  @Test
-  fun `an authentication-only managed route without a declaration fails startup`() {
-    context(validateStartup = true).use { context ->
-      val failure = assertThrows(RuntimeException::class.java) { context.start() }
-      val messages = generateSequence<Throwable>(failure) { it.cause }.map { it.message.orEmpty() }.toList()
-      assertTrue(messages.any { it.contains("missing method-level @AuthorizeOperation") }, messages.joinToString("\n"))
-    }
-  }
-
-  @Test
-  fun `an earlier ALLOWED result cannot bypass missing declaration denial`() {
-    context(validateStartup = false, earlierAllow = true).start().use { context ->
-      context.getBean(EmbeddedServer::class.java).start().use { server ->
-        HttpClient.newHttpClient().use { client ->
-          val request =
-            java.net.http.HttpRequest
-              .newBuilder(
-                URI("${server.url}/api/v1/inventory-fixture/missing"),
-              ).header("Authorization", "Bearer reader")
-              .GET()
-              .build()
-          assertEquals(403, client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
-          assertEquals(0, context.getBean(RouteAccessMissingController::class.java).calls)
-        }
-      }
-    }
-  }
-
-  @Test
-  fun `an undeclared public API route outside the usual api prefix also denies requests`() {
-    context(validateStartup = false, earlierAllow = true).start().use { context ->
-      context.getBean(EmbeddedServer::class.java).start().use { server ->
-        HttpClient.newHttpClient().use { client ->
-          val request =
-            java.net.http.HttpRequest
-              .newBuilder(
-                URI("${server.url}/public/v1/inventory-fixture/missing"),
-              ).header("Authorization", "Bearer reader")
-              .GET()
-              .build()
-          assertEquals(403, client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
-        }
+  @ParameterizedTest
+  @CsvSource(
+    "missing,missing method-level @AuthorizeOperation",
+    "outside,missing method-level @AuthorizeOperation",
+    "shared,SHARED requires a concrete DI rule",
+  )
+  fun `invalid managed declarations fail startup with and without authentication`(
+    invalidRoute: String,
+    expectedError: String,
+  ) {
+    for (securityEnabled in listOf(true, false)) {
+      context(invalidRoute = invalidRoute, securityEnabled = securityEnabled).use { context ->
+        val failure = assertThrows(RuntimeException::class.java) { context.start() }
+        val messages = generateSequence<Throwable>(failure) { it.cause }.map { it.message.orEmpty() }.toList()
+        assertTrue(messages.any { it.contains(expectedError) }, messages.joinToString("\n"))
       }
     }
   }
 
   @Test
   fun `LEGACY metadata preserves existing role denial public login and handler failures`() {
-    context(validateStartup = false).start().use { context ->
+    context().start().use { context ->
       context.getBean(EmbeddedServer::class.java).start().use { server ->
         HttpClient.newHttpClient().use { client ->
           fun status(
@@ -106,31 +80,27 @@ class RouteAccessHttpTest {
   }
 
   @Test
-  fun `handler errors retain the same HTTP status and body with the declaration filter`() {
-    fun response(skipFilter: Boolean): Pair<Int, String> =
-      context(validateStartup = false, skipFilter = skipFilter).start().use { context ->
-        context.getBean(EmbeddedServer::class.java).start().use { server ->
-          HttpClient.newHttpClient().use { client ->
-            val request =
-              java.net.http.HttpRequest
-                .newBuilder(URI("${server.url}/api/v1/inventory-fixture/failure"))
-                .header("Authorization", "Bearer reader")
-                .GET()
-                .build()
-            val result = client.send(request, HttpResponse.BodyHandlers.ofString())
-            result.statusCode() to result.body()
-          }
+  fun `handler errors preserve their HTTP status and body`() {
+    context().start().use { context ->
+      context.getBean(EmbeddedServer::class.java).start().use { server ->
+        HttpClient.newHttpClient().use { client ->
+          val request =
+            java.net.http.HttpRequest
+              .newBuilder(URI("${server.url}/api/v1/inventory-fixture/failure"))
+              .header("Authorization", "Bearer reader")
+              .GET()
+              .build()
+          val result = client.send(request, HttpResponse.BodyHandlers.ofString())
+          assertEquals(400, result.statusCode())
+          assertTrue(result.body().contains("handler failed"), result.body())
         }
       }
-    val baseline = response(skipFilter = true)
-    assertEquals(400, baseline.first)
-    assertTrue(baseline.second.contains("handler failed"), baseline.second)
-    assertEquals(baseline, response(skipFilter = false))
+    }
   }
 
   @Test
   fun `configured no-auth behavior is preserved`() {
-    context(validateStartup = false, securityEnabled = false).start().use { context ->
+    context(securityEnabled = false).start().use { context ->
       context.getBean(EmbeddedServer::class.java).start().use { server ->
         HttpClient.newHttpClient().use { client ->
           val request =
@@ -144,32 +114,11 @@ class RouteAccessHttpTest {
     }
   }
 
-  @Test
-  fun `unverified SHARED cannot execute after an earlier ALLOWED result`() {
-    context(validateStartup = false, earlierAllow = true).start().use { context ->
-      context.getBean(EmbeddedServer::class.java).start().use { server ->
-        HttpClient.newHttpClient().use { client ->
-          val request =
-            java.net.http.HttpRequest
-              .newBuilder(
-                URI("${server.url}/api/v1/inventory-fixture/shared"),
-              ).header("Authorization", "Bearer reader")
-              .GET()
-              .build()
-          assertEquals(403, client.send(request, HttpResponse.BodyHandlers.ofString()).statusCode())
-          assertEquals(0, context.getBean(RouteAccessMissingController::class.java).calls)
-        }
-      }
-    }
-  }
-
   private fun context(
-    validateStartup: Boolean,
-    earlierAllow: Boolean = false,
+    invalidRoute: String = "",
     securityEnabled: Boolean = true,
-    skipFilter: Boolean = false,
   ): ApplicationContext {
-    val allowed = mutableListOf("io.airbyte.server.auth.RouteAccess")
+    val allowed = listOf("io.airbyte.server.auth.RouteAccess")
     val isolated =
       object : BeanConfiguration by BeanConfiguration.disabled("io.airbyte") {
         override fun isWithin(beanDefinitionReference: BeanDefinitionReference<*>): Boolean =
@@ -177,12 +126,7 @@ class RouteAccessHttpTest {
 
         override fun isWithin(cls: Class<*>): Boolean = isWithin(cls.name)
 
-        override fun isWithin(className: String): Boolean =
-          className.startsWith("io.airbyte.") &&
-            (
-              allowed.none(className::startsWith) || (!validateStartup && className.contains("RouteAccessStartup")) ||
-                (skipFilter && className.contains("RouteAccessFilter"))
-            )
+        override fun isWithin(className: String): Boolean = className.startsWith("io.airbyte.") && allowed.none(className::startsWith)
       }
     return ApplicationContext
       .builder()
@@ -197,7 +141,7 @@ class RouteAccessHttpTest {
           "micronaut.metrics.enabled" to false,
           "micronaut.security.enabled" to securityEnabled,
           "micronaut.security.filter.enabled" to securityEnabled,
-          "test.earlier-allow" to earlierAllow,
+          "test.invalid-route" to invalidRoute,
           "micronaut.security.reject-not-found" to false,
         ),
       ).build()
@@ -207,7 +151,7 @@ class RouteAccessHttpTest {
 @Controller("/api/v1/inventory-fixture")
 @Requires(property = "spec.name", value = "RouteAccessHttpTest")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-class RouteAccessMissingController {
+class RouteAccessHttpController {
   @Get("/legacy")
   @Secured("test-reader")
   @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.LEGACY)
@@ -228,21 +172,6 @@ class RouteAccessMissingController {
   fun failure(): String =
     throw io.micronaut.http.exceptions
       .HttpStatusException(io.micronaut.http.HttpStatus.SERVICE_UNAVAILABLE, "handler failed")
-
-  @Get("/shared")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED)
-  fun shared(): String {
-    calls++
-    return "unguarded"
-  }
-
-  var calls = 0
-
-  @Get("/missing")
-  fun missing(): String {
-    calls++
-    return "unchecked"
-  }
 }
 
 @Singleton
@@ -256,20 +185,28 @@ class RouteAccessTestAuthentication : AuthenticationFetcher<HttpRequest<*>> {
     }
 }
 
-@Singleton
+@Controller("/api/v1/inventory-fixture")
 @Requires(property = "spec.name", value = "RouteAccessHttpTest")
-@Requires(property = "test.earlier-allow", value = "true")
-class RouteAccessEarlierAllow : SecurityRule<HttpRequest<*>> {
-  override fun getOrder(): Int = Int.MIN_VALUE
+@Requires(property = "test.invalid-route", value = "missing")
+@Secured(SecurityRule.IS_AUTHENTICATED)
+class RouteAccessMissingController {
+  @Get("/missing")
+  fun missing() = "unchecked"
+}
 
-  override fun check(
-    request: HttpRequest<*>,
-    authentication: Authentication?,
-  ): Publisher<SecurityRuleResult> = Publishers.just(SecurityRuleResult.ALLOWED)
+@Controller("/api/v1/inventory-fixture")
+@Requires(property = "spec.name", value = "RouteAccessHttpTest")
+@Requires(property = "test.invalid-route", value = "shared")
+@Secured(SecurityRule.IS_AUTHENTICATED)
+class RouteAccessUnverifiedController {
+  @Get("/shared")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED)
+  fun shared() = "unguarded"
 }
 
 @Controller("/public/v1/inventory-fixture")
 @Requires(property = "spec.name", value = "RouteAccessHttpTest")
+@Requires(property = "test.invalid-route", value = "outside")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class RouteAccessOutsidePrefixController {
   @Get("/missing")

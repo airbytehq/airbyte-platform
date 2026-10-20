@@ -5,6 +5,8 @@
 package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.permissions.IntentSecurityRule
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -12,6 +14,8 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.rules.SecurityRuleResult
+import io.micronaut.web.router.RouteAttributes
+import io.micronaut.web.router.UriRouteMatch
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
@@ -69,6 +73,16 @@ class ScopedTokenSecurityRule(
       return Flux.just(SecurityRuleResult.UNKNOWN)
     }
 
+    // SHARED rules check the scope against typed, saved ownership through OperationPermissions.
+    // Keep the remaining security rules active; UNKNOWN grants no access.
+    val route = RouteAttributes.getRouteMatch(request).orElse(null)
+    if (route is UriRouteMatch<*, *> &&
+      route.annotationMetadata.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElse(RouteMigration.LEGACY) ==
+      RouteMigration.SHARED
+    ) {
+      return Flux.just(SecurityRuleResult.UNKNOWN)
+    }
+
     // Scoped token requests must match a single workspace ID.
     // If we can't find a workspace ID in the request, the request is rejected.
     val requestedWorkspaceId = resolveWorkspaceId(request)
@@ -99,7 +113,7 @@ class ScopedTokenSecurityRule(
 }
 
 // Get the TokenScopeClaim from the Authentication attributes (which come from the JWT).
-private fun getTokenScopeClaim(authentication: Authentication): TokenScopeClaim? {
+internal fun getTokenScopeClaim(authentication: Authentication): TokenScopeClaim? {
   val obj = authentication.attributes[TokenScopeClaim.CLAIM_ID]
   if (obj == null) {
     return null

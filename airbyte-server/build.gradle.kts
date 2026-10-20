@@ -1,9 +1,19 @@
 plugins {
+  kotlin("plugin.allopen")
   id("io.airbyte.gradle.jvm.app")
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.kube-reload")
   `java-test-fixtures`
+}
+
+// Micronaut advice requires open Kotlin implementations, including inherited LEGACY routes.
+allOpen {
+  annotation("io.micronaut.http.annotation.Controller")
+}
+
+ksp {
+  arg("kotlin.allopen.annotations", "io.micronaut.http.annotation.Controller")
 }
 
 dependencies {
@@ -36,6 +46,7 @@ dependencies {
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.kotlin.logging)
+  implementation(libs.kotlin.coroutines)
   implementation(libs.kubernetes.client)
 
   implementation(project(":oss:airbyte-analytics"))

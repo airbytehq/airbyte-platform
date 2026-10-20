@@ -6,9 +6,11 @@ package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.workload.api.WorkloadApi
+import io.micronaut.context.BeanContext
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.web.router.Router
@@ -20,6 +22,7 @@ import java.lang.reflect.Method
 @Singleton
 class RouteAccessInventory(
   private val router: Router,
+  private val beans: BeanContext,
 ) {
   fun routes(): List<UriRouteInfo<*, *>> =
     router.uriRoutes().filter(::isManaged).toList().distinctBy {
@@ -46,9 +49,9 @@ class RouteAccessInventory(
     val errors = mutableListOf<String>()
     val roles = securedRoles(route).toSet()
     val anonymous = SecurityRule.IS_ANONYMOUS in roles
-    if (declaration.migration == RouteMigration.SHARED) errors += "SHARED requires the verified checker and business guard (PLAT-1504)"
+    if (declaration.migration == RouteMigration.SHARED) errors += sharedViolations(route, declaration)
     if (declaration.access == RouteAccessPolicy.PROTECTED) {
-      if (declaration.migration != RouteMigration.LEGACY) errors += "protected routes must remain LEGACY"
+      if (declaration.migration == RouteMigration.NOT_APPLICABLE) errors += "protected routes require a migration status"
       if (anonymous) errors += "protected policy conflicts with anonymous security metadata"
     } else {
       if (declaration.migration != RouteMigration.NOT_APPLICABLE) errors += "public/login routes cannot have a protected migration status"
@@ -59,6 +62,26 @@ class RouteAccessInventory(
       }
     }
     return errors
+  }
+
+  private fun sharedViolations(
+    route: UriRouteInfo<*, *>,
+    declaration: AuthorizeOperation,
+  ): List<String> {
+    val rule = declaration.rule.java
+    if (rule == OperationRule::class.java || rule.isInterface ||
+      java.lang.reflect.Modifier
+        .isAbstract(rule.modifiers) ||
+      !beans.containsBean(rule)
+    ) {
+      return listOf("SHARED requires a concrete DI rule")
+    }
+    if (!beans.containsBean(AuthorizationInterceptor::class.java) ||
+      !beans.getBeanDefinition(route.declaringType).isProxy
+    ) {
+      return listOf("SHARED requires the checker and controller advice")
+    }
+    return emptyList()
   }
 
   // Match SecuredAnnotationRule: a method annotation overrides its controller annotation.
