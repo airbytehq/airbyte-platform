@@ -100,6 +100,7 @@ class AuthorizationResourceLookupTest {
       mockk(),
       privateLinks = mockk(),
       connectionEvents = mockk(),
+      actorRepository = mockk(),
     )
 
   init {

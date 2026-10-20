@@ -58,6 +58,7 @@ import io.airbyte.domain.models.CommandId
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.protocol.models.Jsons
+import io.airbyte.server.auth.CheckCommandRule
 import io.airbyte.server.helpers.CatalogDiffConverter.toDomain
 import io.airbyte.server.services.CommandService
 import io.micronaut.context.annotation.Context
@@ -294,65 +295,55 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = CheckCommandRule::class,
   )
   override fun runCheckCommand(
     @Body runCheckCommandRequest: RunCheckCommandRequest,
-  ): RunCheckCommandResponse =
-    withRoleValidation(
-      id =
-        if (runCheckCommandRequest.workspaceId != null) {
-          WorkspaceId(runCheckCommandRequest.workspaceId)
-        } else if (runCheckCommandRequest.actorId != null) {
-          ActorId(runCheckCommandRequest.actorId)
-        } else {
-          throw IllegalArgumentException("Must provide either workspaceId or actorId")
-        },
-      roles = setOf(AuthRoleConstants.WORKSPACE_RUNNER, AuthRoleConstants.EMBEDDED_END_USER),
-    ) {
-      val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
+  ): RunCheckCommandResponse {
+    val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
 
-      // Process and sanitize config if present
-      val sanitizedConfig =
-        if (runCheckCommandRequest.config != null) {
-          // Get actor context from service
-          val context =
-            commandService.getCheckCommandContext(
-              actorId = runCheckCommandRequest.actorId,
-              actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
-              workspaceId = runCheckCommandRequest.workspaceId,
-            )
-
-          commandService.processCheckConfig(
+    // Process and sanitize config if present
+    val sanitizedConfig =
+      if (runCheckCommandRequest.config != null) {
+        // Get actor context from service
+        val context =
+          commandService.getCheckCommandContext(
             actorId = runCheckCommandRequest.actorId,
-            actorDefinitionId = context.actorDefinitionId,
-            workspaceId = context.workspaceId,
-            providedConfig = Jsons.jsonNode(runCheckCommandRequest.config),
+            actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
+            workspaceId = runCheckCommandRequest.workspaceId,
           )
-        } else {
-          null
-        }
 
-      // Update request with sanitized config for commandInput (logging/auditing)
-      if (sanitizedConfig != null) {
-        runCheckCommandRequest.config = sanitizedConfig
+        commandService.processCheckConfig(
+          actorId = runCheckCommandRequest.actorId,
+          actorDefinitionId = context.actorDefinitionId,
+          workspaceId = context.workspaceId,
+          providedConfig = Jsons.jsonNode(runCheckCommandRequest.config),
+        )
+      } else {
+        null
       }
 
-      commandService.createCheckCommand(
-        commandId = runCheckCommandRequest.id,
-        actorId = runCheckCommandRequest.actorId,
-        actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
-        workspaceId = runCheckCommandRequest.workspaceId,
-        configuration = sanitizedConfig,
-        jobId = runCheckCommandRequest.jobId,
-        attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
-        workloadPriority = priority,
-        signalInput = runCheckCommandRequest.signalInput,
-        commandInput = Jsons.jsonNode(runCheckCommandRequest),
-      )
-
-      return RunCheckCommandResponse().id(runCheckCommandRequest.id)
+    // Update request with sanitized config for commandInput (logging/auditing)
+    if (sanitizedConfig != null) {
+      runCheckCommandRequest.config = sanitizedConfig
     }
+
+    commandService.createCheckCommand(
+      commandId = runCheckCommandRequest.id,
+      actorId = runCheckCommandRequest.actorId,
+      actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
+      workspaceId = runCheckCommandRequest.workspaceId,
+      configuration = sanitizedConfig,
+      jobId = runCheckCommandRequest.jobId,
+      attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
+      workloadPriority = priority,
+      signalInput = runCheckCommandRequest.signalInput,
+      commandInput = Jsons.jsonNode(runCheckCommandRequest),
+    )
+
+    return RunCheckCommandResponse().id(runCheckCommandRequest.id)
+  }
 
   @Post("/run/discover")
   @ExecuteOn(AirbyteTaskExecutors.IO)

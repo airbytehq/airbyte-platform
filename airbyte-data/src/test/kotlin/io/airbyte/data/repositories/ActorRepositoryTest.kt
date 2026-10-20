@@ -11,8 +11,10 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 
 @MicronautTest
@@ -53,6 +55,33 @@ class ActorRepositoryTest : AbstractConfigRepositoryTest() {
     val foundActor = actorRepository.findByActorId(savedActor.id!!)
 
     assertEquals(name, foundActor?.name)
+  }
+
+  @Test
+  fun `saved definition lookup returns only the definition in the requested workspace for both actor types`() {
+    for (type in listOf(ActorType.source, ActorType.destination)) {
+      val actor =
+        actorRepository.save(
+          Actor(
+            workspaceId = UUID.randomUUID(),
+            actorDefinitionId = UUID.randomUUID(),
+            name = "saved-$type",
+            configuration = Jsons.jsonNode(mapOf("password" to "stored-config")),
+            actorType = type,
+          ),
+        )
+
+      assertEquals(
+        Optional.of(actor.actorDefinitionId),
+        actorRepository.findActorDefinitionIdByIdAndWorkspaceId(actor.id!!, actor.workspaceId),
+      )
+      assertTrue(actorRepository.findActorDefinitionIdByIdAndWorkspaceId(actor.id!!, UUID.randomUUID()).isEmpty)
+    }
+  }
+
+  @Test
+  fun `saved definition lookup is empty for a missing actor`() {
+    assertTrue(actorRepository.findActorDefinitionIdByIdAndWorkspaceId(UUID.randomUUID(), UUID.randomUUID()).isEmpty)
   }
 
   @Test

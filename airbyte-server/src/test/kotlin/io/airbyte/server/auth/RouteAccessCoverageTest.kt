@@ -77,6 +77,8 @@ class RouteAccessCoverageTest {
               context.registerSingleton(type, mockkClass(type.kotlin, relaxed = true), Qualifiers.byName(name.value))
             }
           }
+        context.registerSingleton(CheckCommandRule::class.java, mockkClass(CheckCommandRule::class, relaxed = true))
+        context.registerSingleton(AuthorizationInterceptor::class.java, mockkClass(AuthorizationInterceptor::class, relaxed = true))
         context.start()
         val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
         assertTrue(inventory.routes().size > 400, "Coverage must use all real OSS controllers")
@@ -104,6 +106,7 @@ class RouteAccessCoverageTest {
           "The separate workload API is not Config/public API",
         )
         val entries = routeAccessEntries(inventory)
+        assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.migration == RouteMigration.SHARED })
         assertTrue(entries.any { it.path == "/api/v1/attempt/save_stats" && it.roles == listOf("isAuthenticated()") })
         assertFalse(entries.any { it.implementation.contains("wrapped") })
         writeReportAndCheckContract(entries, "oss-${if (securityEnabled) "authenticated" else "no-auth"}", securityEnabled)

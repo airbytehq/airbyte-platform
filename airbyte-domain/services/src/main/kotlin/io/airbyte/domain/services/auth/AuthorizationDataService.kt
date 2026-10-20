@@ -9,6 +9,7 @@ import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AuthorizationCommandRepository
 import io.airbyte.data.repositories.GroupRepository
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
@@ -57,6 +58,7 @@ class AuthorizationDataService(
   private val invitations: UserInvitationService,
   private val privateLinks: PrivateLinkService,
   private val connectionEvents: ConnectionTimelineEventService,
+  private val actorRepository: ActorRepository,
 ) {
   fun workspaceAndOrganization(workspaceId: UUID): WorkspaceAndOrganization {
     val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) }
@@ -75,6 +77,20 @@ class AuthorizationDataService(
   fun sourceWorkspaceAndOrganization(sourceId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(sourceId)
 
   fun destinationWorkspaceAndOrganization(destinationId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(destinationId)
+
+  fun savedActorDefinitionId(
+    actorId: UUID,
+    workspaceId: UUID,
+  ): UUID = actorRepository.findActorDefinitionIdByIdAndWorkspaceId(actorId, workspaceId).orElseThrow { AuthorizationResourceNotFoundException() }
+
+  fun canUseActorDefinition(
+    actorDefinitionId: UUID,
+    owner: WorkspaceAndOrganization,
+  ): Boolean {
+    val version = actors.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(version.actorDefinitionId == actorDefinitionId)
+    return actors.scopeCanUseDefinition(actorDefinitionId, owner.workspaceId, "workspace")
+  }
 
   fun privateLinkWorkspaceAndOrganization(privateLinkId: UUID): WorkspaceAndOrganization {
     val privateLink =

@@ -9,10 +9,17 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
+import java.util.Optional
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ActorRepository : PageableRepository<Actor, UUID> {
   @Query("SELECT * FROM Actor a WHERE a.id = :actorId")
   fun findByActorId(actorId: UUID): Actor?
+
+  @Query("SELECT actor_definition_id FROM actor WHERE id = :actorId AND workspace_id = :workspaceId")
+  fun findActorDefinitionIdByIdAndWorkspaceId(
+    actorId: UUID,
+    workspaceId: UUID,
+  ): Optional<UUID>
 }
