@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.server.apis.publicapi.helpers.toPublic
 

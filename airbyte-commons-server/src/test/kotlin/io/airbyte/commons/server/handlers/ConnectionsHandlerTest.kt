@@ -947,6 +947,10 @@ internal class ConnectionsHandlerTest {
       val sourceVersion: ActorDefinitionVersion = mock(ActorDefinitionVersion::class.java)
       val destinationVersion: ActorDefinitionVersion = mock(ActorDefinitionVersion::class.java)
 
+      // real actor rows always have a configuration and createdAt, and the Kotlin read models require both
+      source.withConfiguration(jsonNode(mapOf<String, String>())).withCreatedAt(1L)
+      destination.withCreatedAt(1L)
+
       whenever(connectionService.listStandardSyncs())
         .thenReturn(listOf(standardSync, standardSync2))
       whenever(sourceService.getSourceConnection(source.sourceId))

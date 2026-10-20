@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.server.generated.models.ResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.publicApi.server.generated.models.JobTypeResourceLimit
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -18,27 +18,28 @@ class SourceReadMapperTest {
   fun `from should convert a SourceRead object from the config api to a SourceResponse`() {
     // Given
     val sourceRead =
-      SourceRead().apply {
-        sourceId = UUID.randomUUID()
-        name = "sourceName"
-        sourceDefinitionId = UUID.randomUUID()
-        workspaceId = UUID.randomUUID()
-        connectionConfiguration = Jsons.deserialize("{}")
-        createdAt = 1L
+      SourceRead(
+        sourceId = UUID.randomUUID(),
+        name = "sourceName",
+        sourceDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.deserialize("{}"),
+        sourceName = "source-definition",
+        createdAt = 1L,
         resourceAllocation =
-          mockk {
-            every { default } returns
-              mockk {
-                every { cpuRequest } returns "1"
-                every { cpuLimit } returns "2"
-                every { memoryRequest } returns "3"
-                every { memoryLimit } returns "4"
-                every { ephemeralStorageRequest } returns "5"
-                every { ephemeralStorageLimit } returns "6"
-              }
-            every { jobSpecific } returns emptyList()
-          }
-      }
+          ScopedResourceRequirements(
+            default =
+              ResourceRequirements(
+                cpuRequest = "1",
+                cpuLimit = "2",
+                memoryRequest = "3",
+                memoryLimit = "4",
+                ephemeralStorageRequest = "5",
+                ephemeralStorageLimit = "6",
+              ),
+            jobSpecific = emptyList(),
+          ),
+      )
 
     // When
     val sourceResponse = SourceReadMapper.from(sourceRead)

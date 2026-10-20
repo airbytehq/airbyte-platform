@@ -5,24 +5,26 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationReadList
-import io.airbyte.api.model.generated.DestinationSearch
 import io.airbyte.api.model.generated.DestinationSnippetRead
-import io.airbyte.api.model.generated.DestinationUpdate
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.PartialDestinationUpdate
-import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.DestinationCreate
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationReadList
+import io.airbyte.api.server.generated.models.DestinationSearch
+import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.PartialDestinationUpdate
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConfigurationUpdate
@@ -71,6 +73,9 @@ import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
+import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -119,7 +124,7 @@ class DestinationHandler
       // persist
       val destinationId = uuidGenerator.get()
       persistDestinationConnection(
-        if (destinationCreate.name != null) destinationCreate.name else "default",
+        destinationCreate.name,
         destinationCreate.destinationDefinitionId,
         destinationCreate.workspaceId,
         destinationId,
@@ -242,11 +247,13 @@ class DestinationHandler
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
       }
 
+      val destinationId = requireNotNull(partialDestinationUpdate.destinationId) { "destinationId is required" }
+
       // get existing implementation
       val updatedDestination =
         configurationUpdate
           .partialDestination(
-            partialDestinationUpdate.destinationId,
+            destinationId,
             partialDestinationUpdate.name,
             partialDestinationUpdate.connectionConfiguration,
           )
@@ -278,7 +285,7 @@ class DestinationHandler
 
       // read configuration from db
       return buildDestinationRead(
-        destinationService.getDestinationConnection(partialDestinationUpdate.destinationId),
+        destinationService.getDestinationConnection(destinationId),
         spec,
       )
     }
@@ -313,10 +320,11 @@ class DestinationHandler
 
       // Parse sort key to extract field and direction
       val sortKeyInfo =
-        parseSortKey(actorListCursorPaginatedRequestBody.sortKey, ActorType.DESTINATION)
+        parseSortKey(actorListCursorPaginatedRequestBody.sortKey?.let { JavaActorListSortKey.fromValue(it.value) }, ActorType.DESTINATION)
       val internalSortKey = sortKeyInfo.sortKey
       val ascending = sortKeyInfo.ascending
-      val actorFilters = buildFilters(filters)
+      // airbyte-data still takes the Java filter model
+      val actorFilters = buildFilters(Jsons.convertValue(filters, JavaActorListFilters::class.java))
 
       val cursorPagination =
         destinationService.buildCursorPagination(
@@ -339,14 +347,6 @@ class DestinationHandler
       val destinationReads: MutableList<DestinationRead> = mutableListOf()
 
       for ((destination, _, connectionCount, lastSync, connectionJobStatuses, isActive) in destinationConnectionsWithCount) {
-        val destinationRead = buildDestinationRead(destination)
-        if (lastSync != null) {
-          destinationRead.lastSync(lastSync.toEpochSecond())
-        }
-        destinationRead.numConnections(connectionCount)
-        destinationRead.status =
-          if (isActive) ActorStatus.ACTIVE else ActorStatus.INACTIVE
-
         // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
         val statusCountsMap: MutableMap<String, Int> = HashMap()
         for ((key, value) in connectionJobStatuses) {
@@ -362,22 +362,28 @@ class DestinationHandler
             }
           statusCountsMap[statusKey] = value
         }
-        destinationRead.connectionJobStatuses(statusCountsMap)
-
-        destinationReads.add(destinationRead)
+        destinationReads.add(
+          buildDestinationRead(destination).copy(
+            lastSync = lastSync?.toEpochSecond(),
+            numConnections = connectionCount,
+            status = if (isActive) ActorStatus.ACTIVE else ActorStatus.INACTIVE,
+            connectionJobStatuses = statusCountsMap,
+          ),
+        )
       }
-      return DestinationReadList().destinations(destinationReads).numConnections(numDestinations).pageSize(pageSize)
+      return DestinationReadList(
+        destinations = destinationReads,
+        numConnections = numDestinations,
+        pageSize = pageSize,
+      )
     }
 
     private fun buildDestinationReadWithStatus(destinationConnection: DestinationConnection): DestinationRead {
       val destinationRead = buildDestinationRead(destinationConnection)
       // add destination status into destinationRead
-      if (destinationService.isDestinationActive(destinationConnection.destinationId)) {
-        destinationRead.status(ActorStatus.ACTIVE)
-      } else {
-        destinationRead.status(ActorStatus.INACTIVE)
-      }
-      return destinationRead
+      return destinationRead.copy(
+        status = if (destinationService.isDestinationActive(destinationConnection.destinationId)) ActorStatus.ACTIVE else ActorStatus.INACTIVE,
+      )
     }
 
     fun listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): DestinationReadList {
@@ -386,16 +392,16 @@ class DestinationHandler
         destinationService.listWorkspacesDestinationConnections(
           ResourcesQueryPaginated(
             listResourcesForWorkspacesRequestBody.workspaceIds,
-            listResourcesForWorkspacesRequestBody.includeDeleted,
-            listResourcesForWorkspacesRequestBody.pagination.pageSize,
-            listResourcesForWorkspacesRequestBody.pagination.rowOffset,
+            listResourcesForWorkspacesRequestBody.includeDeleted ?: false,
+            requireNotNull(listResourcesForWorkspacesRequestBody.pagination.pageSize) { "pageSize is required" },
+            requireNotNull(listResourcesForWorkspacesRequestBody.pagination.rowOffset) { "rowOffset is required" },
             null,
           ),
         )
       for (destinationConnection in destinationConnections) {
         reads.add(buildDestinationReadWithStatus(destinationConnection))
       }
-      return DestinationReadList().destinations(reads)
+      return DestinationReadList(destinations = reads)
     }
 
     fun listDestinationsForDestinationDefinition(destinationDefinitionId: UUID): DestinationReadList {
@@ -406,7 +412,7 @@ class DestinationHandler
         reads.add(buildDestinationRead(destinationConnection))
       }
 
-      return DestinationReadList().destinations(reads)
+      return DestinationReadList(destinations = reads)
     }
 
     fun searchDestinations(destinationSearch: DestinationSearch?): DestinationReadList {
@@ -421,7 +427,7 @@ class DestinationHandler
         }
       }
 
-      return DestinationReadList().destinations(reads)
+      return DestinationReadList(destinations = reads)
     }
 
     private fun validateDestination(
@@ -526,7 +532,9 @@ class DestinationHandler
           .withDestinationId(destinationId)
           .withTombstone(tombstone)
           .withIsDraft(isDraft)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
+          .withResourceRequirements(
+            apiPojoConverters.scopedResourceReqsToInternal(Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java)),
+          )
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
       // orphaned (e.g. by a version bump) once the new config is durably persisted.
@@ -697,8 +705,12 @@ class DestinationHandler
           destinationConnection.destinationId,
         )
 
-      val breakingChanges: Optional<ActorDefinitionVersionBreakingChanges> =
-        actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion)
+      // the helper and converters still build the Java models
+      val breakingChanges =
+        actorDefinitionHandlerHelper
+          .getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion)
+          .orElse(null)
+          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.workspaceId)
       val isEntitled =
@@ -708,22 +720,27 @@ class DestinationHandler
           standardDestinationDefinition.destinationDefinitionId,
         )
 
-      return DestinationRead()
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .destinationId(destinationConnection.destinationId)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(destinationConnection.destinationDefinitionId)
-        .connectionConfiguration(destinationConnection.configuration)
-        .name(destinationConnection.name)
-        .destinationName(standardDestinationDefinition.name)
-        .icon(standardDestinationDefinition.iconUrl)
-        .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied)
-        .isEntitled(isEntitled)
-        .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion.supportState))
-        .isDraft(destinationConnection.isDraft == true)
-        .createdAt(destinationConnection.createdAt)
-        .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(destinationConnection.resourceRequirements))
+      return DestinationRead(
+        destinationDefinitionId = destinationConnection.destinationDefinitionId,
+        destinationId = destinationConnection.destinationId,
+        workspaceId = destinationConnection.workspaceId,
+        connectionConfiguration = destinationConnection.configuration,
+        name = destinationConnection.name,
+        destinationName = standardDestinationDefinition.name,
+        icon = standardDestinationDefinition.iconUrl,
+        isVersionOverrideApplied = destinationVersionWithOverrideStatus.isOverrideApplied,
+        isEntitled = isEntitled,
+        breakingChanges = breakingChanges,
+        supportState =
+          apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion.supportState)?.convertTo<SupportState>(),
+        isDraft = destinationConnection.isDraft == true,
+        createdAt = destinationConnection.createdAt,
+        resourceAllocation =
+          Jsons.convertValue(
+            apiPojoConverters.scopedResourceReqsToApi(destinationConnection.resourceRequirements),
+            ScopedResourceRequirements::class.java,
+          ),
+      )
     }
 
     fun toDestinationSnippetRead(

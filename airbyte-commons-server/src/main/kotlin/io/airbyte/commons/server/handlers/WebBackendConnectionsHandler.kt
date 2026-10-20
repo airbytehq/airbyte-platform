@@ -13,7 +13,6 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSnippetRead
 import io.airbyte.api.model.generated.JobRead
@@ -23,7 +22,6 @@ import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.SchemaChange
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceSnippetRead
 import io.airbyte.api.model.generated.StreamDescriptor
@@ -40,6 +38,8 @@ import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.enums.convertTo
@@ -80,8 +80,6 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Function
 import java.util.stream.Collectors
-import io.airbyte.api.server.generated.models.DestinationIdRequestBody as KotlinDestinationIdRequestBody
-import io.airbyte.api.server.generated.models.SourceIdRequestBody as KotlinSourceIdRequestBody
 
 /**
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
@@ -273,12 +271,12 @@ class WebBackendConnectionsHandler(
     val sourceActorDefinitionVersionRead =
       actorDefinitionVersionHandler
         .getActorDefinitionVersionForSourceId(
-          KotlinSourceIdRequestBody(sourceId = source.sourceId),
+          SourceIdRequestBody(sourceId = source.sourceId),
         )
     val destinationActorDefinitionVersionRead =
       actorDefinitionVersionHandler
         .getActorDefinitionVersionForDestinationId(
-          KotlinDestinationIdRequestBody(destinationId = destination.destinationId),
+          DestinationIdRequestBody(destinationId = destination.destinationId),
         )
     // the version handler returns Kotlin models; WebBackendConnectionRead is still a Java model
     webBackendConnectionRead.sourceActorDefinitionVersion =
@@ -306,12 +304,12 @@ class WebBackendConnectionsHandler(
     val sourceActorDefinitionVersionRead =
       actorDefinitionVersionHandler
         .getActorDefinitionVersionForSourceId(
-          KotlinSourceIdRequestBody(sourceId = source!!.sourceId),
+          SourceIdRequestBody(sourceId = source!!.sourceId),
         )
     val destinationActorDefinitionVersionRead =
       actorDefinitionVersionHandler
         .getActorDefinitionVersionForDestinationId(
-          KotlinDestinationIdRequestBody(destinationId = destination!!.destinationId),
+          DestinationIdRequestBody(destinationId = destination!!.destinationId),
         )
 
     val listItem =
@@ -366,14 +364,16 @@ class WebBackendConnectionsHandler(
 
   @WithSpan
   private fun getSourceRead(sourceId: UUID): SourceRead {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
-    return sourceHandler.getSource(sourceIdRequestBody)
+    // the source handler returns Kotlin models; this handler still builds the Java ones
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
+    return Jsons.convertValue(sourceHandler.getSource(sourceIdRequestBody), SourceRead::class.java)
   }
 
   @WithSpan
   private fun getDestinationRead(destinationId: UUID): DestinationRead {
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
-    return destinationHandler.getDestination(destinationIdRequestBody)
+    // the destination handler returns Kotlin models; this handler still builds the Java ones
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
+    return Jsons.convertValue(destinationHandler.getDestination(destinationIdRequestBody), DestinationRead::class.java)
   }
 
   @WithSpan
@@ -645,7 +645,7 @@ class WebBackendConnectionsHandler(
       val destinationVersion =
         actorDefinitionVersionHandler
           .getActorDefinitionVersionForDestinationId(
-            KotlinDestinationIdRequestBody(destinationId = oldConnectionRead.destinationId),
+            DestinationIdRequestBody(destinationId = oldConnectionRead.destinationId),
           )
       if (destinationVersion.supportsRefreshes) {
         eventRunner.refreshConnectionAsync(

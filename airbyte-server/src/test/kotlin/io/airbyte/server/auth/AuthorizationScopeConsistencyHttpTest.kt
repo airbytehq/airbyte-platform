@@ -4,8 +4,9 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.api.server.generated.models.WorkspaceRead
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.AuthenticationFactory
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.JobHistoryHandler
@@ -106,7 +107,16 @@ internal class AuthorizationScopeConsistencyHttpTest {
       every { workspaceHelper.getWorkspaceForConnectionId(attackerConn) } returns attackerWs
       every { workspaceHelper.getOrganizationForWorkspace(attackerWs) } returns attackerOrg
       every { workspaceHelper.getOrganizationForWorkspace(victimWs) } returns victimOrg
-      every { sourceHandler.getSource(any()) } returns SourceRead().sourceId(attackerSource).workspaceId(attackerWs)
+      every { sourceHandler.getSource(any()) } returns
+        SourceRead(
+          sourceDefinitionId = UUID.randomUUID(),
+          sourceId = attackerSource,
+          workspaceId = attackerWs,
+          connectionConfiguration = Jsons.emptyObject(),
+          name = "source",
+          sourceName = "source-definition",
+          createdAt = 0L,
+        )
       every { workspacesHandler.getWorkspace(any()) } returns
         WorkspaceRead(
           workspaceId = victimWs,

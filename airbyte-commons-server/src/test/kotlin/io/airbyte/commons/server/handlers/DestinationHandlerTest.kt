@@ -5,24 +5,25 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.ActorListFilters
-import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationSearch
-import io.airbyte.api.model.generated.DestinationUpdate
-import io.airbyte.api.model.generated.ResourceRequirements
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.SupportState
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.ActorListFilters
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.DestinationCreate
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationSearch
+import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.ResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -79,6 +80,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 internal class DestinationHandlerTest {
   private lateinit var standardDestinationDefinition: StandardDestinationDefinition
@@ -161,7 +163,7 @@ internal class DestinationHandlerTest {
     destinationConnection =
       DestinationHelpers.generateDestination(
         standardDestinationDefinition.destinationDefinitionId,
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION),
+        toInternalResourceRequirements(RESOURCE_ALLOCATION),
       )
 
     destinationConnectionWithCount = DestinationHelpers.generateDestinationWithCount(destinationConnection)
@@ -192,12 +194,13 @@ internal class DestinationHandlerTest {
     // ===== GIVEN =====
     // Create the DestinationCreate request with the necessary fields.
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(destinationConnection.configuration)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = destinationConnection.configuration,
+        resourceAllocation = RESOURCE_ALLOCATION,
+      )
 
     // Set up basic mocks.
     every { uuidGenerator.get() } returns destinationConnection.destinationId
@@ -308,8 +311,7 @@ internal class DestinationHandlerTest {
           IS_ENTITLED,
           SUPPORT_STATE,
           RESOURCE_ALLOCATION,
-        ).connectionConfiguration(configWithSecretRefIds)
-        .isDraft(false)
+        ).copy(connectionConfiguration = configWithSecretRefIds, isDraft = false)
 
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
@@ -337,12 +339,13 @@ internal class DestinationHandlerTest {
   fun `create destination as draft uses partial validation and returns draft state`() {
     val partialConfig = emptyObject()
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(partialConfig)
-        .createAsDraft(true)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = partialConfig,
+        createAsDraft = true,
+      )
     val persistedDestination = clone(destinationConnection).withConfiguration(partialConfig).withIsDraft(true)
     val persistedDestinationSlot = slot<DestinationConnection>()
 
@@ -378,7 +381,7 @@ internal class DestinationHandlerTest {
     val result = destinationHandler.createDestination(destinationCreate)
 
     Assertions.assertTrue(persistedDestinationSlot.captured.isDraft)
-    Assertions.assertTrue(result.isDraft)
+    Assertions.assertTrue(result.isDraft == true)
     verify { validator.ensurePartial(connectorSpecification.connectionSpecification, partialConfig) }
   }
 
@@ -399,12 +402,13 @@ internal class DestinationHandlerTest {
     } returns destinationDefinitionVersion
 
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(DestinationHelpers.testDestinationJson)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = DestinationHelpers.testDestinationJson,
+        resourceAllocation = RESOURCE_ALLOCATION,
+      )
 
     // Not entitled
     every {
@@ -445,12 +449,13 @@ internal class DestinationHandlerTest {
     } returns destinationDefinitionVersion
 
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(DestinationHelpers.testDestinationJson)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = DestinationHelpers.testDestinationJson,
+        resourceAllocation = RESOURCE_ALLOCATION,
+      )
 
     // Not entitled
     every {
@@ -501,12 +506,13 @@ internal class DestinationHandlerTest {
       )
 
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(DestinationHelpers.testDestinationJson)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = DestinationHelpers.testDestinationJson,
+        resourceAllocation = RESOURCE_ALLOCATION,
+      )
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -531,14 +537,15 @@ internal class DestinationHandlerTest {
         .withConfiguration(newConfiguration)
         .withTombstone(false)
         .withIsDraft(isDraft)
-        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
+        .withResourceRequirements(toInternalResourceRequirements(newResourceAllocation))
 
     val destinationUpdate =
-      DestinationUpdate()
-        .name(updatedDestName)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      DestinationUpdate(
+        name = updatedDestName,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = newResourceAllocation,
+      )
 
     // Set up basic mocks for the update.
     every {
@@ -670,7 +677,7 @@ internal class DestinationHandlerTest {
           IS_ENTITLED,
           SUPPORT_STATE,
           newResourceAllocation,
-        ).connectionConfiguration(newConfigWithSecretRefIds)
+        ).copy(connectionConfiguration = newConfigWithSecretRefIds)
 
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
@@ -685,7 +692,8 @@ internal class DestinationHandlerTest {
         destinationDefinitionVersion.spec,
       )
     }
-    verify { destinationService.writeDestinationConnectionNoSecrets(updatedDestinationWithSecretRefIds) }
+    // the handler writes a new connection without createdAt; the database fills it in
+    verify { destinationService.writeDestinationConnectionNoSecrets(clone(updatedDestinationWithSecretRefIds).withCreatedAt(null)) }
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
@@ -707,18 +715,19 @@ internal class DestinationHandlerTest {
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("1", "1 GB")
     val destinationUpdate =
-      DestinationUpdate()
-        .name(updatedDestName)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      DestinationUpdate(
+        name = updatedDestName,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = newResourceAllocation,
+      )
 
     val expectedDestinationConnection =
       clone(destinationConnection)
         .withName(updatedDestName)
         .withConfiguration(newConfiguration)
         .withTombstone(false)
-        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
+        .withResourceRequirements(toInternalResourceRequirements(newResourceAllocation))
 
     every {
       secretsProcessor
@@ -786,18 +795,19 @@ internal class DestinationHandlerTest {
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("3", "3 GB")
     val destinationUpdate =
-      DestinationUpdate()
-        .name(updatedDestName)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      DestinationUpdate(
+        name = updatedDestName,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = newResourceAllocation,
+      )
 
     val expectedDestinationConnection =
       clone(destinationConnection)
         .withName(updatedDestName)
         .withConfiguration(newConfiguration)
         .withTombstone(false)
-        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
+        .withResourceRequirements(toInternalResourceRequirements(newResourceAllocation))
 
     every {
       secretsProcessor
@@ -889,11 +899,12 @@ internal class DestinationHandlerTest {
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("3", "3 GB")
     val destinationUpdate =
-      DestinationUpdate()
-        .name(updatedDestName)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      DestinationUpdate(
+        name = updatedDestName,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = newResourceAllocation,
+      )
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -904,7 +915,7 @@ internal class DestinationHandlerTest {
 
   @Test
   fun testUpgradeDestinationVersion() {
-    val requestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
+    val requestBody = DestinationIdRequestBody(destinationId = destinationConnection.destinationId)
 
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)
@@ -924,21 +935,23 @@ internal class DestinationHandlerTest {
   @Test
   fun testGetDestination() {
     val expectedDestinationRead =
-      DestinationRead()
-        .name(destinationConnection.name)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(destinationConnection.configuration)
-        .destinationName(standardDestinationDefinition.name)
-        .icon(ICON_URL)
-        .isEntitled(IS_ENTITLED)
-        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE)
-        .isDraft(destinationConnection.isDraft == true)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationRead(
+        name = destinationConnection.name,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        workspaceId = destinationConnection.workspaceId,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = destinationConnection.configuration,
+        destinationName = standardDestinationDefinition.name,
+        icon = ICON_URL,
+        isEntitled = IS_ENTITLED,
+        isVersionOverrideApplied = IS_VERSION_OVERRIDE_APPLIED,
+        supportState = SUPPORT_STATE,
+        isDraft = destinationConnection.isDraft == true,
+        resourceAllocation = RESOURCE_ALLOCATION,
+        createdAt = destinationConnection.createdAt,
+      )
     val destinationIdRequestBody =
-      DestinationIdRequestBody().destinationId(expectedDestinationRead.destinationId)
+      DestinationIdRequestBody(destinationId = expectedDestinationRead.destinationId)
 
     every {
       secretsProcessor.prepareSecretsForOutput(
@@ -980,7 +993,7 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     // make sure the icon was loaded into actual svg content
-    Assertions.assertTrue(expectedDestinationRead.icon.startsWith("https://"))
+    Assertions.assertTrue(expectedDestinationRead.icon!!.startsWith("https://"))
 
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
@@ -999,7 +1012,7 @@ internal class DestinationHandlerTest {
 
   @Test
   fun testGetDestinationReturnsSecretCoordinatesOnCloud() {
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationConnection.destinationId)
 
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)
@@ -1054,21 +1067,23 @@ internal class DestinationHandlerTest {
   @Test
   fun testListDestinationForWorkspace() {
     val expectedDestinationRead =
-      DestinationRead()
-        .name(destinationConnectionWithCount.destination.name)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .workspaceId(destinationConnectionWithCount.destination.workspaceId)
-        .destinationId(destinationConnectionWithCount.destination.destinationId)
-        .connectionConfiguration(destinationConnectionWithCount.destination.configuration)
-        .destinationName(standardDestinationDefinition.name)
-        .icon(ICON_URL)
-        .isEntitled(IS_ENTITLED)
-        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE)
-        .status(ActorStatus.ACTIVE)
-        .isDraft(destinationConnectionWithCount.destination.isDraft == true)
-        .resourceAllocation(RESOURCE_ALLOCATION)
-        .numConnections(0)
+      DestinationRead(
+        name = destinationConnectionWithCount.destination.name,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        workspaceId = destinationConnectionWithCount.destination.workspaceId,
+        destinationId = destinationConnectionWithCount.destination.destinationId,
+        connectionConfiguration = destinationConnectionWithCount.destination.configuration,
+        destinationName = standardDestinationDefinition.name,
+        icon = ICON_URL,
+        isEntitled = IS_ENTITLED,
+        isVersionOverrideApplied = IS_VERSION_OVERRIDE_APPLIED,
+        supportState = SUPPORT_STATE,
+        status = ActorStatus.ACTIVE,
+        isDraft = destinationConnectionWithCount.destination.isDraft == true,
+        resourceAllocation = RESOURCE_ALLOCATION,
+        numConnections = 0,
+        createdAt = destinationConnectionWithCount.destination.createdAt,
+      )
     val workspaceIdRequestBody =
       WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.workspaceId)
 
@@ -1125,9 +1140,10 @@ internal class DestinationHandlerTest {
     val actualDestinationRead =
       destinationHandler
         .listDestinationsForWorkspace(
-          ActorListCursorPaginatedRequestBody()
-            .workspaceId(workspaceIdRequestBody.workspaceId)
-            .pageSize(10),
+          ActorListCursorPaginatedRequestBody(
+            workspaceId = workspaceIdRequestBody.workspaceId,
+            pageSize = 10,
+          ),
         )
 
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.destinations.get(0))
@@ -1182,9 +1198,10 @@ internal class DestinationHandlerTest {
 
     val workspaceId = destination1.destination.workspaceId
     val requestBody =
-      ActorListCursorPaginatedRequestBody()
-        .workspaceId(workspaceId)
-        .pageSize(10)
+      ActorListCursorPaginatedRequestBody(
+        workspaceId = workspaceId,
+        pageSize = 10,
+      )
 
     every {
       destinationService.buildCursorPagination(
@@ -1301,14 +1318,15 @@ internal class DestinationHandlerTest {
   fun testListDestinationsForWorkspaceWithFilters() {
     val workspaceId = destinationConnectionWithCount.destination.workspaceId
     val requestBody =
-      ActorListCursorPaginatedRequestBody()
-        .workspaceId(workspaceId)
-        .pageSize(5)
-        .filters(
-          ActorListFilters()
-            .searchTerm("test")
-            .states(listOf(ActorStatus.ACTIVE)),
-        )
+      ActorListCursorPaginatedRequestBody(
+        workspaceId = workspaceId,
+        pageSize = 5,
+        filters =
+          ActorListFilters(
+            searchTerm = "test",
+            states = listOf(ActorStatus.ACTIVE),
+          ),
+      )
 
     every {
       destinationService.buildCursorPagination(
@@ -1423,6 +1441,7 @@ internal class DestinationHandlerTest {
         .withName(name)
         .withConfiguration(emptyObject())
         .withTombstone(false)
+        .withCreatedAt(DestinationHelpers.CREATED_AT)
 
     return DestinationConnectionWithCount(
       destination,
@@ -1441,7 +1460,7 @@ internal class DestinationHandlerTest {
 
     val expectedSourceConnection = clone(destinationConnection).withTombstone(true)
 
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationConnection.destinationId)
     val standardSync = ConnectionHelpers.generateSyncWithDestinationId(destinationConnection.destinationId)
     standardSync.breakingChange = false
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
@@ -1515,19 +1534,21 @@ internal class DestinationHandlerTest {
   @Test
   fun testSearchDestinations() {
     val expectedDestinationRead =
-      DestinationRead()
-        .name(destinationConnection.name)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationId(destinationConnection.destinationId)
-        .connectionConfiguration(destinationConnection.configuration)
-        .destinationName(standardDestinationDefinition.name)
-        .icon(ICON_URL)
-        .isEntitled(IS_ENTITLED)
-        .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
-        .supportState(SUPPORT_STATE)
-        .isDraft(destinationConnection.isDraft == true)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      DestinationRead(
+        name = destinationConnection.name,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        workspaceId = destinationConnection.workspaceId,
+        destinationId = destinationConnection.destinationId,
+        connectionConfiguration = destinationConnection.configuration,
+        destinationName = standardDestinationDefinition.name,
+        icon = ICON_URL,
+        isEntitled = IS_ENTITLED,
+        isVersionOverrideApplied = IS_VERSION_OVERRIDE_APPLIED,
+        supportState = SUPPORT_STATE,
+        isDraft = destinationConnection.isDraft == true,
+        resourceAllocation = RESOURCE_ALLOCATION,
+        createdAt = destinationConnection.createdAt,
+      )
 
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)
@@ -1567,7 +1588,7 @@ internal class DestinationHandlerTest {
       )
     }
 
-    val validDestinationSearch = DestinationSearch().name(destinationConnection.name)
+    val validDestinationSearch = DestinationSearch(name = destinationConnection.name)
     var actualDestinationRead = destinationHandler.searchDestinations(validDestinationSearch)
     Assertions.assertEquals(1, actualDestinationRead.destinations.size)
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.destinations.get(0))
@@ -1578,7 +1599,7 @@ internal class DestinationHandlerTest {
       )
     }
 
-    val invalidDestinationSearch = DestinationSearch().name("invalid")
+    val invalidDestinationSearch = DestinationSearch(name = "invalid")
     actualDestinationRead = destinationHandler.searchDestinations(invalidDestinationSearch)
     Assertions.assertEquals(0, actualDestinationRead.destinations.size)
   }
@@ -1586,11 +1607,12 @@ internal class DestinationHandlerTest {
   @Test
   fun testFailedConfigWriteDoesNotDeleteOldSecretReferences() {
     val destinationCreate =
-      DestinationCreate()
-        .name(destinationConnection.name)
-        .workspaceId(destinationConnection.workspaceId)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .connectionConfiguration(destinationConnection.configuration)
+      DestinationCreate(
+        name = destinationConnection.name,
+        workspaceId = destinationConnection.workspaceId,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        connectionConfiguration = destinationConnection.configuration,
+      )
 
     every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
@@ -1621,6 +1643,10 @@ internal class DestinationHandlerTest {
       secretReferenceService.cleanupDanglingSecretReferences(any(), any<SecretReferenceScopeType>(), any<ConfigWithProcessedSecrets>())
     }
   }
+
+  // the internal converter still takes the Java model
+  private fun toInternalResourceRequirements(resourceAllocation: ScopedResourceRequirements?) =
+    apiPojoConverters.scopedResourceReqsToInternal(Jsons.convertValue(resourceAllocation, JavaScopedResourceRequirements::class.java))
 
   private fun createDestinationHandler(
     airbyteEdition: Configs.AirbyteEdition,
@@ -1667,6 +1693,6 @@ internal class DestinationHandlerTest {
       defaultCpuRequest: String?,
       defaultMemoryRequest: String?,
     ): ScopedResourceRequirements? =
-      ScopedResourceRequirements()._default(ResourceRequirements().cpuRequest(defaultCpuRequest).memoryRequest(defaultMemoryRequest))
+      ScopedResourceRequirements(default = ResourceRequirements(cpuRequest = defaultCpuRequest, memoryRequest = defaultMemoryRequest))
   }
 }

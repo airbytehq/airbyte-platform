@@ -6,28 +6,27 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.ActorListFilters
-import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.ResourceRequirements
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceSearch
-import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.api.model.generated.SupportState
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.ActorListFilters
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceSearch
+import io.airbyte.api.server.generated.models.SourceUpdate
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
@@ -103,6 +102,8 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.function.Supplier
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as KotlinScopedResourceRequirements
 
 internal class SourceHandlerTest {
   lateinit var secretsRepositoryReader: SecretsRepositoryReader
@@ -245,12 +246,13 @@ internal class SourceHandlerTest {
     // ===== GIVEN =====
     // Create the SourceCreate request with the necessary fields.
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = sourceConnection.configuration,
+        resourceAllocation = KOTLIN_RESOURCE_ALLOCATION,
+      )
 
     // Set up basic mocks.
     every { uuidGenerator.get() } returns sourceConnection.sourceId
@@ -351,10 +353,14 @@ internal class SourceHandlerTest {
     // Build the expected SourceRead using the updated configuration.
     val expectedSourceRead =
       SourceHelpers
-        .getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE, RESOURCE_ALLOCATION)
-        .connectionConfiguration(configWithSecretRefIds)
-        .isDraft(false)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+        .getSourceRead(
+          sourceConnection,
+          standardSourceDefinition,
+          IS_VERSION_OVERRIDE_APPLIED,
+          IS_ENTITLED,
+          SUPPORT_STATE,
+          KOTLIN_RESOURCE_ALLOCATION,
+        ).copy(connectionConfiguration = configWithSecretRefIds, isDraft = false, resourceAllocation = KOTLIN_RESOURCE_ALLOCATION)
 
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
@@ -369,7 +375,8 @@ internal class SourceHandlerTest {
         sourceDefinitionVersion.spec,
       )
     }
-    verify { sourceService.writeSourceConnectionNoSecrets(persistedConfig) }
+    // the handler writes a new connection without createdAt; the database fills it in
+    verify { sourceService.writeSourceConnectionNoSecrets(clone(persistedConfig).withCreatedAt(null)) }
     verify {
       actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
@@ -382,12 +389,13 @@ internal class SourceHandlerTest {
   fun `create source as draft uses partial validation and returns draft state`() {
     val partialConfig = emptyObject()
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(partialConfig)
-        .createAsDraft(true)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = partialConfig,
+        createAsDraft = true,
+      )
     val persistedSource = clone(sourceConnection).withConfiguration(partialConfig).withIsDraft(true)
     val persistedSourceSlot = slot<SourceConnection>()
 
@@ -426,19 +434,20 @@ internal class SourceHandlerTest {
     val result = sourceHandler.createSource(sourceCreate)
 
     Assertions.assertTrue(persistedSourceSlot.captured.isDraft)
-    Assertions.assertTrue(result.isDraft)
+    Assertions.assertEquals(true, result.isDraft)
     verify { validator.ensurePartial(connectorSpecification.connectionSpecification, partialConfig) }
   }
 
   @Test
   fun testCreateSourceChecksConfigEntitlements() {
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = sourceConnection.configuration,
+        resourceAllocation = KOTLIN_RESOURCE_ALLOCATION,
+      )
 
     every { uuidGenerator.get() } returns sourceConnection.sourceId
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
@@ -474,12 +483,13 @@ internal class SourceHandlerTest {
   @Test
   fun testCreateSourceNoEntitlementThrows() {
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = sourceConnection.configuration,
+        resourceAllocation = KOTLIN_RESOURCE_ALLOCATION,
+      )
 
     every { uuidGenerator.get() } returns sourceConnection.sourceId
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
@@ -543,12 +553,13 @@ internal class SourceHandlerTest {
       )
 
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(DestinationHelpers.testDestinationJson)
-        .resourceAllocation(RESOURCE_ALLOCATION)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = DestinationHelpers.testDestinationJson,
+        resourceAllocation = KOTLIN_RESOURCE_ALLOCATION,
+      )
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -565,7 +576,7 @@ internal class SourceHandlerTest {
     val updatedSourceName = "my updated source name"
     val newConfiguration = clone<JsonNode>(sourceConnection.configuration)
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
-    val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
+    val newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB")
 
     val updatedSource =
       clone(sourceConnection)
@@ -576,11 +587,12 @@ internal class SourceHandlerTest {
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
 
     val sourceUpdate =
-      SourceUpdate()
-        .name(updatedSourceName)
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      SourceUpdate(
+        name = updatedSourceName,
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = toKotlinResourceAllocation(newResourceAllocation),
+      )
 
     // Set up basic mocks for the update.
     every {
@@ -699,8 +711,8 @@ internal class SourceHandlerTest {
           IS_VERSION_OVERRIDE_APPLIED,
           IS_ENTITLED,
           SUPPORT_STATE,
-          newResourceAllocation,
-        ).connectionConfiguration(newConfigWithSecretRefIds)
+          toKotlinResourceAllocation(newResourceAllocation),
+        ).copy(connectionConfiguration = newConfigWithSecretRefIds)
 
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
@@ -715,7 +727,8 @@ internal class SourceHandlerTest {
         sourceDefinitionVersion.spec,
       )
     }
-    verify { sourceService.writeSourceConnectionNoSecrets(updatedSourceWithSecretRefIds) }
+    // the handler writes a new connection without createdAt; the database fills it in
+    verify { sourceService.writeSourceConnectionNoSecrets(clone(updatedSourceWithSecretRefIds).withCreatedAt(null)) }
     verify {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
@@ -735,7 +748,7 @@ internal class SourceHandlerTest {
     val updatedSourceName = "my updated source name for config entitlements"
     val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
-    val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("1", "1 GB")
+    val newResourceAllocation = getResourceRequirementsForSourceRequest("1", "1 GB")
 
     val expectedSourceConnection =
       clone(sourceConnection)
@@ -745,11 +758,12 @@ internal class SourceHandlerTest {
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
 
     val sourceUpdate =
-      SourceUpdate()
-        .name(updatedSourceName)
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      SourceUpdate(
+        name = updatedSourceName,
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = toKotlinResourceAllocation(newResourceAllocation),
+      )
 
     every {
       secretsProcessor.copySecrets(
@@ -798,7 +812,7 @@ internal class SourceHandlerTest {
     val updatedSourceName = "my updated source name"
     val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
-    val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
+    val newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB")
 
     val expectedSourceConnection =
       clone(sourceConnection)
@@ -808,11 +822,12 @@ internal class SourceHandlerTest {
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
 
     val sourceUpdate =
-      SourceUpdate()
-        .name(updatedSourceName)
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      SourceUpdate(
+        name = updatedSourceName,
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = toKotlinResourceAllocation(newResourceAllocation),
+      )
 
     every {
       secretsProcessor.copySecrets(
@@ -889,14 +904,15 @@ internal class SourceHandlerTest {
     val updatedSourceName = "my updated source name"
     val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
-    val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
+    val newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB")
 
     val sourceUpdate =
-      SourceUpdate()
-        .name(updatedSourceName)
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(newConfiguration)
-        .resourceAllocation(newResourceAllocation)
+      SourceUpdate(
+        name = updatedSourceName,
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = newConfiguration,
+        resourceAllocation = toKotlinResourceAllocation(newResourceAllocation),
+      )
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -907,7 +923,7 @@ internal class SourceHandlerTest {
 
   @Test
   fun testUpgradeSourceVersion() {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceConnection.sourceId)
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(standardSourceDefinition.sourceDefinitionId) } returns standardSourceDefinition
@@ -929,9 +945,9 @@ internal class SourceHandlerTest {
         IS_VERSION_OVERRIDE_APPLIED,
         IS_ENTITLED,
         SUPPORT_STATE,
-        RESOURCE_ALLOCATION,
+        KOTLIN_RESOURCE_ALLOCATION,
       )
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = expectedSourceRead.sourceId)
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -990,7 +1006,7 @@ internal class SourceHandlerTest {
 
   @Test
   fun testGetSourceReturnsSecretCoordinatesOnCloud() {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceConnection.sourceId)
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -1053,9 +1069,9 @@ internal class SourceHandlerTest {
         IS_VERSION_OVERRIDE_APPLIED,
         IS_ENTITLED,
         SUPPORT_STATE,
-        RESOURCE_ALLOCATION,
+        KOTLIN_RESOURCE_ALLOCATION,
       )
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = expectedSourceRead.sourceId)
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -1118,13 +1134,11 @@ internal class SourceHandlerTest {
           IS_VERSION_OVERRIDE_APPLIED,
           IS_ENTITLED,
           SUPPORT_STATE,
-          RESOURCE_ALLOCATION,
-        ).numConnections(0)
-        .apply { status = ActorStatus.ACTIVE }
+          KOTLIN_RESOURCE_ALLOCATION,
+        ).copy(numConnections = 0, status = ActorStatus.ACTIVE)
 
     val workspaceIdRequestBody =
-      ActorListCursorPaginatedRequestBody()
-        .workspaceId(sourceConnectionWithCount.source.workspaceId)
+      ActorListCursorPaginatedRequestBody(workspaceId = sourceConnectionWithCount.source.workspaceId)
 
     every { sourceService.getSourceConnection(sourceConnectionWithCount.source.sourceId) } returns sourceConnectionWithCount.source
     every { sourceService.buildCursorPagination(any(), any(), any(), any(), any()) } returns WorkspaceResourceCursorPagination(null, 10)
@@ -1185,9 +1199,7 @@ internal class SourceHandlerTest {
 
     val workspaceId = source1.source.workspaceId
     val requestBody =
-      ActorListCursorPaginatedRequestBody()
-        .workspaceId(workspaceId)
-        .pageSize(10)
+      ActorListCursorPaginatedRequestBody(workspaceId = workspaceId, pageSize = 10)
 
     // Mock pagination service methods
     every { sourceService.buildCursorPagination(any(), any(), any(), any(), any()) } returns WorkspaceResourceCursorPagination(null, 10)
@@ -1232,14 +1244,11 @@ internal class SourceHandlerTest {
   fun testListSourcesForWorkspaceWithFilters() {
     val workspaceId = sourceConnectionWithCount.source.workspaceId
     val requestBody =
-      ActorListCursorPaginatedRequestBody()
-        .workspaceId(workspaceId)
-        .pageSize(5)
-        .filters(
-          ActorListFilters()
-            .searchTerm("test")
-            .states(listOf(ActorStatus.ACTIVE)),
-        )
+      ActorListCursorPaginatedRequestBody(
+        workspaceId = workspaceId,
+        pageSize = 5,
+        filters = ActorListFilters(searchTerm = "test", states = listOf(ActorStatus.ACTIVE)),
+      )
 
     // Mock the pagination service methods with filters
     every { sourceService.buildCursorPagination(any(), any(), any(), true, 5) } returns WorkspaceResourceCursorPagination(null, 5)
@@ -1291,6 +1300,7 @@ internal class SourceHandlerTest {
         .withName(name)
         .withConfiguration(emptyObject())
         .withTombstone(false)
+        .withCreatedAt(SourceHelpers.CREATED_AT)
 
     return SourceConnectionWithCount(
       source,
@@ -1311,7 +1321,7 @@ internal class SourceHandlerTest {
         IS_VERSION_OVERRIDE_APPLIED,
         IS_ENTITLED,
         SUPPORT_STATE,
-        RESOURCE_ALLOCATION,
+        KOTLIN_RESOURCE_ALLOCATION,
       )
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
@@ -1372,7 +1382,7 @@ internal class SourceHandlerTest {
         IS_VERSION_OVERRIDE_APPLIED,
         IS_ENTITLED,
         SUPPORT_STATE,
-        RESOURCE_ALLOCATION,
+        KOTLIN_RESOURCE_ALLOCATION,
       )
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
@@ -1412,12 +1422,12 @@ internal class SourceHandlerTest {
       )
     }
 
-    val validSourceSearch = SourceSearch().name(sourceConnection.name)
+    val validSourceSearch = SourceSearch(name = sourceConnection.name)
     var actualSourceReadList = sourceHandler.searchSources(validSourceSearch)
     Assertions.assertEquals(1, actualSourceReadList.sources.size)
     Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources[0])
 
-    val invalidSourceSearch = SourceSearch().name("invalid")
+    val invalidSourceSearch = SourceSearch(name = "invalid")
     actualSourceReadList = sourceHandler.searchSources(invalidSourceSearch)
     Assertions.assertEquals(0, actualSourceReadList.sources.size)
   }
@@ -1429,7 +1439,7 @@ internal class SourceHandlerTest {
 
     val expectedSourceConnection = clone(sourceConnection).withTombstone(true)
 
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceConnection.sourceId)
     val standardSync = ConnectionHelpers.generateSyncWithSourceId(sourceConnection.sourceId)
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
     val connectionReadList = ConnectionReadList().connections(mutableListOf<@Valid ConnectionRead?>(connectionRead))
@@ -1610,13 +1620,14 @@ internal class SourceHandlerTest {
 
     val sourceHandlerSpy = spyk(sourceHandler)
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = sourceConnection.configuration,
+      )
 
-    every { sourceHandlerSpy.createSource(any()) } returns SourceRead()
+    every { sourceHandlerSpy.createSource(any()) } returns SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition)
     every { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) } returns emptyObject()
     every { sourceService.getStandardSourceDefinition(sourceCreate.sourceDefinitionId) } returns standardSourceDefinition
     every {
@@ -1636,9 +1647,11 @@ internal class SourceHandlerTest {
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
     val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
-    sourceCreate.secretId = secretCoordinate.fullCoordinate
-    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate)
-    verify(exactly = 2) { sourceHandlerSpy.createSource(sourceCreate) }
+    val sourceCreateWithSecret = sourceCreate.copy(secretId = secretCoordinate.fullCoordinate)
+    sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreateWithSecret)
+    // the request is immutable, so the secret path passes on a copy with the hydrated configuration
+    verify(exactly = 1) { sourceHandlerSpy.createSource(sourceCreate) }
+    verify(exactly = 1) { sourceHandlerSpy.createSource(match { it.secretId == secretCoordinate.fullCoordinate }) }
     verify { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) }
   }
 
@@ -1658,9 +1671,10 @@ internal class SourceHandlerTest {
     val oauthDefinitionVersion = sourceDefinitionVersion.withSpec(generateLwaAdvancedAuthConnectorSpecification())
     val inlineSecretConfiguration = jsonNode(mapOf(LWA_APP_ID_FIELD to "lwa-app-id"))
     val partialSourceUpdate =
-      PartialSourceUpdate()
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(inlineSecretConfiguration)
+      PartialSourceUpdate(
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = inlineSecretConfiguration,
+      )
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId) } returns standardSourceDefinition
@@ -1671,7 +1685,8 @@ internal class SourceHandlerTest {
         sourceConnection.sourceId,
       )
     } returns oauthDefinitionVersion
-    every { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) } returns SourceRead()
+    every { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) } returns
+      SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition)
 
     sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = true)
 
@@ -1684,9 +1699,10 @@ internal class SourceHandlerTest {
     val oauthDefinitionVersion = sourceDefinitionVersion.withSpec(generateLwaAdvancedAuthConnectorSpecification())
     val inlineSecretConfiguration = jsonNode(mapOf(LWA_APP_ID_FIELD to "lwa-app-id"))
     val partialSourceUpdate =
-      PartialSourceUpdate()
-        .sourceId(sourceConnection.sourceId)
-        .connectionConfiguration(inlineSecretConfiguration)
+      PartialSourceUpdate(
+        sourceId = sourceConnection.sourceId,
+        connectionConfiguration = inlineSecretConfiguration,
+      )
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId) } returns standardSourceDefinition
@@ -1697,7 +1713,7 @@ internal class SourceHandlerTest {
         sourceConnection.sourceId,
       )
     } returns oauthDefinitionVersion
-    every { sourceHandlerSpy.partialUpdateSource(any()) } returns SourceRead()
+    every { sourceHandlerSpy.partialUpdateSource(any()) } returns SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition)
 
     Assertions.assertThrows(BadObjectSchemaKnownException::class.java) {
       sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = false)
@@ -1709,11 +1725,12 @@ internal class SourceHandlerTest {
   @Test
   fun testFailedConfigWriteDoesNotDeleteOldSecretReferences() {
     val sourceCreate =
-      SourceCreate()
-        .name(sourceConnection.name)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
+      SourceCreate(
+        name = sourceConnection.name,
+        workspaceId = sourceConnection.workspaceId,
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionConfiguration = sourceConnection.configuration,
+      )
 
     every { uuidGenerator.get() } returns sourceConnection.sourceId
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -1749,10 +1766,11 @@ internal class SourceHandlerTest {
     val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
     val connectionConfiguration = jsonNode(mapOf("refresh_token" to "refresh-token"))
     val partialSourceUpdate =
-      PartialSourceUpdate()
-        .sourceId(sourceConnection.sourceId)
-        .secretId(secretCoordinate.fullCoordinate)
-        .connectionConfiguration(connectionConfiguration)
+      PartialSourceUpdate(
+        sourceId = sourceConnection.sourceId,
+        secretId = secretCoordinate.fullCoordinate,
+        connectionConfiguration = connectionConfiguration,
+      )
     val hydratedSecret =
       jsonNode(
         mapOf(
@@ -1781,13 +1799,17 @@ internal class SourceHandlerTest {
       )
     } returns oauthDefinitionVersion
     every { sourceHandlerSpy.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, sourceConnection.workspaceId) } returns hydratedSecret
-    every { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) } returns SourceRead()
+    // the request is immutable, so the handler passes on a copy with the hydrated configuration
+    val hydratedUpdate = slot<PartialSourceUpdate>()
+    every { sourceHandlerSpy.partialUpdateSource(capture(hydratedUpdate)) } returns
+      SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition)
 
     sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = allowInlineOAuthServerOutputSecrets)
 
-    Assertions.assertEquals(expectedConnectionConfiguration, partialSourceUpdate.connectionConfiguration)
+    Assertions.assertEquals(expectedConnectionConfiguration, hydratedUpdate.captured.connectionConfiguration)
+    Assertions.assertEquals(partialSourceUpdate.sourceId, hydratedUpdate.captured.sourceId)
     verify { sourceHandlerSpy.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, sourceConnection.workspaceId) }
-    verify { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) }
+    verify(exactly = 1) { sourceHandlerSpy.partialUpdateSource(any()) }
   }
 
   private fun generateLwaAdvancedAuthConnectorSpecification(): ConnectorSpecification {
@@ -1855,13 +1877,18 @@ internal class SourceHandlerTest {
     private val SUPPORT_STATE = SupportState.SUPPORTED
     private const val DEFAULT_MEMORY = "2 GB"
     private const val DEFAULT_CPU = "2"
-    private val RESOURCE_ALLOCATION: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest(DEFAULT_CPU, DEFAULT_MEMORY)
+    private val RESOURCE_ALLOCATION: JavaScopedResourceRequirements = getResourceRequirementsForSourceRequest(DEFAULT_CPU, DEFAULT_MEMORY)
+    private val KOTLIN_RESOURCE_ALLOCATION: KotlinScopedResourceRequirements = toKotlinResourceAllocation(RESOURCE_ALLOCATION)
     private val ORG_ID: UUID = UUID.randomUUID()
 
     fun getResourceRequirementsForSourceRequest(
       defaultCpuRequest: String?,
       defaultMemoryRequest: String?,
-    ): ScopedResourceRequirements? =
-      ScopedResourceRequirements()._default(ResourceRequirements().cpuRequest(defaultCpuRequest).memoryRequest(defaultMemoryRequest))
+    ): JavaScopedResourceRequirements =
+      JavaScopedResourceRequirements()._default(ResourceRequirements().cpuRequest(defaultCpuRequest).memoryRequest(defaultMemoryRequest))
+
+    // the handler converts the Java model it gets from ApiPojoConverters the same way
+    fun toKotlinResourceAllocation(resourceAllocation: JavaScopedResourceRequirements): KotlinScopedResourceRequirements =
+      Jsons.convertValue(resourceAllocation, KotlinScopedResourceRequirements::class.java)
   }
 }

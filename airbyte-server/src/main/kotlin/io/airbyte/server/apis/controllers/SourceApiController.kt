@@ -4,31 +4,32 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.SourceApi
-import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DiscoverCatalogResult
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.PartialSourceUpdate
-import io.airbyte.api.model.generated.SourceAutoPropagateChange
-import io.airbyte.api.model.generated.SourceCreate
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceIdWithSecretCoordinatesRequestBody
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
-import io.airbyte.api.model.generated.SourceReadWithMetadata
-import io.airbyte.api.model.generated.SourceSearch
-import io.airbyte.api.model.generated.SourceUpdate
+import io.airbyte.api.server.generated.apis.SourceApi
+import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.CheckConnectionRead
+import io.airbyte.api.server.generated.models.DiscoverCatalogResult
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.SourceAutoPropagateChange
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdWithSecretCoordinatesRequestBody
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
+import io.airbyte.api.server.generated.models.SourceReadWithMetadata
+import io.airbyte.api.server.generated.models.SourceSearch
+import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -36,19 +37,22 @@ import io.airbyte.server.apis.execute
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import io.airbyte.api.model.generated.SourceAutoPropagateChange as JavaSourceAutoPropagateChange
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody as JavaSourceDiscoverSchemaRequestBody
+import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody as JavaSourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.model.generated.SourceIdRequestBody as JavaSourceIdRequestBody
+import io.airbyte.api.model.generated.SourceUpdate as JavaSourceUpdate
 
-@Controller("/api/v1/sources")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class SourceApiController(
   private val schedulerHandler: SchedulerHandler,
   private val sourceHandler: SourceHandler,
 ) : SourceApi {
-  @Post("/apply_schema_changes")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -59,12 +63,11 @@ open class SourceApiController(
     @Body sourceAutoPropagateChange: SourceAutoPropagateChange,
   ) {
     execute<Any?> {
-      schedulerHandler.applySchemaChangeForSource(sourceAutoPropagateChange)
+      schedulerHandler.applySchemaChangeForSource(Jsons.convertValue(sourceAutoPropagateChange, JavaSourceAutoPropagateChange::class.java))
       null
     }
   }
 
-  @Post("/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -73,9 +76,13 @@ open class SourceApiController(
   )
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
-  ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
+  ): CheckConnectionRead =
+    execute {
+      val checkConnectionRead =
+        schedulerHandler.checkSourceConnectionFromSourceId(Jsons.convertValue(sourceIdRequestBody, JavaSourceIdRequestBody::class.java))
+      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
+    }
 
-  @Post("/check_connection_for_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -84,9 +91,13 @@ open class SourceApiController(
   )
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
-  ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
+  ): CheckConnectionRead =
+    execute {
+      val checkConnectionRead =
+        schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(Jsons.convertValue(sourceUpdate, JavaSourceUpdate::class.java))
+      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
+    }
 
-  @Post("/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
@@ -96,9 +107,8 @@ open class SourceApiController(
   )
   override fun createSource(
     @Body sourceCreate: SourceCreate,
-  ): SourceRead? = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
+  ): SourceRead = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
 
-  @Post("/delete")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
@@ -118,7 +128,6 @@ open class SourceApiController(
     }
   }
 
-  @Post("/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -127,14 +136,15 @@ open class SourceApiController(
   )
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
-  ): SourceDiscoverSchemaRead? =
+  ): SourceDiscoverSchemaRead =
     execute {
-      schedulerHandler.discoverSchemaForSourceFromSourceId(
-        sourceDiscoverSchemaRequestBody,
-      )
+      val discoverSchemaRead =
+        schedulerHandler.discoverSchemaForSourceFromSourceId(
+          Jsons.convertValue(sourceDiscoverSchemaRequestBody, JavaSourceDiscoverSchemaRequestBody::class.java),
+        )
+      Jsons.convertValue(discoverSchemaRead, SourceDiscoverSchemaRead::class.java)
     }
 
-  @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -143,9 +153,8 @@ open class SourceApiController(
   )
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
-  ): SourceRead? = execute { sourceHandler.getSource(sourceIdRequestBody) }
+  ): SourceRead = execute { sourceHandler.getSource(sourceIdRequestBody) }
 
-  @Post("/get_with_metadata")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -154,16 +163,15 @@ open class SourceApiController(
   )
   override fun getSourceWithMetadata(
     @Body sourceIdWithSecretCoordinatesRequestBody: SourceIdWithSecretCoordinatesRequestBody,
-  ): SourceReadWithMetadata? =
+  ): SourceReadWithMetadata =
     execute {
-      val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceIdWithSecretCoordinatesRequestBody.sourceId)
+      val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceIdWithSecretCoordinatesRequestBody.sourceId)
       sourceHandler.getSourceWithMetadata(
         sourceIdRequestBody,
         sourceIdWithSecretCoordinatesRequestBody.includeSecretCoordinates ?: false,
       )
     }
 
-  @Post("/most_recent_source_actor_catalog")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -172,14 +180,13 @@ open class SourceApiController(
   )
   override fun getMostRecentSourceActorCatalog(
     @Body sourceIdRequestBody: SourceIdRequestBody,
-  ): ActorCatalogWithUpdatedAt? =
+  ): ActorCatalogWithUpdatedAt =
     execute {
       sourceHandler.getMostRecentSourceActorCatalogWithUpdatedAt(
         sourceIdRequestBody,
       )
     }
 
-  @Post("/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -188,9 +195,8 @@ open class SourceApiController(
   )
   override fun listSourcesForWorkspace(
     @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
-  ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
+  ): SourceReadList = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
 
-  @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -199,18 +205,16 @@ open class SourceApiController(
   )
   override fun listSourcesForWorkspacePaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
-  ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
+  ): SourceReadList = execute { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
 
-  @Post("/search")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun searchSources(
-    @Body sourceSearch: SourceSearch?,
-  ): SourceReadList? = execute { sourceHandler.searchSources(sourceSearch) }
+    @Body sourceSearch: SourceSearch,
+  ): SourceReadList = execute { sourceHandler.searchSources(sourceSearch) }
 
-  @Post("/update")
   @Secured(
     AuthRoleConstants.WORKSPACE_EDITOR,
     AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
@@ -225,9 +229,8 @@ open class SourceApiController(
   )
   override fun updateSource(
     @Body sourceUpdate: SourceUpdate,
-  ): SourceRead? = execute { sourceHandler.updateSource(sourceUpdate) }
+  ): SourceRead = execute { sourceHandler.updateSource(sourceUpdate) }
 
-  @Post("/upgrade_version")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
@@ -247,7 +250,6 @@ open class SourceApiController(
     }
   }
 
-  @Post("/partial_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
@@ -257,9 +259,8 @@ open class SourceApiController(
   )
   override fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
-  ): SourceRead? = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
+  ): SourceRead = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
 
-  @Post("/write_discover_catalog_result")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -267,6 +268,11 @@ open class SourceApiController(
     migration = RouteMigration.LEGACY,
   )
   override fun writeDiscoverCatalogResult(
-    @Body request: SourceDiscoverSchemaWriteRequestBody,
-  ): DiscoverCatalogResult? = execute { sourceHandler.writeDiscoverCatalogResult(request) }
+    @Body sourceDiscoverSchemaWriteRequestBody: SourceDiscoverSchemaWriteRequestBody,
+  ): DiscoverCatalogResult =
+    execute {
+      sourceHandler.writeDiscoverCatalogResult(
+        Jsons.convertValue(sourceDiscoverSchemaWriteRequestBody, JavaSourceDiscoverSchemaWriteRequestBody::class.java),
+      )
+    }
 }

@@ -308,7 +308,8 @@ internal class WebBackendConnectionsHandlerTest {
         .withName("marketo")
         .withIconUrl(ICON_URL)
     val source = generateSource(sourceDefinition.sourceDefinitionId)
-    sourceRead = SourceHelpers.getSourceRead(source, sourceDefinition)
+    // the web backend still returns the Java models
+    sourceRead = Jsons.convertValue(SourceHelpers.getSourceRead(source, sourceDefinition), SourceRead::class.java)
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -316,7 +317,7 @@ internal class WebBackendConnectionsHandlerTest {
         .withName("db2")
         .withIconUrl(ICON_URL)
     val destination = DestinationHelpers.generateDestination(destinationDefinition.destinationDefinitionId)
-    val destinationRead = DestinationHelpers.getDestinationRead(destination, destinationDefinition)
+    val destinationRead = Jsons.convertValue(DestinationHelpers.getDestinationRead(destination, destinationDefinition), DestinationRead::class.java)
 
     val standardSync =
       ConnectionHelpers.generateSyncWithSourceAndDestinationId(

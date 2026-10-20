@@ -6,16 +6,19 @@ package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.DestinationDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationReadList
-import io.airbyte.api.model.generated.DestinationSearch
-import io.airbyte.api.model.generated.DestinationUpdate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.JobConfigType
+import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.DestinationCreate
+import io.airbyte.api.server.generated.models.DestinationDiscoverSchemaRequestBody
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationReadList
+import io.airbyte.api.server.generated.models.DestinationSearch
+import io.airbyte.api.server.generated.models.DestinationUpdate
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.services.DestinationDiscoverService
@@ -82,31 +85,31 @@ internal class DestinationApiControllerTest {
 
   @Test
   fun testCheckConnectionToDestination() {
-    every { schedulerHandler.checkDestinationConnectionFromDestinationId(any()) } returns CheckConnectionRead() andThenThrows
+    every { schedulerHandler.checkDestinationConnectionFromDestinationId(any()) } returns checkConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/check_connection"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, destinationIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationIdRequestBody())))
   }
 
   @Test
   fun testCheckConnectionToDestinationForUpdate() {
-    every { schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(any()) } returns CheckConnectionRead() andThenThrows
+    every { schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(any()) } returns checkConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/check_connection_for_update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, destinationUpdate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationUpdate())))
   }
 
   @Test
   fun testCreateDestination() {
-    every { destinationHandler.createDestination(any()) } returns DestinationRead() andThenThrows ConstraintViolationException(setOf())
+    every { destinationHandler.createDestination(any()) } returns destinationRead() andThenThrows ConstraintViolationException(setOf())
 
     val path = "/api/v1/destinations/create"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationCreate())))
-    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(path, DestinationCreate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, destinationCreate())))
+    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(path, destinationCreate())))
   }
 
   @Test
@@ -114,8 +117,8 @@ internal class DestinationApiControllerTest {
     every { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, destinationIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationIdRequestBody())))
   }
 
   @Test
@@ -129,7 +132,7 @@ internal class DestinationApiControllerTest {
           .exchange(
             HttpRequest.POST(
               "/api/v1/destinations/discover_schema",
-              DestinationDiscoverSchemaRequestBody().destinationId(UUID.randomUUID()).disableCache(false),
+              DestinationDiscoverSchemaRequestBody(destinationId = UUID.randomUUID(), disableCache = false),
             ),
             JsonNode::class.java,
           )
@@ -148,26 +151,30 @@ internal class DestinationApiControllerTest {
 
   @Test
   fun testGetDestination() {
-    every { destinationHandler.getDestination(any()) } returns DestinationRead() andThenThrows ConfigNotFoundException("", "")
+    every { destinationHandler.getDestination(any()) } returns destinationRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, destinationIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationIdRequestBody())))
   }
 
   @Test
   fun testListDestination() {
-    every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList() andThenThrows
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList(destinations = emptyList()) andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))))
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))),
+    )
   }
 
   @Test
   fun testSearchDestination() {
-    every { destinationHandler.searchDestinations(any()) } returns DestinationReadList() andThenThrows ConfigNotFoundException("", "")
+    every { destinationHandler.searchDestinations(any()) } returns DestinationReadList(destinations = emptyList()) andThenThrows
+      ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/search"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationSearch())))
@@ -176,11 +183,11 @@ internal class DestinationApiControllerTest {
 
   @Test
   fun testUpdateDestination() {
-    every { destinationHandler.updateDestination(any()) } returns DestinationRead() andThenThrows ConfigNotFoundException("", "")
+    every { destinationHandler.updateDestination(any()) } returns destinationRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, destinationUpdate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationUpdate())))
   }
 
   @Test
@@ -188,8 +195,8 @@ internal class DestinationApiControllerTest {
     every { destinationHandler.upgradeDestinationVersion(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/upgrade_version"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, destinationIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, destinationIdRequestBody())))
   }
 
   @Test
@@ -232,4 +239,40 @@ internal class DestinationApiControllerTest {
         assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "${it.name} should stay reader-scoped")
       }
   }
+
+  private fun destinationIdRequestBody() = DestinationIdRequestBody(destinationId = UUID.randomUUID())
+
+  private fun destinationUpdate() =
+    DestinationUpdate(destinationId = UUID.randomUUID(), connectionConfiguration = Jsons.emptyObject(), name = "destination")
+
+  private fun destinationCreate() =
+    DestinationCreate(
+      workspaceId = UUID.randomUUID(),
+      name = "destination",
+      destinationDefinitionId = UUID.randomUUID(),
+      connectionConfiguration = Jsons.emptyObject(),
+    )
+
+  private fun destinationRead() =
+    DestinationRead(
+      destinationDefinitionId = UUID.randomUUID(),
+      destinationId = UUID.randomUUID(),
+      workspaceId = UUID.randomUUID(),
+      connectionConfiguration = Jsons.emptyObject(),
+      name = "destination",
+      destinationName = "destination-definition",
+      createdAt = 0L,
+    )
+
+  private fun checkConnectionRead() =
+    CheckConnectionRead()
+      .status(CheckConnectionRead.StatusEnum.SUCCEEDED)
+      .jobInfo(
+        SynchronousJobRead()
+          .id(UUID.randomUUID())
+          .configType(JobConfigType.CHECK_CONNECTION_DESTINATION)
+          .createdAt(0L)
+          .endedAt(0L)
+          .succeeded(true),
+      )
 }

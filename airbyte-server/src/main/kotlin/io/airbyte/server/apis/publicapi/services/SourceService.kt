@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.PartialSourceUpdate
-import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -91,13 +91,15 @@ open class SourceServiceImpl(
     sourceCreateRequest: SourceCreateRequest,
     sourceDefinitionId: UUID,
   ): SourceResponse {
-    val sourceCreateOss = SourceCreate()
-    sourceCreateOss.name = sourceCreateRequest.name
-    sourceCreateOss.sourceDefinitionId = sourceDefinitionId
-    sourceCreateOss.workspaceId = sourceCreateRequest.workspaceId
-    sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
-    sourceCreateOss.secretId = sourceCreateRequest.secretId
-    sourceCreateOss.resourceAllocation = sourceCreateRequest.resourceAllocation?.toInternal()
+    val sourceCreateOss =
+      SourceCreate(
+        name = sourceCreateRequest.name,
+        sourceDefinitionId = sourceDefinitionId,
+        workspaceId = sourceCreateRequest.workspaceId,
+        connectionConfiguration = sourceCreateRequest.configuration,
+        secretId = sourceCreateRequest.secretId,
+        resourceAllocation = sourceCreateRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -118,11 +120,12 @@ open class SourceServiceImpl(
     sourcePutRequest: SourcePutRequest,
   ): SourceResponse {
     val sourceUpdate =
-      SourceUpdate()
-        .sourceId(sourceId)
-        .connectionConfiguration(sourcePutRequest.configuration)
-        .name(sourcePutRequest.name)
-        .resourceAllocation(sourcePutRequest.resourceAllocation?.toInternal())
+      SourceUpdate(
+        sourceId = sourceId,
+        connectionConfiguration = sourcePutRequest.configuration,
+        name = sourcePutRequest.name,
+        resourceAllocation = sourcePutRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -143,12 +146,13 @@ open class SourceServiceImpl(
     sourcePatchRequest: SourcePatchRequest,
   ): SourceResponse {
     val sourceUpdate =
-      PartialSourceUpdate()
-        .sourceId(sourceId)
-        .connectionConfiguration(sourcePatchRequest.configuration)
-        .name(sourcePatchRequest.name)
-        .secretId(sourcePatchRequest.secretId)
-        .resourceAllocation(sourcePatchRequest.resourceAllocation?.toInternal())
+      PartialSourceUpdate(
+        sourceId = sourceId,
+        connectionConfiguration = sourcePatchRequest.configuration,
+        name = sourcePatchRequest.name,
+        secretId = sourcePatchRequest.secretId,
+        resourceAllocation = sourcePatchRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -166,7 +170,7 @@ open class SourceServiceImpl(
    * Deletes a source by ID.
    */
   override fun deleteSource(sourceId: UUID) {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
     val result =
       kotlin
         .runCatching { sourceHandler.deleteSource(sourceIdRequestBody) }
@@ -184,8 +188,7 @@ open class SourceServiceImpl(
     sourceId: UUID,
     includeSecretCoordinates: Boolean?,
   ): SourceResponse {
-    val sourceIdRequestBody = SourceIdRequestBody()
-    sourceIdRequestBody.sourceId = sourceId
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
 
     val result =
       kotlin
@@ -205,6 +208,7 @@ open class SourceServiceImpl(
     sourceId: UUID,
     disableCache: Boolean,
   ): SourceDiscoverSchemaRead {
+    // SchedulerHandler still uses the Java models
     val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
 
     val result =
@@ -237,12 +241,14 @@ open class SourceServiceImpl(
     limit: Int,
     offset: Int,
   ): SourcesResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+        workspaceIds = workspaceIdsToQuery,
+      )
 
     val result =
       kotlin

@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
 import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.JobDebugInfoRead
@@ -23,11 +22,12 @@ import io.airbyte.api.model.generated.JobReadList
 import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.model.generated.WorkflowStateRead
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -441,14 +441,15 @@ class JobHistoryHandler(
       .getRunningSyncJobForConnections(connectionIds)
       .map { obj: Job -> JobConverter.getJobRead(obj) }
 
+  // the source and destination handlers return Kotlin models; this handler still builds the Java ones
   private fun getSourceRead(connectionRead: ConnectionRead): SourceRead {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(connectionRead.sourceId)
-    return sourceHandler.getSource(sourceIdRequestBody)
+    val sourceIdRequestBody = SourceIdRequestBody(sourceId = connectionRead.sourceId)
+    return Jsons.convertValue(sourceHandler.getSource(sourceIdRequestBody), SourceRead::class.java)
   }
 
   private fun getDestinationRead(connectionRead: ConnectionRead): DestinationRead {
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(connectionRead.destinationId)
-    return destinationHandler.getDestination(destinationIdRequestBody)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = connectionRead.destinationId)
+    return Jsons.convertValue(destinationHandler.getDestination(destinationIdRequestBody), DestinationRead::class.java)
   }
 
   // the definitions handlers return Kotlin models; this handler still builds the Java ones

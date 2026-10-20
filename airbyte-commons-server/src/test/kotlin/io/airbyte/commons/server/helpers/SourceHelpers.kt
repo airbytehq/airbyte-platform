@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SupportState
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
@@ -16,6 +16,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.UUID
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as KotlinScopedResourceRequirements
 
 object SourceHelpers {
   fun generateSource(
@@ -48,6 +49,7 @@ object SourceHelpers {
       .withConfiguration(implementationJson)
       .withTombstone(tombstone)
       .withResourceRequirements(resourceRequirements)
+      .withCreatedAt(CREATED_AT)
   }
 
   @get:Throws(IOException::class)
@@ -81,20 +83,23 @@ object SourceHelpers {
     isVersionOverrideApplied: Boolean,
     isEntitled: Boolean,
     supportState: SupportState?,
-    resourceAllocation: io.airbyte.api.model.generated.ScopedResourceRequirements?,
+    resourceAllocation: KotlinScopedResourceRequirements?,
   ): SourceRead =
-    SourceRead()
-      .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-      .workspaceId(source.getWorkspaceId())
-      .sourceDefinitionId(source.getSourceDefinitionId())
-      .sourceId(source.getSourceId())
-      .connectionConfiguration(source.getConfiguration())
-      .name(source.getName())
-      .sourceName(standardSourceDefinition.getName())
-      .icon(standardSourceDefinition.getIconUrl())
-      .isVersionOverrideApplied(isVersionOverrideApplied)
-      .isEntitled(isEntitled)
-      .supportState(supportState)
-      .isDraft(source.isDraft == true)
-      .resourceAllocation(resourceAllocation)
+    SourceRead(
+      workspaceId = source.workspaceId,
+      sourceDefinitionId = source.sourceDefinitionId,
+      sourceId = source.sourceId,
+      connectionConfiguration = source.configuration,
+      name = source.name,
+      sourceName = standardSourceDefinition.name,
+      icon = standardSourceDefinition.iconUrl,
+      isVersionOverrideApplied = isVersionOverrideApplied,
+      isEntitled = isEntitled,
+      supportState = supportState,
+      isDraft = source.isDraft == true,
+      resourceAllocation = resourceAllocation,
+      createdAt = source.createdAt,
+    )
+
+  const val CREATED_AT = 1L
 }

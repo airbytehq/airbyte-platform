@@ -5,12 +5,12 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.ListWorkspacesByUserRequestBody
@@ -319,7 +319,7 @@ class WorkspacesHandler
       // disable all destinations associated with this workspace
       for (destinationRead in destinationHandler
         .listDestinationsForWorkspace(
-          ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.workspaceId),
+          ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
         ).destinations) {
         destinationHandler.deleteDestination(destinationRead)
       }
@@ -327,7 +327,7 @@ class WorkspacesHandler
       // disable all sources associated with this workspace
       for (sourceRead in sourceHandler
         .listSourcesForWorkspace(
-          ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.workspaceId),
+          ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
         ).sources) {
         sourceHandler.deleteSource(sourceRead)
       }

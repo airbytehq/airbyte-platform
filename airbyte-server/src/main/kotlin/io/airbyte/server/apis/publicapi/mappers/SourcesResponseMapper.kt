@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.publicApi.server.generated.models.SourcesResponse
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
 import io.airbyte.server.apis.publicapi.constants.SOURCES_PATH

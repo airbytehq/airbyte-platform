@@ -5,31 +5,33 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
-import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.ActorType
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.DiscoverCatalogResult
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.PartialSourceUpdate
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceMetadata
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
-import io.airbyte.api.model.generated.SourceReadWithMetadata
-import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceSnippetRead
-import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.DiscoverCatalogResult
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceMetadata
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
+import io.airbyte.api.server.generated.models.SourceReadWithMetadata
+import io.airbyte.api.server.generated.models.SourceSearch
+import io.airbyte.api.server.generated.models.SourceUpdate
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConfigurationUpdate
@@ -88,6 +90,9 @@ import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
+import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
+import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -122,17 +127,22 @@ class SourceHandler
     private val currentUserService: CurrentUserService,
   ) {
     fun createSourceWithOptionalSecret(sourceCreate: SourceCreate): SourceRead {
-      if (sourceCreate.secretId != null && !sourceCreate.secretId.isBlank()) {
-        val hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.secretId, sourceCreate.workspaceId)
+      val secretId = sourceCreate.secretId
+      if (secretId != null && !secretId.isBlank()) {
+        val hydratedSecret = hydrateOAuthResponseSecret(secretId, sourceCreate.workspaceId)
         val spec =
           getSourceVersionForWorkspaceId(sourceCreate.sourceDefinitionId, sourceCreate.workspaceId).spec
         // add OAuth Response data to connection configuration
-        sourceCreate.connectionConfiguration =
-          setSecretsInConnectionConfiguration(
-            spec,
-            hydratedSecret,
-            sourceCreate.connectionConfiguration,
-          )
+        return createSource(
+          sourceCreate.copy(
+            connectionConfiguration =
+              setSecretsInConnectionConfiguration(
+                spec,
+                hydratedSecret,
+                sourceCreate.connectionConfiguration,
+              ),
+          ),
+        )
       }
       return createSource(sourceCreate)
     }
@@ -154,6 +164,7 @@ class SourceHandler
       )
 
       val secretId = partialSourceUpdate.secretId
+      var sourceUpdate = partialSourceUpdate
 
       when {
         !secretId.isNullOrBlank() -> {
@@ -165,11 +176,14 @@ class SourceHandler
             }
           val hydratedSecret = hydrateOAuthResponseSecret(secretId, sourceConnection.workspaceId)
           // add OAuth Response data to connection configuration
-          partialSourceUpdate.connectionConfiguration =
-            setSecretsInConnectionConfiguration(
-              spec,
-              hydratedSecret,
-              Optional.ofNullable(partialSourceUpdate.connectionConfiguration).orElse(Jsons.emptyObject()),
+          sourceUpdate =
+            partialSourceUpdate.copy(
+              connectionConfiguration =
+                setSecretsInConnectionConfiguration(
+                  spec,
+                  hydratedSecret,
+                  Optional.ofNullable(partialSourceUpdate.connectionConfiguration).orElse(Jsons.emptyObject()),
+                ),
             )
           addTagsToTrace(
             mapOf(
@@ -181,7 +195,7 @@ class SourceHandler
           validateNoSecretsInConfiguration(spec, partialSourceUpdate.connectionConfiguration)
         }
       }
-      return partialUpdateSource(partialSourceUpdate)
+      return partialUpdateSource(sourceUpdate)
     }
 
     @InternalForTesting
@@ -207,7 +221,7 @@ class SourceHandler
       // persist
       val sourceId = uuidGenerator.get()
       persistSourceConnection(
-        sourceCreate.name ?: "default",
+        sourceCreate.name,
         sourceCreate.sourceDefinitionId,
         sourceCreate.workspaceId,
         sourceId,
@@ -323,24 +337,25 @@ class SourceHandler
     ): SourceReadWithMetadata {
       val sourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceRead.workspaceId, false)
-      val metadata = SourceMetadata().workspaceName(workspace.name)
-      return SourceReadWithMetadata()
-        .sourceDefinitionId(sourceRead.sourceDefinitionId)
-        .sourceId(sourceRead.sourceId)
-        .workspaceId(sourceRead.workspaceId)
-        .connectionConfiguration(sourceRead.connectionConfiguration)
-        .name(sourceRead.name)
-        .sourceName(sourceRead.sourceName)
-        .icon(sourceRead.icon)
-        .isVersionOverrideApplied(sourceRead.isVersionOverrideApplied)
-        .isEntitled(sourceRead.isEntitled)
-        .breakingChanges(sourceRead.breakingChanges)
-        .supportState(sourceRead.supportState)
-        .isDraft(sourceRead.isDraft)
-        .status(sourceRead.status)
-        .createdAt(sourceRead.createdAt)
-        .resourceAllocation(sourceRead.resourceAllocation)
-        .metadata(metadata)
+      val metadata = SourceMetadata(workspaceName = workspace.name)
+      return SourceReadWithMetadata(
+        sourceDefinitionId = sourceRead.sourceDefinitionId,
+        sourceId = sourceRead.sourceId,
+        workspaceId = sourceRead.workspaceId,
+        connectionConfiguration = sourceRead.connectionConfiguration,
+        name = sourceRead.name,
+        sourceName = sourceRead.sourceName,
+        icon = sourceRead.icon,
+        isVersionOverrideApplied = sourceRead.isVersionOverrideApplied,
+        isEntitled = sourceRead.isEntitled,
+        breakingChanges = sourceRead.breakingChanges,
+        supportState = sourceRead.supportState,
+        isDraft = sourceRead.isDraft,
+        status = sourceRead.status,
+        createdAt = sourceRead.createdAt,
+        resourceAllocation = sourceRead.resourceAllocation,
+        metadata = metadata,
+      )
     }
 
     fun getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody: SourceIdRequestBody): ActorCatalogWithUpdatedAt {
@@ -349,7 +364,10 @@ class SourceHandler
       return if (actorCatalog.isEmpty) {
         ActorCatalogWithUpdatedAt()
       } else {
-        ActorCatalogWithUpdatedAt().updatedAt(actorCatalog.get().updatedAt).catalog(actorCatalog.get().catalog)
+        ActorCatalogWithUpdatedAt(
+          updatedAt = actorCatalog.get().updatedAt,
+          catalog = actorCatalog.get().catalog,
+        )
       }
     }
 
@@ -360,10 +378,11 @@ class SourceHandler
 
       // Parse sort key to extract field and direction
       val sortKeyInfo =
-        parseSortKey(actorListCursorPaginatedRequestBody.sortKey, ActorType.SOURCE)
+        parseSortKey(actorListCursorPaginatedRequestBody.sortKey?.let { JavaActorListSortKey.fromValue(it.value) }, ActorType.SOURCE)
       val internalSortKey = sortKeyInfo.sortKey
       val ascending = sortKeyInfo.ascending
-      val actorFilters = buildFilters(filters)
+      // airbyte-data still takes the Java filter model
+      val actorFilters = buildFilters(Jsons.convertValue(filters, JavaActorListFilters::class.java))
 
       val cursorPagination =
         sourceService.buildCursorPagination(
@@ -386,14 +405,6 @@ class SourceHandler
       val sourceReads: MutableList<SourceRead> = mutableListOf()
 
       for ((source, _, connectionCount, lastSync, connectionJobStatuses, isActive) in sourceConnectionsWithCount) {
-        val sourceRead = buildSourceRead(source)
-        if (lastSync != null) {
-          sourceRead.lastSync(lastSync.toEpochSecond())
-        }
-        sourceRead.numConnections(connectionCount)
-        sourceRead.status =
-          if (isActive) ActorStatus.ACTIVE else ActorStatus.INACTIVE
-
         // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
         val statusCountsMap: MutableMap<String, Int> = HashMap()
         for ((key, value) in connectionJobStatuses) {
@@ -409,11 +420,16 @@ class SourceHandler
             }
           statusCountsMap[statusKey] = value
         }
-        sourceRead.connectionJobStatuses(statusCountsMap)
-
-        sourceReads.add(sourceRead)
+        sourceReads.add(
+          buildSourceRead(source).copy(
+            lastSync = lastSync?.toEpochSecond(),
+            numConnections = connectionCount,
+            status = if (isActive) ActorStatus.ACTIVE else ActorStatus.INACTIVE,
+            connectionJobStatuses = statusCountsMap,
+          ),
+        )
       }
-      return SourceReadList().sources(sourceReads).numConnections(numSources).pageSize(pageSize)
+      return SourceReadList(sources = sourceReads, numConnections = numSources, pageSize = pageSize)
     }
 
     fun listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): SourceReadList {
@@ -421,9 +437,9 @@ class SourceHandler
         sourceService.listWorkspacesSourceConnections(
           ResourcesQueryPaginated(
             listResourcesForWorkspacesRequestBody.workspaceIds,
-            listResourcesForWorkspacesRequestBody.includeDeleted,
-            listResourcesForWorkspacesRequestBody.pagination.pageSize,
-            listResourcesForWorkspacesRequestBody.pagination.rowOffset,
+            listResourcesForWorkspacesRequestBody.includeDeleted ?: false,
+            requireNotNull(listResourcesForWorkspacesRequestBody.pagination.pageSize) { "pageSize is required" },
+            requireNotNull(listResourcesForWorkspacesRequestBody.pagination.rowOffset) { "rowOffset is required" },
             null,
           ),
         )
@@ -433,7 +449,7 @@ class SourceHandler
         reads.add(buildSourceReadWithStatus(sc))
       }
 
-      return SourceReadList().sources(reads)
+      return SourceReadList(sources = reads)
     }
 
     fun listSourcesForSourceDefinition(sourceDefinitionId: UUID): SourceReadList {
@@ -442,7 +458,7 @@ class SourceHandler
         reads.add(buildSourceRead(sourceConnection))
       }
 
-      return SourceReadList().sources(reads)
+      return SourceReadList(sources = reads)
     }
 
     fun searchSources(sourceSearch: SourceSearch?): SourceReadList {
@@ -457,7 +473,7 @@ class SourceHandler
         }
       }
 
-      return SourceReadList().sources(reads)
+      return SourceReadList(sources = reads)
     }
 
     fun deleteSource(sourceIdRequestBody: SourceIdRequestBody) {
@@ -532,7 +548,7 @@ class SourceHandler
       val persistenceCatalog = catalogConverter.toProtocol(request.catalog)
       val catalogId = writeActorCatalog(persistenceCatalog, request)
 
-      return DiscoverCatalogResult().catalogId(catalogId)
+      return DiscoverCatalogResult(catalogId = catalogId)
     }
 
     private fun writeActorCatalog(
@@ -549,12 +565,7 @@ class SourceHandler
     private fun buildSourceReadWithStatus(sourceConnection: SourceConnection): SourceRead {
       val sourceRead = buildSourceRead(sourceConnection)
       // add source status into sourceRead
-      if (sourceService.isSourceActive(sourceConnection.sourceId)) {
-        sourceRead.status(ActorStatus.ACTIVE)
-      } else {
-        sourceRead.status(ActorStatus.INACTIVE)
-      }
-      return sourceRead
+      return sourceRead.copy(status = if (sourceService.isSourceActive(sourceConnection.sourceId)) ActorStatus.ACTIVE else ActorStatus.INACTIVE)
     }
 
     @JvmOverloads
@@ -706,7 +717,9 @@ class SourceHandler
           .withSourceId(sourceId)
           .withTombstone(tombstone)
           .withIsDraft(isDraft)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
+          .withResourceRequirements(
+            apiPojoConverters.scopedResourceReqsToInternal(Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java)),
+          )
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
       // orphaned (e.g. by a version bump) once the new config is durably persisted.
@@ -824,29 +837,38 @@ class SourceHandler
           sourceConnection.sourceId,
         )
 
-      val breakingChanges: Optional<ActorDefinitionVersionBreakingChanges> =
-        actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion)
+      // the helper and converters still build the Java models
+      val breakingChanges =
+        actorDefinitionHandlerHelper
+          .getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion)
+          .orElse(null)
+          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.workspaceId)
       val isEntitled =
         licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, standardSourceDefinition.sourceDefinitionId)
 
-      return SourceRead()
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .sourceName(standardSourceDefinition.name)
-        .sourceId(sourceConnection.sourceId)
-        .workspaceId(sourceConnection.workspaceId)
-        .sourceDefinitionId(sourceConnection.sourceDefinitionId)
-        .connectionConfiguration(sourceConnection.configuration)
-        .name(sourceConnection.name)
-        .icon(standardSourceDefinition.iconUrl)
-        .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied)
-        .isEntitled(isEntitled)
-        .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion.supportState))
-        .isDraft(sourceConnection.isDraft == true)
-        .createdAt(sourceConnection.createdAt)
-        .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(sourceConnection.resourceRequirements))
+      return SourceRead(
+        sourceDefinitionId = sourceConnection.sourceDefinitionId,
+        sourceName = standardSourceDefinition.name,
+        sourceId = sourceConnection.sourceId,
+        workspaceId = sourceConnection.workspaceId,
+        connectionConfiguration = sourceConnection.configuration,
+        name = sourceConnection.name,
+        icon = standardSourceDefinition.iconUrl,
+        isVersionOverrideApplied = sourceVersionWithOverrideStatus.isOverrideApplied,
+        isEntitled = isEntitled,
+        breakingChanges = breakingChanges,
+        supportState =
+          apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion.supportState)?.convertTo<SupportState>(),
+        isDraft = sourceConnection.isDraft == true,
+        createdAt = sourceConnection.createdAt,
+        resourceAllocation =
+          Jsons.convertValue(
+            apiPojoConverters.scopedResourceReqsToApi(sourceConnection.resourceRequirements),
+            ScopedResourceRequirements::class.java,
+          ),
+      )
     }
 
     fun toSourceSnippetRead(

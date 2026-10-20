@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.SupportState
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.ResourceRequirements
@@ -17,6 +17,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.UUID
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as KotlinScopedResourceRequirements
 
 object DestinationHelpers {
   @get:Throws(IOException::class)
@@ -63,6 +64,7 @@ object DestinationHelpers {
       .withConfiguration(implementationJson)
       .withTombstone(tombstone)
       .withResourceRequirements(resourceRequirements)
+      .withCreatedAt(CREATED_AT)
   }
 
   fun generateDestinationWithCount(destination: DestinationConnection): DestinationConnectionWithCount =
@@ -88,20 +90,23 @@ object DestinationHelpers {
     isVersionOverrideApplied: Boolean,
     isEntitled: Boolean,
     supportState: SupportState?,
-    resourceAllocation: io.airbyte.api.model.generated.ScopedResourceRequirements?,
+    resourceAllocation: KotlinScopedResourceRequirements?,
   ): DestinationRead =
-    DestinationRead()
-      .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-      .workspaceId(destination.getWorkspaceId())
-      .destinationDefinitionId(destination.getDestinationDefinitionId())
-      .destinationId(destination.getDestinationId())
-      .connectionConfiguration(destination.getConfiguration())
-      .name(destination.getName())
-      .destinationName(standardDestinationDefinition.getName())
-      .icon(standardDestinationDefinition.getIconUrl())
-      .isVersionOverrideApplied(isVersionOverrideApplied)
-      .isEntitled(isEntitled)
-      .supportState(supportState)
-      .isDraft(destination.isDraft == true)
-      .resourceAllocation(resourceAllocation)
+    DestinationRead(
+      workspaceId = destination.workspaceId,
+      destinationDefinitionId = destination.destinationDefinitionId,
+      destinationId = destination.destinationId,
+      connectionConfiguration = destination.configuration,
+      name = destination.name,
+      destinationName = standardDestinationDefinition.name,
+      icon = standardDestinationDefinition.iconUrl,
+      isVersionOverrideApplied = isVersionOverrideApplied,
+      isEntitled = isEntitled,
+      supportState = supportState,
+      isDraft = destination.isDraft == true,
+      resourceAllocation = resourceAllocation,
+      createdAt = destination.createdAt,
+    )
+
+  const val CREATED_AT = 1L
 }

@@ -11,9 +11,9 @@ import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
+import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.CurrentUserService

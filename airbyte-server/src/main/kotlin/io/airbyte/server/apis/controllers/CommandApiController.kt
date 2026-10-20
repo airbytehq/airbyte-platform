@@ -70,6 +70,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 import io.airbyte.api.model.generated.JobLogs as ApiJobLogs
+import io.airbyte.commons.json.Jsons as CommonsJsons
 
 @Controller("/api/v1/commands")
 @Context
@@ -181,7 +182,8 @@ class CommandApiController(
       val apiDestinationCatalog =
         output?.destinationCatalog?.let {
           val protocolDestinationCatalog = Jsons.`object`(it.catalog, io.airbyte.protocol.models.v0.DestinationCatalog::class.java)
-          protocolDestinationCatalog.toModel().toApi()
+          // the command response is still a Java model
+          CommonsJsons.convertValue(protocolDestinationCatalog.toModel().toApi(), io.airbyte.api.model.generated.DestinationCatalog::class.java)
         }
       return DiscoverCommandOutputResponse().apply {
         id(discoverCommandOutputRequest.id)

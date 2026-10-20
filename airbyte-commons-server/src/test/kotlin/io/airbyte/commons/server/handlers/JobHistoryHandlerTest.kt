@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.AttemptStats
 import io.airbyte.api.model.generated.AttemptStreamStats
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
-import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.JobAggregatedStats
 import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.JobDebugInfoRead
@@ -27,10 +26,11 @@ import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.api.model.generated.LogFormatType
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.ResetConfig
-import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
@@ -720,14 +720,8 @@ internal class JobHistoryHandlerTest {
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
 
     whenever(connectionService.getStandardSync(UUID.fromString(job.scope))).thenReturn(standardSync)
-    whenever(sourceHandler.getSource(SourceIdRequestBody().apply { sourceId = connectionRead.sourceId })).thenReturn(sourceRead)
-    whenever(
-      destinationHandler.getDestination(
-        DestinationIdRequestBody().apply {
-          destinationId = connectionRead.destinationId
-        },
-      ),
-    ).thenReturn(destinationRead)
+    whenever(sourceHandler.getSource(SourceIdRequestBody(sourceId = connectionRead.sourceId))).thenReturn(sourceRead)
+    whenever(destinationHandler.getDestination(DestinationIdRequestBody(destinationId = connectionRead.destinationId))).thenReturn(destinationRead)
     whenever(jobPersistence.getJob(JOB_ID)).thenReturn(job)
     whenever(jobPersistence.getAttemptStats(anyOrNull(), anyOrNull())).thenReturn(FIRST_ATTEMPT_STATS)
     whenever(logClientManager.getLogs(anyOrNull())).thenReturn(LogEvents(emptyList(), "1"))

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
 import io.airbyte.api.server.generated.models.CustomSourceDefinitionCreate
@@ -14,6 +12,8 @@ import io.airbyte.api.server.generated.models.SourceDefinitionCreate
 import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.entitlements.Entitlement
@@ -58,7 +58,6 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import jakarta.validation.Valid
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -1407,12 +1406,21 @@ internal class SourceDefinitionsHandlerTest {
   @DisplayName("deleteSourceDefinition should correctly delete a sourceDefinition")
   fun testDeleteSourceDefinition() {
     val updatedSourceDefinition = clone<StandardSourceDefinition>(this.sourceDefinition).withTombstone(true)
-    val newSourceDefinition = SourceRead()
+    val newSourceDefinition =
+      SourceRead(
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        sourceId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = jsonNode(emptyMap<String, Any>()),
+        name = "source",
+        sourceName = sourceDefinition.name,
+        createdAt = 1L,
+      )
 
     whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
       .thenReturn(sourceDefinition)
     whenever(sourceHandler.listSourcesForSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(SourceReadList().sources(mutableListOf<@Valid SourceRead?>(newSourceDefinition)))
+      .thenReturn(SourceReadList(sources = listOf(newSourceDefinition)))
 
     Assertions.assertFalse(sourceDefinition.tombstone)
 

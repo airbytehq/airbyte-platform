@@ -5,7 +5,8 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.micronaut.context.ApplicationContext
@@ -30,7 +31,16 @@ class SourcesExecuteTest {
   fun `OSS config API retains source routes but exposes no execute endpoint`() {
     val sourceId = UUID.randomUUID()
     val sourceHandler = mockk<SourceHandler>()
-    every { sourceHandler.getSource(any()) } returns SourceRead().sourceId(sourceId).name("Existing source")
+    every { sourceHandler.getSource(any()) } returns
+      SourceRead(
+        sourceDefinitionId = UUID.randomUUID(),
+        sourceId = sourceId,
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.emptyObject(),
+        name = "Existing source",
+        sourceName = "source-definition",
+        createdAt = 0L,
+      )
     val isolated =
       object : BeanConfiguration by BeanConfiguration.disabled("io.airbyte") {
         override fun isWithin(beanDefinitionReference: BeanDefinitionReference<*>): Boolean =

@@ -4,15 +4,15 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.DestinationUpdate
-import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.PartialDestinationUpdate
+import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.PartialDestinationUpdate
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -87,12 +87,14 @@ class DestinationServiceImpl(
     destinationCreateRequest: DestinationCreateRequest,
     destinationDefinitionId: UUID,
   ): DestinationResponse {
-    val destinationCreateOss = DestinationCreate()
-    destinationCreateOss.name = destinationCreateRequest.name
-    destinationCreateOss.destinationDefinitionId = destinationDefinitionId
-    destinationCreateOss.workspaceId = destinationCreateRequest.workspaceId
-    destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
-    destinationCreateOss.resourceAllocation = destinationCreateRequest.resourceAllocation?.toInternal()
+    val destinationCreateOss =
+      DestinationCreate(
+        name = destinationCreateRequest.name,
+        destinationDefinitionId = destinationDefinitionId,
+        workspaceId = destinationCreateRequest.workspaceId,
+        connectionConfiguration = destinationCreateRequest.configuration,
+        resourceAllocation = destinationCreateRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -115,8 +117,7 @@ class DestinationServiceImpl(
     destinationId: UUID,
     includeSecretCoordinates: Boolean?,
   ): DestinationResponse {
-    val destinationIdRequestBody = DestinationIdRequestBody()
-    destinationIdRequestBody.destinationId = destinationId
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
 
     val result =
       kotlin
@@ -136,8 +137,7 @@ class DestinationServiceImpl(
    * Gets a DestinationRead by ID.
    */
   override fun getDestinationRead(destinationId: UUID): DestinationRead {
-    val destinationIdRequestBody = DestinationIdRequestBody()
-    destinationIdRequestBody.destinationId = destinationId
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
 
     val result =
       runCatching {
@@ -160,11 +160,12 @@ class DestinationServiceImpl(
     destinationPutRequest: DestinationPutRequest,
   ): DestinationResponse {
     val destinationUpdate =
-      DestinationUpdate()
-        .destinationId(destinationId)
-        .connectionConfiguration(destinationPutRequest.configuration)
-        .name(destinationPutRequest.name)
-        .resourceAllocation(destinationPutRequest.resourceAllocation?.toInternal())
+      DestinationUpdate(
+        destinationId = destinationId,
+        connectionConfiguration = destinationPutRequest.configuration,
+        name = destinationPutRequest.name,
+        resourceAllocation = destinationPutRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -187,11 +188,12 @@ class DestinationServiceImpl(
     destinationPatchRequest: DestinationPatchRequest,
   ): DestinationResponse {
     val partialDestinationUpdate =
-      PartialDestinationUpdate()
-        .destinationId(destinationId)
-        .connectionConfiguration(destinationPatchRequest.configuration)
-        .name(destinationPatchRequest.name)
-        .resourceAllocation(destinationPatchRequest.resourceAllocation?.toInternal())
+      PartialDestinationUpdate(
+        destinationId = destinationId,
+        connectionConfiguration = destinationPatchRequest.configuration,
+        name = destinationPatchRequest.name,
+        resourceAllocation = destinationPatchRequest.resourceAllocation?.toInternal(),
+      )
 
     val result =
       kotlin
@@ -210,7 +212,7 @@ class DestinationServiceImpl(
    * Deletes updates a destination by ID.
    */
   override fun deleteDestination(destinationId: UUID) {
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
+    val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
     val result =
       kotlin
         .runCatching {
@@ -231,12 +233,14 @@ class DestinationServiceImpl(
     limit: Int,
     offset: Int,
   ): DestinationsResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
+    val pagination = Pagination(pageSize = limit, rowOffset = offset)
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
-    val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
-    listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
-    listResourcesForWorkspacesRequestBody.pagination = pagination
-    listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
+    val listResourcesForWorkspacesRequestBody =
+      ListResourcesForWorkspacesRequestBody(
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+        workspaceIds = workspaceIdsToQuery,
+      )
 
     val result =
       runCatching {

@@ -5,12 +5,12 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.FailureReason
-import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -61,14 +61,15 @@ class SourceServiceTest {
 
     val partialSourceUpdateSlot = slot<PartialSourceUpdate>()
     val sourceRead =
-      SourceRead().apply {
-        this.sourceId = this@SourceServiceTest.sourceId
-        this.name = "updated-source"
-        this.sourceDefinitionId = UUID.randomUUID()
-        this.workspaceId = UUID.randomUUID()
-        this.connectionConfiguration = Jsons.deserialize("{}")
-        this.createdAt = 1L
-      }
+      SourceRead(
+        sourceId = sourceId,
+        name = "updated-source",
+        sourceDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.deserialize("{}"),
+        sourceName = "source-definition",
+        createdAt = 1L,
+      )
 
     every { sourceHandler.updateSourceWithOptionalSecret(capture(partialSourceUpdateSlot), allowInlineOAuthServerOutputSecrets = true) } returns
       sourceRead
@@ -95,14 +96,15 @@ class SourceServiceTest {
 
     val partialSourceUpdateSlot = slot<PartialSourceUpdate>()
     val sourceRead =
-      SourceRead().apply {
-        this.sourceId = this@SourceServiceTest.sourceId
-        this.name = "updated-source"
-        this.sourceDefinitionId = UUID.randomUUID()
-        this.workspaceId = UUID.randomUUID()
-        this.connectionConfiguration = Jsons.deserialize("{}")
-        this.createdAt = 1L
-      }
+      SourceRead(
+        sourceId = sourceId,
+        name = "updated-source",
+        sourceDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.deserialize("{}"),
+        sourceName = "source-definition",
+        createdAt = 1L,
+      )
 
     every { sourceHandler.updateSourceWithOptionalSecret(capture(partialSourceUpdateSlot), allowInlineOAuthServerOutputSecrets = true) } returns
       sourceRead

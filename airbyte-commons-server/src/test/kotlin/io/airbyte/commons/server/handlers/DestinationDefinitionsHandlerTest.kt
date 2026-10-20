@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationReadList
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.ActorDefinitionIdWithScope
 import io.airbyte.api.server.generated.models.CustomDestinationDefinitionCreate
@@ -13,6 +11,8 @@ import io.airbyte.api.server.generated.models.DestinationDefinitionCreate
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.DestinationDefinitionRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionUpdate
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.PrivateDestinationDefinitionRead
 import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
@@ -58,7 +58,6 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import jakarta.validation.Valid
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -1504,14 +1503,23 @@ internal class DestinationDefinitionsHandlerTest {
   @DisplayName("deleteDestinationDefinition should correctly delete a sourceDefinition")
   fun testDeleteDestinationDefinition() {
     val updatedDestinationDefinition = clone<StandardDestinationDefinition>(this.destinationDefinition).withTombstone(true)
-    val newDestinationDefinition = DestinationRead()
+    val newDestinationDefinition =
+      DestinationRead(
+        destinationDefinitionId = destinationDefinition.destinationDefinitionId,
+        destinationId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = jsonNode(emptyMap<String, Any>()),
+        name = "destination",
+        destinationName = destinationDefinition.name,
+        createdAt = 1L,
+      )
 
     Mockito
       .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition)
     Mockito
       .`when`(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(DestinationReadList().destinations(mutableListOf<@Valid DestinationRead?>(newDestinationDefinition)))
+      .thenReturn(DestinationReadList(destinations = listOf(newDestinationDefinition)))
 
     Assertions.assertFalse(destinationDefinition.tombstone)
 

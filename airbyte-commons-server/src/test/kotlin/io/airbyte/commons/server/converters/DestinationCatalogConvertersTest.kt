@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.UUID
-import io.airbyte.api.model.generated.DestinationSyncMode as ApiDestinationSyncMode
+import io.airbyte.api.server.generated.models.DestinationSyncMode as ApiDestinationSyncMode
 
 class DestinationCatalogConvertersTest {
   private val catalogId = UUID.randomUUID()

@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.ResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.commons.json.Jsons
 import io.airbyte.publicApi.server.generated.models.JobTypeResourceLimit
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -18,27 +18,28 @@ class DestinationReadMapperTest {
   fun `from should convert a DestinationRead object from the config api to a DestinationResponse`() {
     // Given
     val destinationRead =
-      DestinationRead().apply {
-        destinationId = UUID.randomUUID()
-        name = "destinationName"
-        destinationDefinitionId = UUID.randomUUID()
-        workspaceId = UUID.randomUUID()
-        connectionConfiguration = Jsons.deserialize("{}")
-        createdAt = 1L
+      DestinationRead(
+        destinationId = UUID.randomUUID(),
+        name = "destinationName",
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.deserialize("{}"),
+        destinationName = "destination-definition",
+        createdAt = 1L,
         resourceAllocation =
-          mockk {
-            every { default } returns
-              mockk {
-                every { cpuRequest } returns "1"
-                every { cpuLimit } returns "2"
-                every { memoryRequest } returns "3"
-                every { memoryLimit } returns "4"
-                every { ephemeralStorageRequest } returns "5"
-                every { ephemeralStorageLimit } returns "6"
-              }
-            every { jobSpecific } returns emptyList()
-          }
-      }
+          ScopedResourceRequirements(
+            default =
+              ResourceRequirements(
+                cpuRequest = "1",
+                cpuLimit = "2",
+                memoryRequest = "3",
+                memoryLimit = "4",
+                ephemeralStorageRequest = "5",
+                ephemeralStorageLimit = "6",
+              ),
+            jobSpecific = emptyList(),
+          ),
+      )
 
     // When
     val destinationResponse = DestinationReadMapper.from(destinationRead)

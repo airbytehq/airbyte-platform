@@ -5,22 +5,27 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
 import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DiscoverCatalogResult
-import io.airbyte.api.model.generated.SourceCreate
+import io.airbyte.api.model.generated.JobConfigType
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
-import io.airbyte.api.model.generated.SourceReadWithMetadata
-import io.airbyte.api.model.generated.SourceSearch
-import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.DiscoverCatalogResult
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceMetadata
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
+import io.airbyte.api.server.generated.models.SourceReadWithMetadata
+import io.airbyte.api.server.generated.models.SourceSearch
+import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -70,30 +75,30 @@ internal class SourceApiControllerTest {
 
   @Test
   fun testCheckConnectionToSource() {
-    every { schedulerHandler.checkSourceConnectionFromSourceId(any()) } returns CheckConnectionRead() andThenThrows ConfigNotFoundException("", "")
+    every { schedulerHandler.checkSourceConnectionFromSourceId(any()) } returns checkConnectionRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/check_connection"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
   fun testCheckConnectionToSourceForUpdate() {
-    every { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(any()) } returns CheckConnectionRead() andThenThrows
+    every { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(any()) } returns checkConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/check_connection_for_update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceUpdate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceUpdate())))
   }
 
   @Test
   fun testCreateSource() {
-    every { sourceHandler.createSourceWithOptionalSecret(any()) } returns SourceRead() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.createSourceWithOptionalSecret(any()) } returns sourceRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/create"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceCreate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceCreate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceCreate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceCreate())))
   }
 
   @Test
@@ -101,18 +106,18 @@ internal class SourceApiControllerTest {
     every { sourceHandler.deleteSource(any<SourceIdRequestBody>()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
   fun testDiscoverSchemaForSource() {
-    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead() andThenThrows
+    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns sourceDiscoverSchemaRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/discover_schema"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()))))
   }
 
   @Test
@@ -126,7 +131,7 @@ internal class SourceApiControllerTest {
           .exchange(
             HttpRequest.POST(
               "/api/v1/sources/discover_schema",
-              SourceDiscoverSchemaRequestBody().sourceId(UUID.randomUUID()),
+              SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()),
             ),
             JsonNode::class.java,
           )
@@ -145,20 +150,20 @@ internal class SourceApiControllerTest {
 
   @Test
   fun testGetSource() {
-    every { sourceHandler.getSource(any()) } returns SourceRead() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.getSource(any()) } returns sourceRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
   fun testGetSourceWithMetadata() {
-    every { sourceHandler.getSourceWithMetadata(any(), any()) } returns SourceReadWithMetadata() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.getSourceWithMetadata(any(), any()) } returns sourceReadWithMetadata() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/get_with_metadata"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
@@ -166,21 +171,24 @@ internal class SourceApiControllerTest {
     every { sourceHandler.getMostRecentSourceActorCatalogWithUpdatedAt(any()) } returns ActorCatalogWithUpdatedAt()
 
     val path = "/api/v1/sources/most_recent_source_actor_catalog"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
   fun testListSourcesForWorkspace() {
-    every { sourceHandler.listSourcesForWorkspace(any()) } returns SourceReadList() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.listSourcesForWorkspace(any()) } returns SourceReadList(sources = emptyList()) andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))))
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))),
+    )
   }
 
   @Test
   fun testSearchSources() {
-    every { sourceHandler.searchSources(any()) } returns SourceReadList() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.searchSources(any()) } returns SourceReadList(sources = emptyList()) andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/search"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceSearch())))
@@ -189,19 +197,24 @@ internal class SourceApiControllerTest {
 
   @Test
   fun testUpdateSources() {
-    every { sourceHandler.updateSource(any()) } returns SourceRead() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.updateSource(any()) } returns sourceRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, sourceUpdate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceUpdate())))
   }
 
   @Test
   fun testWriteDiscoverCatalogResult() {
-    every { sourceHandler.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult()
+    every { sourceHandler.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = UUID.randomUUID())
 
     val path = "/api/v1/sources/write_discover_catalog_result"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDiscoverSchemaWriteRequestBody())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(path, SourceDiscoverSchemaWriteRequestBody(catalog = AirbyteCatalog(streams = emptyList()), sourceId = UUID.randomUUID())),
+      ),
+    )
   }
 
   @Test
@@ -209,8 +222,8 @@ internal class SourceApiControllerTest {
     every { sourceHandler.upgradeSourceVersion(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/upgrade_version"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, sourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, sourceIdRequestBody())))
   }
 
   @Test
@@ -254,4 +267,54 @@ internal class SourceApiControllerTest {
         assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "${it.name} should stay reader-scoped")
       }
   }
+
+  private fun sourceIdRequestBody() = SourceIdRequestBody(sourceId = UUID.randomUUID())
+
+  private fun sourceUpdate() = SourceUpdate(sourceId = UUID.randomUUID(), connectionConfiguration = Jsons.emptyObject(), name = "source")
+
+  private fun sourceCreate() =
+    SourceCreate(
+      sourceDefinitionId = UUID.randomUUID(),
+      connectionConfiguration = Jsons.emptyObject(),
+      workspaceId = UUID.randomUUID(),
+      name = "source",
+    )
+
+  private fun sourceRead() =
+    SourceRead(
+      sourceDefinitionId = UUID.randomUUID(),
+      sourceId = UUID.randomUUID(),
+      workspaceId = UUID.randomUUID(),
+      connectionConfiguration = Jsons.emptyObject(),
+      name = "source",
+      sourceName = "source-definition",
+      createdAt = 0L,
+    )
+
+  private fun sourceReadWithMetadata() =
+    SourceReadWithMetadata(
+      sourceDefinitionId = UUID.randomUUID(),
+      sourceId = UUID.randomUUID(),
+      workspaceId = UUID.randomUUID(),
+      connectionConfiguration = Jsons.emptyObject(),
+      name = "source",
+      sourceName = "source-definition",
+      createdAt = 0L,
+      metadata = SourceMetadata(workspaceName = "workspace"),
+    )
+
+  private fun synchronousJobRead(configType: JobConfigType) =
+    SynchronousJobRead()
+      .id(UUID.randomUUID())
+      .configType(configType)
+      .createdAt(0L)
+      .endedAt(0L)
+      .succeeded(true)
+
+  private fun checkConnectionRead() =
+    CheckConnectionRead()
+      .status(CheckConnectionRead.StatusEnum.SUCCEEDED)
+      .jobInfo(synchronousJobRead(JobConfigType.CHECK_CONNECTION_SOURCE))
+
+  private fun sourceDiscoverSchemaRead() = SourceDiscoverSchemaRead().jobInfo(synchronousJobRead(JobConfigType.DISCOVER_SCHEMA))
 }

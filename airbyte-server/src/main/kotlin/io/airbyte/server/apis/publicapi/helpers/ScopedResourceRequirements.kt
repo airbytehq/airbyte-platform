@@ -5,37 +5,38 @@
 package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.api.model.generated.JobTypeResourceLimit as InternalJobTypeResourceLimit
-import io.airbyte.api.model.generated.ResourceRequirements as InternalResourceRequirements
-import io.airbyte.api.model.generated.ScopedResourceRequirements as InternalScopedResourceRequirements
+import io.airbyte.api.server.generated.models.JobTypeResourceLimit as InternalJobTypeResourceLimit
+import io.airbyte.api.server.generated.models.ResourceRequirements as InternalResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as InternalScopedResourceRequirements
 import io.airbyte.publicApi.server.generated.models.JobTypeResourceLimit as PublicJobTypeResourceLimit
 import io.airbyte.publicApi.server.generated.models.ResourceRequirements as PublicResourceRequirements
 import io.airbyte.publicApi.server.generated.models.ScopedResourceRequirements as PublicScopedResourceRequirements
 
 /**
- * Extension function for converting the non-public [io.airbyte.api.model.generated.ScopedResourceRequirements] type to the public
+ * Extension function for converting the non-public [io.airbyte.api.server.generated.models.ScopedResourceRequirements] type to the public
  * [io.airbyte.publicApi.server.generated.models.ScopedResourceRequirements] type.
  *
- * @receiver [io.airbyte.api.model.generated.ScopedResourceRequirements] the non-public instance
+ * @receiver [io.airbyte.api.server.generated.models.ScopedResourceRequirements] the non-public instance
  * @return the public instance [io.airbyte.publicApi.server.generated.models.ScopedResourceRequirements]
  */
 internal fun InternalScopedResourceRequirements.toPublic(): PublicScopedResourceRequirements =
   PublicScopedResourceRequirements(
-    default = this@toPublic.default.toPublic(),
-    jobSpecific = this@toPublic.jobSpecific.map { it.toPublic() },
+    default = this@toPublic.default?.toPublic(),
+    jobSpecific = this@toPublic.jobSpecific?.map { it.toPublic() },
   )
 
 /**
  * Extension function for converting the public [io.airbyte.publicApi.server.generated.models.ScopedResourceRequirements] type to the non-public
- * [io.airbyte.api.model.generated.ScopedResourceRequirements] type.
+ * [io.airbyte.api.server.generated.models.ScopedResourceRequirements] type.
  *
  * @receiver [io.airbyte.publicApi.server.generated.models.ScopedResourceRequirements] the non-public instance
- * @return the public instance [io.airbyte.api.model.generated.ScopedResourceRequirements]
+ * @return the public instance [io.airbyte.api.server.generated.models.ScopedResourceRequirements]
  */
 internal fun PublicScopedResourceRequirements.toInternal(): InternalScopedResourceRequirements =
-  InternalScopedResourceRequirements()
-    ._default(this.default?.toInternal())
-    .jobSpecific(this.jobSpecific?.map { it.toInternal() })
+  InternalScopedResourceRequirements(
+    default = this.default?.toInternal(),
+    jobSpecific = this.jobSpecific?.map { it.toInternal() },
+  )
 
 private fun InternalResourceRequirements.toPublic(): PublicResourceRequirements =
   PublicResourceRequirements(
@@ -54,15 +55,17 @@ private fun InternalJobTypeResourceLimit.toPublic(): PublicJobTypeResourceLimit 
   )
 
 private fun PublicResourceRequirements.toInternal(): InternalResourceRequirements =
-  InternalResourceRequirements()
-    .cpuRequest(this.cpuRequest)
-    .cpuLimit(this.cpuLimit)
-    .memoryRequest(this.memoryRequest)
-    .memoryLimit(this.memoryLimit)
-    .ephemeralStorageRequest(this.ephemeralStorageRequest)
-    .ephemeralStorageLimit(this.ephemeralStorageLimit)
+  InternalResourceRequirements(
+    cpuRequest = this.cpuRequest,
+    cpuLimit = this.cpuLimit,
+    memoryRequest = this.memoryRequest,
+    memoryLimit = this.memoryLimit,
+    ephemeralStorageRequest = this.ephemeralStorageRequest,
+    ephemeralStorageLimit = this.ephemeralStorageLimit,
+  )
 
 private fun PublicJobTypeResourceLimit.toInternal(): InternalJobTypeResourceLimit =
-  InternalJobTypeResourceLimit()
-    .jobType(this.jobType.convertTo())
-    .resourceRequirements(this.resourceRequirements.toInternal())
+  InternalJobTypeResourceLimit(
+    jobType = this.jobType.convertTo(),
+    resourceRequirements = this.resourceRequirements.toInternal(),
+  )

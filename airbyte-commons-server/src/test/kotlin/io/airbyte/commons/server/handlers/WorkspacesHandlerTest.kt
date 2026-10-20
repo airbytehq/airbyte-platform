@@ -5,24 +5,24 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationReadList
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceReadList
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
+import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
 import io.airbyte.api.server.generated.models.NotificationConfig
 import io.airbyte.api.server.generated.models.NotificationType
 import io.airbyte.api.server.generated.models.NotificationsConfig
 import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.api.server.generated.models.SlugRequestBody
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.api.server.generated.models.WebhookConfigRead
 import io.airbyte.api.server.generated.models.WebhookConfigWrite
 import io.airbyte.api.server.generated.models.WebhookNotificationConfig
@@ -38,6 +38,7 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.MaximumWorkspacesEntitlement
 import io.airbyte.commons.entitlements.models.NumericEntitlementResult
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -918,8 +919,26 @@ internal class WorkspacesHandlerTest {
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
     val connection = ConnectionRead().connectionId(UUID.randomUUID())
-    val destination = DestinationRead()
-    val source = SourceRead()
+    val destination =
+      DestinationRead(
+        destinationDefinitionId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        workspaceId = workspace.workspaceId,
+        connectionConfiguration = Jsons.emptyObject(),
+        name = "destination",
+        destinationName = "destination-definition",
+        createdAt = 1L,
+      )
+    val source =
+      SourceRead(
+        sourceDefinitionId = UUID.randomUUID(),
+        sourceId = UUID.randomUUID(),
+        workspaceId = workspace.workspaceId,
+        connectionConfiguration = Jsons.emptyObject(),
+        name = "source",
+        sourceName = "source-definition",
+        createdAt = 1L,
+      )
 
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
@@ -943,17 +962,15 @@ internal class WorkspacesHandlerTest {
     Mockito
       .`when`(
         destinationHandler
-          .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.workspaceId)),
-      ).thenReturn(DestinationReadList().destinations(mutableListOf<@Valid DestinationRead?>(destination)))
+          .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId)),
+      ).thenReturn(DestinationReadList(destinations = listOf(destination)))
 
     Mockito
       .`when`(
         sourceHandler.listSourcesForWorkspace(
-          ActorListCursorPaginatedRequestBody().workspaceId(
-            workspaceIdRequestBody.workspaceId,
-          ),
+          ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
         ),
-      ).thenReturn(SourceReadList().sources(mutableListOf<@Valid SourceRead?>(source)))
+      ).thenReturn(SourceReadList(sources = listOf(source)))
     Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
     stubTombstone(WorkspaceTombstoneResult.TOMBSTONED, allowLastWorkspace = false)
 
@@ -1044,10 +1061,10 @@ internal class WorkspacesHandlerTest {
       ).thenReturn(ConnectionReadList().connections(mutableListOf()))
     Mockito
       .`when`(destinationHandler.listDestinationsForWorkspace(any()))
-      .thenReturn(DestinationReadList().destinations(mutableListOf()))
+      .thenReturn(DestinationReadList(destinations = emptyList()))
     Mockito
       .`when`(sourceHandler.listSourcesForWorkspace(any()))
-      .thenReturn(SourceReadList().sources(mutableListOf()))
+      .thenReturn(SourceReadList(sources = emptyList()))
     return workspaceIdRequestBody
   }
 
