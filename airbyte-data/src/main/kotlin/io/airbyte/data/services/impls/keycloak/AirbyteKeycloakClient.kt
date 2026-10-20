@@ -297,7 +297,18 @@ class AirbyteKeycloakClient(
     }
 
     val clientToClone = readMcpSourceClient(mcpClientId)
-    val targetClients = keycloakAdminClient.realms().realm(realmName).clients()
+    val targetRealm = keycloakAdminClient.realms().realm(realmName)
+    val realmSettings =
+      try {
+        targetRealm.toRepresentation()
+      } catch (e: Exception) {
+        logger.error(e) { "Read realm $realmName request failed" }
+        throw CreateClientException("Read realm $realmName failed! Server error: $e")
+      }
+
+    clientToClone.attributes = withinRealmSessionLimits(realmName, clientToClone.attributes, realmSettings)
+
+    val targetClients = targetRealm.clients()
     val existingClient =
       try {
         targetClients.findByClientId(mcpClientId).firstOrNull()
@@ -317,6 +328,50 @@ class AirbyteKeycloakClient(
         throw CreateClientException("Update MCP client $mcpClientId in realm $realmName failed! Server error: $e")
       }
       logger.info { "Updated MCP client $mcpClientId in realm $realmName" }
+    }
+  }
+
+  /**
+   * Keycloak's client session timeout validation rejects client values above the realm's SSO limits.
+   * Omitting these attributes lets the client inherit the realm timeout, the longest accepted value.
+   */
+  private fun withinRealmSessionLimits(
+    realmName: String,
+    attributes: Map<String, String>?,
+    realm: RealmRepresentation,
+  ): Map<String, String>? {
+    if (attributes == null) {
+      return null
+    }
+
+    val idleLimit =
+      if (realm.isRememberMe == true) {
+        maxOf(realm.ssoSessionIdleTimeout ?: 0, realm.ssoSessionIdleTimeoutRememberMe ?: 0)
+      } else {
+        realm.ssoSessionIdleTimeout ?: 0
+      }
+    val maxLifespanLimit =
+      if (realm.isRememberMe == true) {
+        maxOf(realm.ssoSessionMaxLifespan ?: 0, realm.ssoSessionMaxLifespanRememberMe ?: 0)
+      } else {
+        realm.ssoSessionMaxLifespan ?: 0
+      }
+
+    return attributes.filter { (key, value) ->
+      val realmLimit =
+        when (key) {
+          CLIENT_SESSION_IDLE_TIMEOUT_ATTRIBUTE -> idleLimit
+          CLIENT_SESSION_MAX_LIFESPAN_ATTRIBUTE -> maxLifespanLimit
+          else -> null
+        }
+      val timeout = value.toIntOrNull()
+
+      if (realmLimit != null && timeout != null && timeout > realmLimit) {
+        logger.info { "Dropped MCP client attribute $key=$value for realm $realmName; realm limit is $realmLimit" }
+        false
+      } else {
+        true
+      }
     }
   }
 
@@ -626,6 +681,8 @@ class AirbyteKeycloakClient(
     private const val DEFAULT_SCOPE = "openid profile email"
     private const val DEFAULT_IDP_ALIAS = "default"
     private const val CLIENT_AUTH_METHOD = "client_secret_post"
+    private const val CLIENT_SESSION_IDLE_TIMEOUT_ATTRIBUTE = "client.session.idle.timeout"
+    private const val CLIENT_SESSION_MAX_LIFESPAN_ATTRIBUTE = "client.session.max.lifespan"
     private const val AIRBYTE_WEBAPP_CLIENT_ID = "airbyte-webapp"
     private const val AIRBYTE_WEBAPP_CLIENT_NAME = "Airbyte Webapp"
     private const val SONAR_WEBAPP_CLIENT_ID = "sonar-webapp"

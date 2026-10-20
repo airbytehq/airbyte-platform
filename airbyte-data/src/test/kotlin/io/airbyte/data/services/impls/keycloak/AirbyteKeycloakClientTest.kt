@@ -636,7 +636,7 @@ class AirbyteKeycloakClientTest {
   }
 
   @Test
-  fun `createOidcSsoConfig clones the configured MCP client into the new realm`() {
+  fun `createOidcSsoConfig drops MCP client session timeouts that exceed the new realm SSO session limits`() {
     every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
     every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
 
@@ -651,10 +651,25 @@ class AirbyteKeycloakClientTest {
     val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
     every { sourceRealmMock.clients() } returns sourceClientsMock
-    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns listOf(mcpSourceClient())
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(
+        mcpSourceClient().apply {
+          attributes =
+            mapOf(
+              "pkce.code.challenge.method" to "S256",
+              "client.session.idle.timeout" to "604800",
+              "client.session.max.lifespan" to "2592000",
+            )
+        },
+      )
 
     val realmMock = mockk<RealmResource>(relaxed = true)
     every { realmsMock.realm(config.companyIdentifier) } returns realmMock
+    every { realmMock.toRepresentation() } returns
+      RealmRepresentation().apply {
+        ssoSessionIdleTimeout = 1800
+        ssoSessionMaxLifespan = 36000
+      }
 
     val clientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmMock.clients() } returns clientsMock
@@ -781,6 +796,7 @@ class AirbyteKeycloakClientTest {
 
     val realmMock = mockk<RealmResource>(relaxed = true)
     every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns RealmRepresentation()
 
     val clientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmMock.clients() } returns clientsMock
@@ -798,6 +814,272 @@ class AirbyteKeycloakClientTest {
     assertEquals(MCP_CLIENT_ID, capturedUpdate.captured.clientId)
     assertEquals(MCP_CLIENT_SECRET, capturedUpdate.captured.secret)
     assertEquals(listOf("https://mcp.airbyte.com/auth/callback"), capturedUpdate.captured.redirectUris)
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm drops session timeouts above realm limits when updating an existing client`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(
+        mcpSourceClient().apply {
+          attributes =
+            mapOf(
+              "pkce.code.challenge.method" to "S256",
+              "client.session.idle.timeout" to "604800",
+              "client.session.max.lifespan" to "2592000",
+            )
+        },
+      )
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns
+      RealmRepresentation().apply {
+        ssoSessionIdleTimeout = 1800
+        ssoSessionMaxLifespan = 36000
+      }
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(ClientRepresentation().apply { id = "existing-uuid" })
+    val existingClientResource = mockk<ClientResource>(relaxed = true)
+    every { clientsMock["existing-uuid"] } returns existingClientResource
+    val capturedUpdate = slot<ClientRepresentation>()
+    every { existingClientResource.update(capture(capturedUpdate)) } just Runs
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertEquals(mapOf("pkce.code.challenge.method" to "S256"), capturedUpdate.captured.attributes)
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm keeps session timeouts within realm limits`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(
+        mcpSourceClient().apply {
+          attributes =
+            mapOf(
+              "pkce.code.challenge.method" to "S256",
+              "client.session.idle.timeout" to "900",
+              "client.session.max.lifespan" to "36000",
+            )
+        },
+      )
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns
+      RealmRepresentation().apply {
+        ssoSessionIdleTimeout = 1800
+        ssoSessionMaxLifespan = 36000
+      }
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(ClientRepresentation().apply { id = "existing-uuid" })
+    val existingClientResource = mockk<ClientResource>(relaxed = true)
+    every { clientsMock["existing-uuid"] } returns existingClientResource
+    val capturedUpdate = slot<ClientRepresentation>()
+    every { existingClientResource.update(capture(capturedUpdate)) } just Runs
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertEquals(
+      mapOf(
+        "pkce.code.challenge.method" to "S256",
+        "client.session.idle.timeout" to "900",
+        "client.session.max.lifespan" to "36000",
+      ),
+      capturedUpdate.captured.attributes,
+    )
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm keeps non-numeric session timeout values`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(
+        mcpSourceClient().apply {
+          attributes =
+            mapOf(
+              "pkce.code.challenge.method" to "S256",
+              "client.session.idle.timeout" to "unlimited",
+              "client.session.max.lifespan" to "36000",
+            )
+        },
+      )
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns
+      RealmRepresentation().apply {
+        ssoSessionIdleTimeout = 1800
+        ssoSessionMaxLifespan = 36000
+      }
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(ClientRepresentation().apply { id = "existing-uuid" })
+    val existingClientResource = mockk<ClientResource>(relaxed = true)
+    every { clientsMock["existing-uuid"] } returns existingClientResource
+    val capturedUpdate = slot<ClientRepresentation>()
+    every { existingClientResource.update(capture(capturedUpdate)) } just Runs
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertEquals(
+      mapOf(
+        "pkce.code.challenge.method" to "S256",
+        "client.session.idle.timeout" to "unlimited",
+        "client.session.max.lifespan" to "36000",
+      ),
+      capturedUpdate.captured.attributes,
+    )
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm applies remember-me limits when remember me is enabled`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(
+        mcpSourceClient().apply {
+          attributes =
+            mapOf(
+              "pkce.code.challenge.method" to "S256",
+              "client.session.idle.timeout" to "604800",
+              "client.session.max.lifespan" to "2592000",
+            )
+        },
+      )
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns
+      RealmRepresentation().apply {
+        isRememberMe = true
+        ssoSessionIdleTimeout = 1800
+        ssoSessionIdleTimeoutRememberMe = 604800
+        ssoSessionMaxLifespan = 36000
+        ssoSessionMaxLifespanRememberMe = 2592000
+      }
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(ClientRepresentation().apply { id = "existing-uuid" })
+    val existingClientResource = mockk<ClientResource>(relaxed = true)
+    every { clientsMock["existing-uuid"] } returns existingClientResource
+    val capturedUpdate = slot<ClientRepresentation>()
+    every { existingClientResource.update(capture(capturedUpdate)) } just Runs
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertEquals(
+      mapOf(
+        "pkce.code.challenge.method" to "S256",
+        "client.session.idle.timeout" to "604800",
+        "client.session.max.lifespan" to "2592000",
+      ),
+      capturedUpdate.captured.attributes,
+    )
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm clones a client without attributes`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(mcpSourceClient().apply { attributes = null })
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns RealmRepresentation()
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns emptyList()
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+    val capturedCreate = slot<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedCreate)) } returns mockResponse
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertNull(capturedCreate.captured.attributes)
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm throws when the target realm cannot be read`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns listOf(mcpSourceClient())
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } throws RuntimeException("realm unavailable")
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+
+    assertThrows<CreateClientException> { cloudKeycloakClient().ensureMcpClientInRealm("acme") }
+
+    verify(exactly = 0) { clientsMock.create(any()) }
   }
 
   @Test
@@ -820,6 +1102,7 @@ class AirbyteKeycloakClientTest {
 
     val realmMock = mockk<RealmResource>(relaxed = true)
     every { realmsMock.realm("acme") } returns realmMock
+    every { realmMock.toRepresentation() } returns RealmRepresentation()
 
     val clientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmMock.clients() } returns clientsMock
