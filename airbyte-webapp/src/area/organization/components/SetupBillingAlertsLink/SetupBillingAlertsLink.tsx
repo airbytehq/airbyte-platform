@@ -3,11 +3,12 @@ import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { hasOrganizationBillingHistory } from "area/organization/utils/isOrganizationSubscribed";
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { hasOrganizationBillingHistory, useCurrentOrganizationId } from "area/organization/utils";
+import { useHasInAppBillingAlerts } from "cloud/area/billing/utils/useHasInAppBillingAlerts";
+import { useLinkToBillingPage } from "cloud/area/billing/utils/useLinkToBillingPage";
 import { useOrganization, useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -17,24 +18,34 @@ export const SetupBillingAlertsLink: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const { email } = useOrganization(organizationId);
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+  const hasInAppBillingAlerts = useHasInAppBillingAlerts();
+  const billingPagePath = useLinkToBillingPage();
 
   if (!hasOrganizationBillingHistory(billing)) {
     return null;
   }
 
+  const label = (
+    <FlexContainer alignItems="center" gap="xs">
+      <Icon type="bell" size="sm" />
+      <FormattedMessage id="settings.organization.billing.setupNotifications" />
+    </FlexContainer>
+  );
+
   return (
     <Text size="sm">
-      <ExternalLink
-        href={links.billingNotificationsForm
-          .replace("{organizationId}", organizationId)
-          .replace("{email}", email ?? "")}
-        opensInNewTab
-      >
-        <FlexContainer alignItems="center" gap="xs">
-          <Icon type="bell" size="sm" />
-          <FormattedMessage id="settings.organization.billing.setupNotifications" />
-        </FlexContainer>
-      </ExternalLink>
+      {hasInAppBillingAlerts ? (
+        <Link to={billingPagePath}>{label}</Link>
+      ) : (
+        <ExternalLink
+          href={links.billingNotificationsForm
+            .replace("{organizationId}", organizationId)
+            .replace("{email}", email ?? "")}
+          opensInNewTab
+        >
+          {label}
+        </ExternalLink>
+      )}
     </Text>
   );
 };

@@ -8,6 +8,7 @@ import { useGeneratedIntent } from "core/utils/rbac";
 import { OrganizationBillingPage } from "./OrganizationBillingPage";
 
 jest.mock("area/organization/utils", () => ({
+  ...jest.requireActual("area/organization/utils/isOrganizationSubscribed"),
   useCurrentOrganizationId: jest.fn().mockReturnValue("test-organization-id"),
   useOrganizationPlan: jest.fn(),
 }));
