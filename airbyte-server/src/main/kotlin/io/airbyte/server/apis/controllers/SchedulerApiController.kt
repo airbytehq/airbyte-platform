@@ -10,6 +10,9 @@ import io.airbyte.api.model.generated.DestinationCoreConfig
 import io.airbyte.api.model.generated.SourceCoreConfig
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -28,6 +31,10 @@ open class SchedulerApiController(
   @Post("/destinations/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun executeDestinationCheckConnection(
     @Body destinationCoreConfig: DestinationCoreConfig,
   ): CheckConnectionRead? =
@@ -40,6 +47,10 @@ open class SchedulerApiController(
   @Post("/sources/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun executeSourceCheckConnection(
     @Body sourceCoreConfig: SourceCoreConfig,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig) }
@@ -47,6 +58,10 @@ open class SchedulerApiController(
   @Post("/sources/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun executeSourceDiscoverSchema(
     @Body sourceCoreConfig: SourceCoreConfig,
   ): SourceDiscoverSchemaRead? =

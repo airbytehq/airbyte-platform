@@ -6,6 +6,9 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.apis.ConnectorBuilderAssistApi
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.AssistProxyHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.context.annotation.Context
@@ -27,6 +30,10 @@ class ConnectorBuilderAssistApiController(
   @Post(uri = "/process", consumes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun assistV1Process(
     @Body requestBody: Map<String, Any>,
   ): Map<String, Any> = assistProxyHandler.process(requestBody, true)
@@ -35,6 +42,10 @@ class ConnectorBuilderAssistApiController(
   @Secured(SecurityRule.IS_ANONYMOUS)
   @CrossOrigin("*")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PUBLIC,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   override fun assistV1Warm(
     @Body requestBody: Map<String, Any>,
   ): Map<String, Any> = assistProxyHandler.process(requestBody, false)

@@ -35,6 +35,9 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.JobInputHandler
@@ -70,6 +73,10 @@ open class JobsApiController(
   @Post("/cancel")
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun cancelJob(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.cancelJob(jobIdRequestBody) }
@@ -77,6 +84,10 @@ open class JobsApiController(
   @Post("/create")
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createJob(
     @Body jobCreate: JobCreate,
   ): JobInfoRead? = execute { schedulerHandler.createJob(jobCreate) }
@@ -84,6 +95,10 @@ open class JobsApiController(
   @Post("/fail_non_terminal")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun failNonTerminalJobs(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ) {
@@ -96,6 +111,10 @@ open class JobsApiController(
   @Post("/evaluate_outlier")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun evaluateOutlier(jobIdRequestBody: JobIdRequestBody): InternalOperationResult? =
     execute {
       try {
@@ -110,6 +129,10 @@ open class JobsApiController(
   @Post("/finalize")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun finalizeJob(jobIdRequestBody: JobIdRequestBody): InternalOperationResult? =
     execute {
       try {
@@ -124,6 +147,10 @@ open class JobsApiController(
   @Post("/get_debug_info")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getJobDebugInfo(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): JobDebugInfoRead? = execute { jobHistoryHandler.getJobDebugInfo(jobIdRequestBody.id) }
@@ -131,6 +158,10 @@ open class JobsApiController(
   @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getJobInfo(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): JobInfoRead? = execute { jobHistoryHandler.getJobInfo(jobIdRequestBody.id) }
@@ -138,6 +169,10 @@ open class JobsApiController(
   @Post("/get_without_logs")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getJobInfoWithoutLogs(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): JobInfoRead? = execute { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody.id) }
@@ -145,6 +180,10 @@ open class JobsApiController(
   @Post("/get_input")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getJobInput(
     @Body syncInput: SyncInput,
   ): Any? = execute { jobInputHandler.getJobInput(syncInput) }
@@ -152,6 +191,10 @@ open class JobsApiController(
   @Post("/get_light")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getJobInfoLight(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): JobInfoLightRead? = execute { jobHistoryHandler.getJobInfoLight(jobIdRequestBody) }
@@ -159,6 +202,10 @@ open class JobsApiController(
   @Post("/get_last_replication_job")
   @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getLastReplicationJob(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobOptionalRead? = execute { jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody) }
@@ -166,6 +213,10 @@ open class JobsApiController(
   @Post("/get_last_replication_job_with_cancel")
   @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getLastReplicationJobWithCancel(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobOptionalRead? = execute { jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody) }
@@ -173,6 +224,10 @@ open class JobsApiController(
   @Post("/getWebhookConfig")
   @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getWebhookConfig(
     @Body getWebhookConfigRequest: GetWebhookConfigRequest,
   ): GetWebhookConfigResponse? =
@@ -183,6 +238,10 @@ open class JobsApiController(
   @Post("/job_failure")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun jobFailure(
     @Body jobFailureRequest: JobFailureRequest,
   ): InternalOperationResult? = execute { jobsHandler.jobFailure(jobFailureRequest) }
@@ -191,6 +250,10 @@ open class JobsApiController(
   @Path("/job_success_with_attempt_number")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun jobSuccessWithAttemptNumber(
     @Body jobSuccessWithAttemptNumberRequest: JobSuccessWithAttemptNumberRequest,
   ): InternalOperationResult? =
@@ -203,6 +266,10 @@ open class JobsApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listJobsFor(
     @Body jobListRequestBody: JobListRequestBody,
   ): JobReadList? = execute { jobHistoryHandler.listJobsFor(jobListRequestBody) }
@@ -210,6 +277,10 @@ open class JobsApiController(
   @Post("/list_for_workspaces")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listJobsForWorkspaces(
     @Body requestBody: JobListForWorkspacesRequestBody,
   ): JobReadList? = execute { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
@@ -217,6 +288,10 @@ open class JobsApiController(
   @Post("/reportJobStart")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun reportJobStart(
     @Body reportJobStartRequest: ReportJobStartRequest,
   ): InternalOperationResult? = execute { jobsHandler.reportJobStart(reportJobStartRequest.jobId) }
@@ -224,6 +299,10 @@ open class JobsApiController(
   @Post("/setJobQueued")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun setJobQueued(
     @Body setJobQueuedRequest: SetJobQueuedRequest,
   ): InternalOperationResult? = execute { jobsHandler.setJobQueued(setJobQueuedRequest.jobId) }
@@ -231,6 +310,10 @@ open class JobsApiController(
   @Post("/cancelQueuedJob")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun cancelQueuedJob(
     @Body cancelQueuedJobRequest: CancelQueuedJobRequest,
   ): InternalOperationResult? = execute { jobsHandler.cancelQueuedJob(cancelQueuedJobRequest.jobId) }
@@ -238,6 +321,10 @@ open class JobsApiController(
   @Post("/checkDataWorkerCapacity")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkDataWorkerCapacity(
     @Body checkDataWorkerCapacityRequest: CheckDataWorkerCapacityRequest,
   ): CheckDataWorkerCapacityRead? =
@@ -252,6 +339,10 @@ open class JobsApiController(
   @Post(uri = "/did_previous_job_succeed")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.ADMIN)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun didPreviousJobSucceed(
     @Body requestBody: ConnectionJobRequestBody,
   ): BooleanRead? =
@@ -265,11 +356,19 @@ open class JobsApiController(
   @Post("/explain")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @RequiresIntent(Intent.ViewConnection)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun explainJob(jobIdRequestBody: JobIdRequestBody): JobExplainRead = throw ApiNotImplementedInOssProblem()
 
   @Post("/persist_cancellation")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun persistJobCancellation(
     @Body requestBody: PersistCancelJobRequestBody,
   ) {
@@ -287,6 +386,10 @@ open class JobsApiController(
   @Post("/delete_stream_reset_records")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteStreamResetRecordsForJob(
     @Body requestBody: DeleteStreamResetRecordsForJobRequest,
   ) {

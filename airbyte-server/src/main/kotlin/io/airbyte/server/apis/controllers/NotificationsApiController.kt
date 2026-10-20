@@ -10,6 +10,9 @@ import io.airbyte.api.server.generated.models.Notification
 import io.airbyte.api.server.generated.models.NotificationRead
 import io.airbyte.api.server.generated.models.NotificationWebhookConfigValidationRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.NotificationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -28,6 +31,10 @@ class NotificationsApiController(
 ) : NotificationsApi {
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun tryNotificationConfig(
     @Body notification: Notification,
   ): NotificationRead =
@@ -39,6 +46,10 @@ class NotificationsApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun tryNotificationWebhookConfig(
     @Body request: NotificationWebhookConfigValidationRequestBody,
   ): NotificationRead =

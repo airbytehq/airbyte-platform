@@ -16,6 +16,9 @@ import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.model.generated.SaveStatsRequestBody
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -37,6 +40,10 @@ class AttemptApiController(
   @Post(uri = "/get_for_job", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getAttemptForJob(
     @Body requestBody: GetAttemptStatsRequestBody,
   ): AttemptInfoRead? =
@@ -52,6 +59,10 @@ class AttemptApiController(
   @Post(uri = "/create_new_attempt_number", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.ADMIN)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createNewAttemptNumber(
     @Body requestBody: CreateNewAttemptNumberRequest,
   ): CreateNewAttemptNumberResponse? = execute { attemptHandler.createNewAttemptNumber(requestBody.jobId) }
@@ -59,6 +70,10 @@ class AttemptApiController(
   @Post(uri = "/get_combined_stats", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getAttemptCombinedStats(
     @Body requestBody: GetAttemptStatsRequestBody,
   ): AttemptStats? =
@@ -71,12 +86,20 @@ class AttemptApiController(
 
   @Post(uri = "/save_stats", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun saveStats(
     @Body requestBody: SaveStatsRequestBody,
   ): InternalOperationResult? = execute { attemptHandler.saveStats(requestBody) }
 
   @Post(uri = "/save_stream_metadata", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun saveStreamMetadata(
     @Body requestBody: SaveStreamAttemptMetadataRequestBody,
   ): InternalOperationResult? = execute { attemptHandler.saveStreamMetadata(requestBody) }
@@ -84,6 +107,10 @@ class AttemptApiController(
   @Post(uri = "/save_sync_config", processes = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun saveSyncConfig(
     @Body requestBody: SaveAttemptSyncConfigRequestBody,
   ): InternalOperationResult? = execute { attemptHandler.saveSyncConfig(requestBody) }
@@ -91,6 +118,10 @@ class AttemptApiController(
   @Post(uri = "/fail", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.ADMIN)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun failAttempt(
     @Body requestBody: FailAttemptRequest,
   ) {

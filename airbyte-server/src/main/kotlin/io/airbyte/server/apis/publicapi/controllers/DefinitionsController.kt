@@ -26,6 +26,9 @@ import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
 import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -82,6 +85,10 @@ class DefinitionsController(
 ) : PublicSourceDefinitionsApi,
   PublicDestinationDefinitionsApi,
   PublicDeclarativeSourceDefinitionsApi {
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateSourceDefinition(
     workspaceId: UUID,
     createDefinitionRequest: CreateDefinitionRequest,
@@ -100,6 +107,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateDeclarativeSourceDefinition(
     workspaceId: UUID,
     request: CreateDeclarativeSourceDefinitionRequest,
@@ -141,6 +152,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateDestinationDefinition(
     workspaceId: UUID,
     createDefinitionRequest: CreateDefinitionRequest,
@@ -159,6 +174,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -174,6 +193,10 @@ class DefinitionsController(
     def.toPublicApiModel().ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteDeclarativeSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -198,6 +221,10 @@ class DefinitionsController(
     return@wrap response
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteDestinationDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -208,6 +235,10 @@ class DefinitionsController(
     def.toPublicApiModel().ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -234,6 +265,10 @@ class DefinitionsController(
     def.toPublicApiModel().ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetDeclarativeSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -247,6 +282,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetDestinationDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -268,6 +307,10 @@ class DefinitionsController(
     def.toPublicApiModel().ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListSourceDefinitions(workspaceId: UUID) =
     wrap {
       ensureUserCanRead(workspaceId)
@@ -281,6 +324,10 @@ class DefinitionsController(
       ).ok()
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListDeclarativeSourceDefinitions(workspaceId: UUID) =
     wrap {
       ensureUserCanRead(workspaceId)
@@ -302,6 +349,10 @@ class DefinitionsController(
       ).ok()
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListDestinationDefinitions(workspaceId: UUID) =
     wrap {
       ensureUserCanRead(workspaceId)
@@ -314,6 +365,10 @@ class DefinitionsController(
       ).ok()
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -340,6 +395,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateDeclarativeSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
@@ -387,6 +446,10 @@ class DefinitionsController(
       .ok()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateDestinationDefinition(
     workspaceId: UUID,
     definitionId: UUID,

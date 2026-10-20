@@ -9,6 +9,9 @@ import io.airbyte.api.problems.model.generated.ProblemValueData
 import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -50,6 +53,10 @@ open class DestinationsController(
 ) : PublicDestinationsApi {
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest?): Response {
     val destinationResponse: Any? =
       destinationCreateRequest?.let { request ->
@@ -107,6 +114,10 @@ open class DestinationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteDestination(destinationId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -139,6 +150,10 @@ open class DestinationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetDestination(
     destinationId: String,
     includeSecretCoordinates: Boolean?,
@@ -175,6 +190,10 @@ open class DestinationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDestinations(
     workspaceIds: List<UUID>?,
     includeDeleted: Boolean,
@@ -217,6 +236,10 @@ open class DestinationsController(
   @Path("$DESTINATIONS_PATH/{destinationId}")
   @Patch
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun patchDestination(
     destinationId: String,
     destinationPatchRequest: DestinationPatchRequest?,
@@ -255,6 +278,10 @@ open class DestinationsController(
 
   @Path("$DESTINATIONS_PATH/{destinationId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun putDestination(
     destinationId: String,
     destinationPutRequest: DestinationPutRequest?,

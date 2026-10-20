@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
@@ -46,6 +49,10 @@ open class ApplicationsController(
   private val trackingHelper: TrackingHelper,
 ) : PublicApplicationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateApplication(applicationCreate: ApplicationCreate): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
@@ -69,6 +76,10 @@ open class ApplicationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteApplication(applicationId: String): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
@@ -99,6 +110,10 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Secured(SecurityRule.IS_ANONYMOUS)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.LOGIN,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response {
     ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.CLIENT_ID to applicationTokenRequestWithGrant.clientId))
     return Response
@@ -118,6 +133,10 @@ open class ApplicationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetApplication(applicationId: String): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
@@ -150,6 +169,10 @@ open class ApplicationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListApplications(): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
 

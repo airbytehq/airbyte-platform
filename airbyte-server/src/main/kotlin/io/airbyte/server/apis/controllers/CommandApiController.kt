@@ -33,6 +33,9 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.logging.LogUtils
@@ -81,6 +84,10 @@ class CommandApiController(
 ) : CommandApi {
   @Post("/cancel")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun cancelCommand(
     @Body cancelCommandRequest: CancelCommandRequest,
   ): CancelCommandResponse =
@@ -94,6 +101,10 @@ class CommandApiController(
 
   @Post("/output/check")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getCheckCommandOutput(
     @Body checkCommandOutputRequest: CheckCommandOutputRequest,
   ): CheckCommandOutputResponse =
@@ -120,6 +131,10 @@ class CommandApiController(
 
   @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getCommand(
     @Body commandGetRequest: CommandGetRequest,
   ): CommandGetResponse =
@@ -144,6 +159,10 @@ class CommandApiController(
 
   @Post("/output/discover")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDiscoverCommandOutput(
     @Body discoverCommandOutputRequest: DiscoverCommandOutputRequest,
   ): DiscoverCommandOutputResponse =
@@ -186,6 +205,10 @@ class CommandApiController(
 
   @Post("/output/spec")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSpecCommandOutput(
     @Body specCommandOutputRequest: SpecCommandOutputRequest,
   ): SpecCommandOutputResponse =
@@ -207,6 +230,10 @@ class CommandApiController(
 
   @Post("/output/replicate")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getReplicateCommandOutput(
     @Body replicateCommandOutputRequest: ReplicateCommandOutputRequest,
   ): ReplicateCommandOutputResponse =
@@ -245,6 +272,10 @@ class CommandApiController(
 
   @Post("/status")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getCommandStatus(
     @Body commandStatusRequest: CommandStatusRequest,
   ): CommandStatusResponse =
@@ -261,6 +292,10 @@ class CommandApiController(
 
   @Post("/run/check")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun runCheckCommand(
     @Body runCheckCommandRequest: RunCheckCommandRequest,
   ): RunCheckCommandResponse =
@@ -321,6 +356,10 @@ class CommandApiController(
 
   @Post("/run/discover")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun runDiscoverCommand(runDiscoverCommandRequest: RunDiscoverCommandRequest): RunDiscoverCommandResponse =
     withRoleValidation(
       id = ActorId(runDiscoverCommandRequest.actorId),
@@ -342,6 +381,10 @@ class CommandApiController(
   @Post("/run/replicate")
   @Secured(AuthRoleConstants.WORKSPACE_RUNNER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun runReplicateCommand(runReplicateCommandRequest: RunReplicateCommandRequest): RunReplicateCommandResponse =
     withRoleValidation(
       id = ConnectionId(runReplicateCommandRequest.connectionId),
@@ -369,6 +412,10 @@ class CommandApiController(
 
   @Post("/run/spec")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun runSpecCommand(
     @Body runSpecCommandRequest: RunSpecCommandRequest,
   ): RunSpecCommandResponse =

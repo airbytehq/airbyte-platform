@@ -6,6 +6,9 @@ package io.airbyte.server.wrapped.apis.controllers
 
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.server.apis.controllers.OrganizationApiController
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
@@ -27,6 +30,10 @@ open class ReplacementOrganizationApiController(
     organizationsHandler,
     organizationAccessAuthorizationHelper,
   ) {
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody?,
   ): OrganizationRead {

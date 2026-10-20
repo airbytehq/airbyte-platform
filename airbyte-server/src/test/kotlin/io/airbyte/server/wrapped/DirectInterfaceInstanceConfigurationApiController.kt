@@ -7,6 +7,9 @@ package io.airbyte.server.wrapped
 import io.airbyte.api.generated.InstanceConfigurationApi
 import io.airbyte.api.model.generated.InstanceConfigurationResponse
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.server.apis.controllers.InstanceConfigurationApiController
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -23,9 +26,17 @@ class DirectInterfaceInstanceConfigurationApiController(
   private val tracker: InstanceConfigurationSetupTracker,
 ) : InstanceConfigurationApi {
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getInstanceConfiguration(): InstanceConfigurationResponse? = null
 
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun setupInstanceConfiguration(
     instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,
   ): InstanceConfigurationResponse? {

@@ -3,6 +3,7 @@ plugins {
   id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
   id("io.airbyte.gradle.kube-reload")
+  `java-test-fixtures`
 }
 
 dependencies {
@@ -106,10 +107,16 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.logback.classic)
+  testImplementation(libs.snakeyaml)
   testImplementation(libs.mockk)
   testImplementation(libs.micronaut.http.client)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  testFixturesApi(project(":oss:airbyte-commons-auth"))
+  testFixturesImplementation(platform(libs.micronaut.platform))
+  testFixturesImplementation(libs.micronaut.http.server.netty)
+  testFixturesImplementation(libs.micronaut.security)
 }
 
 // we want to be able to access the generated db files from config/init when we build the server docker image.)
@@ -262,6 +269,9 @@ airbyte {
 }
 
 tasks.named<Test>("test") {
+  // Micronaut retains metadata from closed contexts, so limit how many test classes share a JVM.
+  forkEvery = 50
+
   environment(
     mapOf(
       "AIRBYTE_VERSION" to "dev",

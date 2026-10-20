@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -34,6 +37,10 @@ open class TagsController(
   private val trackingHelper: TrackingHelper,
 ) : PublicTagsApi {
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateTag(tagCreateRequest: TagCreateRequest): Response {
     val tag =
       trackingHelper.callWithTracker({
@@ -46,6 +53,10 @@ open class TagsController(
       .build()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteTag(tagId: UUID): Response {
     // We need to manually fetch the workspaceId here because there is no Tag scope in the ApiAuthorizationHelper
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
@@ -71,6 +82,10 @@ open class TagsController(
       .build()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetTag(tagId: UUID): Response {
     // We need to manually fetch the workspaceId here because there is no Tag scope in the ApiAuthorizationHelper
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
@@ -93,6 +108,10 @@ open class TagsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListTags(workspaceIds: List<UUID>?): Response {
     // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the TagService will determine the workspaces for the current user.
@@ -115,6 +134,10 @@ open class TagsController(
       .build()
   }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateTag(
     tagId: UUID,
     tagPatchRequest: TagPatchRequest,

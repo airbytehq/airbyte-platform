@@ -7,6 +7,9 @@ package io.airbyte.server.apis
 import io.airbyte.api.generated.DiagnosticToolApi
 import io.airbyte.api.model.generated.DiagnosticReportRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.DiagnosticToolHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
@@ -24,6 +27,10 @@ class DiagnosticToolApiController(
 ) : DiagnosticToolApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun generateDiagnosticReport(
     @Body @Valid diagnosticReportRequestBody: DiagnosticReportRequestBody,
   ): File? = execute { diagnosticToolHandler.generateDiagnosticReport() }

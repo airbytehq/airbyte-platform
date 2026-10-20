@@ -15,6 +15,9 @@ import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -36,6 +39,10 @@ open class SSOConfigApiController(
 ) : SsoConfigApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
     entitlementService.ensureEntitled(OrganizationId(getSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -54,6 +61,10 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -79,6 +90,10 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -93,6 +108,10 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoEntitlement)
 
@@ -110,6 +129,10 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(activateSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -124,6 +147,10 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)
 

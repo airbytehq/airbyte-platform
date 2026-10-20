@@ -11,6 +11,9 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.DestinationDiscoverService
@@ -60,6 +63,10 @@ open class ConnectionsController(
 ) : PublicConnectionsApi {
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -168,6 +175,10 @@ open class ConnectionsController(
 
   @Path("$CONNECTIONS_PATH/{connectionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -207,6 +218,10 @@ open class ConnectionsController(
 
   @Path("$CONNECTIONS_PATH/{connectionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -234,6 +249,10 @@ open class ConnectionsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnections(
     workspaceIds: List<UUID>?,
     tagIds: List<UUID>?,
@@ -280,6 +299,10 @@ open class ConnectionsController(
   @Patch
   @Path("$CONNECTIONS_PATH/{connectionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun patchConnection(
     @PathParam(value = "connectionId") connectionId: String,
     @Valid @Body @NotNull connectionPatchRequest: ConnectionPatchRequest,

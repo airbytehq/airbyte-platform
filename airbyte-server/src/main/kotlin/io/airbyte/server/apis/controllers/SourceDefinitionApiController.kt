@@ -21,6 +21,9 @@ import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -46,6 +49,10 @@ open class SourceDefinitionApiController(
 ) : SourceDefinitionApi {
   @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createCustomSourceDefinition(
     @Body customSourceDefinitionCreate: CustomSourceDefinitionCreate?,
   ): SourceDefinitionRead {
@@ -63,6 +70,10 @@ open class SourceDefinitionApiController(
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteSourceDefinition(
     @Body sourceDefinitionIdRequestBody: SourceDefinitionIdRequestBody,
   ) {
@@ -76,6 +87,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceDefinition(
     @Body sourceDefinitionIdRequestBody: SourceDefinitionIdRequestBody,
   ): SourceDefinitionRead =
@@ -88,6 +103,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceDefinitionForScope(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ): SourceDefinitionRead =
@@ -99,6 +118,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceDefinitionForWorkspace(
     @Body sourceDefinitionIdWithWorkspaceId: SourceDefinitionIdWithWorkspaceId,
   ): SourceDefinitionRead =
@@ -110,6 +133,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun grantSourceDefinition(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ): PrivateSourceDefinitionRead =
@@ -121,6 +148,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listEnterpriseSourceStubs(): EnterpriseConnectorStubsReadList =
     execute {
       enterpriseConnectorStubsHandler.listEnterpriseSourceStubs()
@@ -128,6 +159,10 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listEnterpriseSourceStubsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
   ): EnterpriseConnectorStubsReadList =
@@ -139,10 +174,18 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listLatestSourceDefinitions(): SourceDefinitionReadList = execute { sourceDefinitionsHandler.listLatestSourceDefinitions() }
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listPrivateSourceDefinitions(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
   ): PrivateSourceDefinitionReadList =
@@ -154,10 +197,18 @@ open class SourceDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSourceDefinitions(): SourceDefinitionReadList = execute { sourceDefinitionsHandler.listSourceDefinitions() }
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSourceDefinitionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody?,
   ): SourceDefinitionReadList =
@@ -170,6 +221,10 @@ open class SourceDefinitionApiController(
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun revokeSourceDefinition(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ) {
@@ -182,6 +237,10 @@ open class SourceDefinitionApiController(
   // the accessValidator will provide additional authorization checks, depending on the Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateSourceDefinition(
     @Body sourceDefinitionUpdate: SourceDefinitionUpdate?,
   ): SourceDefinitionRead {

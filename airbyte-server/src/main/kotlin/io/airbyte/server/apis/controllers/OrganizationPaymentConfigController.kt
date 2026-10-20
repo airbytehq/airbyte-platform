@@ -12,6 +12,9 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.config.OrganizationPaymentConfig
@@ -40,6 +43,10 @@ open class OrganizationPaymentConfigController(
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrganizationPaymentConfig(
     @PathVariable("organizationId") organizationId: UUID,
   ): OrganizationPaymentConfigRead =
@@ -51,6 +58,10 @@ open class OrganizationPaymentConfigController(
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Post("/{organizationId}/end_grace_period")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun endGracePeriod(
     @PathVariable("organizationId") organizationId: UUID,
   ) {
@@ -60,6 +71,10 @@ open class OrganizationPaymentConfigController(
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOrganizationPaymentConfig(
     @Body requestBody: OrganizationPaymentConfigUpdateRequestBody,
   ): OrganizationPaymentConfigRead {

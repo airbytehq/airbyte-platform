@@ -9,6 +9,9 @@ import io.airbyte.api.problems.model.generated.ProblemValueData
 import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -51,6 +54,10 @@ open class SourcesController(
 ) : PublicSourcesApi {
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -107,6 +114,10 @@ open class SourcesController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteSource(sourceId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
@@ -146,6 +157,10 @@ open class SourcesController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetSource(
     sourceId: String,
     includeSecretCoordinates: Boolean?,
@@ -184,9 +199,17 @@ open class SourcesController(
 
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response = sourceService.controllerInitiateOAuth(initiateOauthRequest)
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSources(
     workspaceIds: List<UUID>?,
     includeDeleted: Boolean,
@@ -230,6 +253,10 @@ open class SourcesController(
   @Patch
   @Path("$SOURCES_PATH/{sourceId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun patchSource(
     sourceId: String,
     sourcePatchRequest: SourcePatchRequest?,
@@ -278,6 +305,10 @@ open class SourcesController(
 
   @Path("$SOURCES_PATH/{sourceId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun putSource(
     sourceId: String,
     sourcePutRequest: SourcePutRequest?,

@@ -21,6 +21,9 @@ import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -46,6 +49,10 @@ open class DestinationDefinitionApiController(
 ) : DestinationDefinitionApi {
   @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createCustomDestinationDefinition(
     @Body customDestinationDefinitionCreate: CustomDestinationDefinitionCreate?,
   ): DestinationDefinitionRead {
@@ -63,6 +70,10 @@ open class DestinationDefinitionApiController(
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteDestinationDefinition(
     @Body destinationDefinitionIdRequestBody: DestinationDefinitionIdRequestBody,
   ) {
@@ -75,6 +86,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestinationDefinition(
     @Body destinationDefinitionIdRequestBody: DestinationDefinitionIdRequestBody,
   ): DestinationDefinitionRead =
@@ -87,6 +102,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestinationDefinitionForScope(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ): DestinationDefinitionRead =
@@ -98,6 +117,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestinationDefinitionForWorkspace(
     @Body destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
   ): DestinationDefinitionRead =
@@ -109,6 +132,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun grantDestinationDefinition(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ): PrivateDestinationDefinitionRead =
@@ -120,6 +147,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDestinationDefinitions(): DestinationDefinitionReadList =
     execute(
       Callable {
@@ -129,6 +160,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDestinationDefinitionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody?,
   ): DestinationDefinitionReadList =
@@ -140,6 +175,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listEnterpriseDestinationStubsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
   ): EnterpriseConnectorStubsReadList =
@@ -151,6 +190,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listLatestDestinationDefinitions(): DestinationDefinitionReadList =
     execute(
       Callable {
@@ -160,6 +203,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listPrivateDestinationDefinitions(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
   ): PrivateDestinationDefinitionReadList =
@@ -171,6 +218,10 @@ open class DestinationDefinitionApiController(
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun revokeDestinationDefinition(
     @Body actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
   ) {
@@ -183,6 +234,10 @@ open class DestinationDefinitionApiController(
   // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateDestinationDefinition(
     @Body destinationDefinitionUpdate: DestinationDefinitionUpdate,
   ): DestinationDefinitionRead {

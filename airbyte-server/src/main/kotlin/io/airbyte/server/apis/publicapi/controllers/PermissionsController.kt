@@ -10,6 +10,9 @@ import io.airbyte.api.server.generated.models.PermissionIdRequestBody
 import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.PermissionUpdate
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -54,6 +57,10 @@ open class PermissionsController(
   private val permissionHandler: PermissionHandler,
 ) : PublicPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreatePermission(permissionCreateRequest: PermissionCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
     val workspaceId: UUID? = permissionCreateRequest.workspaceId
@@ -115,6 +122,10 @@ open class PermissionsController(
 
   @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeletePermission(permissionId: String): Response {
     val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
     // current user should have at least a workspace_admin role to delete a workspace level permission
@@ -147,6 +158,10 @@ open class PermissionsController(
 
   @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetPermission(permissionId: String): Response {
     val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
 
@@ -180,6 +195,10 @@ open class PermissionsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListPermissionsByUserId(
     userId: String?,
     organizationId: String?,
@@ -238,6 +257,10 @@ open class PermissionsController(
   @Patch
   @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdatePermission(
     permissionId: String,
     permissionUpdateRequest: PermissionUpdateRequest,

@@ -11,6 +11,9 @@ import io.airbyte.api.model.generated.ApplicationIdRequestBody
 import io.airbyte.api.model.generated.ApplicationRead
 import io.airbyte.api.model.generated.ApplicationReadList
 import io.airbyte.api.model.generated.ApplicationTokenRequest
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
@@ -47,6 +50,10 @@ open class ApplicationsController(
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @RequestTimeout(timeout = "PT1S")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.LOGIN,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   override fun applicationTokenRequest(
     @Body applicationTokenRequest: ApplicationTokenRequest,
   ): AccessToken {
@@ -70,6 +77,10 @@ open class ApplicationsController(
    */
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createApplication(
     @Body applicationCreate: ApplicationCreate,
   ): ApplicationRead {
@@ -84,6 +95,10 @@ open class ApplicationsController(
    */
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteApplication(
     @Body applicationIdRequestBody: ApplicationIdRequestBody,
   ) {
@@ -100,6 +115,10 @@ open class ApplicationsController(
    */
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listApplications(): ApplicationReadList? {
     val applications =
       applicationService

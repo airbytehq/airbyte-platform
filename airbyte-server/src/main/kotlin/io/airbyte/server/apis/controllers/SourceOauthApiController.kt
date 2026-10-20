@@ -17,6 +17,9 @@ import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -34,6 +37,10 @@ class SourceOauthApiController(
 ) : SourceOauthApi {
   @Post("/complete_oauth")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun completeSourceOAuth(
     @Body completeSourceOauthRequest: CompleteSourceOauthRequest,
   ): CompleteOAuthResponse? =
@@ -45,6 +52,10 @@ class SourceOauthApiController(
 
   @Post("/get_embedded_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getEmbeddedSourceOAuthConsent(
     @Body embeddedSourceOauthConsentRequest: EmbeddedSourceOauthConsentRequest,
   ): OAuthConsentRead {
@@ -64,18 +75,30 @@ class SourceOauthApiController(
 
   @Post("/get_scopes")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceOAuthScopes(
     @Body request: SourceOAuthScopesRequest,
   ): SourceOAuthScopesRead? = execute { oAuthHandler.getSourceOAuthScopes(request) }
 
   @Post("/get_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceOAuthConsent(
     @Body sourceOauthConsentRequest: SourceOauthConsentRequest,
   ): OAuthConsentRead? = execute { oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest) }
 
   @Post("/revoke")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun revokeSourceOAuthTokens(
     @Body revokeSourceOauthTokensRequest: RevokeSourceOauthTokensRequest,
   ) {
@@ -88,6 +111,10 @@ class SourceOauthApiController(
   @Post("/oauth_params/create")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun setInstancewideSourceOauthParams(
     @Body setInstancewideSourceOauthParamsRequestBody: SetInstancewideSourceOauthParamsRequestBody,
   ) {

@@ -11,6 +11,9 @@ import io.airbyte.api.server.generated.models.AuditLogListRequestBody
 import io.airbyte.api.server.generated.models.AuditLogReadList
 import io.airbyte.audit.logging.read.AuditLogReadService
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
@@ -34,6 +37,10 @@ open class AuditLogApiController(
 ) : AuditLogsApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listAuditLogs(auditLogListRequestBody: AuditLogListRequestBody): AuditLogReadList {
     val authorizedOrganizationIds = resolveAuthorizedOrganizationIds()
     if (auditLogListRequestBody.organizationId !in authorizedOrganizationIds) {

@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -39,6 +42,10 @@ open class OrganizationsController(
   private val roleResolver: RoleResolver,
 ) : PublicOrganizationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createOrUpdateOrganizationOAuthCredentials(
     organizationId: String,
     organizationOAuthCredentialsRequest: OrganizationOAuthCredentialsRequest,
@@ -79,6 +86,10 @@ open class OrganizationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteOrganizationOAuthCredentials(
     organizationId: String,
     actorType: ActorTypeEnum,
@@ -120,6 +131,10 @@ open class OrganizationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListOrganizationsForUser(): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
     val organizationsResponse =

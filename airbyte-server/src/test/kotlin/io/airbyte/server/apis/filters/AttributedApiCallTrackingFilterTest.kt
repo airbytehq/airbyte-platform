@@ -13,12 +13,13 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ScopeType
 import io.airbyte.server.apis.filters.AttributedApiCallTrackingFilter.Companion.AIRBYTE_ANALYTIC_SOURCE_HEADER
 import io.airbyte.server.apis.filters.AttributedApiCallTrackingFilter.Companion.AIRBYTE_ATTRIBUTED_API_CALL
-import io.micronaut.http.HttpAttributes
+import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MutableHttpResponse
 import io.micronaut.http.filter.ServerFilterChain
-import io.micronaut.http.uri.UriMatchInfo
+import io.micronaut.web.router.RouteAttributes
+import io.micronaut.web.router.UriRouteMatch
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -91,10 +92,10 @@ class AttributedApiCallTrackingFilterTest {
       HttpRequest
         .GET<Any>("/api/public/v1/workspaces/$workspaceId")
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, "pyairbyte")
-    val routeMatch = mockk<UriMatchInfo>()
+    val routeMatch = mockk<UriRouteMatch<Any, Any>>()
     every { routeMatch.variableValues } returns mapOf("workspaceId" to workspaceId.toString())
-    request.setAttribute(HttpAttributes.ROUTE_MATCH, routeMatch)
-    request.setAttribute(HttpAttributes.URI_TEMPLATE, "/api/public/v1/workspaces/{workspaceId}")
+    RouteAttributes.setRouteMatch(request, routeMatch)
+    BasicHttpAttributes.setUriTemplate(request, "/api/public/v1/workspaces/{workspaceId}")
 
     run(request)
 
@@ -229,7 +230,7 @@ class AttributedApiCallTrackingFilterTest {
   }
 
   private fun authenticate(request: HttpRequest<*>) {
-    request.setAttribute(HttpAttributes.PRINCIPAL, Principal { "auth-user" })
+    request.setUserPrincipal(Principal { "auth-user" })
   }
 
   private fun run(request: HttpRequest<*>): MutableHttpResponse<*> {

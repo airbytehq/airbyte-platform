@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -34,6 +37,10 @@ open class RegionController(
   private val entitlementService: EntitlementService,
 ) : PublicRegionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListRegions(organizationId: UUID): Response {
     ensureSelfManagedRegionsEntitlement(OrganizationId(organizationId))
     roleResolver
@@ -46,6 +53,10 @@ open class RegionController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateRegion(regionCreateRequest: RegionCreateRequest): Response {
     ensureSelfManagedRegionsEntitlement(OrganizationId(regionCreateRequest.organizationId))
     roleResolver
@@ -59,6 +70,10 @@ open class RegionController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$REGIONS_PATH/{regionId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetRegion(regionId: UUID): Response {
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
@@ -74,6 +89,10 @@ open class RegionController(
   @Patch
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$REGIONS_PATH/{regionId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateRegion(
     regionId: UUID,
     regionPatchRequest: RegionPatchRequest,
@@ -91,6 +110,10 @@ open class RegionController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$REGIONS_PATH/{regionId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteRegion(regionId: UUID): Response {
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))

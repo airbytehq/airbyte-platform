@@ -15,6 +15,9 @@ import io.airbyte.api.server.generated.models.StreamStatusReadList
 import io.airbyte.api.server.generated.models.StreamStatusRunState
 import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.handlers.StreamStatusesHandler
@@ -33,6 +36,10 @@ class StreamStatusesApiController(
   @Status(HttpStatus.CREATED)
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createStreamStatus(
     @Body req: StreamStatusCreateRequestBody?,
   ): StreamStatusRead {
@@ -43,6 +50,10 @@ class StreamStatusesApiController(
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateStreamStatus(
     @Body req: StreamStatusUpdateRequestBody?,
   ): StreamStatusRead {
@@ -53,6 +64,10 @@ class StreamStatusesApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getStreamStatuses(
     @Body req: StreamStatusListRequestBody?,
   ): StreamStatusReadList {
@@ -63,6 +78,10 @@ class StreamStatusesApiController(
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getStreamStatusesByRunState(
     @Body req: ConnectionIdRequestBody?,
   ): StreamStatusReadList = handler.listStreamStatusPerRunState(req!!)

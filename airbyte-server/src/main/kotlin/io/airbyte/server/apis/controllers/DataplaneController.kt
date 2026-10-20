@@ -25,6 +25,9 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
@@ -74,6 +77,10 @@ open class DataplaneController(
   @Post("/create")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createDataplane(
     @Body dataplaneCreateRequestBody: DataplaneCreateRequestBody,
   ): DataplaneCreateResponse {
@@ -99,6 +106,10 @@ open class DataplaneController(
   @Post("/update")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateDataplane(
     @Body dataplaneUpdateRequestBody: DataplaneUpdateRequestBody,
   ): DataplaneRead {
@@ -115,6 +126,10 @@ open class DataplaneController(
   @Post("/delete")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteDataplane(
     @Body dataplaneDeleteRequestBody: DataplaneDeleteRequestBody,
   ): DataplaneRead {
@@ -127,6 +142,10 @@ open class DataplaneController(
   @Post("/list")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDataplanes(
     @Body dataplaneListRequestBody: DataplaneListRequestBody,
   ): DataplaneListResponse {
@@ -156,6 +175,10 @@ open class DataplaneController(
 
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.LOGIN,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   override fun getDataplaneToken(
     @Body dataplaneTokenRequest: DataplaneTokenRequestBody,
   ): AccessToken {
@@ -172,6 +195,10 @@ open class DataplaneController(
 
   @Post("/initialize")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
     @HeaderParam(AIRBYTE_VERSION_HEADER) xAirbyteVersion: String?,
@@ -208,6 +235,10 @@ open class DataplaneController(
 
   @Post("/heartbeat")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
     @HeaderParam(AIRBYTE_VERSION_HEADER) xAirbyteVersion: String?,
@@ -281,6 +312,10 @@ open class DataplaneController(
   @Post("/health")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun listDataplaneHealth(
     @Body request: OrganizationIdRequestBody,
   ): DataplaneHealthListResponse {

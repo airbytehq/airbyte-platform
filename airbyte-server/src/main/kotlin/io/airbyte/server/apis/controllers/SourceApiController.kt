@@ -26,6 +26,9 @@ import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -48,6 +51,10 @@ open class SourceApiController(
   @Post("/apply_schema_changes")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun applySchemaChangeForSource(
     @Body sourceAutoPropagateChange: SourceAutoPropagateChange,
   ) {
@@ -60,6 +67,10 @@ open class SourceApiController(
   @Post("/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
@@ -67,6 +78,10 @@ open class SourceApiController(
   @Post("/check_connection_for_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
@@ -75,6 +90,10 @@ open class SourceApiController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createSource(
     @Body sourceCreate: SourceCreate,
   ): SourceRead? = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
@@ -86,6 +105,10 @@ open class SourceApiController(
     HttpStatus.NO_CONTENT,
   )
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ) {
@@ -98,6 +121,10 @@ open class SourceApiController(
   @Post("/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
   ): SourceDiscoverSchemaRead? =
@@ -110,6 +137,10 @@ open class SourceApiController(
   @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): SourceRead? = execute { sourceHandler.getSource(sourceIdRequestBody) }
@@ -117,6 +148,10 @@ open class SourceApiController(
   @Post("/get_with_metadata")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSourceWithMetadata(
     @Body sourceIdWithSecretCoordinatesRequestBody: SourceIdWithSecretCoordinatesRequestBody,
   ): SourceReadWithMetadata? =
@@ -131,6 +166,10 @@ open class SourceApiController(
   @Post("/most_recent_source_actor_catalog")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getMostRecentSourceActorCatalog(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): ActorCatalogWithUpdatedAt? =
@@ -143,6 +182,10 @@ open class SourceApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSourcesForWorkspace(
     @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
   ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
@@ -150,11 +193,19 @@ open class SourceApiController(
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSourcesForWorkspacePaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
   ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
 
   @Post("/search")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun searchSources(
     @Body sourceSearch: SourceSearch?,
   ): SourceReadList? = execute { sourceHandler.searchSources(sourceSearch) }
@@ -168,6 +219,10 @@ open class SourceApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateSource(
     @Body sourceUpdate: SourceUpdate,
   ): SourceRead? = execute { sourceHandler.updateSource(sourceUpdate) }
@@ -179,6 +234,10 @@ open class SourceApiController(
     HttpStatus.NO_CONTENT,
   )
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun upgradeSourceVersion(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ) {
@@ -192,6 +251,10 @@ open class SourceApiController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
   ): SourceRead? = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
@@ -199,6 +262,10 @@ open class SourceApiController(
   @Post("/write_discover_catalog_result")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun writeDiscoverCatalogResult(
     @Body request: SourceDiscoverSchemaWriteRequestBody,
   ): DiscoverCatalogResult? = execute { sourceHandler.writeDiscoverCatalogResult(request) }

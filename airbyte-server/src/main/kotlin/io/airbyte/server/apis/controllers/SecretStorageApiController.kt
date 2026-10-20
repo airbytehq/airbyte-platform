@@ -14,6 +14,9 @@ import io.airbyte.api.server.generated.models.SecretStorageReadList
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -47,6 +50,10 @@ class SecretStorageApiController(
   private val roleResolver: RoleResolver,
 ) : SecretStorageApi {
   @RequiresIntent(Intent.ManageSecretStorages)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createSecretStorage(
     @Body secretStorageCreateRequestBody:
       @Valid @NotNull
@@ -87,6 +94,10 @@ class SecretStorageApiController(
   }
 
   @RequiresIntent(Intent.ManageSecretStorages)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteSecretStorage(
     @Body secretStorageIdRequestBody:
       @Valid @NotNull
@@ -99,6 +110,10 @@ class SecretStorageApiController(
   }
 
   @Secured(IS_AUTHENTICATED)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSecretStorage(
     @Body secretStorageIdRequestBody: SecretStorageIdRequestBody,
   ): SecretStorageRead {
@@ -119,6 +134,10 @@ class SecretStorageApiController(
   }
 
   @RequiresIntent(Intent.ManageSecretStorages)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listSecretStorage(
     @Body secretStorageListRequestBody:
       @Valid @NotNull
@@ -137,6 +156,10 @@ class SecretStorageApiController(
     )
 
   @RequiresIntent(Intent.ManageSecretStorages)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun migrateSecretStorage(
     @Body migrateSecretStorageRequestBody: MigrateSecretStorageRequestBody,
   ) {

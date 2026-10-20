@@ -11,6 +11,9 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -26,6 +29,10 @@ open class BillingNotificationSettingsController : BillingNotificationSettingsAp
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getBillingNotificationSettings(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): BillingNotificationSettingsRead = throw ApiNotImplementedInOssProblem()
@@ -33,6 +40,10 @@ open class BillingNotificationSettingsController : BillingNotificationSettingsAp
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/update")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateBillingNotificationSettings(
     @Body billingNotificationSettingsUpdateRequestBody: BillingNotificationSettingsUpdateRequestBody,
   ): BillingNotificationSettingsRead = throw ApiNotImplementedInOssProblem()

@@ -19,6 +19,9 @@ import io.airbyte.api.server.generated.models.UserIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Permission
@@ -38,6 +41,10 @@ open class PermissionApiController(
 ) : PermissionApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.CREATE_PERMISSION)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createPermission(
     @Body permissionCreate: PermissionCreate,
   ): PermissionRead =
@@ -56,12 +63,20 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.WORKSPACE_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getPermission(
     @Body permissionIdRequestBody: PermissionIdRequestBody,
   ): PermissionRead = execute { permissionHandler.getPermissionRead(permissionIdRequestBody) }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.UPDATE_PERMISSION)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updatePermission(
     @Body permissionUpdate: PermissionUpdate,
   ) {
@@ -82,6 +97,10 @@ open class PermissionApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.DELETE_PERMISSION)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deletePermission(
     @Body permissionIdRequestBody: PermissionIdRequestBody,
   ) {
@@ -92,6 +111,10 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.SELF)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteUserFromWorkspace(
     @Body permissionDeleteUserFromWorkspaceRequestBody: PermissionDeleteUserFromWorkspaceRequestBody,
   ) {
@@ -102,16 +125,28 @@ open class PermissionApiController(
   }
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listPermissionsByUser(
     @Body userIdRequestBody: UserIdRequestBody,
   ): PermissionReadList = execute { permissionHandler.effectivePermissionReadListForUser(userIdRequestBody.userId) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkPermissions(
     @Body permissionCheckRequest: PermissionCheckRequest,
   ): PermissionCheckRead = execute { permissionHandler.checkPermissions(permissionCheckRequest) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkPermissionsAcrossMultipleWorkspaces(
     @Body request: PermissionsCheckMultipleWorkspacesRequest,
   ): PermissionCheckRead = execute { permissionHandler.permissionsCheckMultipleWorkspaces(request) }

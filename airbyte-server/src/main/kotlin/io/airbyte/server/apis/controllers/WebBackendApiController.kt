@@ -26,6 +26,9 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
@@ -59,6 +62,10 @@ open class WebBackendApiController(
   @Post("/state/get_type")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getStateType(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): ConnectionStateType? =
@@ -70,6 +77,10 @@ open class WebBackendApiController(
   @Post("/check_updates")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendCheckUpdates(): WebBackendCheckUpdatesRead? = execute { webBackendCheckUpdatesHandler.checkUpdates() }
 
   @Post("/connections/create")
@@ -81,6 +92,10 @@ open class WebBackendApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendCreateConnection(
     @Body webBackendConnectionCreate: WebBackendConnectionCreate,
   ): WebBackendConnectionRead? =
@@ -95,6 +110,10 @@ open class WebBackendApiController(
   @Post("/connections/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendGetConnection(
     @Body webBackendConnectionRequestBody: WebBackendConnectionRequestBody,
   ): WebBackendConnectionRead? =
@@ -121,6 +140,10 @@ open class WebBackendApiController(
   @Post("/workspace/state")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendGetWorkspaceState(
     @Body webBackendWorkspaceState: WebBackendWorkspaceState,
   ): WebBackendWorkspaceStateResult? =
@@ -132,6 +155,10 @@ open class WebBackendApiController(
   @Post("/connections/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendListConnectionsForWorkspace(
     @Body webBackendConnectionListRequestBody: WebBackendConnectionListRequestBody,
   ): WebBackendConnectionReadList? =
@@ -145,6 +172,10 @@ open class WebBackendApiController(
   @Post("/connections/status_counts")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendGetConnectionStatusCounts(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): WebBackendConnectionStatusCounts? =
@@ -162,6 +193,10 @@ open class WebBackendApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendUpdateConnection(
     @Body webBackendConnectionUpdate: WebBackendConnectionUpdate,
   ): WebBackendConnectionRead? =
@@ -178,6 +213,10 @@ open class WebBackendApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendValidateMappers(
     @Body webBackendValidateMappersRequestBody: WebBackendValidateMappersRequestBody,
   ): WebBackendValidateMappersResponse? =
@@ -190,6 +229,10 @@ open class WebBackendApiController(
   @Post("/describe_cron_expression")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun webBackendDescribeCronExpression(
     @Body body: WebBackendDescribeCronExpressionRequestBody,
   ): WebBackendCronExpressionDescription? =
@@ -202,6 +245,10 @@ open class WebBackendApiController(
   @Get("/config")
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PUBLIC,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {
       version = airbyteConfig.version

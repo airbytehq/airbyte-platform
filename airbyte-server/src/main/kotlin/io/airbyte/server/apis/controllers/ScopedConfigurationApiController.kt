@@ -19,6 +19,9 @@ import io.airbyte.api.model.generated.ScopedConfigurationReadResponse
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateResponse
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ScopedConfigurationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.ConfigOriginType
@@ -40,6 +43,10 @@ class ScopedConfigurationApiController(
   @Post("/create")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createScopedConfiguration(
     @Body scopedConfigurationCreateRequestBody: ScopedConfigurationCreateRequestBody,
   ): ScopedConfigurationCreateResponse? =
@@ -57,6 +64,10 @@ class ScopedConfigurationApiController(
   @Post("/delete")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteScopedConfiguration(
     @Body scopedConfigurationDeleteRequestBody: ScopedConfigurationDeleteRequestBody,
   ): ScopedConfigurationDeleteResponse? =
@@ -69,6 +80,10 @@ class ScopedConfigurationApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getScopedConfigurationsList(
     @Body scopedConfigurationListRequestBody: ScopedConfigurationListRequestBody,
   ): ScopedConfigurationListResponse? =
@@ -101,6 +116,10 @@ class ScopedConfigurationApiController(
   @Post("/get")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getScopedConfigurationById(
     @Body scopedConfigurationReadRequestBody: ScopedConfigurationReadRequestBody,
   ): ScopedConfigurationReadResponse? =
@@ -114,6 +133,10 @@ class ScopedConfigurationApiController(
   @Post("/get_context")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getScopedConfigurationContext(
     @Body scopedConfigurationContextRequestBody: ScopedConfigurationContextRequestBody,
   ): ScopedConfigurationContextResponse? =
@@ -126,6 +149,10 @@ class ScopedConfigurationApiController(
   @Post("/update")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateScopedConfiguration(
     @Body scopedConfigurationUpdateRequestBody: ScopedConfigurationUpdateRequestBody,
   ): ScopedConfigurationUpdateResponse? =

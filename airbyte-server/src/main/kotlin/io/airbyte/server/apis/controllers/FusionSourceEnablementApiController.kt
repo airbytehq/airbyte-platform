@@ -9,6 +9,9 @@ import io.airbyte.api.model.generated.FusionSourceEnablementCreate
 import io.airbyte.api.model.generated.FusionSourceEnablementRead
 import io.airbyte.api.model.generated.FusionSourceEnablementUpdate
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -27,23 +30,39 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
   @Get
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionSourceEnablement(
     @PathVariable sourceId: UUID,
   ): FusionSourceEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Post
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createFusionSourceEnablement(
     @PathVariable sourceId: UUID,
     @Body request: FusionSourceEnablementCreate,
   ): FusionSourceEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Put
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateFusionSourceEnablement(
     @PathVariable sourceId: UUID,
     @Body request: FusionSourceEnablementUpdate,
   ): FusionSourceEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Delete
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteFusionSourceEnablement(
     @PathVariable sourceId: UUID,
   ): FusionSourceEnablementRead = throw ApiNotImplementedInOssProblem()

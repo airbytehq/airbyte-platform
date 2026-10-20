@@ -8,6 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.FusionSearchApi
 import io.airbyte.api.model.generated.FusionSearchRequest
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -24,23 +27,39 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionSearchApiController : FusionSearchApi {
   @Post("/sources/{sourceId}/search")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun searchFusionSource(
     @PathVariable sourceId: UUID,
     @Body request: FusionSearchRequest,
   ): JsonNode = throw ApiNotImplementedInOssProblem()
 
   @Post("/destinations/{destinationId}/search")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun searchFusionDestination(
     @PathVariable destinationId: UUID,
     @Body request: FusionSearchRequest,
   ): JsonNode = throw ApiNotImplementedInOssProblem()
 
   @Get("/sources/{sourceId}/search-status")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionSourceSearchStatus(
     @PathVariable sourceId: UUID,
   ): JsonNode = throw ApiNotImplementedInOssProblem()
 
   @Get("/destinations/{destinationId}/search-status")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionDestinationSearchStatus(
     @PathVariable destinationId: UUID,
   ): JsonNode = throw ApiNotImplementedInOssProblem()

@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.dsr.DsrDeletionService
 import io.airbyte.commons.server.handlers.dsr.DsrInvalidConfirmationException
 import io.airbyte.commons.server.handlers.dsr.DsrInvalidStateException
@@ -65,6 +68,10 @@ open class DsrDeletionController(
   @Post("/preview")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   open fun preview(
     @Body request: DsrPreviewRequest,
   ): DsrPreviewResponse? =
@@ -92,6 +99,10 @@ open class DsrDeletionController(
   @Post("/{requestId}/execute")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   open fun execute(
     @PathVariable requestId: UUID,
     @Body request: DsrExecuteRequest,
@@ -162,6 +173,10 @@ open class DsrDeletionController(
 
   @Get("/{requestId}")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   open fun getById(
     @PathVariable requestId: UUID,
   ): HttpResponse<DsrRequestRead> {
@@ -172,6 +187,10 @@ open class DsrDeletionController(
 
   @Get
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   open fun listByEmail(
     @QueryValue email: String,
   ): DsrRequestListRead {
@@ -185,6 +204,10 @@ open class DsrDeletionController(
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   open fun cancel(
     @PathVariable requestId: UUID,
   ): DsrRequestRead? =

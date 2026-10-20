@@ -6,6 +6,9 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.json.Jsons
@@ -57,6 +60,10 @@ class EmbeddedController(
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listEmbeddedOrganizationsByUser(): Response {
     val currentUserId = currentUserService.getCurrentUser().userId
     val organizations =
@@ -132,6 +139,10 @@ class EmbeddedController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun generateEmbeddedScopedToken(embeddedScopedTokenRequest: EmbeddedScopedTokenRequest): Response {
     val currentUser = currentUserService.getCurrentUser()
     val workspaceId = embeddedScopedTokenRequest.workspaceId.toString()
@@ -141,6 +152,10 @@ class EmbeddedController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
     val organizationId = OrganizationId(req.organizationId)
 

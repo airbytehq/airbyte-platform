@@ -7,13 +7,12 @@ package io.airbyte.commons.auth.permissions
 import io.airbyte.commons.auth.generated.Intent
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.annotation.Nullable
-import io.micronaut.http.HttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecuredAnnotationRule
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.rules.SecurityRuleResult
-import io.micronaut.web.router.RouteMatch
+import io.micronaut.web.router.RouteAttributes
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
@@ -33,7 +32,7 @@ class IntentSecurityRule : SecurityRule<HttpRequest<*>> {
     request: HttpRequest<*>,
     authentication: @Nullable Authentication?,
   ): Publisher<SecurityRuleResult> {
-    val routeMatch = request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java).orElse(null)
+    val routeMatch = RouteAttributes.getRouteMatch(request).orElse(null)
     routeMatch?.let {
       if (!it.isAnnotationPresent(RequiresIntent::class.java)) {
         logger.debug { "[$it] RequiresIntent annotation not found on request, returning UNKNOWN" }

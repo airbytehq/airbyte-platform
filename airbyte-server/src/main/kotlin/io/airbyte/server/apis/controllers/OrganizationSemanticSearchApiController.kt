@@ -12,6 +12,9 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -25,6 +28,10 @@ import io.micronaut.security.rules.SecurityRule
 open class OrganizationSemanticSearchApiController : OrganizationSemanticSearchApi {
   @Post("/get_semantic_search_enablement")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrganizationSemanticSearchEnablement(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationSemanticSearchEnablementRead = throw ApiNotImplementedInOssProblem()
@@ -33,6 +40,10 @@ open class OrganizationSemanticSearchApiController : OrganizationSemanticSearchA
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOrganizationSemanticSearchEnablement(
     @Body organizationSemanticSearchEnablementUpdateRequestBody: OrganizationSemanticSearchEnablementUpdateRequestBody,
   ): OrganizationSemanticSearchEnablementRead = throw ApiNotImplementedInOssProblem()

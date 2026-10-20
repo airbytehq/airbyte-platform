@@ -17,6 +17,9 @@ import io.airbyte.api.server.generated.models.GroupPermissionReadList
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -50,6 +53,10 @@ open class GroupPermissionApiController(
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
   private val groupPermissionValidator: GroupPermissionValidator,
 ) : GroupPermissionApi {
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listGroupPermissions(groupIdRequestBody: GroupIdRequestBody): GroupPermissionReadList {
     getAuthorizedGroup(groupIdRequestBody.groupId)
 
@@ -62,6 +69,10 @@ open class GroupPermissionApiController(
   }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createGroupPermission(groupPermissionCreate: GroupPermissionCreate): GroupPermissionRead {
     val group = getAuthorizedGroup(groupPermissionCreate.groupId)
     val workspaceId = groupPermissionCreate.workspaceId
@@ -95,6 +106,10 @@ open class GroupPermissionApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteGroupPermission(groupPermissionIdRequestBody: GroupPermissionIdRequestBody) {
     getAuthorizedGroup(groupPermissionIdRequestBody.groupId)
 

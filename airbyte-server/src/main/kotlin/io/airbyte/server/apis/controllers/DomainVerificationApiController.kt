@@ -19,6 +19,9 @@ import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -42,6 +45,10 @@ open class DomainVerificationApiController(
   @RequiresIntent(Intent.ManageDomainVerification)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createDomainVerification(domainVerificationCreateRequestBody: DomainVerificationCreateRequestBody): DomainVerificationResponse {
     try {
       val savedDomainModel =
@@ -61,6 +68,10 @@ open class DomainVerificationApiController(
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @RequiresIntent(Intent.ManageDomainVerification)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDomainVerifications(organizationIdRequestBody: OrganizationIdRequestBody): DomainVerificationListResponse {
     val organizationId = organizationIdRequestBody.organizationId
     val domainModels = organizationDomainVerificationService.findByOrganizationId(organizationId)
@@ -74,6 +85,10 @@ open class DomainVerificationApiController(
    */
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listPendingDomainVerifications(): DomainVerificationListResponse {
     val pendingVerifications = organizationDomainVerificationService.findByStatus(DomainVerificationStatus.PENDING)
     return DomainVerificationListResponse(
@@ -87,6 +102,10 @@ open class DomainVerificationApiController(
    * organization admin users who want to initiate a manual check.
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
     val verification =
       try {
@@ -119,6 +138,10 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody) {
     val verification =
       try {
@@ -155,6 +178,10 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun resetDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
     val verification =
       try {

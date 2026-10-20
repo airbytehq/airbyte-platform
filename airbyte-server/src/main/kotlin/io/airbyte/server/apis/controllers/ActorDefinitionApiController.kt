@@ -16,6 +16,9 @@ import io.airbyte.api.server.generated.models.ActorDefinitionUpdateResponse
 import io.airbyte.api.server.generated.models.ScopeType
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.ActorType
@@ -37,6 +40,10 @@ open class ActorDefinitionApiController(
 ) : ActorDefinitionApi {
   @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createActorDefinition(
     @Body actorDefinitionCreateRequest: ActorDefinitionCreateRequest,
   ): ActorDefinitionCreateResponse {
@@ -55,6 +62,10 @@ open class ActorDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateActorDefinition(
     @Body actorDefinitionUpdateRequest: ActorDefinitionUpdateRequest,
   ): ActorDefinitionUpdateResponse {
@@ -68,6 +79,10 @@ open class ActorDefinitionApiController(
 
   @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun finishActorDefinitionUpdate(
     @Body actorDefinitionFinishRequest: ActorDefinitionFinishRequest,
   ): ActorDefinitionFinishResponse {
@@ -93,6 +108,10 @@ open class ActorDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getActorDefinitionResult(
     @Body actorDefinitionResultRequest: ActorDefinitionResultRequest,
   ): ActorDefinitionResultResponse =

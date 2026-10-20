@@ -14,6 +14,9 @@ import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -34,6 +37,10 @@ open class OperationApiController(
   @Post("/check")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkOperation(
     @Body operatorConfiguration: OperatorConfiguration,
   ): CheckOperationRead? = execute { operationsHandler.checkOperation(operatorConfiguration) }
@@ -46,6 +53,10 @@ open class OperationApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createOperation(
     @Body operationCreate: OperationCreate,
   ): OperationRead? = execute { operationsHandler.createOperation(operationCreate) }
@@ -61,6 +72,10 @@ open class OperationApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteOperation(
     @Body operationIdRequestBody: OperationIdRequestBody,
   ) {
@@ -73,6 +88,10 @@ open class OperationApiController(
   @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOperation(
     @Body operationIdRequestBody: OperationIdRequestBody,
   ): OperationRead? = execute { operationsHandler.getOperation(operationIdRequestBody) }
@@ -80,6 +99,10 @@ open class OperationApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listOperationsForConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): OperationReadList? = execute { operationsHandler.listOperationsForConnection(connectionIdRequestBody) }
@@ -92,6 +115,10 @@ open class OperationApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOperation(
     @Body operationUpdate: OperationUpdate,
   ): OperationRead? = execute { operationsHandler.updateOperation(operationUpdate) }

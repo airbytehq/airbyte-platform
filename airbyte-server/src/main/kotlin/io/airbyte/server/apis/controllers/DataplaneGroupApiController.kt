@@ -18,6 +18,9 @@ import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
@@ -50,6 +53,10 @@ class DataplaneGroupApiController(
   @Post("/create")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createDataplaneGroup(
     @Body dataplaneGroupCreateRequestBody: DataplaneGroupCreateRequestBody,
   ): DataplaneGroupRead? {
@@ -66,6 +73,10 @@ class DataplaneGroupApiController(
   @Post("/update")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateDataplaneGroup(
     @Body dataplaneGroupUpdateRequestBody: DataplaneGroupUpdateRequestBody,
   ): DataplaneGroupRead {
@@ -84,6 +95,10 @@ class DataplaneGroupApiController(
   @Post("/delete")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteDataplaneGroup(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
   ): DataplaneGroupRead? {
@@ -102,6 +117,10 @@ class DataplaneGroupApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,
   ): DataplaneGroupListResponse? {

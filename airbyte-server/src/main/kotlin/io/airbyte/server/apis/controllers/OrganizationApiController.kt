@@ -25,6 +25,9 @@ import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -44,6 +47,10 @@ open class OrganizationApiController(
 ) : OrganizationApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): OrganizationRead =
@@ -56,24 +63,40 @@ open class OrganizationApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_EDITOR)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody?,
   ): OrganizationRead = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody.requireBody()) }
 
   @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun setOrganizationAgenticStatus(
     @Body organizationAgenticStatusUpdateRequestBody: OrganizationAgenticStatusUpdateRequestBody?,
   ): OrganizationRead = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody.requireBody()) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createOrganization(
     @Body organizationCreateRequestBody: OrganizationCreateRequestBody?,
   ): OrganizationRead = execute { organizationsHandler.createOrganization(organizationCreateRequestBody.requireBody()) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ) {
@@ -82,24 +105,40 @@ open class OrganizationApiController(
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listOrganizationsByUser(
     @Body request: ListOrganizationsByUserRequestBody?,
   ): OrganizationReadList = execute { organizationsHandler.listOrganizationsByUser(request.requireBody()) }
 
   @RequiresIntent(Intent.ViewOrganizationUsage)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrganizationUsage(
     @Body organizationUsageRequestBody: OrganizationUsageRequestBody?,
   ): OrganizationUsageRead = throw ApiNotImplementedInOssProblem()
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listOrganizationSummaries(
     @Body organizationSummaryRequestBody: ListOrganizationSummariesRequestBody?,
   ): ListOrganizationSummariesResponse = execute { organizationsHandler.getOrganizationSummaries(organizationSummaryRequestBody.requireBody()) }
 
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrgInfo(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationInfoRead =
@@ -113,6 +152,10 @@ open class OrganizationApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getOrganizationDataWorkerUsage(
     @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody?,
   ): OrganizationDataWorkerUsageRead = throw ApiNotImplementedInOssProblem()

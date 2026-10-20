@@ -11,6 +11,9 @@ import io.airbyte.api.model.generated.DestinationOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -31,6 +34,10 @@ class DestinationOauthApiController(
   @Post("/complete_oauth")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun completeDestinationOAuth(
     @Body completeDestinationOAuthRequest: CompleteDestinationOAuthRequest,
   ): CompleteOAuthResponse? = execute { oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest) }
@@ -38,6 +45,10 @@ class DestinationOauthApiController(
   @Post("/get_consent_url")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestinationOAuthConsent(
     @Body destinationOauthConsentRequest: DestinationOauthConsentRequest,
   ): OAuthConsentRead? = execute { oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest) }
@@ -45,6 +56,10 @@ class DestinationOauthApiController(
   @Post("/oauth_params/create")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun setInstancewideDestinationOauthParams(
     @Body setInstancewideDestinationOauthParamsRequestBody: SetInstancewideDestinationOauthParamsRequestBody,
   ) {

@@ -7,12 +7,12 @@ package io.airbyte.commons.auth.permissions
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.micronaut.core.annotation.AnnotationValue
-import io.micronaut.http.HttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecuredAnnotationRule
 import io.micronaut.security.rules.SecurityRuleResult
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import io.micronaut.web.router.RouteAttributes
 import io.micronaut.web.router.RouteMatch
 import io.mockk.every
 import io.mockk.mockk
@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import reactor.test.StepVerifier
-import java.util.Optional
 
 val mockRoles = setOf("role-1", "role-2")
 
@@ -43,8 +42,8 @@ internal class IntentSecurityRuleTest {
       routeMatch.getAnnotation(RequiresIntent::class.java)
     } returns AnnotationValue.builder(RequiresIntent::class.java).value(Intent.UploadCustomConnector.name).build()
 
-    request = mockk()
-    every { request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java) } returns Optional.of(routeMatch)
+    request = HttpRequest.GET<Any>("/intent-test")
+    RouteAttributes.setRouteMatch(request, routeMatch)
 
     authentication = mockk()
     every { authentication.roles } returns mockRoles
@@ -171,7 +170,7 @@ internal class IntentSecurityRuleTest {
 
   @Test
   internal fun `check returns UNKNOWN if no route match attribute`() {
-    every { request.getAttribute(HttpAttributes.ROUTE_MATCH, RouteMatch::class.java) } returns Optional.empty()
+    request = HttpRequest.GET<Any>("/intent-test")
 
     val result = intentSecurityRule.check(request, authentication)
     StepVerifier

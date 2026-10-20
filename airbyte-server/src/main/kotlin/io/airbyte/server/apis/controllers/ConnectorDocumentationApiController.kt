@@ -8,6 +8,9 @@ import io.airbyte.api.server.generated.apis.ConnectorDocumentationApi
 import io.airbyte.api.server.generated.models.ConnectorDocumentationRead
 import io.airbyte.api.server.generated.models.ConnectorDocumentationRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectorDocumentationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -29,6 +32,10 @@ class ConnectorDocumentationApiController(
   @Status(HttpStatus.OK)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectorDocumentation(
     @Body connectorDocumentationRequestBody: ConnectorDocumentationRequestBody,
   ): ConnectorDocumentationRead =

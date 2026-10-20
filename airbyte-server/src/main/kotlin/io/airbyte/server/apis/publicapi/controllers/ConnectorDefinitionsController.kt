@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
@@ -29,6 +32,10 @@ class ConnectorDefinitionsController(
   val currentUserService: CurrentUserService,
   val trackingHelper: TrackingHelper,
 ) : ConnectorDefinitionsApi {
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectorDefinitions(
     type: ConnectorType,
     workspaceId: UUID?,

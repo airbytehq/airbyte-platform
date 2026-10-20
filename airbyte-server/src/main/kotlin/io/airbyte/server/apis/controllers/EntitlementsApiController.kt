@@ -15,6 +15,9 @@ import io.airbyte.api.model.generated.UpdateOrganizationEntitlementPlanResponse
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -39,6 +42,10 @@ open class EntitlementsApiController(
   @Post("/is_entitled")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkEntitlement(
     @Body isEntitledRequestBody: OrganizationIsEntitledRequestBody,
   ): OrganizationIsEntitledResponse? =
@@ -59,6 +66,10 @@ open class EntitlementsApiController(
   @Post("/get_entitlements")
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getEntitlements(
     @Body getEntitlementsByOrganizationIdRequestBody: GetEntitlementsByOrganizationIdRequestBody,
   ): GetEntitlementsByOrganizationIdResponse? =
@@ -93,11 +104,19 @@ open class EntitlementsApiController(
   @Post("/list_plans")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listAllEntitlementPlans(): ListAllEntitlementPlansResponse? = throw ApiNotImplementedInOssProblem()
 
   @Post("/update_plan")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateOrganizationEntitlementPlan(
     @Body updateOrganizationEntitlementPlanRequestBody: UpdateOrganizationEntitlementPlanRequestBody,
   ): UpdateOrganizationEntitlementPlanResponse? = throw ApiNotImplementedInOssProblem()

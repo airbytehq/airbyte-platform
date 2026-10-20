@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -35,6 +38,10 @@ open class DataplaneController(
   private val entitlementService: EntitlementService,
 ) : PublicDataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListDataplanes(regionIds: List<UUID>?): Response {
     if (!regionIds.isNullOrEmpty()) {
       roleResolver
@@ -48,6 +55,10 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
     val orgId = regionService.getOrganizationIdFromRegion(dataplaneCreateRequest.regionId)
     roleResolver
@@ -62,6 +73,10 @@ open class DataplaneController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
@@ -78,6 +93,10 @@ open class DataplaneController(
   @Patch
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateDataplane(
     dataplaneId: UUID,
     dataplanePatchRequest: DataplanePatchRequest,
@@ -96,6 +115,10 @@ open class DataplaneController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)

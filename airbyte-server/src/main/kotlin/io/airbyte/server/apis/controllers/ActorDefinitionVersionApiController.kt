@@ -12,6 +12,9 @@ import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionReque
 import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionResponse
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -28,6 +31,10 @@ class ActorDefinitionVersionApiController(
 ) : ActorDefinitionVersionApi {
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getActorDefinitionVersionForSourceId(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): ActorDefinitionVersionRead =
@@ -39,6 +46,10 @@ class ActorDefinitionVersionApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getActorDefinitionVersionForDestinationId(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ): ActorDefinitionVersionRead =
@@ -50,6 +61,10 @@ class ActorDefinitionVersionApiController(
 
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getActorDefinitionVersionDefault(
     @Body actorDefinitionVersionDefaultRequestBody: GetActorDefinitionVersionDefaultRequestBody,
   ): ActorDefinitionVersionRead =
@@ -61,6 +76,10 @@ class ActorDefinitionVersionApiController(
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun resolveActorDefinitionVersionByTag(
     @Body resolveActorDefinitionVersionRequestBody: ResolveActorDefinitionVersionRequestBody,
   ): ResolveActorDefinitionVersionResponse =

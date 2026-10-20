@@ -16,6 +16,9 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -37,6 +40,10 @@ open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
   @Post("/list")
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDataWorkerAllocations(
     @Body dataWorkerAllocationListRequestBody: DataWorkerAllocationListRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
@@ -44,6 +51,10 @@ open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDataWorkerAllocation(
     @Body dataWorkerAllocationGetRequestBody: DataWorkerAllocationGetRequestBody,
   ): DataWorkerAllocationRead = throw ApiNotImplementedInOssProblem()
@@ -51,6 +62,10 @@ open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
   @Post("/reallocate")
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun reallocateDataWorkerCapacity(
     @Body dataWorkerReallocateRequestBody: DataWorkerReallocateRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
@@ -59,6 +74,10 @@ open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
   @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun addDataWorkerCapacity(
     @Body dataWorkerAddCapacityRequestBody: DataWorkerAddCapacityRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
@@ -67,6 +86,10 @@ open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
   @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun removeDataWorkerCapacity(
     @Body dataWorkerRemoveCapacityRequestBody: DataWorkerRemoveCapacityRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()

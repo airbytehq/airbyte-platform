@@ -9,6 +9,9 @@ import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspa
 import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -25,6 +28,10 @@ open class DestinationDefinitionSpecificationApiController(
 ) : DestinationDefinitionSpecificationApi {
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestinationDefinitionSpecification(
     @Body destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
   ): DestinationDefinitionSpecificationRead =
@@ -36,6 +43,10 @@ open class DestinationDefinitionSpecificationApiController(
 
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSpecificationForDestinationId(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ): DestinationDefinitionSpecificationRead =

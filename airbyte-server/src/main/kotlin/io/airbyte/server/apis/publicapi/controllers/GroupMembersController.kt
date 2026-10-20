@@ -10,6 +10,9 @@ import io.airbyte.api.problems.throwable.generated.GroupMemberAlreadyExistsProbl
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -55,6 +58,10 @@ open class GroupMembersController(
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupMembersApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListGroupMembers(
     groupId: UUID,
     limit: Int,
@@ -114,6 +121,10 @@ open class GroupMembersController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicAddGroupMember(
     groupId: UUID,
     groupMemberAddRequest: GroupMemberAddRequest,
@@ -182,6 +193,10 @@ open class GroupMembersController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicRemoveGroupMember(
     groupId: UUID,
     userId: UUID,

@@ -23,6 +23,9 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.converters.toModel
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -51,6 +54,10 @@ open class DestinationApiController(
   @Post(uri = "/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkConnectionToDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ): CheckConnectionRead? =
@@ -63,6 +70,10 @@ open class DestinationApiController(
   @Post(uri = "/check_connection_for_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun checkConnectionToDestinationForUpdate(
     @Body destinationUpdate: DestinationUpdate,
   ): CheckConnectionRead? =
@@ -76,6 +87,10 @@ open class DestinationApiController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createDestination(
     @Body destinationCreate: DestinationCreate,
   ): DestinationRead? = execute { destinationHandler.createDestination(destinationCreate) }
@@ -87,6 +102,10 @@ open class DestinationApiController(
     HttpStatus.NO_CONTENT,
   )
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -99,6 +118,10 @@ open class DestinationApiController(
   @Post(uri = "/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun discoverCatalogForDestination(
     @Body destinationDiscoverReqBody: DestinationDiscoverSchemaRequestBody,
   ): DestinationDiscoverRead? =
@@ -113,6 +136,10 @@ open class DestinationApiController(
   @Post(uri = "/write_discover_catalog_result")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun writeDestinationDiscoverCatalogResult(
     @Body discoverWriteRequestBody: DestinationDiscoverSchemaWriteRequestBody,
   ): DiscoverCatalogResult? =
@@ -130,6 +157,10 @@ open class DestinationApiController(
 
   @Post(uri = "/get_catalog_for_connection")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getCatalogForConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): DestinationDiscoverRead? =
@@ -140,6 +171,10 @@ open class DestinationApiController(
   @Post(uri = "/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ): DestinationRead? = execute { destinationHandler.getDestination(destinationIdRequestBody) }
@@ -147,6 +182,10 @@ open class DestinationApiController(
   @Post(uri = "/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDestinationsForWorkspace(
     @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
   ): DestinationReadList? = execute { destinationHandler.listDestinationsForWorkspace(actorListCursorPaginatedRequestBody) }
@@ -154,6 +193,10 @@ open class DestinationApiController(
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listDestinationsForWorkspacesPaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
   ): DestinationReadList? =
@@ -165,6 +208,10 @@ open class DestinationApiController(
 
   @Post(uri = "/search")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun searchDestinations(
     @Body destinationSearch: DestinationSearch?,
   ): DestinationReadList? = execute { destinationHandler.searchDestinations(destinationSearch) }
@@ -173,6 +220,10 @@ open class DestinationApiController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateDestination(
     @Body destinationUpdate: DestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.updateDestination(destinationUpdate) }
@@ -184,6 +235,10 @@ open class DestinationApiController(
     HttpStatus.NO_CONTENT,
   )
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun upgradeDestinationVersion(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -197,6 +252,10 @@ open class DestinationApiController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun partialUpdateDestination(
     @Body partialDestinationUpdate: PartialDestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.partialDestinationUpdate(partialDestinationUpdate) }

@@ -7,6 +7,9 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.WorkloadOutputApi
 import io.airbyte.api.model.generated.WorkloadOutputWriteRequest
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -35,6 +38,10 @@ class WorkloadOutputController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @Post // TODO: add `/write` once another method/endpoint is added
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun writeWorkloadOutput(req: WorkloadOutputWriteRequest) {
     val workload = workloadService.getWorkload(req.workloadId)
 

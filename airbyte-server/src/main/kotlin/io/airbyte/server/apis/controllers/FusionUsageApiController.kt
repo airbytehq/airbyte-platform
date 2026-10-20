@@ -7,6 +7,9 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.server.generated.apis.FusionUsageApi
 import io.airbyte.api.server.generated.models.FusionUsageRead
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -21,6 +24,10 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionUsageApiController : FusionUsageApi {
   @Get("/organizations/{organizationId}/tool_calls/usage")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionUsage(
     @PathVariable organizationId: UUID,
   ): FusionUsageRead = throw ApiNotImplementedInOssProblem()

@@ -12,6 +12,9 @@ import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.CatalogDiffService
@@ -41,6 +44,10 @@ class CatalogApiController(
 ) : CatalogApi {
   @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun diffCatalogs(
     @Body diffCatalogsRequest: DiffCatalogsRequest,
   ): DiffCatalogsResponse {

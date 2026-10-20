@@ -10,6 +10,9 @@ import io.airbyte.api.model.generated.ScopeType
 import io.airbyte.api.model.generated.SecretPersistenceConfig
 import io.airbyte.api.model.generated.SecretPersistenceConfigGetRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
@@ -38,6 +41,10 @@ class SecretsPersistenceConfigApiController(
 ) : SecretsPersistenceConfigApi {
   @Post("/create_or_update")
   @Secured(AuthRoleConstants.ADMIN)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createOrUpdateSecretsPersistenceConfig(
     @Body requestBody: CreateOrUpdateSecretsPersistenceConfigRequestBody,
   ) {
@@ -86,6 +93,10 @@ class SecretsPersistenceConfigApiController(
 
   @Post("/get")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getSecretsPersistenceConfig(
     @Body requestBody: SecretPersistenceConfigGetRequestBody,
   ): SecretPersistenceConfig? {

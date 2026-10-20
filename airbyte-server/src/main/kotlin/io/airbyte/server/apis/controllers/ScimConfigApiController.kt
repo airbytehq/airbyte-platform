@@ -12,6 +12,9 @@ import io.airbyte.api.server.generated.models.ScimConfigResponse
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -46,6 +49,10 @@ open class ScimConfigApiController(
 ) : ScimConfigApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getScimConfig(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
       val organizationId = OrganizationId(organizationIdRequestBody.organizationId)
@@ -57,6 +64,10 @@ open class ScimConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun enableScim(enableScimRequestBody: EnableScimRequestBody): ScimConfigResponse =
     executeScim {
       scimConfigurationService
@@ -72,6 +83,10 @@ open class ScimConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun rotateScimToken(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
       scimConfigurationService
@@ -87,6 +102,10 @@ open class ScimConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
   @Status(HttpStatus.NO_CONTENT)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun disableScim(organizationIdRequestBody: OrganizationIdRequestBody) {
     executeScim {
       scimConfigurationService.disable(

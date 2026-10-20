@@ -9,6 +9,9 @@ import io.airbyte.api.model.generated.FusionConnectionEnablementCreate
 import io.airbyte.api.model.generated.FusionConnectionEnablementRead
 import io.airbyte.api.model.generated.FusionConnectionEnablementUpdate
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -27,23 +30,39 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionConnectionEnablementApiController : FusionConnectionEnablementApi {
   @Get
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionConnectionEnablement(
     @PathVariable connectionId: UUID,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Post
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createFusionConnectionEnablement(
     @PathVariable connectionId: UUID,
     @Body request: FusionConnectionEnablementCreate,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Put
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateFusionConnectionEnablement(
     @PathVariable connectionId: UUID,
     @Body request: FusionConnectionEnablementUpdate,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Delete
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteFusionConnectionEnablement(
     @PathVariable connectionId: UUID,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()

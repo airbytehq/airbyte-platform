@@ -9,6 +9,9 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -53,6 +56,10 @@ open class GroupPermissionsController(
   private val groupPermissionValidator: GroupPermissionValidator,
 ) : PublicGroupPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListGroupPermissions(groupId: UUID): Response {
     val group =
       groupService.getGroup(GroupId(groupId)) ?: throw ResourceNotFoundProblem(
@@ -91,6 +98,10 @@ open class GroupPermissionsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateGroupPermission(
     groupId: UUID,
     groupPermissionCreateRequest: GroupPermissionCreateRequest,
@@ -166,6 +177,10 @@ open class GroupPermissionsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteGroupPermission(
     groupId: UUID,
     permissionId: UUID,

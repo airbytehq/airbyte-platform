@@ -49,6 +49,9 @@ import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
@@ -88,6 +91,10 @@ open class ConnectionApiController(
   @Post(uri = "/auto_disable")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun autoDisableConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): InternalOperationResult? =
@@ -100,6 +107,10 @@ open class ConnectionApiController(
   @Post(uri = "/backfill_events")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun backfillConnectionEvents(
     @Body connectionEventsBackfillRequestBody: ConnectionEventsBackfillRequestBody,
   ) {
@@ -118,6 +129,10 @@ open class ConnectionApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createConnection(
     @Body connectionCreate: ConnectionCreate,
   ): ConnectionRead? = execute { connectionsHandler.createConnection(connectionCreate) }
@@ -131,6 +146,10 @@ open class ConnectionApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateConnection(
     @Body connectionUpdate: ConnectionUpdate,
   ): ConnectionRead? = execute { connectionsHandler.updateConnection(connectionUpdate, null, false) }
@@ -144,6 +163,10 @@ open class ConnectionApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateConnectionWithReason(
     @Body connectionUpdateWithReason: ConnectionUpdateWithReason,
   ): ConnectionRead? =
@@ -158,6 +181,10 @@ open class ConnectionApiController(
   @Post(uri = "/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): ConnectionReadList? = execute { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) }
@@ -165,6 +192,10 @@ open class ConnectionApiController(
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionsForWorkspacesPaginated(
     @Body listConnectionsForWorkspacesRequestBody: ListConnectionsForWorkspacesRequestBody,
   ): ConnectionReadList? =
@@ -177,6 +208,10 @@ open class ConnectionApiController(
   @Post(uri = "/refresh")
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun refreshConnectionStream(
     @Body connectionStreamRefreshRequestBody: ConnectionStreamRefreshRequestBody,
   ): JobReadResponse {
@@ -194,12 +229,20 @@ open class ConnectionApiController(
   @Post(uri = "/list_all")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listAllConnectionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): ConnectionReadList? = execute { connectionsHandler.listAllConnectionsForWorkspace(workspaceIdRequestBody) }
 
   @Post(uri = "/list_by_actor_definition")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionsByActorDefinition(
     @Body actorDefinitionRequestBody: ActorDefinitionRequestBody,
   ): ConnectionReadList? =
@@ -211,6 +254,10 @@ open class ConnectionApiController(
 
   @Post(uri = "/search")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun searchConnections(
     @Body connectionSearch: ConnectionSearch?,
   ): ConnectionReadList? = execute { matchSearchHandler.searchConnections(connectionSearch) }
@@ -218,6 +265,10 @@ open class ConnectionApiController(
   @Post(uri = "/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): ConnectionRead? = execute { connectionsHandler.getConnection(connectionIdRequestBody.connectionId) }
@@ -225,6 +276,10 @@ open class ConnectionApiController(
   @Post(uri = "/history/data")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionDataHistory(
     @Body connectionDataHistoryRequestBody: ConnectionDataHistoryRequestBody,
   ): List<JobSyncResultRead>? =
@@ -237,6 +292,10 @@ open class ConnectionApiController(
   @Post(uri = "/events/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionEvent(
     @Body connectionEventIdRequestBody:
       @Valid @NotNull
@@ -246,6 +305,10 @@ open class ConnectionApiController(
   @Post(uri = "/events/list")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionEvents(
     @Body connectionEventsRequestBody:
       @Valid @NotNull
@@ -255,6 +318,10 @@ open class ConnectionApiController(
   @Post(uri = "/events/list_for_job")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionEventsForJob(
     @Body jobIdRequestBody: JobIdRequestBody,
   ): ConnectionEventList? =
@@ -264,6 +331,10 @@ open class ConnectionApiController(
       )
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listConnectionEventsMinimal(
     connectionEventsListMinimalRequestBody: ConnectionEventsListMinimalRequestBody,
   ): ConnectionEventListMinimal? =
@@ -276,6 +347,10 @@ open class ConnectionApiController(
   @Post(uri = "/getForJob")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionForJob(
     @Body connectionAndJobIdRequestBody: ConnectionAndJobIdRequestBody,
   ): ConnectionRead? =
@@ -289,6 +364,10 @@ open class ConnectionApiController(
   @Post(uri = "/last_job_per_stream")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionLastJobPerStream(
     @Body requestBody: ConnectionLastJobPerStreamRequestBody,
   ): List<ConnectionLastJobPerStreamReadItem>? =
@@ -301,6 +380,10 @@ open class ConnectionApiController(
   @Post(uri = "/status")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionStatuses(
     @Body connectionStatusesRequestBody: ConnectionStatusesRequestBody,
   ): List<ConnectionStatusRead>? =
@@ -313,6 +396,10 @@ open class ConnectionApiController(
   @Post(uri = "/stream_history")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionStreamHistory(
     @Body connectionStreamHistoryRequestBody: ConnectionStreamHistoryRequestBody,
   ): List<ConnectionStreamHistoryReadItem>? =
@@ -325,6 +412,10 @@ open class ConnectionApiController(
   @Post(uri = "/sync_progress")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionSyncProgress(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): ConnectionSyncProgressRead? =
@@ -337,6 +428,10 @@ open class ConnectionApiController(
   @Post(uri = "/history/uptime")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionUptimeHistory(
     @Body connectionUptimeHistoryRequestBody: ConnectionUptimeHistoryRequestBody,
   ): List<JobSyncResultRead>? =
@@ -356,6 +451,10 @@ open class ConnectionApiController(
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ) {
@@ -369,6 +468,10 @@ open class ConnectionApiController(
   @Post(uri = "/sync")
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun syncConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.syncConnection(connectionIdRequestBody) }
@@ -381,6 +484,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun resetConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
@@ -393,6 +500,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun resetConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
@@ -405,6 +516,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun clearConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
@@ -417,6 +532,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun clearConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
@@ -429,6 +548,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun applySchemaChangeForConnection(
     @Body request: ConnectionAutoPropagateSchemaChange,
   ): ConnectionAutoPropagateResult? = execute { connectionsHandler.applySchemaChange(request) }
@@ -441,6 +564,10 @@ open class ConnectionApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun postprocessDiscoveredCatalogForConnection(
     @Body req: PostprocessDiscoveredCatalogRequestBody,
   ): PostprocessDiscoveredCatalogResult? =
@@ -454,6 +581,10 @@ open class ConnectionApiController(
   @Post(uri = "/get_context")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getConnectionContext(
     @Body req: ConnectionIdRequestBody,
   ): ConnectionContextRead? = execute { connectionsHandler.getConnectionContext(req.connectionId) }

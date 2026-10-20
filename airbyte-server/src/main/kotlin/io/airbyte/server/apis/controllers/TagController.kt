@@ -10,6 +10,9 @@ import io.airbyte.api.model.generated.TagListRequestBody
 import io.airbyte.api.model.generated.TagUpdateRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.handlers.TagHandler
 import io.micronaut.http.annotation.Body
@@ -24,6 +27,10 @@ class TagController(
   @Post("/list")
   @RequiresIntent(Intent.ViewConnection)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun listTags(
     @Body tagListRequestBody: TagListRequestBody,
   ) = tagHandler.getTagsForWorkspaces(listOf(tagListRequestBody.workspaceId))
@@ -31,6 +38,10 @@ class TagController(
   @Post("/create")
   @RequiresIntent(Intent.CreateOrEditConnection)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun createTag(
     @Body tagCreateRequestyBody: TagCreateRequestBody,
   ) = tagHandler.createTag(tagCreateRequestyBody)
@@ -38,6 +49,10 @@ class TagController(
   @Post("/update")
   @RequiresIntent(Intent.CreateOrEditConnection)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun updateTag(
     @Body tagUpdateRequestBody: TagUpdateRequestBody,
   ) = tagHandler.updateTag(tagUpdateRequestBody)
@@ -45,6 +60,10 @@ class TagController(
   @Post("/delete")
   @RequiresIntent(Intent.CreateOrEditConnection)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun deleteTag(
     @Body tagDeleteRequestBody: TagDeleteRequestBody,
   ) = tagHandler.deleteTag(tagDeleteRequestBody)

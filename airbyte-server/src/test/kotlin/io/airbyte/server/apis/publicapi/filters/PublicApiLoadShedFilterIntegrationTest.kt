@@ -4,6 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.filters
 
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LoadShedPublicApi
 import io.airbyte.featureflag.TokenSubject
@@ -110,9 +113,17 @@ class FixedSubjectAuthenticationFetcher : AuthenticationFetcher<HttpRequest<*>> 
 @Secured(SecurityRule.IS_ANONYMOUS)
 class LoadShedPingController {
   @Get("/api/public/v1/ping")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PUBLIC,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   fun publicPing(): String = "pong"
 
   @Get("/api/v1/ping")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PUBLIC,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   fun internalPing(): String = "pong"
 }
 

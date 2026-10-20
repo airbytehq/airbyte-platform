@@ -8,6 +8,9 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.airbyte.api.scim.generated.models.ScimError
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.scim.ScimAccessDeniedException
@@ -536,10 +539,18 @@ class ScimAuthenticationTestController {
   fun fail(): Nothing = throw IllegalStateException("sensitive failure")
 
   @Get("/api/v1/scim-auth-test/failure")
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PUBLIC,
+    migration = RouteMigration.NOT_APPLICABLE,
+  )
   fun normalApiFailure(): HttpResponse<Map<String, String>> = HttpResponse.badRequest(mapOf("message" to "normal API error"))
 
   @Get("/api/v1/scim-auth-test")
   @Secured(SecurityRule.IS_AUTHENTICATED)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   fun normalApi(): String = "authenticated"
 
   private fun contextResponse(request: HttpRequest<*>): Map<String, Any> {

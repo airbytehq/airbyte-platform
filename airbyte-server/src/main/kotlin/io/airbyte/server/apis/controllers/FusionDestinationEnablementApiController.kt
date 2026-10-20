@@ -9,6 +9,9 @@ import io.airbyte.api.model.generated.FusionDestinationEnablementCreate
 import io.airbyte.api.model.generated.FusionDestinationEnablementRead
 import io.airbyte.api.model.generated.FusionDestinationEnablementUpdate
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -27,23 +30,39 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionDestinationEnablementApiController : FusionDestinationEnablementApi {
   @Get
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getFusionDestinationEnablement(
     @PathVariable destinationId: UUID,
   ): FusionDestinationEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Post
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createFusionDestinationEnablement(
     @PathVariable destinationId: UUID,
     @Body request: FusionDestinationEnablementCreate,
   ): FusionDestinationEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Put
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun updateFusionDestinationEnablement(
     @PathVariable destinationId: UUID,
     @Body request: FusionDestinationEnablementUpdate,
   ): FusionDestinationEnablementRead = throw ApiNotImplementedInOssProblem()
 
   @Delete
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun deleteFusionDestinationEnablement(
     @PathVariable destinationId: UUID,
   ): FusionDestinationEnablementRead = throw ApiNotImplementedInOssProblem()

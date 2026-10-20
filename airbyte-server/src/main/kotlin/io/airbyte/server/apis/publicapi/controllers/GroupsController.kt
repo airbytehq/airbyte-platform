@@ -11,6 +11,9 @@ import io.airbyte.api.problems.throwable.generated.GroupAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -56,6 +59,10 @@ open class GroupsController(
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicListGroups(
     organizationId: UUID?,
     limit: Int,
@@ -125,6 +132,10 @@ open class GroupsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicCreateGroup(groupCreateRequest: GroupCreateRequest): Response {
     // Require organization admin to create groups
     roleResolver
@@ -163,6 +174,10 @@ open class GroupsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicGetGroup(groupId: UUID): Response {
     val group =
       groupService.getGroup(
@@ -204,6 +219,10 @@ open class GroupsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicUpdateGroup(
     groupId: UUID,
     groupUpdateRequest: GroupUpdateRequest,
@@ -253,6 +272,10 @@ open class GroupsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun publicDeleteGroup(groupId: UUID): Response {
     val existingGroup =
       groupService.getGroup(

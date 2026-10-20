@@ -13,6 +13,9 @@ import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
 import io.airbyte.api.server.generated.models.UserInvitationListRequestBody
 import io.airbyte.api.server.generated.models.UserInvitationRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.support.CurrentUserService
@@ -34,6 +37,10 @@ class UserInvitationApiController(
   private val currentUserService: CurrentUserService,
   private val userInvitationAuthorizationHelper: UserInvitationAuthorizationHelper,
 ) : UserInvitationApi {
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun getUserInvitation(
     @PathParam("inviteCode") inviteCode: String,
   ): UserInvitationRead =
@@ -45,11 +52,19 @@ class UserInvitationApiController(
     )
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun listPendingInvitations(
     @Body invitationListRequestBody: UserInvitationListRequestBody?,
   ): List<UserInvitationAdminRead> = userInvitationHandler.getPendingInvitations(invitationListRequestBody)
 
   @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun createUserInvitation(
     @Body invitationCreateRequestBody: UserInvitationCreateRequestBody?,
   ): UserInvitationCreateResponse =
@@ -58,6 +73,10 @@ class UserInvitationApiController(
       userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody!!, currentUser)
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun acceptUserInvitation(
     @Body inviteCodeRequestBody: InviteCodeRequestBody?,
   ): UserInvitationRead =
@@ -66,6 +85,10 @@ class UserInvitationApiController(
       userInvitationHandler.accept(inviteCodeRequestBody!!, currentUser)
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun declineUserInvitation(
     @Body inviteCodeRequestBody: InviteCodeRequestBody?,
   ): UserInvitationRead =
@@ -74,6 +97,10 @@ class UserInvitationApiController(
       throw RuntimeException("Not yet implemented")
     }
 
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.LEGACY,
+  )
   override fun cancelUserInvitation(
     @Body invitationRequestBody: UserInvitationCancelRequestBody?,
   ): UserInvitationAdminRead {
