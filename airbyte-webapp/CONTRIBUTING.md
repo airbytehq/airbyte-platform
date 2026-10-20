@@ -481,7 +481,7 @@ The OSS tests answer every API call from a mock backend (`playwright/mock/`). Th
 
 #### Running the tests in CI
 
-CI runs these tests in two jobs. `OSS FE Acceptance` runs on PR Build for frontend changes and on merge builds of `master`. `OSS FE Acceptance on stage` runs during the stage deploy. The [Playwright README](playwright/README.md#when-ci-runs-the-tests) lists the exact triggers.
+CI runs these tests in two jobs. `OSS FE Acceptance` runs on PR Build for frontend changes. `OSS FE Acceptance on stage` runs during the stage deploy and blocks prod. The [Playwright README](playwright/README.md#when-ci-runs-the-tests) lists the exact triggers.
 
 ## Mocking APIs and features in development
 

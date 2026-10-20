@@ -71,10 +71,8 @@ The OSS tests need no backend and no other services. `pnpm test` starts the weba
 
 Two CI jobs run the OSS tests. Both use the mock backend and install no OSS release.
 
-- **`OSS FE Acceptance`** (`.github/workflows/pr-test-fe-acceptance.yml`):
-  - **PR Build:** when a pull request changes files that match the `workflow`, `frontend` or `frontendServers` path filter.
-  - **Merge: Build:** on each push to `master` that starts a merge build. Merge: Build skips pushes that only change paths in its `paths-ignore` list, such as `docs/**` or most of `.github/**`.
-- **`OSS FE Acceptance on stage`** (`.github/workflows/test-oss-fe-acceptance-stage.yml`): during the stage deploy of Deploy to Stage + Prod, when the deploy runs its tests (`run_tests: true`, the default). The job is non-blocking: a failure does not stop the deploy. The production deploy runs no Playwright tests.
+- **`OSS FE Acceptance`** (`.github/workflows/pr-test-fe-acceptance.yml`): on PR Build, when a pull request changes files that match the `workflow`, `frontend` or `frontendServers` path filter.
+- **`OSS FE Acceptance on stage`** (`.github/workflows/test-oss-fe-acceptance-stage.yml`): during the stage deploy of Deploy to Stage + Prod, when the deploy runs its tests (`run_tests: true`, the default). A failure blocks the production deploy. Merge builds don't run the tests.
 
 Each job reports its tests to Datadog Test Optimization: `OSS FE Acceptance` as the service `oss-fe-acceptance-test`, and `OSS FE Acceptance on stage` as `stage-oss-fe-acceptance-test`.
 
