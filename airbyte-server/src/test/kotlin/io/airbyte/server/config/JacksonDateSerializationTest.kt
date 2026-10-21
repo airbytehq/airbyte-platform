@@ -5,10 +5,10 @@
 package io.airbyte.server.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.DataplaneGroupRead
-import io.airbyte.api.model.generated.DataplaneRead
-import io.airbyte.api.model.generated.OrganizationPaymentConfigRead
 import io.airbyte.api.model.generated.UserRead
+import io.airbyte.api.server.generated.models.DataplaneGroupRead
+import io.airbyte.api.server.generated.models.DataplaneRead
+import io.airbyte.api.server.generated.models.OrganizationPaymentConfigRead
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -58,13 +58,15 @@ class JacksonDateSerializationTest {
   @Test
   fun `DataplaneGroupRead createdAt and updatedAt serialize as ISO strings`() {
     val read =
-      DataplaneGroupRead()
-        .dataplaneGroupId(UUID.randomUUID())
-        .organizationId(UUID.randomUUID())
-        .name("test-group")
-        .enabled(true)
-        .createdAt(testTimestamp)
-        .updatedAt(testTimestamp)
+      DataplaneGroupRead(
+        dataplaneGroupId = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        name = "test-group",
+        enabled = true,
+        createdAt = testTimestamp,
+        updatedAt = testTimestamp,
+        dataplanes = emptyList(),
+      )
 
     val json = objectMapper.writeValueAsString(read)
 
@@ -75,13 +77,14 @@ class JacksonDateSerializationTest {
   @Test
   fun `DataplaneRead createdAt and updatedAt serialize as ISO strings`() {
     val read =
-      DataplaneRead()
-        .dataplaneId(UUID.randomUUID())
-        .dataplaneGroupId(UUID.randomUUID())
-        .name("test-dataplane")
-        .enabled(true)
-        .createdAt(testTimestamp)
-        .updatedAt(testTimestamp)
+      DataplaneRead(
+        dataplaneId = UUID.randomUUID(),
+        dataplaneGroupId = UUID.randomUUID(),
+        name = "test-dataplane",
+        enabled = true,
+        createdAt = testTimestamp,
+        updatedAt = testTimestamp,
+      )
 
     val json = objectMapper.writeValueAsString(read)
 
@@ -92,9 +95,12 @@ class JacksonDateSerializationTest {
   @Test
   fun `OrganizationPaymentConfigRead gracePeriodEndAt serializes as ISO string`() {
     val read =
-      OrganizationPaymentConfigRead()
-        .organizationId(UUID.randomUUID())
-        .gracePeriodEndAt(testTimestamp)
+      OrganizationPaymentConfigRead(
+        organizationId = UUID.randomUUID(),
+        paymentStatus = OrganizationPaymentConfigRead.PaymentStatus.OKAY,
+        subscriptionStatus = OrganizationPaymentConfigRead.SubscriptionStatus.SUBSCRIBED,
+        gracePeriodEndAt = testTimestamp,
+      )
 
     val json = objectMapper.writeValueAsString(read)
 

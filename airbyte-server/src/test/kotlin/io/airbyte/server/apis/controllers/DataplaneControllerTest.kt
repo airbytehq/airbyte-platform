@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneHealthRead
-import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
-import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
-import io.airbyte.api.model.generated.DataplaneInitRequestBody
-import io.airbyte.api.model.generated.DataplaneInitResponse
-import io.airbyte.api.model.generated.DataplaneListRequestBody
-import io.airbyte.api.model.generated.DataplaneTokenRequestBody
-import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHealthRead
+import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHeartbeatResponse
+import io.airbyte.api.server.generated.models.DataplaneInitRequestBody
+import io.airbyte.api.server.generated.models.DataplaneInitResponse
+import io.airbyte.api.server.generated.models.DataplaneListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneTokenRequestBody
+import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -82,10 +82,7 @@ class DataplaneControllerTest {
 
     val updatedDataplane =
       dataplaneController.updateDataplane(
-        DataplaneUpdateRequestBody()
-          .dataplaneId(mockDataplane.id)
-          .name(newName)
-          .enabled(newEnabled),
+        DataplaneUpdateRequestBody(dataplaneId = mockDataplane.id, name = newName, enabled = newEnabled),
       )
 
     assert(updatedDataplane.dataplaneId == mockDataplane.id)
@@ -104,7 +101,7 @@ class DataplaneControllerTest {
     every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneDeleteRequestBody =
-      DataplaneDeleteRequestBody().dataplaneId(mockDataplane.id)
+      DataplaneDeleteRequestBody(dataplaneId = mockDataplane.id)
 
     dataplaneController.deleteDataplane(dataplaneDeleteRequestBody)
 
@@ -124,8 +121,8 @@ class DataplaneControllerTest {
         createDataplane(dataplaneId1),
         createDataplane(dataplaneId2),
       )
-    val dataplanes = dataplaneController.listDataplanes(DataplaneListRequestBody().dataplaneGroupId(MOCK_DATAPLANE_GROUP_ID))
-    val responseDataplanes = dataplanes.dataplanes
+    val dataplanes = dataplaneController.listDataplanes(DataplaneListRequestBody(dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID))
+    val responseDataplanes = dataplanes.dataplanes!!
 
     assert(responseDataplanes.size == 2)
     assert(responseDataplanes[0].dataplaneId == dataplaneId1)
@@ -140,7 +137,7 @@ class DataplaneControllerTest {
 
     every { dataplaneService.getToken(clientId, clientSecret) } returns expectedToken
 
-    val requestBody = DataplaneTokenRequestBody().clientId(clientId).clientSecret(clientSecret)
+    val requestBody = DataplaneTokenRequestBody(clientId = clientId, clientSecret = clientSecret)
     val accessToken = dataplaneController.getDataplaneToken(requestBody)
 
     assert(accessToken.accessToken == expectedToken)
@@ -156,18 +153,19 @@ class DataplaneControllerTest {
     every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
-    val req = DataplaneHeartbeatRequestBody()
-    req.clientId = clientId
+    val req = DataplaneHeartbeatRequestBody(clientId = clientId)
 
     val result = dataplaneController.heartbeatDataplane(req, TEST_DATAPLANE_VERSION)
 
-    val expected = DataplaneHeartbeatResponse()
-    expected.dataplaneName = dataplane.name
-    expected.dataplaneId = dataplane.id
-    expected.dataplaneEnabled = dataplane.enabled
-    expected.dataplaneGroupName = dataplaneGroup.name
-    expected.dataplaneGroupId = dataplaneGroup.id
-    expected.organizationId = dataplaneGroup.organizationId
+    val expected =
+      DataplaneHeartbeatResponse(
+        dataplaneName = dataplane.name,
+        dataplaneId = dataplane.id,
+        dataplaneEnabled = dataplane.enabled,
+        dataplaneGroupName = dataplaneGroup.name,
+        dataplaneGroupId = dataplaneGroup.id,
+        organizationId = dataplaneGroup.organizationId,
+      )
 
     Assertions.assertEquals(expected, result)
 
@@ -190,18 +188,19 @@ class DataplaneControllerTest {
     every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
-    val req = DataplaneInitRequestBody()
-    req.clientId = clientId
+    val req = DataplaneInitRequestBody(clientId = clientId)
 
     val result = dataplaneController.initializeDataplane(req, TEST_DATAPLANE_VERSION)
 
-    val expected = DataplaneInitResponse()
-    expected.dataplaneName = dataplane.name
-    expected.dataplaneId = dataplane.id
-    expected.dataplaneEnabled = dataplane.enabled
-    expected.dataplaneGroupName = dataplaneGroup.name
-    expected.dataplaneGroupId = dataplaneGroup.id
-    expected.organizationId = dataplaneGroup.organizationId
+    val expected =
+      DataplaneInitResponse(
+        dataplaneName = dataplane.name,
+        dataplaneId = dataplane.id,
+        dataplaneEnabled = dataplane.enabled,
+        dataplaneGroupName = dataplaneGroup.name,
+        dataplaneGroupId = dataplaneGroup.id,
+        organizationId = dataplaneGroup.organizationId,
+      )
 
     Assertions.assertEquals(expected, result)
   }
@@ -228,8 +227,7 @@ class DataplaneControllerTest {
     every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
-    val req = DataplaneInitRequestBody()
-    req.clientId = clientId
+    val req = DataplaneInitRequestBody(clientId = clientId)
 
     val result = dataplaneController.initializeDataplane(req, TEST_DATAPLANE_VERSION)
 
@@ -258,8 +256,7 @@ class DataplaneControllerTest {
     every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
-    val req = DataplaneHeartbeatRequestBody()
-    req.clientId = clientId
+    val req = DataplaneHeartbeatRequestBody(clientId = clientId)
 
     val result = dataplaneController.heartbeatDataplane(req, TEST_DATAPLANE_VERSION)
 
@@ -370,24 +367,24 @@ class DataplaneControllerTest {
     every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId1, dataplaneId2, dataplaneId3)) } returns
       listOf(healthStatus1, healthStatus2, healthStatus3)
 
-    val request = OrganizationIdRequestBody().organizationId(mockOrganizationId)
+    val request = OrganizationIdRequestBody(organizationId = mockOrganizationId)
     val response = dataplaneController.listDataplaneHealth(request)
 
     Assertions.assertEquals(3, response.dataplanes.size)
 
     val health1 = response.dataplanes[0]
     Assertions.assertEquals(dataplaneId1, health1.dataplaneId)
-    Assertions.assertEquals(DataplaneHealthRead.StatusEnum.HEALTHY, health1.status)
+    Assertions.assertEquals(DataplaneHealthRead.Status.HEALTHY, health1.status)
     Assertions.assertEquals("1.0.0", health1.controlPlaneVersion)
     Assertions.assertEquals("2.0.0", health1.dataplaneVersion)
 
     val health2 = response.dataplanes[1]
     Assertions.assertEquals(dataplaneId2, health2.dataplaneId)
-    Assertions.assertEquals(DataplaneHealthRead.StatusEnum.DEGRADED, health2.status)
+    Assertions.assertEquals(DataplaneHealthRead.Status.DEGRADED, health2.status)
 
     val health3 = response.dataplanes[2]
     Assertions.assertEquals(dataplaneId3, health3.dataplaneId)
-    Assertions.assertEquals(DataplaneHealthRead.StatusEnum.UNHEALTHY, health3.status)
+    Assertions.assertEquals(DataplaneHealthRead.Status.UNHEALTHY, health3.status)
 
     verify(exactly = 1) { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) }
   }
@@ -428,14 +425,14 @@ class DataplaneControllerTest {
     every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
     every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId)) } returns listOf(healthStatus)
 
-    val request = OrganizationIdRequestBody().organizationId(mockOrganizationId)
+    val request = OrganizationIdRequestBody(organizationId = mockOrganizationId)
     val response = dataplaneController.listDataplaneHealth(request)
 
     Assertions.assertEquals(1, response.dataplanes.size)
 
     val health = response.dataplanes[0]
     Assertions.assertEquals(dataplaneId, health.dataplaneId)
-    Assertions.assertEquals(DataplaneHealthRead.StatusEnum.UNKNOWN, health.status)
+    Assertions.assertEquals(DataplaneHealthRead.Status.UNKNOWN, health.status)
     Assertions.assertNull(health.lastHeartbeatTimestamp)
     Assertions.assertNull(health.controlPlaneVersion)
     Assertions.assertNull(health.dataplaneVersion)
@@ -449,7 +446,7 @@ class DataplaneControllerTest {
     every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns emptyList()
     every { dataplaneService.listDataplanes(emptyList<UUID>()) } returns emptyList()
 
-    val request = OrganizationIdRequestBody().organizationId(mockOrganizationId)
+    val request = OrganizationIdRequestBody(organizationId = mockOrganizationId)
     val response = dataplaneController.listDataplaneHealth(request)
 
     Assertions.assertEquals(0, response.dataplanes.size)

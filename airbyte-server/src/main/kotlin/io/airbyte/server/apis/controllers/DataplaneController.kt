@@ -4,24 +4,25 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.DataplaneApi
-import io.airbyte.api.model.generated.AccessToken
-import io.airbyte.api.model.generated.DataplaneCreateRequestBody
-import io.airbyte.api.model.generated.DataplaneCreateResponse
-import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneHealthListResponse
-import io.airbyte.api.model.generated.DataplaneHealthRead
-import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
-import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
-import io.airbyte.api.model.generated.DataplaneInitRequestBody
-import io.airbyte.api.model.generated.DataplaneInitResponse
-import io.airbyte.api.model.generated.DataplaneListRequestBody
-import io.airbyte.api.model.generated.DataplaneListResponse
-import io.airbyte.api.model.generated.DataplaneRead
-import io.airbyte.api.model.generated.DataplaneTokenRequestBody
-import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.api.model.generated.HeartbeatRecord
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.apis.DataplaneApi
+import io.airbyte.api.server.generated.apis.DataplanesApi
+import io.airbyte.api.server.generated.models.AccessToken
+import io.airbyte.api.server.generated.models.DataplaneCreateRequestBody
+import io.airbyte.api.server.generated.models.DataplaneCreateResponse
+import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHealthListResponse
+import io.airbyte.api.server.generated.models.DataplaneHealthRead
+import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHeartbeatResponse
+import io.airbyte.api.server.generated.models.DataplaneInitRequestBody
+import io.airbyte.api.server.generated.models.DataplaneInitResponse
+import io.airbyte.api.server.generated.models.DataplaneListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneListResponse
+import io.airbyte.api.server.generated.models.DataplaneRead
+import io.airbyte.api.server.generated.models.DataplaneTokenRequestBody
+import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
+import io.airbyte.api.server.generated.models.HeartbeatRecord
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
@@ -51,7 +52,6 @@ import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
@@ -63,7 +63,7 @@ import java.util.UUID
 import java.util.stream.Collectors
 
 @Context
-@Controller("/api/v1/dataplanes")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
@@ -73,8 +73,8 @@ open class DataplaneController(
   private val entitlementService: EntitlementService,
   private val metricClient: MetricClient,
   private val airbyteConfig: AirbyteConfig,
-) : DataplaneApi {
-  @Post("/create")
+) : DataplaneApi,
+  DataplanesApi {
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -95,15 +95,16 @@ open class DataplaneController(
 
     // this function will also create a service account
     // for the dataplane and grant that account the appropriate permissions.
-    val dataplaneWithServiceAccount = dataplaneService.createNewDataplane(dataplane, dataplaneCreateRequestBody.instanceScope)
+    val dataplaneWithServiceAccount = dataplaneService.createNewDataplane(dataplane, dataplaneCreateRequestBody.instanceScope ?: false)
 
-    return DataplaneCreateResponse()
-      .dataplaneId(dataplaneWithServiceAccount.dataplane.id)
-      .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
-      .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
+    return DataplaneCreateResponse(
+      dataplaneId = dataplaneWithServiceAccount.dataplane.id,
+      regionId = dataplaneWithServiceAccount.dataplane.dataplaneGroupId,
+      clientId = dataplaneWithServiceAccount.serviceAccount.id.toString(),
+      clientSecret = dataplaneWithServiceAccount.serviceAccount.secret,
+    )
   }
 
-  @Post("/update")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -123,7 +124,6 @@ open class DataplaneController(
     )
   }
 
-  @Post("/delete")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -139,7 +139,6 @@ open class DataplaneController(
     return toDataplaneRead(tombstonedDataplane)
   }
 
-  @Post("/list")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -151,27 +150,24 @@ open class DataplaneController(
   ): DataplaneListResponse {
     ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneListRequestBody.dataplaneGroupId))
     val dataplanes: List<Dataplane> = dataplaneService.listDataplanes(dataplaneListRequestBody.dataplaneGroupId)
-    return DataplaneListResponse()
-      .dataplanes(
+    return DataplaneListResponse(
+      dataplanes =
         dataplanes
           .stream()
           .map { dataplane: Dataplane -> toDataplaneRead(dataplane) }
           .collect(Collectors.toList()),
-      )
+    )
   }
 
-  fun toDataplaneRead(dataplane: Dataplane): DataplaneRead {
-    val dataplaneRead = DataplaneRead()
-    dataplaneRead
-      .dataplaneId(dataplane.id)
-      .name(dataplane.name)
-      .dataplaneGroupId(dataplane.dataplaneGroupId)
-      .enabled(dataplane.enabled)
-      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.createdAt), ZoneOffset.UTC))
-      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.updatedAt), ZoneOffset.UTC))
-
-    return dataplaneRead
-  }
+  fun toDataplaneRead(dataplane: Dataplane): DataplaneRead =
+    DataplaneRead(
+      dataplaneId = dataplane.id,
+      name = dataplane.name,
+      dataplaneGroupId = dataplane.dataplaneGroupId,
+      enabled = dataplane.enabled,
+      createdAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.createdAt), ZoneOffset.UTC),
+      updatedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.updatedAt), ZoneOffset.UTC),
+    )
 
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -188,12 +184,9 @@ open class DataplaneController(
         dataplaneTokenRequest.clientSecret,
       )
 
-    val accessToken = AccessToken()
-    accessToken.accessToken = token
-    return accessToken
+    return AccessToken(accessToken = token)
   }
 
-  @Post("/initialize")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -220,20 +213,21 @@ open class DataplaneController(
 
     // TODO implement version based gating of dataplane based on airbyte version here
 
-    val resp = DataplaneInitResponse()
-    resp.dataplaneName = dataplane.name
-    resp.dataplaneId = dataplane.id
-    resp.dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
-    resp.dataplaneGroupName = dataplaneGroup.name
-    resp.dataplaneGroupId = dataplaneGroup.id
-    resp.organizationId = dataplaneGroup.organizationId
+    val resp =
+      DataplaneInitResponse(
+        dataplaneName = dataplane.name,
+        dataplaneId = dataplane.id,
+        dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled,
+        dataplaneGroupName = dataplaneGroup.name,
+        dataplaneGroupId = dataplaneGroup.id,
+        organizationId = dataplaneGroup.organizationId,
+      )
 
     reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_INITIALIZE, dataplane, dataplaneGroup, dataplaneVersion = xAirbyteVersion)
 
     return resp
   }
 
-  @Post("/heartbeat")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -266,14 +260,14 @@ open class DataplaneController(
       dataplaneVersion = xAirbyteVersion,
     )
 
-    return DataplaneHeartbeatResponse().apply {
-      dataplaneName = dataplane.name
-      dataplaneId = dataplane.id
-      dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
-      dataplaneGroupName = dataplaneGroup.name
-      dataplaneGroupId = dataplaneGroup.id
-      organizationId = dataplaneGroup.organizationId
-    }
+    return DataplaneHeartbeatResponse(
+      dataplaneName = dataplane.name,
+      dataplaneId = dataplane.id,
+      dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled,
+      dataplaneGroupName = dataplaneGroup.name,
+      dataplaneGroupId = dataplaneGroup.id,
+      organizationId = dataplaneGroup.organizationId,
+    )
   }
 
   private fun reportDataplaneMetric(
@@ -309,14 +303,13 @@ open class DataplaneController(
     entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 
-  @Post("/health")
   @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  fun listDataplaneHealth(
+  override fun listDataplaneHealth(
     @Body request: OrganizationIdRequestBody,
   ): DataplaneHealthListResponse {
     entitlementService.ensureEntitled(OrganizationId(request.organizationId), SelfManagedRegionsEntitlement)
@@ -334,22 +327,22 @@ open class DataplaneController(
         val dataplane = dataplaneMap[healthInfo.dataplaneId]!!
         val dataplaneGroup = dataplaneGroupMap[dataplane.dataplaneGroupId]!!
 
-        DataplaneHealthRead()
-          .dataplaneId(healthInfo.dataplaneId)
-          .dataplaneName(dataplane.name)
-          .dataplaneGroupId(dataplane.dataplaneGroupId)
-          .organizationId(dataplaneGroup.organizationId)
-          .status(DataplaneHealthRead.StatusEnum.fromValue(healthInfo.status.name))
-          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp?.toInstant()?.toEpochMilli())
-          .recentHeartbeats(
+        DataplaneHealthRead(
+          dataplaneId = healthInfo.dataplaneId,
+          dataplaneName = dataplane.name,
+          dataplaneGroupId = dataplane.dataplaneGroupId,
+          organizationId = dataplaneGroup.organizationId,
+          status = DataplaneHealthRead.Status.entries.first { it.value == healthInfo.status.name },
+          lastHeartbeatTimestamp = healthInfo.lastHeartbeatTimestamp?.toInstant()?.toEpochMilli(),
+          recentHeartbeats =
             healthInfo.recentHeartbeats.map { hb ->
-              HeartbeatRecord()
-                .timestamp(hb.timestamp.toInstant().toEpochMilli())
+              HeartbeatRecord(timestamp = hb.timestamp.toInstant().toEpochMilli())
             },
-          ).controlPlaneVersion(healthInfo.controlPlaneVersion)
-          .dataplaneVersion(healthInfo.dataplaneVersion)
+          controlPlaneVersion = healthInfo.controlPlaneVersion,
+          dataplaneVersion = healthInfo.dataplaneVersion,
+        )
       }
 
-    return DataplaneHealthListResponse().dataplanes(dataplaneHealthReads)
+    return DataplaneHealthListResponse(dataplanes = dataplaneHealthReads)
   }
 }

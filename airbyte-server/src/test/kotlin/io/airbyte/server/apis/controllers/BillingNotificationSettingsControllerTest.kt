@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.BillingNotificationSettingsUpdateRequestBody
-import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.api.server.generated.models.BillingNotificationSettingsUpdateRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
@@ -19,14 +19,15 @@ class BillingNotificationSettingsControllerTest {
   fun `billing notification settings are unavailable in OSS`() {
     val organizationId = UUID.randomUUID()
     assertThrows<ApiNotImplementedInOssProblem> {
-      controller.getBillingNotificationSettings(OrganizationIdRequestBody().organizationId(organizationId))
+      controller.getBillingNotificationSettings(OrganizationIdRequestBody(organizationId = organizationId))
     }
     assertThrows<ApiNotImplementedInOssProblem> {
       controller.updateBillingNotificationSettings(
-        BillingNotificationSettingsUpdateRequestBody()
-          .organizationId(organizationId)
-          .syncCreditThreshold(BigDecimal.ONE)
-          .invoiceAmountThreshold(BigDecimal.TEN),
+        BillingNotificationSettingsUpdateRequestBody(
+          organizationId = organizationId,
+          syncCreditThreshold = BigDecimal.ONE,
+          invoiceAmountThreshold = BigDecimal.TEN,
+        ),
       )
     }
   }

@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.DataplaneGroupCreateRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupListRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
+import io.airbyte.api.server.generated.models.DataplaneGroupCreateRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupUpdateRequestBody
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
@@ -46,8 +46,11 @@ class DataplaneGroupApiControllerTest {
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns createDataplaneGroup()
     every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
-    val dataplaneGroup = dataplaneGroupApiController.createDataplaneGroup(DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID))
-    val responseDataplaneGroups = dataplaneGroup!!
+    val dataplaneGroup =
+      dataplaneGroupApiController.createDataplaneGroup(
+        DataplaneGroupCreateRequestBody(organizationId = MOCK_ORGANIZATION_ID, name = "test", enabled = true),
+      )
+    val responseDataplaneGroups = dataplaneGroup
 
     assert(responseDataplaneGroups.organizationId == MOCK_ORGANIZATION_ID)
   }
@@ -57,7 +60,7 @@ class DataplaneGroupApiControllerTest {
     every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
-    val dataplaneGroupCreateRequestBody = DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID)
+    val dataplaneGroupCreateRequestBody = DataplaneGroupCreateRequestBody(organizationId = MOCK_ORGANIZATION_ID, name = "test", enabled = true)
 
     assertThrows<DataplaneGroupNameAlreadyExistsProblem> {
       dataplaneGroupApiController.createDataplaneGroup(dataplaneGroupCreateRequestBody)
@@ -82,10 +85,11 @@ class DataplaneGroupApiControllerTest {
 
     val updatedDataplaneGroup =
       dataplaneGroupApiController.updateDataplaneGroup(
-        DataplaneGroupUpdateRequestBody()
-          .dataplaneGroupId(mockDataplaneGroup.id)
-          .name(newName)
-          .enabled(newEnabled),
+        DataplaneGroupUpdateRequestBody(
+          dataplaneGroupId = mockDataplaneGroup.id,
+          name = newName,
+          enabled = newEnabled,
+        ),
       )
     val responseDataplaneGroups = updatedDataplaneGroup
 
@@ -104,7 +108,7 @@ class DataplaneGroupApiControllerTest {
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
     assertThrows<DataplaneGroupNameAlreadyExistsProblem> {
-      dataplaneGroupApiController.updateDataplaneGroup(DataplaneGroupUpdateRequestBody().dataplaneGroupId(mockDataplaneGroup.id))
+      dataplaneGroupApiController.updateDataplaneGroup(DataplaneGroupUpdateRequestBody(dataplaneGroupId = mockDataplaneGroup.id))
     }
   }
 
@@ -125,9 +129,7 @@ class DataplaneGroupApiControllerTest {
 
     val updated =
       dataplaneGroupApiController.updateDataplaneGroup(
-        DataplaneGroupUpdateRequestBody()
-          .dataplaneGroupId(mockDataplaneGroup.id)
-          .name(newName),
+        DataplaneGroupUpdateRequestBody(dataplaneGroupId = mockDataplaneGroup.id, name = newName),
       )
 
     assert(updated.name == newName)
@@ -151,9 +153,7 @@ class DataplaneGroupApiControllerTest {
 
     val updated =
       dataplaneGroupApiController.updateDataplaneGroup(
-        DataplaneGroupUpdateRequestBody()
-          .dataplaneGroupId(mockDataplaneGroup.id)
-          .enabled(newEnabled),
+        DataplaneGroupUpdateRequestBody(dataplaneGroupId = mockDataplaneGroup.id, enabled = newEnabled),
       )
 
     assert(updated.enabled == newEnabled)
@@ -182,7 +182,7 @@ class DataplaneGroupApiControllerTest {
     every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneGroupDeleteRequestBody =
-      DataplaneGroupDeleteRequestBody().dataplaneGroupId(mockDataplaneGroup.id)
+      DataplaneGroupDeleteRequestBody(dataplaneGroupId = mockDataplaneGroup.id)
 
     dataplaneGroupApiController.deleteDataplaneGroup(dataplaneGroupDeleteRequestBody)
 
@@ -213,9 +213,9 @@ class DataplaneGroupApiControllerTest {
       )
     every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
-    val dataplaneGroups = dataplaneGroupApiController.listDataplaneGroups(DataplaneGroupListRequestBody().organizationId(MOCK_ORGANIZATION_ID))
+    val dataplaneGroups = dataplaneGroupApiController.listDataplaneGroups(DataplaneGroupListRequestBody(organizationId = MOCK_ORGANIZATION_ID))
 
-    val responseDataplaneGroups = dataplaneGroups?.dataplaneGroups!!
+    val responseDataplaneGroups = dataplaneGroups.dataplaneGroups!!
     assert(responseDataplaneGroups.size == 2)
     assert(responseDataplaneGroups[0].dataplaneGroupId == dataplaneGroupId1)
     assert(responseDataplaneGroups[1].dataplaneGroupId == dataplaneGroupId2)

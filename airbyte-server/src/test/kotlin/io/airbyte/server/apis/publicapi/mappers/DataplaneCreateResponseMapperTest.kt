@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.DataplaneCreateResponse
+import io.airbyte.api.server.generated.models.DataplaneCreateResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -13,12 +13,12 @@ class DataplaneCreateResponseMapperTest {
   @Test
   fun `Should map a DataplaneCreateResponse from the DataplaneService to a DataplaneCreateResponseBody in the public API`() {
     val dataplaneCreateResponse =
-      DataplaneCreateResponse().apply {
-        regionId = UUID.randomUUID()
-        dataplaneId = UUID.randomUUID()
-        clientId = UUID.randomUUID().toString()
-        clientSecret = UUID.randomUUID().toString()
-      }
+      DataplaneCreateResponse(
+        regionId = UUID.randomUUID(),
+        dataplaneId = UUID.randomUUID(),
+        clientId = UUID.randomUUID().toString(),
+        clientSecret = UUID.randomUUID().toString(),
+      )
 
     val mapped = DataplaneCreateResponseMapper.from(dataplaneCreateResponse)!!
 

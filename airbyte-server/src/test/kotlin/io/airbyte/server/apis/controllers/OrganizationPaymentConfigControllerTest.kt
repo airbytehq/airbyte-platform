@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.OrganizationPaymentConfigUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.api.server.generated.models.OrganizationPaymentConfigUpdateRequestBody
 import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.kotest.assertions.throwables.shouldThrow
@@ -40,10 +40,10 @@ class OrganizationPaymentConfigControllerTest {
     every { organizationPaymentConfigService.findByOrganizationId(orgId) } returns null
     shouldThrow<ResourceNotFoundProblem> {
       controller.updateOrganizationPaymentConfig(
-        OrganizationPaymentConfigUpdateRequestBody()
-          .organizationId(
-            orgId,
-          ).paymentStatus(OrganizationPaymentConfigUpdateRequestBody.PaymentStatusEnum.MANUAL),
+        OrganizationPaymentConfigUpdateRequestBody(
+          organizationId = orgId,
+          paymentStatus = OrganizationPaymentConfigUpdateRequestBody.PaymentStatus.MANUAL,
+        ),
       )
     }
   }

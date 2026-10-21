@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdRequestBody
-import io.airbyte.api.model.generated.OrganizationIsEntitledRequestBody
-import io.airbyte.api.model.generated.UpdateOrganizationEntitlementPlanRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.models.GetEntitlementsByOrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIsEntitledRequestBody
+import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.domain.models.OrganizationId
@@ -40,7 +40,7 @@ class EntitlementsApiControllerTest {
 
   @Test
   fun testCheckEntitlement() {
-    val requestBody = OrganizationIsEntitledRequestBody().organizationId(organizationId).featureId(featureId)
+    val requestBody = OrganizationIsEntitledRequestBody(organizationId = organizationId, featureId = featureId)
     val entitlementResult = EntitlementResult(featureId, true, null)
 
     every { entitlementService.checkEntitlement(OrganizationId(organizationId), any()) } returns entitlementResult
@@ -48,14 +48,14 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.checkEntitlement(requestBody)
 
     assertNotNull(result)
-    assertEquals(featureId, result!!.featureId)
+    assertEquals(featureId, result.featureId)
     assertEquals(true, result.isEntitled)
     verify(exactly = 1) { entitlementService.checkEntitlement(OrganizationId(organizationId), any()) }
   }
 
   @Test
   fun testCheckEntitlementThrowsOnUnknownEntitlement() {
-    val requestBody = OrganizationIsEntitledRequestBody().organizationId(organizationId).featureId("not-a-featuer")
+    val requestBody = OrganizationIsEntitledRequestBody(organizationId = organizationId, featureId = "not-a-featuer")
     val entitlementResult = EntitlementResult(featureId, true, null)
 
     every { entitlementService.checkEntitlement(OrganizationId(organizationId), any()) } returns entitlementResult
@@ -65,7 +65,7 @@ class EntitlementsApiControllerTest {
 
   @Test
   fun testGetEntitlementsSucceedsWhenValidationPasses() {
-    val requestBody = GetEntitlementsByOrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = GetEntitlementsByOrganizationIdRequestBody(organizationId = organizationId)
     val entitlementResults =
       listOf(
         EntitlementResult("feature1", true, null),
@@ -80,7 +80,7 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.getEntitlements(requestBody)
 
     assertNotNull(result)
-    assertEquals(3, result!!.entitlements.size)
+    assertEquals(3, result.entitlements.size)
 
     val firstEntitlement = result.entitlements[0]
     assertEquals("feature1", firstEntitlement.featureId)
@@ -104,7 +104,7 @@ class EntitlementsApiControllerTest {
 
   @Test
   fun testGetEntitlementsReturnsEmptyListWhenValidationFails() {
-    val requestBody = GetEntitlementsByOrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = GetEntitlementsByOrganizationIdRequestBody(organizationId = organizationId)
     val forbiddenException = ForbiddenProblem()
 
     // Mock validation to fail
@@ -113,14 +113,14 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.getEntitlements(requestBody)
 
     assertNotNull(result)
-    assertEquals(0, result!!.entitlements.size) // Should return empty list instead of throwing
+    assertEquals(0, result.entitlements.size) // Should return empty list instead of throwing
     verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
     verify(exactly = 0) { entitlementService.getEntitlements(any()) } // Should not call service
   }
 
   @Test
   fun testGetEntitlementsWithEmptyResults() {
-    val requestBody = GetEntitlementsByOrganizationIdRequestBody().organizationId(organizationId)
+    val requestBody = GetEntitlementsByOrganizationIdRequestBody(organizationId = organizationId)
 
     // Mock validation to succeed
     every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
@@ -129,7 +129,7 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.getEntitlements(requestBody)
 
     assertNotNull(result)
-    assertEquals(0, result!!.entitlements.size)
+    assertEquals(0, result.entitlements.size)
 
     verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
     verify(exactly = 1) { entitlementService.getEntitlements(OrganizationId(organizationId)) }
@@ -146,9 +146,10 @@ class EntitlementsApiControllerTest {
   fun testUpdateOrganizationEntitlementPlanIsNotImplementedInOss() {
     assertThrows<ApiNotImplementedInOssProblem> {
       entitlementsApiController.updateOrganizationEntitlementPlan(
-        UpdateOrganizationEntitlementPlanRequestBody()
-          .organizationId(organizationId)
-          .planName(UpdateOrganizationEntitlementPlanRequestBody.PlanNameEnum.PRO),
+        UpdateOrganizationEntitlementPlanRequestBody(
+          organizationId = organizationId,
+          planName = UpdateOrganizationEntitlementPlanRequestBody.PlanName.PRO,
+        ),
       )
     }
   }

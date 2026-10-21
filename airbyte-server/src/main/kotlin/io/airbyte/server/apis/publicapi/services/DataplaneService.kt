@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.DataplaneCreateResponse
+import io.airbyte.api.server.generated.models.DataplaneCreateResponse
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
@@ -109,11 +109,12 @@ class DataplaneServiceImpl(
         {
           runCatching {
             val dataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(newDataplane)
-            DataplaneCreateResponse()
-              .regionId(dataplaneWithServiceAccount.dataplane.dataplaneGroupId)
-              .dataplaneId(dataplaneWithServiceAccount.dataplane.id)
-              .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
-              .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
+            DataplaneCreateResponse(
+              regionId = dataplaneWithServiceAccount.dataplane.dataplaneGroupId,
+              dataplaneId = dataplaneWithServiceAccount.dataplane.id,
+              clientId = dataplaneWithServiceAccount.serviceAccount.id.toString(),
+              clientSecret = dataplaneWithServiceAccount.serviceAccount.secret,
+            )
           }.onFailure {
             log.error(it) { "Error creating dataplane" }
             ConfigClientErrorHandler.handleError(it)

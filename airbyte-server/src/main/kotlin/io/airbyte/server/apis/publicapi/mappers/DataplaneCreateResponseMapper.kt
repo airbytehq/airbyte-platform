@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.DataplaneCreateResponse
+import io.airbyte.api.server.generated.models.DataplaneCreateResponse
 import io.airbyte.publicApi.server.generated.models.DataplaneCreateResponseBody
 
 object DataplaneCreateResponseMapper {

@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.EntitlementsApi
-import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdRequestBody
-import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdResponse
-import io.airbyte.api.model.generated.ListAllEntitlementPlansResponse
-import io.airbyte.api.model.generated.OrganizationIsEntitledRequestBody
-import io.airbyte.api.model.generated.OrganizationIsEntitledResponse
-import io.airbyte.api.model.generated.UpdateOrganizationEntitlementPlanRequestBody
-import io.airbyte.api.model.generated.UpdateOrganizationEntitlementPlanResponse
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.apis.EntitlementsApi
+import io.airbyte.api.server.generated.models.GetEntitlementsByOrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.GetEntitlementsByOrganizationIdResponse
+import io.airbyte.api.server.generated.models.ListAllEntitlementPlansResponse
+import io.airbyte.api.server.generated.models.OrganizationIsEntitledRequestBody
+import io.airbyte.api.server.generated.models.OrganizationIsEntitledResponse
+import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanRequestBody
+import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanResponse
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -23,23 +23,22 @@ import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.apis.execute
+import io.airbyte.server.apis.requireBody
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/entitlements")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class EntitlementsApiController(
   private val entitlementService: EntitlementService,
   private val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
 ) : EntitlementsApi {
-  @Post("/is_entitled")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -47,23 +46,24 @@ open class EntitlementsApiController(
     migration = RouteMigration.LEGACY,
   )
   override fun checkEntitlement(
-    @Body isEntitledRequestBody: OrganizationIsEntitledRequestBody,
-  ): OrganizationIsEntitledResponse? =
+    @Body isEntitledRequestBody: OrganizationIsEntitledRequestBody?,
+  ): OrganizationIsEntitledResponse =
     execute {
-      val orgId = OrganizationId(isEntitledRequestBody.organizationId)
-      val entitlementId = isEntitledRequestBody.featureId
+      val body = isEntitledRequestBody.requireBody()
+      val orgId = OrganizationId(body.organizationId)
+      val entitlementId = body.featureId
       val entitlement =
         Entitlements.fromId(entitlementId)
           ?: throw IllegalArgumentException("Unknown entitlementId: $entitlementId")
       val entitlementResult = entitlementService.checkEntitlement(orgId, entitlement)
 
-      OrganizationIsEntitledResponse()
-        .featureId(entitlementResult.featureId)
-        .isEntitled(entitlementResult.isEntitled)
-        .accessDeniedReason(entitlementResult.reason)
+      OrganizationIsEntitledResponse(
+        featureId = entitlementResult.featureId,
+        isEntitled = entitlementResult.isEntitled,
+        accessDeniedReason = entitlementResult.reason,
+      )
     }
 
-  @Post("/get_entitlements")
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -71,10 +71,10 @@ open class EntitlementsApiController(
     migration = RouteMigration.LEGACY,
   )
   override fun getEntitlements(
-    @Body getEntitlementsByOrganizationIdRequestBody: GetEntitlementsByOrganizationIdRequestBody,
-  ): GetEntitlementsByOrganizationIdResponse? =
+    @Body getEntitlementsByOrganizationIdRequestBody: GetEntitlementsByOrganizationIdRequestBody?,
+  ): GetEntitlementsByOrganizationIdResponse =
     execute {
-      val orgId = OrganizationId(getEntitlementsByOrganizationIdRequestBody.organizationId)
+      val orgId = OrganizationId(getEntitlementsByOrganizationIdRequestBody.requireBody().organizationId)
 
       try {
         // Validate organization access (organization member OR workspace access)
@@ -82,35 +82,33 @@ open class EntitlementsApiController(
 
         val result = entitlementService.getEntitlements(orgId)
 
-        GetEntitlementsByOrganizationIdResponse()
-          .entitlements(
+        GetEntitlementsByOrganizationIdResponse(
+          entitlements =
             result.map {
-              OrganizationIsEntitledResponse()
-                .featureId(it.featureId)
-                .featureName(it.featureName)
-                .isEntitled(it.isEntitled)
-                .accessDeniedReason(it.reason)
-                .value(it.value)
-                .isUnlimited(it.isUnlimited)
+              OrganizationIsEntitledResponse(
+                featureId = it.featureId,
+                featureName = it.featureName,
+                isEntitled = it.isEntitled,
+                accessDeniedReason = it.reason,
+                value = it.value,
+                isUnlimited = it.isUnlimited,
+              )
             },
-          )
+        )
       } catch (e: ForbiddenProblem) {
         // User doesn't have access to this organization, return empty entitlements list
-        GetEntitlementsByOrganizationIdResponse()
-          .entitlements(emptyList())
+        GetEntitlementsByOrganizationIdResponse(entitlements = emptyList())
       }
     }
 
-  @Post("/list_plans")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  override fun listAllEntitlementPlans(): ListAllEntitlementPlansResponse? = throw ApiNotImplementedInOssProblem()
+  override fun listAllEntitlementPlans(): ListAllEntitlementPlansResponse = throw ApiNotImplementedInOssProblem()
 
-  @Post("/update_plan")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -119,5 +117,5 @@ open class EntitlementsApiController(
   )
   override fun updateOrganizationEntitlementPlan(
     @Body updateOrganizationEntitlementPlanRequestBody: UpdateOrganizationEntitlementPlanRequestBody,
-  ): UpdateOrganizationEntitlementPlanResponse? = throw ApiNotImplementedInOssProblem()
+  ): UpdateOrganizationEntitlementPlanResponse = throw ApiNotImplementedInOssProblem()
 }

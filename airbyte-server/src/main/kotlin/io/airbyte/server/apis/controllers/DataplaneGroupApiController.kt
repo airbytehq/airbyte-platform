@@ -4,15 +4,15 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.DataplaneGroupApi
-import io.airbyte.api.model.generated.DataplaneGroupCreateRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupListRequestBody
-import io.airbyte.api.model.generated.DataplaneGroupListResponse
-import io.airbyte.api.model.generated.DataplaneGroupRead
-import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
-import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
+import io.airbyte.api.server.generated.apis.DataplaneGroupApi
+import io.airbyte.api.server.generated.models.DataplaneGroupCreateRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneGroupListResponse
+import io.airbyte.api.server.generated.models.DataplaneGroupRead
+import io.airbyte.api.server.generated.models.DataplaneGroupUpdateRequestBody
+import io.airbyte.api.server.generated.models.DataplaneRead
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.auth.generated.Intent
@@ -33,7 +33,6 @@ import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
@@ -42,7 +41,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-@Controller("/api/v1/dataplane_group")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DataplaneGroupApiController(
@@ -50,7 +49,6 @@ class DataplaneGroupApiController(
   protected val dataplaneService: DataplaneService,
   private val entitlementService: EntitlementService,
 ) : DataplaneGroupApi {
-  @Post("/create")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -59,7 +57,7 @@ class DataplaneGroupApiController(
   )
   override fun createDataplaneGroup(
     @Body dataplaneGroupCreateRequestBody: DataplaneGroupCreateRequestBody,
-  ): DataplaneGroupRead? {
+  ): DataplaneGroupRead {
     entitlementService.ensureEntitled(OrganizationId(dataplaneGroupCreateRequestBody.organizationId), SelfManagedRegionsEntitlement)
     val createdDataplaneGroup =
       DataplaneGroup().apply {
@@ -70,7 +68,6 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(createdDataplaneGroup))
   }
 
-  @Post("/update")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -92,7 +89,6 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
   }
 
-  @Post("/delete")
   @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -101,7 +97,7 @@ class DataplaneGroupApiController(
   )
   override fun deleteDataplaneGroup(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
-  ): DataplaneGroupRead? {
+  ): DataplaneGroupRead {
     ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneGroupDeleteRequestBody.dataplaneGroupId))
     val deletedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupDeleteRequestBody.dataplaneGroupId)
     val tombstonedGroup =
@@ -114,7 +110,6 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))
   }
 
-  @Post("/list")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -123,7 +118,7 @@ class DataplaneGroupApiController(
   )
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,
-  ): DataplaneGroupListResponse? {
+  ): DataplaneGroupListResponse {
     val organizationId = dataplaneGroupListRequestBody.organizationId
 
     // Build list of organization IDs to query based on entitlements
@@ -159,37 +154,34 @@ class DataplaneGroupApiController(
         false,
       )
 
-    return DataplaneGroupListResponse()
-      .dataplaneGroups(
+    return DataplaneGroupListResponse(
+      dataplaneGroups =
         dataplaneGroups.map { dataplaneGroup ->
           this.toDataplaneGroupRead(dataplaneGroup)
         },
-      )
+    )
   }
 
-  private fun toDataplaneGroupRead(dataplaneGroup: DataplaneGroup): DataplaneGroupRead {
-    val dataplaneGroupRead = DataplaneGroupRead()
-    dataplaneGroupRead
-      .dataplaneGroupId(dataplaneGroup.id)
-      .name(dataplaneGroup.name)
-      .organizationId(dataplaneGroup.organizationId)
-      .enabled(dataplaneGroup.enabled)
-      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.createdAt), ZoneOffset.UTC))
-      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.updatedAt), ZoneOffset.UTC))
-      .dataplanes(
+  private fun toDataplaneGroupRead(dataplaneGroup: DataplaneGroup): DataplaneGroupRead =
+    DataplaneGroupRead(
+      dataplaneGroupId = dataplaneGroup.id,
+      name = dataplaneGroup.name,
+      organizationId = dataplaneGroup.organizationId,
+      enabled = dataplaneGroup.enabled,
+      createdAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.createdAt), ZoneOffset.UTC),
+      updatedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplaneGroup.updatedAt), ZoneOffset.UTC),
+      dataplanes =
         dataplaneService.listDataplanes(dataplaneGroup.id).map {
-          DataplaneRead().apply {
-            dataplaneId = it.id
-            dataplaneGroupId = it.dataplaneGroupId
-            name = it.name
-            enabled = it.enabled
-            createdAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.createdAt), ZoneOffset.UTC)
-            updatedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.updatedAt), ZoneOffset.UTC)
-          }
+          DataplaneRead(
+            dataplaneId = it.id,
+            dataplaneGroupId = it.dataplaneGroupId,
+            name = it.name,
+            enabled = it.enabled,
+            createdAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.createdAt), ZoneOffset.UTC),
+            updatedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(it.updatedAt), ZoneOffset.UTC),
+          )
         },
-      )
-    return dataplaneGroupRead
-  }
+    )
 
   private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {
     val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId.value))

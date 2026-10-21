@@ -25010,7 +25010,7 @@ components:
       properties:
         organization_id:
           type: string
-          format: UUID
+          format: uuid
         name:
           type: string
         enabled:
@@ -25214,7 +25214,7 @@ components:
       properties:
         dataplane_group_id:
           type: string
-          format: UUID
+          format: uuid
         name:
           type: string
         enabled:
@@ -25232,10 +25232,10 @@ components:
       properties:
         dataplane_id:
           type: string
-          format: UUID
+          format: uuid
         region_id:
           type: string
-          format: UUID
+          format: uuid
         client_id:
           type: string
         client_secret:
