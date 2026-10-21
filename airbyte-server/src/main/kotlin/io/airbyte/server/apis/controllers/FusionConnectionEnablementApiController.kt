@@ -4,66 +4,58 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.FusionConnectionEnablementApi
-import io.airbyte.api.model.generated.FusionConnectionEnablementCreate
-import io.airbyte.api.model.generated.FusionConnectionEnablementRead
-import io.airbyte.api.model.generated.FusionConnectionEnablementUpdate
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.api.server.generated.apis.FusionConnectionEnablementApi
+import io.airbyte.api.server.generated.models.FusionConnectionEnablementCreate
+import io.airbyte.api.server.generated.models.FusionConnectionEnablementRead
+import io.airbyte.api.server.generated.models.FusionConnectionEnablementUpdate
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Delete
-import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
-import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.Put
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 
-@Controller("/api/v1/connections/{connectionId}/enablement")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionConnectionEnablementApiController : FusionConnectionEnablementApi {
-  @Get
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getFusionConnectionEnablement(
-    @PathVariable connectionId: UUID,
+    @PathVariable("connectionId") connectionId: UUID,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
-  @Post
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun createFusionConnectionEnablement(
-    @PathVariable connectionId: UUID,
+    @PathVariable("connectionId") connectionId: UUID,
     @Body request: FusionConnectionEnablementCreate,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
-  @Put
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun updateFusionConnectionEnablement(
-    @PathVariable connectionId: UUID,
+    @PathVariable("connectionId") connectionId: UUID,
     @Body request: FusionConnectionEnablementUpdate,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 
-  @Delete
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun deleteFusionConnectionEnablement(
-    @PathVariable connectionId: UUID,
+    @PathVariable("connectionId") connectionId: UUID,
   ): FusionConnectionEnablementRead = throw ApiNotImplementedInOssProblem()
 }
