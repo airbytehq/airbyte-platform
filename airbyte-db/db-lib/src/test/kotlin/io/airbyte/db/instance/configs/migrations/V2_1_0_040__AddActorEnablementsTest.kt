@@ -8,6 +8,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.development.DevDatabaseMigrator
+import org.flywaydb.core.Flyway
 import org.jooq.exception.IntegrityConstraintViolationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -20,13 +21,20 @@ import java.util.UUID
 internal class V2_1_0_040__AddActorEnablementsTest : AbstractConfigsDatabaseTest() {
   @Test
   fun `defaults existing and new actors and constrains enablements without changing actor lifecycle`() {
+    // Stop at this migration: later ones drop the checks and columns it adds.
     val flyway =
-      FlywayFactory.create(
-        dataSource,
-        javaClass.simpleName,
-        ConfigsDatabaseMigrator.DB_IDENTIFIER,
-        ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
-      )
+      Flyway
+        .configure()
+        .configuration(
+          FlywayFactory
+            .create(
+              dataSource,
+              javaClass.simpleName,
+              ConfigsDatabaseMigrator.DB_IDENTIFIER,
+              ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
+            ).configuration,
+        ).target(V2_1_0_040__AddActorEnablements().version)
+        .load()
     DevDatabaseMigrator(ConfigsDatabaseMigrator(database!!, flyway), V2_1_0_039__AddMaxTotalCpuRequestToDataWorkerUsage().version).createBaseline()
     val ctx = dslContext!!
     val workspace = UUID.randomUUID()
