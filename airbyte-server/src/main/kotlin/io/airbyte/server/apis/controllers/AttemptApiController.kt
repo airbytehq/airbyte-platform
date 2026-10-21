@@ -4,17 +4,17 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.AttemptApi
-import io.airbyte.api.model.generated.AttemptInfoRead
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.CreateNewAttemptNumberRequest
-import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse
-import io.airbyte.api.model.generated.FailAttemptRequest
-import io.airbyte.api.model.generated.GetAttemptStatsRequestBody
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
-import io.airbyte.api.model.generated.SaveStatsRequestBody
-import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
+import io.airbyte.api.server.generated.apis.AttemptApi
+import io.airbyte.api.server.generated.models.AttemptInfoRead
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.CreateNewAttemptNumberRequest
+import io.airbyte.api.server.generated.models.CreateNewAttemptNumberResponse
+import io.airbyte.api.server.generated.models.FailAttemptRequest
+import io.airbyte.api.server.generated.models.GetAttemptStatsRequestBody
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.server.generated.models.SaveStatsRequestBody
+import io.airbyte.api.server.generated.models.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -23,21 +23,19 @@ import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
-import io.micronaut.http.MediaType
+import io.airbyte.server.apis.requireBody
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/attempt")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class AttemptApiController(
   private val attemptHandler: AttemptHandler,
   private val jobConverter: JobConverter,
 ) : AttemptApi {
-  @Post(uri = "/get_for_job", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @AuthorizeOperation(
@@ -46,7 +44,7 @@ class AttemptApiController(
   )
   override fun getAttemptForJob(
     @Body requestBody: GetAttemptStatsRequestBody,
-  ): AttemptInfoRead? =
+  ): AttemptInfoRead =
     execute {
       val attempt =
         attemptHandler.getAttemptForJob(
@@ -56,7 +54,6 @@ class AttemptApiController(
       jobConverter.getAttemptInfoRead(attempt)
     }
 
-  @Post(uri = "/create_new_attempt_number", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.ADMIN)
   @AuthorizeOperation(
@@ -65,9 +62,8 @@ class AttemptApiController(
   )
   override fun createNewAttemptNumber(
     @Body requestBody: CreateNewAttemptNumberRequest,
-  ): CreateNewAttemptNumberResponse? = execute { attemptHandler.createNewAttemptNumber(requestBody.jobId) }
+  ): CreateNewAttemptNumberResponse = execute { attemptHandler.createNewAttemptNumber(requestBody.jobId) }
 
-  @Post(uri = "/get_combined_stats", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @AuthorizeOperation(
@@ -76,7 +72,7 @@ class AttemptApiController(
   )
   override fun getAttemptCombinedStats(
     @Body requestBody: GetAttemptStatsRequestBody,
-  ): AttemptStats? =
+  ): AttemptStats =
     execute {
       attemptHandler.getAttemptCombinedStats(
         requestBody.jobId,
@@ -84,7 +80,6 @@ class AttemptApiController(
       )
     }
 
-  @Post(uri = "/save_stats", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -92,19 +87,17 @@ class AttemptApiController(
   )
   override fun saveStats(
     @Body requestBody: SaveStatsRequestBody,
-  ): InternalOperationResult? = execute { attemptHandler.saveStats(requestBody) }
+  ): InternalOperationResult = execute { attemptHandler.saveStats(requestBody) }
 
-  @Post(uri = "/save_stream_metadata", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun saveStreamMetadata(
-    @Body requestBody: SaveStreamAttemptMetadataRequestBody,
-  ): InternalOperationResult? = execute { attemptHandler.saveStreamMetadata(requestBody) }
+    @Body requestBody: SaveStreamAttemptMetadataRequestBody?,
+  ): InternalOperationResult = execute { attemptHandler.saveStreamMetadata(requestBody.requireBody()) }
 
-  @Post(uri = "/save_sync_config", processes = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -113,9 +106,8 @@ class AttemptApiController(
   )
   override fun saveSyncConfig(
     @Body requestBody: SaveAttemptSyncConfigRequestBody,
-  ): InternalOperationResult? = execute { attemptHandler.saveSyncConfig(requestBody) }
+  ): InternalOperationResult = execute { attemptHandler.saveSyncConfig(requestBody) }
 
-  @Post(uri = "/fail", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Secured(AuthRoleConstants.ADMIN)
   @AuthorizeOperation(

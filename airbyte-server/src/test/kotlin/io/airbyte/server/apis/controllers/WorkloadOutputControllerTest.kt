@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.WorkloadOutputWriteRequest
+import io.airbyte.api.server.generated.models.WorkloadOutputWriteRequest
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.workload.repository.domain.Workload
@@ -61,9 +61,7 @@ class WorkloadOutputControllerTest {
     output: String,
   ) {
     val req =
-      WorkloadOutputWriteRequest()
-        .workloadId(workloadId)
-        .output(output)
+      WorkloadOutputWriteRequest(workloadId = workloadId, output = output)
 
     controller.writeWorkloadOutput(req)
 
@@ -75,9 +73,7 @@ class WorkloadOutputControllerTest {
     val exception = RuntimeException("bang")
     every { storageClient.write(any(), any()) } throws exception
     val req =
-      WorkloadOutputWriteRequest()
-        .workloadId("")
-        .output("")
+      WorkloadOutputWriteRequest(workloadId = "", output = "")
 
     assertThrows<RuntimeException> { controller.writeWorkloadOutput(req) }
   }

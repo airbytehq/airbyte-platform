@@ -255,9 +255,9 @@ class WebBackendConnectionsHandler(
 
     webBackendConnectionRead.isSyncing = latestRunningSyncJob.isPresent
 
-    latestSyncJob.ifPresent { job: JobRead ->
+    latestSyncJob.ifPresent { job: io.airbyte.api.server.generated.models.JobRead ->
       webBackendConnectionRead.latestSyncJobCreatedAt = job.createdAt
-      webBackendConnectionRead.latestSyncJobStatus = job.status
+      webBackendConnectionRead.latestSyncJobStatus = job.status.convertTo<io.airbyte.api.model.generated.JobStatus>()
     }
 
     val mostRecentFetchEvent =

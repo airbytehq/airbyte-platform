@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.CheckDataWorkerCapacityRead
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
+import io.airbyte.api.server.generated.models.CheckDataWorkerCapacityRead
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.JobSuccessWithAttemptNumberRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
@@ -139,11 +139,12 @@ class JobsHandlerTest {
   @ValueSource(booleans = [true, false])
   fun jobSuccessWithAttemptNumber(mergeStatsWithMetadata: Boolean) {
     val request =
-      JobSuccessWithAttemptNumberRequest()
-        .attemptNumber(attemptNumber)
-        .jobId(jobId)
-        .connectionId(connectionId)
-        .standardSyncOutput(standardSyncOutput)
+      JobSuccessWithAttemptNumberRequest(
+        attemptNumber = attemptNumber,
+        jobId = jobId,
+        connectionId = connectionId,
+        standardSyncOutput = standardSyncOutput,
+      )
 
     val job =
       Job(
@@ -184,11 +185,12 @@ class JobsHandlerTest {
   @Test
   fun resetJobNoNotification() {
     val request =
-      JobSuccessWithAttemptNumberRequest()
-        .attemptNumber(attemptNumber)
-        .jobId(jobId)
-        .connectionId(UUID.randomUUID())
-        .standardSyncOutput(standardSyncOutput)
+      JobSuccessWithAttemptNumberRequest(
+        attemptNumber = attemptNumber,
+        jobId = jobId,
+        connectionId = UUID.randomUUID(),
+        standardSyncOutput = standardSyncOutput,
+      )
 
     val job = Job(jobId, JobConfig.ConfigType.RESET_CONNECTION, "", simpleConfig, listOf(), JobStatus.SUCCEEDED, 0L, 0, 0, true)
     whenever(jobPersistence.getJob(jobId)).thenReturn(job)
@@ -205,11 +207,12 @@ class JobsHandlerTest {
 
     assertThatThrownBy {
       jobsHandler.jobSuccessWithAttemptNumber(
-        JobSuccessWithAttemptNumberRequest()
-          .attemptNumber(attemptNumber)
-          .jobId(jobId)
-          .connectionId(connectionId)
-          .standardSyncOutput(standardSyncOutput),
+        JobSuccessWithAttemptNumberRequest(
+          attemptNumber = attemptNumber,
+          jobId = jobId,
+          connectionId = connectionId,
+          standardSyncOutput = standardSyncOutput,
+        ),
       )
     }.isInstanceOf(RuntimeException::class.java)
       .hasCauseInstanceOf(IOException::class.java)
@@ -294,7 +297,7 @@ class JobsHandlerTest {
 
     val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
 
-    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(true).useOnDemandCapacity(true), result)
+    assertEquals(CheckDataWorkerCapacityRead(capacityAvailable = true, useOnDemandCapacity = true), result)
     verify(dataWorkerCapacityService).checkCapacityAndReserve(
       OrganizationId(organizationId),
       job,
@@ -325,7 +328,7 @@ class JobsHandlerTest {
 
     val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
 
-    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(true).useOnDemandCapacity(false), result)
+    assertEquals(CheckDataWorkerCapacityRead(capacityAvailable = true, useOnDemandCapacity = false), result)
     verify(connectionService, never()).getStandardSync(any())
     verify(dataWorkerCapacityService, never()).checkCapacityAndReserve(any(), any(), any(), any())
     verify(jobPersistence, never()).updateSyncJobOnDemandCapacity(any(), any())
@@ -368,7 +371,7 @@ class JobsHandlerTest {
   @Test
   fun testReportJobStart() {
     val result = jobsHandler.reportJobStart(5L)
-    assertEquals(InternalOperationResult().succeeded(true), result)
+    assertEquals(InternalOperationResult(succeeded = true), result)
     verify(helper).reportJobStart(5L)
   }
 
@@ -376,7 +379,7 @@ class JobsHandlerTest {
   fun testSetJobQueued() {
     val result = jobsHandler.setJobQueued(5L)
 
-    assertEquals(InternalOperationResult().succeeded(true), result)
+    assertEquals(InternalOperationResult(succeeded = true), result)
     verify(helper).setJobQueued(5L)
   }
 
@@ -384,7 +387,7 @@ class JobsHandlerTest {
   fun testCancelQueuedJob() {
     val result = jobsHandler.cancelQueuedJob(5L)
 
-    assertEquals(InternalOperationResult().succeeded(true), result)
+    assertEquals(InternalOperationResult(succeeded = true), result)
     verify(helper).cancelQueuedJob(5L)
   }
 

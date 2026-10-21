@@ -52,6 +52,7 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
@@ -421,7 +422,8 @@ open class ConnectionApiController(
   ): ConnectionSyncProgressRead? =
     execute {
       jobHistoryHandler.getConnectionSyncProgress(
-        connectionIdRequestBody,
+        io.airbyte.api.server.generated.models
+          .ConnectionIdRequestBody(connectionId = connectionIdRequestBody.connectionId),
       )
     }
 
@@ -474,7 +476,9 @@ open class ConnectionApiController(
   )
   override fun syncConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
-  ): JobInfoRead? = execute { schedulerHandler.syncConnection(connectionIdRequestBody) }
+  ): JobInfoRead? =
+    // TODO: SchedulerHandler returns the Kotlin JobInfoRead; drop these conversions when the connection API moves to Kotlin
+    execute { Jsons.convertValue(schedulerHandler.syncConnection(connectionIdRequestBody), JobInfoRead::class.java) }
 
   @Post(uri = "/reset")
   @Secured(
@@ -490,7 +494,7 @@ open class ConnectionApiController(
   )
   override fun resetConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
-  ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
+  ): JobInfoRead? = execute { Jsons.convertValue(schedulerHandler.resetConnection(connectionIdRequestBody), JobInfoRead::class.java) }
 
   @Post(uri = "/reset/stream")
   @Secured(
@@ -506,7 +510,7 @@ open class ConnectionApiController(
   )
   override fun resetConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
-  ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
+  ): JobInfoRead? = execute { Jsons.convertValue(schedulerHandler.resetConnectionStream(connectionStreamRequestBody), JobInfoRead::class.java) }
 
   @Post(uri = "/clear")
   @Secured(
@@ -522,7 +526,7 @@ open class ConnectionApiController(
   )
   override fun clearConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
-  ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
+  ): JobInfoRead? = execute { Jsons.convertValue(schedulerHandler.resetConnection(connectionIdRequestBody), JobInfoRead::class.java) }
 
   @Post(uri = "/clear/stream")
   @Secured(
@@ -538,7 +542,7 @@ open class ConnectionApiController(
   )
   override fun clearConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
-  ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
+  ): JobInfoRead? = execute { Jsons.convertValue(schedulerHandler.resetConnectionStream(connectionStreamRequestBody), JobInfoRead::class.java) }
 
   @Post(uri = "/apply_schema_change")
   @Secured(

@@ -12,8 +12,11 @@ import io.airbyte.api.model.generated.ConnectionSearch
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.ConnectionStreamRequestBody
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobStatus
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
@@ -191,7 +194,7 @@ internal class ConnectionApiControllerTest {
 
   @Test
   fun testSyncConnection() {
-    every { schedulerHandler.syncConnection(any()) } returns JobInfoRead() andThenThrows ConfigNotFoundException("", "")
+    every { schedulerHandler.syncConnection(any()) } returns sampleJobInfoRead() andThenThrows ConfigNotFoundException("", "")
 
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
     val result = connectionApiController.syncConnection(connectionIdRequestBody)
@@ -204,7 +207,7 @@ internal class ConnectionApiControllerTest {
 
   @Test
   fun testResetConnection() {
-    every { schedulerHandler.resetConnection(any()) } returns JobInfoRead() andThenThrows ConfigNotFoundException("", "")
+    every { schedulerHandler.resetConnection(any()) } returns sampleJobInfoRead() andThenThrows ConfigNotFoundException("", "")
 
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
     val result = connectionApiController.resetConnection(connectionIdRequestBody)
@@ -232,11 +235,29 @@ internal class ConnectionApiControllerTest {
         .connectionId(connectionId)
         .streams(listOf(connectionStream))
 
-    val expectedJobInfoRead = JobInfoRead()
+    val expectedJobInfoRead = sampleJobInfoRead()
 
     every { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) } returns expectedJobInfoRead
 
     val jobInfoRead = connectionApiController.resetConnectionStream(connectionStreamRequestBody)
-    Assertions.assertEquals(expectedJobInfoRead, jobInfoRead)
+    Assertions.assertEquals(
+      io.airbyte.commons.json.Jsons
+        .convertValue(expectedJobInfoRead, io.airbyte.api.model.generated.JobInfoRead::class.java),
+      jobInfoRead,
+    )
   }
+
+  private fun sampleJobInfoRead() =
+    JobInfoRead(
+      job =
+        JobRead(
+          id = 1L,
+          configType = JobConfigType.SYNC,
+          configId = UUID.randomUUID().toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        ),
+      attempts = emptyList(),
+    )
 }

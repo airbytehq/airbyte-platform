@@ -4,12 +4,13 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.AttemptRead
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.AttemptStreamStats
-import io.airbyte.api.model.generated.JobAggregatedStats
-import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.api.model.generated.StreamStats
+import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.AttemptStreamStats
+import io.airbyte.api.server.generated.models.JobAggregatedStats
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.StreamStats
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler.StreamNameAndNamespace
@@ -19,7 +20,6 @@ import io.airbyte.config.SyncMode
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.validation.Valid
 import java.io.IOException
 import java.util.Optional
 import java.util.function.Consumer
@@ -137,68 +137,75 @@ object StatsAggregationHelper {
     return Optional.empty()
   }
 
+  /**
+   * Returns the job reads with their attempts hydrated with persisted stats, and, when
+   * [hydrateAggregatedStats] is set, the jobs hydrated with stats aggregated across attempts. The
+   * returned list is in the same order as [jobReads].
+   */
   @JvmStatic
   fun hydrateWithStats(
     jobReads: List<JobWithAttemptsRead>,
     jobs: List<Job>,
     hydrateAggregatedStats: Boolean,
     jobPersistence: JobPersistence,
-  ) {
-    val jobIds = jobReads.stream().map { r: JobWithAttemptsRead -> r.job.id }.toList()
+  ): List<JobWithAttemptsRead> {
+    val jobIds = jobReads.stream().map { r: JobWithAttemptsRead -> r.job!!.id }.toList()
     val attemptStats: Map<JobAttemptPair, JobPersistence.AttemptStats> = jobPersistence.getAttemptStats(jobIds)
 
     log.debug { "Attempt stats: $attemptStats" }
     val jobToStreamStats: MutableMap<Long, Map<StreamNameAndNamespace, MutableList<StreamSyncStats>>> = HashMap()
-    for (jwar in jobReads) {
-      val streamAttemptStats: MutableMap<StreamNameAndNamespace, MutableList<StreamSyncStats>> = HashMap()
-      jobToStreamStats.putIfAbsent(jwar.job.id, streamAttemptStats)
-      log.debug { "Hydrating job ${jwar.job.id}" }
-      for (attempt in jwar.attempts) {
-        val stat = attemptStats[JobAttemptPair(jwar.job.id, attempt.id.toInt())]
-        if (stat == null) {
-          log.debug { "Missing stats for job ${jwar.job.id} attempt ${attempt.id}" }
-          continue
-        }
+    val withAttemptStats =
+      jobReads.map { jwar ->
+        val jobId = jwar.job!!.id
+        val streamAttemptStats: MutableMap<StreamNameAndNamespace, MutableList<StreamSyncStats>> = HashMap()
+        jobToStreamStats.putIfAbsent(jobId, streamAttemptStats)
+        log.debug { "Hydrating job $jobId" }
+        val attempts =
+          jwar.attempts!!.map { attempt ->
+            val stat = attemptStats[JobAttemptPair(jobId, attempt.id.toInt())]
+            if (stat == null) {
+              log.debug { "Missing stats for job $jobId attempt ${attempt.id}" }
+              return@map attempt
+            }
 
-        hydrateWithStats(attempt, stat)
-        if (hydrateAggregatedStats) {
-          stat.perStreamStats.forEach(
-            Consumer { s: StreamSyncStats ->
-              val streamNameAndNamespace = StreamNameAndNamespace(s.streamName, s.streamNamespace)
-              streamAttemptStats.putIfAbsent(streamNameAndNamespace, ArrayList())
-              streamAttemptStats[streamNameAndNamespace]!!.add(s)
-            },
-          )
-        }
+            if (hydrateAggregatedStats) {
+              stat.perStreamStats.forEach(
+                Consumer { s: StreamSyncStats ->
+                  val streamNameAndNamespace = StreamNameAndNamespace(s.streamName, s.streamNamespace)
+                  streamAttemptStats.putIfAbsent(streamNameAndNamespace, ArrayList())
+                  streamAttemptStats[streamNameAndNamespace]!!.add(s)
+                },
+              )
+            }
+            hydrateWithStats(attempt, stat)
+          }
+        jwar.copy(attempts = attempts)
       }
+
+    if (!hydrateAggregatedStats) {
+      return withAttemptStats
     }
 
-    if (hydrateAggregatedStats) {
-      val jobToStreamSyncMode =
-        jobs
-          .stream()
-          .collect(
-            Collectors.toMap(
-              Function { j: Job -> j.id },
-              Function { job: Job -> JobHistoryHandler.getStreamsToSyncMode(job) },
-            ),
-          )
+    val jobToStreamSyncMode =
+      jobs
+        .stream()
+        .collect(
+          Collectors.toMap(
+            Function { j: Job -> j.id },
+            Function { job: Job -> JobHistoryHandler.getStreamsToSyncMode(job) },
+          ),
+        )
 
-      log.debug { "Job to stream sync mode: $jobToStreamSyncMode" }
-      jobReads.forEach(
-        Consumer { job: JobWithAttemptsRead ->
-          val streamToAttemptStats =
-            jobToStreamStats[job.job.id]!!
-          val streamToSyncMode = jobToStreamSyncMode[job.job.id]!!
-          hydrateWithAggregatedStats(job, streamToAttemptStats, streamToSyncMode)
-        },
-      )
+    log.debug { "Job to stream sync mode: $jobToStreamSyncMode" }
+    return withAttemptStats.map { job: JobWithAttemptsRead ->
+      val streamToAttemptStats = jobToStreamStats[job.job!!.id]!!
+      val streamToSyncMode = jobToStreamSyncMode[job.job!!.id]!!
+      job.copy(job = hydrateWithAggregatedStats(job.job!!, streamToAttemptStats, streamToSyncMode))
     }
   }
 
   /**
-   * Retrieve stats for a given job id and attempt number and hydrate the api model with the retrieved
-   * information.
+   * Returns the attempt hydrated with the given persisted stats.
    *
    * @param a the attempt to hydrate stats for.
    */
@@ -206,54 +213,56 @@ object StatsAggregationHelper {
   fun hydrateWithStats(
     a: AttemptRead,
     attemptStats: JobPersistence.AttemptStats,
-  ) {
-    a.totalStats = AttemptStats()
-
+  ): AttemptRead {
     val combinedStats =
       attemptStats.combinedStats
         ?: // If overall stats are missing, assume stream stats are also missing, since overall stats are
         // easier to produce than stream stats. Exit early.
-        return
-
-    a.totalStats
-      .estimatedBytes(combinedStats.estimatedBytes)
-      .estimatedRecords(combinedStats.estimatedRecords)
-      .bytesEmitted(combinedStats.bytesEmitted)
-      .recordsEmitted(combinedStats.recordsEmitted)
-      .recordsCommitted(combinedStats.recordsCommitted)
-      .recordsRejected(combinedStats.recordsRejected)
+        return a.copy(totalStats = AttemptStats())
 
     val streamStats =
       attemptStats.perStreamStats
         .stream()
         .map { s: StreamSyncStats ->
-          AttemptStreamStats()
-            .streamName(s.streamName)
-            .streamNamespace(s.streamNamespace)
-            .stats(
-              AttemptStats()
-                .bytesEmitted(s.stats.bytesEmitted)
-                .recordsEmitted(s.stats.recordsEmitted)
-                .recordsCommitted(s.stats.recordsCommitted)
-                .recordsRejected(s.stats.recordsRejected)
-                .estimatedBytes(s.stats.estimatedBytes)
-                .estimatedRecords(s.stats.estimatedRecords),
-            )
+          AttemptStreamStats(
+            streamName = s.streamName,
+            streamNamespace = s.streamNamespace,
+            stats =
+              AttemptStats(
+                bytesEmitted = s.stats.bytesEmitted,
+                recordsEmitted = s.stats.recordsEmitted,
+                recordsCommitted = s.stats.recordsCommitted,
+                recordsRejected = s.stats.recordsRejected,
+                estimatedBytes = s.stats.estimatedBytes,
+                estimatedRecords = s.stats.estimatedRecords,
+              ),
+          )
         }.collect(Collectors.toList())
-    a.streamStats = streamStats
+    return a.copy(
+      totalStats =
+        AttemptStats(
+          estimatedBytes = combinedStats.estimatedBytes,
+          estimatedRecords = combinedStats.estimatedRecords,
+          bytesEmitted = combinedStats.bytesEmitted,
+          recordsEmitted = combinedStats.recordsEmitted,
+          recordsCommitted = combinedStats.recordsCommitted,
+          recordsRejected = combinedStats.recordsRejected,
+        ),
+      streamStats = streamStats,
+    )
   }
 
   // WARNING!!!!! These stats are used for billing, be careful when changing this logic.
   private fun hydrateWithAggregatedStats(
-    job: JobWithAttemptsRead,
+    job: JobRead,
     streamToAttemptStats: Map<StreamNameAndNamespace, MutableList<StreamSyncStats>>,
     streamToSyncMode: Map<StreamNameAndNamespace, SyncMode>,
-  ) {
+  ): JobRead {
     val streamAggregatedStats: MutableList<StreamStatsRecord> = ArrayList()
     streamToSyncMode.keys.forEach(
       Consumer<StreamNameAndNamespace> { streamNameAndNamespace: StreamNameAndNamespace ->
         if (!streamToAttemptStats.containsKey(streamNameAndNamespace)) {
-          log.debug { "No stats have been persisted for job ${job.job.id} stream $streamNameAndNamespace." }
+          log.debug { "No stats have been persisted for job ${job.id} stream $streamNameAndNamespace." }
           return@Consumer
         }
         val streamStats: List<StreamSyncStats> = streamToAttemptStats[streamNameAndNamespace]!!
@@ -264,32 +273,35 @@ object StatsAggregationHelper {
       },
     )
 
-    val jobAggregatedStats = getJobAggregatedStats(streamAggregatedStats)
-    job.job.aggregatedStats = jobAggregatedStats
-    job.job.streamAggregatedStats =
-      streamAggregatedStats
-        .stream()
-        .map { s: StreamStatsRecord ->
-          StreamStats()
-            .streamName(s.streamName)
-            .streamNamespace(s.streamNamespace)
-            .recordsEmitted(s.recordsEmitted)
-            .bytesEmitted(s.bytesEmitted)
-            .recordsCommitted(s.recordsCommitted)
-            .bytesCommitted(s.bytesCommitted)
-            .recordsRejected(s.recordsRejected)
-            .wasBackfilled(s.wasBackfilled.orElse(null))
-            .wasResumed(s.wasResumed.orElse(null))
-        }.collect(Collectors.toList<@Valid StreamStats?>())
+    return job.copy(
+      aggregatedStats = getJobAggregatedStats(streamAggregatedStats),
+      streamAggregatedStats =
+        streamAggregatedStats
+          .stream()
+          .map { s: StreamStatsRecord ->
+            StreamStats(
+              streamName = s.streamName,
+              streamNamespace = s.streamNamespace,
+              recordsEmitted = s.recordsEmitted,
+              bytesEmitted = s.bytesEmitted,
+              recordsCommitted = s.recordsCommitted,
+              bytesCommitted = s.bytesCommitted,
+              recordsRejected = s.recordsRejected,
+              wasBackfilled = s.wasBackfilled.orElse(null),
+              wasResumed = s.wasResumed.orElse(null),
+            )
+          }.collect(Collectors.toList()),
+    )
   }
 
   private fun getJobAggregatedStats(streamStats: List<StreamStatsRecord>): JobAggregatedStats =
-    JobAggregatedStats()
-      .recordsEmitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsEmitted).sum())
-      .bytesEmitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesEmitted).sum())
-      .recordsCommitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsCommitted).sum())
-      .bytesCommitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesCommitted).sum())
-      .recordsRejected(streamStats.stream().mapToLong(StreamStatsRecord::recordsRejected).sum())
+    JobAggregatedStats(
+      recordsEmitted = streamStats.stream().mapToLong(StreamStatsRecord::recordsEmitted).sum(),
+      bytesEmitted = streamStats.stream().mapToLong(StreamStatsRecord::bytesEmitted).sum(),
+      recordsCommitted = streamStats.stream().mapToLong(StreamStatsRecord::recordsCommitted).sum(),
+      bytesCommitted = streamStats.stream().mapToLong(StreamStatsRecord::bytesCommitted).sum(),
+      recordsRejected = streamStats.stream().mapToLong(StreamStatsRecord::recordsRejected).sum(),
+    )
 
   @JvmStatic
   fun getJobIdToJobWithAttemptsReadMap(
@@ -302,10 +314,10 @@ object StatsAggregationHelper {
     try {
       val jobReads = jobs.stream().map { obj: Job -> JobConverter.getJobWithAttemptsRead(obj) }.collect(Collectors.toList())
 
-      hydrateWithStats(jobReads, jobs, true, jobPersistence)
-      return jobReads.stream().collect(
+      val hydratedJobReads = hydrateWithStats(jobReads, jobs, true, jobPersistence)
+      return hydratedJobReads.stream().collect(
         Collectors.toMap(
-          Function { j: JobWithAttemptsRead -> j.job.id },
+          Function { j: JobWithAttemptsRead -> j.job!!.id },
           Function { j: JobWithAttemptsRead -> j },
         ),
       )

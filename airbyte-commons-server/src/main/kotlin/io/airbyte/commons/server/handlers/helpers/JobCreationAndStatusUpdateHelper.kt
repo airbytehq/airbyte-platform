@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.JobFailureRequest
-import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
+import io.airbyte.api.server.generated.models.JobFailureRequest
+import io.airbyte.api.server.generated.models.JobSuccessWithAttemptNumberRequest
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.JobStatus

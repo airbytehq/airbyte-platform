@@ -5,13 +5,13 @@
 package io.airbyte.commons.server.converters
 
 import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.AttemptSyncConfig
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionSchedule
 import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.DeadlineAction
@@ -27,6 +27,7 @@ import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.converters.StateConverter.toApi
 import io.airbyte.commons.converters.StateConverter.toInternal
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -81,7 +82,9 @@ class ApiPojoConverters(
       )
   }
 
-  fun attemptSyncConfigToInternal(attemptSyncConfig: AttemptSyncConfig?): io.airbyte.config.AttemptSyncConfig? {
+  fun attemptSyncConfigToInternal(
+    attemptSyncConfig: io.airbyte.api.server.generated.models.AttemptSyncConfig?,
+  ): io.airbyte.config.AttemptSyncConfig? {
     if (attemptSyncConfig == null) {
       return null
     }
@@ -92,9 +95,10 @@ class ApiPojoConverters(
         .withSourceConfiguration(attemptSyncConfig.sourceConfiguration)
         .withDestinationConfiguration(attemptSyncConfig.destinationConfiguration)
 
-    val connectionState = attemptSyncConfig.state
+    // TODO: StateConverter still works on the Java ConnectionState; drop this conversion when the state models move to Kotlin
+    val connectionState = attemptSyncConfig.state?.let { Jsons.convertValue(it, ConnectionState::class.java) }
     if (connectionState != null && connectionState.stateType != ConnectionStateType.NOT_SET) {
-      val stateWrapper = toInternal(attemptSyncConfig.state)
+      val stateWrapper = toInternal(connectionState)
       val state = getState(stateWrapper)
       internalAttemptSyncConfig.state = state
     }
@@ -105,7 +109,7 @@ class ApiPojoConverters(
   fun attemptSyncConfigToApi(
     attemptSyncConfig: io.airbyte.config.AttemptSyncConfig?,
     connectionId: UUID,
-  ): AttemptSyncConfig? {
+  ): io.airbyte.api.server.generated.models.AttemptSyncConfig? {
     if (attemptSyncConfig == null) {
       return null
     }
@@ -113,10 +117,16 @@ class ApiPojoConverters(
     val state = attemptSyncConfig.state
     val optStateWrapper: Optional<StateWrapper> = if (state != null) getTypedState(state.state) else Optional.empty()
 
-    return AttemptSyncConfig()
-      .sourceConfiguration(attemptSyncConfig.sourceConfiguration)
-      .destinationConfiguration(attemptSyncConfig.destinationConfiguration)
-      .state(toApi(connectionId, optStateWrapper.orElse(null)))
+    return io.airbyte.api.server.generated.models.AttemptSyncConfig(
+      sourceConfiguration = attemptSyncConfig.sourceConfiguration,
+      destinationConfiguration = attemptSyncConfig.destinationConfiguration,
+      // TODO: StateConverter still builds the Java ConnectionState; drop this conversion when the state models move to Kotlin
+      state =
+        Jsons.convertValue(
+          toApi(connectionId, optStateWrapper.orElse(null)),
+          io.airbyte.api.server.generated.models.ConnectionState::class.java,
+        ),
+    )
   }
 
   fun scopedResourceReqsToApi(scopedResourceReqs: io.airbyte.config.ScopedResourceRequirements?): ScopedResourceRequirements? {

@@ -9,8 +9,10 @@ import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.GlobalState
-import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.StreamState
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobStatus
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.errors.SyncIsRunningException
@@ -214,7 +216,20 @@ internal class StateHandlerTest {
       ConnectionStateCreateOrUpdate()
         .connectionId(CONNECTION_ID)
         .connectionState(ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB))
-    whenever<Optional<JobRead>?>(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.of<JobRead>(JobRead()))
+    whenever<Optional<JobRead>?>(
+      jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID),
+    ).thenReturn(
+      Optional.of<JobRead>(
+        JobRead(
+          id = 1L,
+          configType = JobConfigType.SYNC,
+          configId = CONNECTION_ID.toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        ),
+      ),
+    )
     Assertions.assertThrows(
       SyncIsRunningException::class.java,
     ) { stateHandler.createOrUpdateStateSafe(input) }

@@ -13,9 +13,6 @@ import io.airbyte.api.model.generated.DestinationCoreConfig
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobCreate
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.LogFormatType
 import io.airbyte.api.model.generated.SourceAutoPropagateChange
 import io.airbyte.api.model.generated.SourceCoreConfig
@@ -26,6 +23,9 @@ import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.server.generated.models.JobCreate
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobInfoRead
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons

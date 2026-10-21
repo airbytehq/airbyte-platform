@@ -4,14 +4,14 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.AttemptStreamStats
-import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
-import io.airbyte.api.model.generated.SaveStatsRequestBody
-import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
-import io.airbyte.api.model.generated.StreamAttemptMetadata
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.AttemptStreamStats
+import io.airbyte.api.server.generated.models.CreateNewAttemptNumberResponse
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.server.generated.models.SaveStatsRequestBody
+import io.airbyte.api.server.generated.models.SaveStreamAttemptMetadataRequestBody
+import io.airbyte.api.server.generated.models.StreamAttemptMetadata
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
@@ -125,7 +125,7 @@ open class AttemptHandler(
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_CREATED_BY_RELEASE_STAGE, job)
     jobCreationAndStatusUpdateHelper.emitAttemptCreatedEvent(job, persistedAttemptNumber)
 
-    return CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber)
+    return CreateNewAttemptNumberResponse(attemptNumber = persistedAttemptNumber)
   }
 
   @InternalForTesting
@@ -246,14 +246,15 @@ open class AttemptHandler(
           String.format("%d_%d", jobId, attemptNo),
         )
 
-    return AttemptStats()
-      .recordsEmitted(stats.recordsEmitted)
-      .bytesEmitted(stats.bytesEmitted)
-      .bytesCommitted(stats.bytesCommitted)
-      .recordsCommitted(stats.recordsCommitted)
-      .recordsRejected(stats.recordsRejected)
-      .estimatedRecords(stats.estimatedRecords)
-      .estimatedBytes(stats.estimatedBytes)
+    return AttemptStats(
+      recordsEmitted = stats.recordsEmitted,
+      bytesEmitted = stats.bytesEmitted,
+      bytesCommitted = stats.bytesCommitted,
+      recordsCommitted = stats.recordsCommitted,
+      recordsRejected = stats.recordsRejected,
+      estimatedRecords = stats.estimatedRecords,
+      estimatedBytes = stats.estimatedBytes,
+    )
   }
 
   fun saveStats(requestBody: SaveStatsRequestBody): InternalOperationResult {
@@ -261,6 +262,7 @@ open class AttemptHandler(
       val stats = requestBody.stats
       val streamStats =
         requestBody.streamStats
+          .orEmpty()
           .stream()
           .map { s: AttemptStreamStats ->
             StreamSyncStats()
@@ -294,10 +296,10 @@ open class AttemptHandler(
       )
     } catch (ioe: IOException) {
       log.error(ioe) { "IOException when setting temporal workflow in attempt;" }
-      return InternalOperationResult().succeeded(false)
+      return InternalOperationResult(succeeded = false)
     }
 
-    return InternalOperationResult().succeeded(true)
+    return InternalOperationResult(succeeded = true)
   }
 
   fun saveStreamMetadata(requestBody: SaveStreamAttemptMetadataRequestBody): InternalOperationResult {
@@ -306,6 +308,7 @@ open class AttemptHandler(
         requestBody.jobId,
         requestBody.attemptNumber.toLong(),
         requestBody.streamMetadata
+          .orEmpty()
           .stream()
           .map { s: StreamAttemptMetadata ->
             io.airbyte.data.services.StreamAttemptMetadata(
@@ -316,10 +319,10 @@ open class AttemptHandler(
             )
           }.toList(),
       )
-      return InternalOperationResult().succeeded(true)
+      return InternalOperationResult(succeeded = true)
     } catch (e: Exception) {
       log.error(e) { "failed to save steam metadata for job: ${requestBody.jobId} attempt: ${requestBody.attemptNumber}" }
-      return InternalOperationResult().succeeded(false)
+      return InternalOperationResult(succeeded = false)
     }
   }
 
@@ -332,9 +335,9 @@ open class AttemptHandler(
       )
     } catch (ioe: IOException) {
       log.error(ioe) { "IOException when saving AttemptSyncConfig for attempt;" }
-      return InternalOperationResult().succeeded(false)
+      return InternalOperationResult(succeeded = false)
     }
-    return InternalOperationResult().succeeded(true)
+    return InternalOperationResult(succeeded = true)
   }
 
   fun failAttempt(

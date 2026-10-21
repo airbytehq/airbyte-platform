@@ -413,15 +413,18 @@ class ConnectionTimelineEventHelperTest {
         )
 
       val jobInfo =
-        io.airbyte.api.model.generated
-          .JobInfoRead()
-          .job(
-            io.airbyte.api.model.generated
-              .JobRead()
-              .id(jobId)
-              .configType(io.airbyte.api.model.generated.JobConfigType.SYNC)
-              .createdAt(System.currentTimeMillis() / 1000),
-          )
+        io.airbyte.api.server.generated.models.JobInfoRead(
+          job =
+            io.airbyte.api.server.generated.models.JobRead(
+              id = jobId,
+              configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+              configId = connectionId.toString(),
+              createdAt = System.currentTimeMillis() / 1000,
+              updatedAt = System.currentTimeMillis() / 1000,
+              status = io.airbyte.api.server.generated.models.JobStatus.RUNNING,
+            ),
+          attempts = emptyList(),
+        )
       val streams = emptyList<io.airbyte.config.StreamDescriptor>()
 
       connectionTimelineEventHelper.logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, streams)

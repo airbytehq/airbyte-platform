@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AttemptRead
-import io.airbyte.api.model.generated.AttemptStatus
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -23,10 +21,6 @@ import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.FieldAdd
 import io.airbyte.api.model.generated.FieldRemove
 import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.OperationRead
@@ -51,6 +45,12 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
+import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.AttemptStatus
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
 import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.enums.convertTo
@@ -392,37 +392,40 @@ internal class WebBackendConnectionsHandlerTest {
       )
 
     val jobRead =
-      JobWithAttemptsRead()
-        .job(
-          JobRead()
-            .configId(connectionRead.connectionId.toString())
-            .configType(JobConfigType.SYNC)
-            .id(10L)
-            .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-            .createdAt(now.epochSecond)
-            .updatedAt(now.epochSecond),
-        ).attempts(
-          arrayListOf(
-            AttemptRead()
-              .id(12L)
-              .status(AttemptStatus.SUCCEEDED)
-              .bytesSynced(100L)
-              .recordsSynced(15L)
-              .createdAt(now.epochSecond)
-              .updatedAt(now.epochSecond)
-              .endedAt(now.epochSecond),
+      JobWithAttemptsRead(
+        job =
+          JobRead(
+            configId = connectionRead.connectionId.toString(),
+            configType = JobConfigType.SYNC,
+            id = 10L,
+            status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+            createdAt = now.epochSecond,
+            updatedAt = now.epochSecond,
           ),
-        )
+        attempts =
+          arrayListOf(
+            AttemptRead(
+              id = 12L,
+              status = AttemptStatus.SUCCEEDED,
+              bytesSynced = 100L,
+              recordsSynced = 15L,
+              createdAt = now.epochSecond,
+              updatedAt = now.epochSecond,
+              endedAt = now.epochSecond,
+            ),
+          ),
+      )
 
-    every { jobHistoryHandler.getLatestSyncJob(connectionRead.connectionId) } returns Optional.of(jobRead.job)
+    every { jobHistoryHandler.getLatestSyncJob(connectionRead.connectionId) } returns Optional.of(jobRead.job!!)
     every { jobHistoryHandler.getLatestSyncJobsForConnections(listOf(connectionRead.connectionId)) } returns
       listOf(
         JobStatusSummary(
-          UUID.fromString(jobRead.job.configId),
-          jobRead.job.createdAt,
+          UUID.fromString(jobRead.job!!.configId),
+          jobRead.job!!.createdAt,
           io.airbyte.config.JobStatus
             .valueOf(
-              jobRead.job.status
+              jobRead.job!!
+                .status
                 .toString()
                 .uppercase(),
             ),
@@ -430,37 +433,40 @@ internal class WebBackendConnectionsHandlerTest {
       )
 
     val brokenJobRead =
-      JobWithAttemptsRead()
-        .job(
-          JobRead()
-            .configId(brokenConnectionRead.connectionId.toString())
-            .configType(JobConfigType.SYNC)
-            .id(10L)
-            .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-            .createdAt(now.epochSecond)
-            .updatedAt(now.epochSecond),
-        ).attempts(
-          arrayListOf(
-            AttemptRead()
-              .id(12L)
-              .status(AttemptStatus.SUCCEEDED)
-              .bytesSynced(100L)
-              .recordsSynced(15L)
-              .createdAt(now.epochSecond)
-              .updatedAt(now.epochSecond)
-              .endedAt(now.epochSecond),
+      JobWithAttemptsRead(
+        job =
+          JobRead(
+            configId = brokenConnectionRead.connectionId.toString(),
+            configType = JobConfigType.SYNC,
+            id = 10L,
+            status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+            createdAt = now.epochSecond,
+            updatedAt = now.epochSecond,
           ),
-        )
+        attempts =
+          arrayListOf(
+            AttemptRead(
+              id = 12L,
+              status = AttemptStatus.SUCCEEDED,
+              bytesSynced = 100L,
+              recordsSynced = 15L,
+              createdAt = now.epochSecond,
+              updatedAt = now.epochSecond,
+              endedAt = now.epochSecond,
+            ),
+          ),
+      )
 
-    every { jobHistoryHandler.getLatestSyncJob(brokenConnectionRead.connectionId) } returns Optional.of(brokenJobRead.job)
+    every { jobHistoryHandler.getLatestSyncJob(brokenConnectionRead.connectionId) } returns Optional.of(brokenJobRead.job!!)
     every { jobHistoryHandler.getLatestSyncJobsForConnections(listOf(brokenConnectionRead.connectionId)) } returns
       listOf(
         JobStatusSummary(
-          UUID.fromString(brokenJobRead.job.configId),
-          brokenJobRead.job.createdAt,
+          UUID.fromString(brokenJobRead.job!!.configId),
+          brokenJobRead.job!!.createdAt,
           io.airbyte.config.JobStatus
             .valueOf(
-              brokenJobRead.job.status
+              brokenJobRead.job!!
+                .status
                 .toString()
                 .uppercase(),
             ),
@@ -474,8 +480,9 @@ internal class WebBackendConnectionsHandlerTest {
           sourceRead,
           destinationRead,
           false,
-          jobRead.job.createdAt,
-          jobRead.job.status,
+          jobRead.job!!.createdAt,
+          io.airbyte.api.model.generated.JobStatus
+            .valueOf(jobRead.job!!.status.name),
           SchemaChange.NO_CHANGE,
         ).sourceActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
         .destinationActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
@@ -575,7 +582,19 @@ internal class WebBackendConnectionsHandlerTest {
         brokenConnectionRead.sourceCatalogId,
       )
 
-    every { schedulerHandler.resetConnection(any()) } returns JobInfoRead().job(JobRead().status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED))
+    every { schedulerHandler.resetConnection(any()) } returns
+      JobInfoRead(
+        job =
+          JobRead(
+            id = 10L,
+            configType = JobConfigType.SYNC,
+            configId = connectionRead.connectionId.toString(),
+            createdAt = now.epochSecond,
+            updatedAt = now.epochSecond,
+            status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          ),
+        attempts = emptyList(),
+      )
   }
 
   fun expectedWebBackendConnectionReadObject(

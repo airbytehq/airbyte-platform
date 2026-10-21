@@ -4,16 +4,16 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.AttemptStreamStats
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.GlobalState
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
-import io.airbyte.api.model.generated.SaveStatsRequestBody
-import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
-import io.airbyte.api.model.generated.StreamAttemptMetadata
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.AttemptStreamStats
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.GlobalState
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.server.generated.models.SaveStatsRequestBody
+import io.airbyte.api.server.generated.models.SaveStreamAttemptMetadataRequestBody
+import io.airbyte.api.server.generated.models.StreamAttemptMetadata
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -72,7 +72,6 @@ import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.persistence.job.JobInTerminalStateException
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobRunningAttemptExistsException
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -200,23 +199,28 @@ internal class AttemptHandlerTest {
     val sourceConfig = jsonNode(mapOf("source_key" to "source_val"))
     val destinationConfig = jsonNode(mapOf("destination_key" to "destination_val"))
     val state =
-      ConnectionState()
-        .connectionId(CONNECTION_ID)
-        .stateType(ConnectionStateType.GLOBAL)
-        .streamState(null)
-        .globalState(GlobalState().sharedState(jsonNode(mapOf("state_key" to "state_val"))))
+      ConnectionState(
+        connectionId = CONNECTION_ID,
+        stateType = ConnectionStateType.GLOBAL,
+        streamState = null,
+        globalState = GlobalState(streamStates = emptyList(), sharedState = jsonNode(mapOf("state_key" to "state_val"))),
+      )
 
     val attemptSyncConfig =
-      io.airbyte.api.model.generated
-        .AttemptSyncConfig()
-        .destinationConfiguration(destinationConfig)
-        .sourceConfiguration(sourceConfig)
-        .state(state)
+      io.airbyte.api.server.generated.models.AttemptSyncConfig(
+        destinationConfiguration = destinationConfig,
+        sourceConfiguration = sourceConfig,
+        state = state,
+      )
 
     val requestBody =
-      SaveAttemptSyncConfigRequestBody().attemptNumber(ATTEMPT_NUMBER).jobId(JOB_ID).syncConfig(attemptSyncConfig)
+      SaveAttemptSyncConfigRequestBody(
+        attemptNumber = ATTEMPT_NUMBER,
+        jobId = JOB_ID,
+        syncConfig = attemptSyncConfig,
+      )
 
-    Assertions.assertTrue(handler.saveSyncConfig(requestBody).getSucceeded())
+    Assertions.assertTrue(handler.saveSyncConfig(requestBody).succeeded)
 
     Mockito
       .verify(jobPersistence)
@@ -763,13 +767,13 @@ internal class AttemptHandlerTest {
       .thenReturn(stats)
 
     val result = handler.getAttemptCombinedStats(1L, 2)
-    Assertions.assertEquals(stats.getRecordsEmitted(), result.getRecordsEmitted())
-    Assertions.assertEquals(stats.getBytesEmitted(), result.getBytesEmitted())
-    Assertions.assertEquals(stats.getBytesCommitted(), result.getBytesCommitted())
-    Assertions.assertEquals(stats.getRecordsCommitted(), result.getRecordsCommitted())
-    Assertions.assertEquals(stats.getEstimatedRecords(), result.getEstimatedRecords())
-    Assertions.assertEquals(stats.getEstimatedBytes(), result.getEstimatedBytes())
-    Assertions.assertNull(result.getStateMessagesEmitted()) // punting on this for now
+    Assertions.assertEquals(stats.recordsEmitted, result.recordsEmitted)
+    Assertions.assertEquals(stats.bytesEmitted, result.bytesEmitted)
+    Assertions.assertEquals(stats.bytesCommitted, result.bytesCommitted)
+    Assertions.assertEquals(stats.recordsCommitted, result.recordsCommitted)
+    Assertions.assertEquals(stats.estimatedRecords, result.estimatedRecords)
+    Assertions.assertEquals(stats.estimatedBytes, result.estimatedBytes)
+    Assertions.assertNull(result.stateMessagesEmitted) // punting on this for now
   }
 
   @Test
@@ -832,19 +836,20 @@ internal class AttemptHandlerTest {
 
     val result =
       handler.saveStreamMetadata(
-        SaveStreamAttemptMetadataRequestBody()
-          .jobId(jobId)
-          .attemptNumber(attemptNumber)
-          .streamMetadata(
-            listOf<@Valid StreamAttemptMetadata?>(
-              StreamAttemptMetadata().streamName("s1").wasBackfilled(false).wasResumed(true),
-              StreamAttemptMetadata()
-                .streamName("s2")
-                .streamNamespace("ns")
-                .wasBackfilled(true)
-                .wasResumed(false),
+        SaveStreamAttemptMetadataRequestBody(
+          jobId = jobId,
+          attemptNumber = attemptNumber,
+          streamMetadata =
+            listOf(
+              StreamAttemptMetadata(streamName = "s1", wasBackfilled = false, wasResumed = true),
+              StreamAttemptMetadata(
+                streamName = "s2",
+                streamNamespace = "ns",
+                wasBackfilled = true,
+                wasResumed = false,
+              ),
             ),
-          ),
+        ),
       )
     Mockito.verify(streamAttemptMetadataService).upsertStreamAttemptMetadata(
       jobId,
@@ -856,7 +861,7 @@ internal class AttemptHandlerTest {
           .StreamAttemptMetadata("s2", "ns", true, false),
       ),
     )
-    Assertions.assertEquals(InternalOperationResult().succeeded(true), result)
+    Assertions.assertEquals(InternalOperationResult(succeeded = true), result)
   }
 
   @Test
@@ -872,16 +877,16 @@ internal class AttemptHandlerTest {
 
     val result =
       handler.saveStreamMetadata(
-        SaveStreamAttemptMetadataRequestBody()
-          .jobId(jobId)
-          .attemptNumber(attemptNumber)
-          .streamMetadata(
-            listOf<@Valid StreamAttemptMetadata?>(
-              StreamAttemptMetadata().streamName("s").wasBackfilled(false).wasResumed(false),
+        SaveStreamAttemptMetadataRequestBody(
+          jobId = jobId,
+          attemptNumber = attemptNumber,
+          streamMetadata =
+            listOf(
+              StreamAttemptMetadata(streamName = "s", wasBackfilled = false, wasResumed = false),
             ),
-          ),
+        ),
       )
-    Assertions.assertEquals(InternalOperationResult().succeeded(false), result)
+    Assertions.assertEquals(InternalOperationResult(succeeded = false), result)
   }
 
   @ParameterizedTest
@@ -934,26 +939,32 @@ internal class AttemptHandlerTest {
 
   @Test
   fun testSaveStats() {
-    val attemptStats = AttemptStats()
-    attemptStats.bytesEmitted = 123L
-    attemptStats.bytesCommitted = 223L
-    attemptStats.estimatedBytes = 323L
-    attemptStats.estimatedRecords = 423L
-    attemptStats.recordsEmitted = 523L
-    attemptStats.recordsCommitted = 623L
-    attemptStats.recordsRejected = 723L
-    attemptStats.stateMessagesEmitted = 823L
-    attemptStats.additionalStats = mapOf("additional" to 923L.toBigDecimal())
-    val attemptStreamStats = AttemptStreamStats()
-    attemptStreamStats.streamName = "streamName"
-    attemptStreamStats.streamNamespace = "streamNamespace"
-    attemptStreamStats.stats = attemptStats
-    val saveStatsRequest = SaveStatsRequestBody()
-    saveStatsRequest.connectionId = CONNECTION_ID
-    saveStatsRequest.jobId = JOB_ID
-    saveStatsRequest.attemptNumber = ATTEMPT_NUMBER
-    saveStatsRequest.stats = attemptStats
-    saveStatsRequest.streamStats = listOf(attemptStreamStats)
+    val attemptStats =
+      AttemptStats(
+        bytesEmitted = 123L,
+        bytesCommitted = 223L,
+        estimatedBytes = 323L,
+        estimatedRecords = 423L,
+        recordsEmitted = 523L,
+        recordsCommitted = 623L,
+        recordsRejected = 723L,
+        stateMessagesEmitted = 823L,
+        additionalStats = mapOf("additional" to 923L.toBigDecimal()),
+      )
+    val attemptStreamStats =
+      AttemptStreamStats(
+        streamName = "streamName",
+        streamNamespace = "streamNamespace",
+        stats = attemptStats,
+      )
+    val saveStatsRequest =
+      SaveStatsRequestBody(
+        connectionId = CONNECTION_ID,
+        jobId = JOB_ID,
+        attemptNumber = ATTEMPT_NUMBER,
+        stats = attemptStats,
+        streamStats = listOf(attemptStreamStats),
+      )
 
     val expectedStreamSyncStats = StreamSyncStats()
     expectedStreamSyncStats.streamName = attemptStreamStats.streamName

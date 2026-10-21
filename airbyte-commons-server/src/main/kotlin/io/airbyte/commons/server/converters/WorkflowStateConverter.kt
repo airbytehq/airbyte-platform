@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.WorkflowStateRead
+import io.airbyte.api.server.generated.models.WorkflowStateRead
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import jakarta.inject.Singleton
 
@@ -13,5 +13,5 @@ import jakarta.inject.Singleton
  */
 @Singleton
 class WorkflowStateConverter {
-  fun getWorkflowStateRead(workflowState: WorkflowState): WorkflowStateRead = WorkflowStateRead().running(workflowState.isRunning)
+  fun getWorkflowStateRead(workflowState: WorkflowState): WorkflowStateRead = WorkflowStateRead(running = workflowState.isRunning)
 }

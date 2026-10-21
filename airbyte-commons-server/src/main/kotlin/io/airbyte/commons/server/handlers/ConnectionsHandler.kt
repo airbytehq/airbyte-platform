@@ -10,7 +10,6 @@ import io.airbyte.api.model.generated.ActorDefinitionRequestBody
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.AttemptRead
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.ConnectionAutoPropagateResult
@@ -42,14 +41,11 @@ import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.FailureOrigin
 import io.airbyte.api.model.generated.FailureType
-import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.JobSyncResultRead
-import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.Tag
@@ -85,7 +81,11 @@ import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.AttemptRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.StreamStats
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
@@ -1555,8 +1555,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         val connectionStatus =
           ConnectionStatusRead()
             .connectionId(connectionId)
-            .activeJob(activeJob.map { obj: Job -> JobConverter.getJobRead(obj) }.orElse(null))
-            .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
+            // TODO: ConnectionStatusRead is still the Java model; drop this conversion when the connection API moves to Kotlin
+            .activeJob(
+              activeJob
+                .map { obj: Job -> Jsons.convertValue(JobConverter.getJobRead(obj), io.airbyte.api.model.generated.JobRead::class.java) }
+                .orElse(null),
+            ).lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
             .scheduleData(connectionRead.scheduleData)
         if (lastSucceededOrFailedJob.isPresent) {
           connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().id)
@@ -1761,11 +1765,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 job.id,
                 job.createdAtInSecond,
                 job.updatedAtInSecond,
-                jobRead.attempts
+                jobRead.attempts!!
                   .stream()
                   .mapToLong { attempt: AttemptRead -> attempt.bytesSynced ?: 0 }
                   .sum(),
-                jobRead.attempts
+                jobRead.attempts!!
                   .stream()
                   .mapToLong { attempt: AttemptRead -> attempt.recordsSynced ?: 0 }
                   .sum(),
@@ -1788,13 +1792,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 job.id,
                 job.createdAtInSecond,
                 job.updatedAtInSecond,
-                jobRead.attempts
+                jobRead.attempts!!
                   .stream()
-                  .mapToLong { attempt: AttemptRead -> if (attempt.bytesSynced != null) attempt.bytesSynced else 0 }
+                  .mapToLong { attempt: AttemptRead -> attempt.bytesSynced ?: 0 }
                   .sum(),
-                jobRead.attempts
+                jobRead.attempts!!
                   .stream()
-                  .mapToLong { attempt: AttemptRead -> if (attempt.recordsSynced != null) attempt.recordsSynced else 0 }
+                  .mapToLong { attempt: AttemptRead -> attempt.recordsSynced ?: 0 }
                   .sum(),
                 null,
                 job.getAttemptsCount(),
@@ -1871,12 +1875,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       jobs.forEach(
         Consumer { job: Job ->
           val jobId = job.id
-          val jobRead = jobIdToJobRead[jobId]!!.job
-          val aggregatedStats = jobRead.aggregatedStats
+          val jobRead = jobIdToJobRead[jobId]!!.job!!
+          val aggregatedStats = jobRead.aggregatedStats!!
           val jobResult =
             JobSyncResultRead()
               .jobId(jobId)
-              .configType(jobRead.configType)
+              .configType(jobRead.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
               .jobCreatedAt(jobRead.createdAt)
               .jobUpdatedAt(jobRead.updatedAt)
               .bytesEmitted(aggregatedStats.bytesEmitted)
@@ -2203,7 +2207,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       // convert the hydrated jobs to the response format
       return streamToJobRead.entries
         .stream()
-        .map { entry: Map.Entry<StreamDescriptor, JobWithAttemptsRead?> -> buildLastJobPerStreamReadItem(entry.key, entry.value!!.job, memo) }
+        .map { entry: Map.Entry<StreamDescriptor, JobWithAttemptsRead?> -> buildLastJobPerStreamReadItem(entry.key, entry.value!!.job!!, memo) }
         .collect(Collectors.toList())
     }
 
@@ -2341,8 +2345,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         .streamName(streamDescriptor.name)
         .streamNamespace(streamDescriptor.namespace)
         .jobId(jobRead.id)
-        .configType(jobRead.configType)
-        .jobStatus(jobRead.status)
+        .configType(jobRead.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
+        .jobStatus(jobRead.status.convertTo<io.airbyte.api.model.generated.JobStatus>())
         .startedAt(jobRead.startedAt)
         .endedAt(jobRead.updatedAt) // assumes the job ended at the last updated time
         .bytesCommitted(statsForThisStream.map { obj: StreamStats -> obj.bytesCommitted }.orElse(null))
@@ -2355,7 +2359,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      */
     private fun buildStreamStatsMap(jobRead: JobRead): Map<StreamDescriptor, StreamStats> {
       val map: MutableMap<StreamDescriptor, StreamStats> = HashMap()
-      for (stat in jobRead.streamAggregatedStats) {
+      for (stat in jobRead.streamAggregatedStats.orEmpty()) {
         val streamDescriptor =
           StreamDescriptor()
             .withName(stat.streamName)

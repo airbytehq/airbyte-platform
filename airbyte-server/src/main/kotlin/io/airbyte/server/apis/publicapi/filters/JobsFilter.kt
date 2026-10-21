@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.filters
 
-import io.airbyte.api.model.generated.JobStatus
+import io.airbyte.api.server.generated.models.JobStatus
 import io.airbyte.publicApi.server.generated.models.JobStatusEnum
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import java.time.OffsetDateTime

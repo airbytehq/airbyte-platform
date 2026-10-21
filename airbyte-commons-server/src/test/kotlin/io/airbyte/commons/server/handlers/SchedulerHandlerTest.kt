@@ -25,11 +25,6 @@ import io.airbyte.api.model.generated.FailureOrigin
 import io.airbyte.api.model.generated.FailureType
 import io.airbyte.api.model.generated.FieldAdd
 import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobCreate
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.LogFormatType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SourceAutoPropagateChange
@@ -42,6 +37,11 @@ import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobCreate
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
@@ -329,12 +329,12 @@ internal class SchedulerHandlerTest {
     whenever<Job?>(jobPersistence.getJob(JOB_ID))
       .thenReturn(job)
     whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(JobInfoRead().job(JobRead().id(JOB_ID)))
+      .thenReturn(sampleJobInfoRead(JOB_ID))
 
-    val output = schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(isScheduled))
+    val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = isScheduled))
 
     verify(jobFactory).createSync(CONNECTION_ID, isScheduled)
-    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID)
+    Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
 
   private fun stubSyncJobCreation() {
@@ -345,7 +345,7 @@ internal class SchedulerHandlerTest {
     whenever<Job?>(jobPersistence.getJob(JOB_ID))
       .thenReturn(job)
     whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(JobInfoRead().job(JobRead().id(JOB_ID)))
+      .thenReturn(sampleJobInfoRead(JOB_ID))
   }
 
   private fun stubWorkspaceForConnection(organizationId: UUID?) {
@@ -362,7 +362,7 @@ internal class SchedulerHandlerTest {
     whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
       .thenReturn(false)
 
-    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(dataWorkerUsageService).insertUsageForCreatedJob(job)
   }
@@ -376,7 +376,7 @@ internal class SchedulerHandlerTest {
     whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
       .thenReturn(true)
 
-    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
   }
@@ -390,7 +390,7 @@ internal class SchedulerHandlerTest {
     whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
       .thenThrow(RuntimeException("flag lookup failed"))
 
-    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
   }
@@ -402,7 +402,7 @@ internal class SchedulerHandlerTest {
     whenever(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
       .thenThrow(RuntimeException("workspace lookup failed"))
 
-    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
   }
@@ -413,7 +413,7 @@ internal class SchedulerHandlerTest {
     stubSyncJobCreation()
     stubWorkspaceForConnection(organizationId = null)
 
-    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
     verifyNoInteractions(featureFlagClient)
@@ -433,7 +433,7 @@ internal class SchedulerHandlerTest {
     whenever<Job?>(jobPersistence.getJob(JOB_ID))
       .thenReturn(job)
     whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(JobInfoRead().job(JobRead().id(JOB_ID)))
+      .thenReturn(sampleJobInfoRead(JOB_ID))
     whenever(streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID))
       .thenReturn(
         listOf(
@@ -441,10 +441,10 @@ internal class SchedulerHandlerTest {
         ),
       )
 
-    val output = schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(jobFactory).createRefresh(eq(CONNECTION_ID), any())
-    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID)
+    Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
 
   @Test
@@ -504,16 +504,16 @@ internal class SchedulerHandlerTest {
     whenever<Job?>(jobPersistence.getJob(JOB_ID))
       .thenReturn(job)
     whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(JobInfoRead().job(JobRead().id(JOB_ID)))
+      .thenReturn(sampleJobInfoRead(JOB_ID))
 
-    val output = schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+    val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
     verify(oAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any())
 
     verify(actorDefinitionVersionHelper)
       .getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)
 
-    Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID)
+    Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
 
   @Test
@@ -758,7 +758,7 @@ internal class SchedulerHandlerTest {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val sourceUpdate =
       SourceUpdate()
-        .name(source.getName())
+        .name(source.name)
         .sourceId(source.getSourceId())
         .connectionConfiguration(source.getConfiguration())
     val sourceDefinition =
@@ -783,7 +783,7 @@ internal class SchedulerHandlerTest {
     whenever(
       configurationUpdate.source(
         source.getSourceId(),
-        source.getName(),
+        source.name,
         sourceUpdate.getConnectionConfiguration(),
       ),
     ).thenReturn(source)
@@ -929,7 +929,7 @@ internal class SchedulerHandlerTest {
     val destination = DestinationHelpers.generateDestination(UUID.randomUUID())
     val destinationUpdate =
       DestinationUpdate()
-        .name(destination.getName())
+        .name(destination.name)
         .destinationId(destination.getDestinationId())
         .connectionConfiguration(destination.getConfiguration())
     val destinationDefinition =
@@ -978,7 +978,7 @@ internal class SchedulerHandlerTest {
     whenever(
       configurationUpdate.destination(
         destination.getDestinationId(),
-        destination.getName(),
+        destination.name,
         destinationUpdate.getConnectionConfiguration(),
       ),
     ).thenReturn(destination)
@@ -1658,7 +1658,7 @@ internal class SchedulerHandlerTest {
       isCompatible<StandardCheckConnectionOutput.Status, CheckConnectionRead.StatusEnum>(),
     )
     org.junit.jupiter.api.Assertions.assertTrue(
-      isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>(),
+      isCompatible<JobStatus, io.airbyte.api.server.generated.models.JobStatus>(),
     )
   }
 
@@ -1672,7 +1672,7 @@ internal class SchedulerHandlerTest {
     whenever<ManualOperationResult?>(eventRunner.startNewManualSync(connectionId))
       .thenReturn(manualOperationResult)
 
-    doReturn(JobInfoRead())
+    doReturn(sampleJobInfoRead())
       .whenever(jobConverter)
       .getJobInfoRead(anyOrNull())
 
@@ -1708,7 +1708,7 @@ internal class SchedulerHandlerTest {
       schedulerHandler.resetConnectionStream(ConnectionStreamRequestBody().connectionId(connectionId).streams(emptyList()))
     }
     assertThrows<ActorNotReadyProblem> {
-      schedulerHandler.createJob(JobCreate().connectionId(connectionId).isScheduled(false))
+      schedulerHandler.createJob(JobCreate(connectionId = connectionId, isScheduled = false))
     }
 
     verifyNoInteractions(eventRunner)
@@ -1728,7 +1728,7 @@ internal class SchedulerHandlerTest {
     doReturn(job)
       .whenever(jobPersistence)
       .getJob(jobId)
-    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+    doReturn(sampleJobInfoRead(jobId))
       .whenever(jobConverter)
       .getJobInfoRead(job)
 
@@ -1752,7 +1752,7 @@ internal class SchedulerHandlerTest {
     doReturn(job)
       .whenever(jobPersistence)
       .getJob(jobId)
-    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+    doReturn(sampleJobInfoRead(jobId))
       .whenever(jobConverter)
       .getJobInfoRead(job)
 
@@ -1777,7 +1777,7 @@ internal class SchedulerHandlerTest {
     doReturn(job)
       .whenever(jobPersistence)
       .getJob(jobId)
-    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+    doReturn(sampleJobInfoRead(jobId))
       .whenever(jobConverter)
       .getJobInfoRead(job)
 
@@ -1799,7 +1799,7 @@ internal class SchedulerHandlerTest {
     doReturn(job)
       .whenever(jobPersistence)
       .getJob(jobId)
-    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+    doReturn(sampleJobInfoRead(jobId))
       .whenever(jobConverter)
       .getJobInfoRead(job)
 
@@ -1824,7 +1824,7 @@ internal class SchedulerHandlerTest {
     doReturn(job)
       .whenever(jobPersistence)
       .getJob(jobId)
-    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+    doReturn(sampleJobInfoRead(jobId))
       .whenever(jobConverter)
       .getJobInfoRead(job)
 
@@ -1904,7 +1904,7 @@ internal class SchedulerHandlerTest {
     whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
       .thenReturn(manualOperationResult)
 
-    doReturn(JobInfoRead())
+    doReturn(sampleJobInfoRead())
       .whenever(jobConverter)
       .getJobInfoRead(anyOrNull())
 
@@ -1930,7 +1930,7 @@ internal class SchedulerHandlerTest {
     whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
       .thenReturn(manualOperationResult)
 
-    doReturn(JobInfoRead())
+    doReturn(sampleJobInfoRead())
       .whenever(jobConverter)
       .getJobInfoRead(anyOrNull())
 
@@ -1959,7 +1959,7 @@ internal class SchedulerHandlerTest {
     whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
       .thenReturn(manualOperationResult)
 
-    doReturn(JobInfoRead())
+    doReturn(sampleJobInfoRead())
       .whenever(jobConverter)
       .getJobInfoRead(anyOrNull())
 
@@ -1978,16 +1978,10 @@ internal class SchedulerHandlerTest {
     whenever<ManualOperationResult?>(eventRunner.startNewCancellation(SCOPE))
       .thenReturn(manualOperationResult)
     val jobInfo =
-      JobInfoRead()
-        .job(
-          JobRead()
-            .id(JOB_ID)
-            .createdAt(123L)
-            .updatedAt(321L),
-        )
+      sampleJobInfoRead(JOB_ID, createdAt = 123L, updatedAt = 321L)
     doReturn(jobInfo).whenever(jobConverter).getJobInfoRead(any())
 
-    schedulerHandler.cancelJob(JobIdRequestBody().id(JOB_ID))
+    schedulerHandler.cancelJob(JobIdRequestBody(id = JOB_ID))
 
     verify(eventRunner).startNewCancellation(SCOPE)
   }
@@ -2577,6 +2571,24 @@ internal class SchedulerHandlerTest {
   }
 
   companion object {
+    private fun sampleJobInfoRead(
+      id: Long = 0L,
+      createdAt: Long = 0L,
+      updatedAt: Long = 0L,
+    ): JobInfoRead =
+      JobInfoRead(
+        job =
+          JobRead(
+            id = id,
+            configType = JobConfigType.SYNC,
+            configId = UUID.randomUUID().toString(),
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            status = io.airbyte.api.server.generated.models.JobStatus.RUNNING,
+          ),
+        attempts = emptyList(),
+      )
+
     private const val SOURCE_DOCKER_REPO = "srcimage"
     private const val SOURCE_DOCKER_TAG = "tag"
     private const val SOURCE_PROTOCOL_VERSION = "0.4.5"
@@ -2682,7 +2694,7 @@ internal class SchedulerHandlerTest {
       return SynchronousJobRead()
         .id(SYNC_JOB_ID)
         .configId(CONFIG_ID.toString())
-        .configType(JobConfigType.CHECK_CONNECTION_SOURCE)
+        .configType(io.airbyte.api.model.generated.JobConfigType.CHECK_CONNECTION_SOURCE)
         .createdAt(CREATED_AT)
         .endedAt(CREATED_AT)
         .connectorConfigurationUpdated(CONNECTOR_CONFIG_UPDATED)

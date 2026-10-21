@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.JobAggregatedStats
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobStatus
+import io.airbyte.api.server.generated.models.JobAggregatedStats
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -22,8 +22,7 @@ class JobResponseMapperTest {
   fun `from should convert a JobRead object from the config api to a JobResponse`(jobConfigType: JobConfigType) {
     // Given
     val jobRead = getJobRead(jobConfigType)
-    val jobInfoRead = JobInfoRead()
-    jobInfoRead.job = jobRead
+    val jobInfoRead = JobInfoRead(job = jobRead, attempts = emptyList())
 
     // When
     val jobResponse = JobResponseMapper.from(jobInfoRead)
@@ -36,24 +35,23 @@ class JobResponseMapperTest {
     assertEquals(jobResponse.startTime, "1970-01-01T00:00:01Z")
     assertEquals(jobResponse.lastUpdatedAt, "1970-01-01T00:00:02Z")
     assertEquals(jobResponse.duration, "PT1S")
-    assertEquals(jobResponse.bytesSynced, jobRead.aggregatedStats.bytesCommitted)
-    assertEquals(jobResponse.rowsSynced, jobRead.aggregatedStats.recordsCommitted)
+    assertEquals(jobResponse.bytesSynced, jobRead.aggregatedStats!!.bytesCommitted)
+    assertEquals(jobResponse.rowsSynced, jobRead.aggregatedStats!!.recordsCommitted)
   }
 
   @ParameterizedTest
   @EnumSource(value = JobConfigType::class, names = ["SYNC", "RESET_CONNECTION", "REFRESH", "CLEAR"], mode = EnumSource.Mode.EXCLUDE)
   fun `from should fail to convert a JobRead object from the config api if the config type is not supported`(jobConfigType: JobConfigType) {
     val jobRead = getJobRead(jobConfigType)
-    val jobInfoRead = JobInfoRead()
-    jobInfoRead.job = jobRead
+    val jobInfoRead = JobInfoRead(job = jobRead, attempts = emptyList())
 
     assertThrows<IllegalArgumentException> { JobResponseMapper.from(jobInfoRead) }
   }
 
   @Test
   fun `from should convert a queued JobRead object from the config api to a JobResponse`() {
-    val jobRead = getJobRead(JobConfigType.SYNC).apply { status = JobStatus.QUEUED }
-    val jobInfoRead = JobInfoRead().apply { job = jobRead }
+    val jobRead = getJobRead(JobConfigType.SYNC).copy(status = JobStatus.QUEUED)
+    val jobInfoRead = JobInfoRead(job = jobRead, attempts = emptyList())
 
     val jobResponse = JobResponseMapper.from(jobInfoRead)
 
@@ -61,17 +59,20 @@ class JobResponseMapperTest {
   }
 
   private fun getJobRead(jobConfigType: JobConfigType): JobRead =
-    JobRead().apply {
-      this.id = 1L
-      this.status = JobStatus.FAILED
-      this.configId = UUID.randomUUID().toString()
-      this.configType = jobConfigType
-      this.createdAt = 1L
-      this.updatedAt = 2L
-      this.aggregatedStats =
-        JobAggregatedStats().apply {
-          this.bytesCommitted = 12345
-          this.recordsCommitted = 67890
-        }
-    }
+    JobRead(
+      id = 1L,
+      status = JobStatus.FAILED,
+      configId = UUID.randomUUID().toString(),
+      configType = jobConfigType,
+      createdAt = 1L,
+      updatedAt = 2L,
+      aggregatedStats =
+        JobAggregatedStats(
+          recordsEmitted = 0,
+          bytesEmitted = 0,
+          recordsCommitted = 67890,
+          bytesCommitted = 12345,
+          recordsRejected = 0,
+        ),
+    )
 }

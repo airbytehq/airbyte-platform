@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ConnectionStream
 import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
@@ -80,7 +81,8 @@ class StreamRefreshesHandler(
       connectionTimelineEventService.writeEvent(connectionId, refreshStartedEvent, userId, it.id)
     }
 
-    return if (job == null) null else JobConverter.getJobRead(job)
+    // TODO: the connection API still returns the Java JobRead; drop this conversion when it moves to Kotlin
+    return if (job == null) null else Jsons.convertValue(JobConverter.getJobRead(job), io.airbyte.api.model.generated.JobRead::class.java)
   }
 
   fun getRefreshesForConnection(connectionId: UUID): List<StreamRefresh> = streamRefreshesRepository.findByConnectionId(connectionId)

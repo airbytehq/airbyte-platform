@@ -4,8 +4,9 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.SaveStatsRequestBody
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.SaveStatsRequestBody
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
@@ -42,10 +43,10 @@ internal class AttemptApiControllerTest {
 
   @Test
   fun testSaveState() {
-    every { attemptHandler.saveStats(any()) } returns InternalOperationResult()
+    every { attemptHandler.saveStats(any()) } returns InternalOperationResult(succeeded = true)
 
     val path = "/api/v1/attempt/save_stats"
 
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SaveStatsRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SaveStatsRequestBody(jobId = 1L, attemptNumber = 0, stats = AttemptStats()))))
   }
 }

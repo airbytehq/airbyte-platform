@@ -4,14 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFieldEnum
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
-import io.airbyte.api.model.generated.JobListRequestBody
-import io.airbyte.api.model.generated.Pagination
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobListForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.JobListRequestBody
+import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -45,15 +43,15 @@ interface JobService {
   fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
-    orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    orderByField: JobListForWorkspacesRequestBody.OrderByField = JobListForWorkspacesRequestBody.OrderByField.CREATED_AT,
+    orderByMethod: JobListForWorkspacesRequestBody.OrderByMethod = JobListForWorkspacesRequestBody.OrderByMethod.DESC,
   ): JobsResponse
 
   fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum = OrderByFieldEnum.CREATED_AT,
-    orderByMethod: OrderByMethodEnum = OrderByMethodEnum.DESC,
+    orderByField: JobListForWorkspacesRequestBody.OrderByField = JobListForWorkspacesRequestBody.OrderByField.CREATED_AT,
+    orderByMethod: JobListForWorkspacesRequestBody.OrderByMethod = JobListForWorkspacesRequestBody.OrderByMethod.DESC,
   ): JobsResponse
 }
 
@@ -76,7 +74,11 @@ class JobServiceImpl(
     organizationId: UUID?,
     returnAfterJobId: Boolean,
   ): JobResponse {
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
+    // SchedulerHandler still takes the Java request body
+    val connectionIdRequestBody =
+      io.airbyte.api.model.generated
+        .ConnectionIdRequestBody()
+        .connectionId(connectionId)
     val result =
       kotlin
         .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId, returnAfterJobId) }
@@ -90,7 +92,11 @@ class JobServiceImpl(
    * Starts a reset job for the given connection ID.
    */
   override fun reset(connectionId: UUID): JobResponse {
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
+    // SchedulerHandler still takes the Java request body
+    val connectionIdRequestBody =
+      io.airbyte.api.model.generated
+        .ConnectionIdRequestBody()
+        .connectionId(connectionId)
     val result =
       kotlin
         .runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
@@ -106,7 +112,7 @@ class JobServiceImpl(
    * Cancels a job by ID.
    */
   override fun cancelJob(jobId: Long): JobResponse {
-    val jobIdRequestBody = JobIdRequestBody().id(jobId)
+    val jobIdRequestBody = JobIdRequestBody(id = jobId)
     val result =
       kotlin
         .runCatching {
@@ -140,24 +146,23 @@ class JobServiceImpl(
   override fun getJobList(
     connectionId: UUID,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum,
-    orderByMethod: OrderByMethodEnum,
+    orderByField: JobListForWorkspacesRequestBody.OrderByField,
+    orderByMethod: JobListForWorkspacesRequestBody.OrderByMethod,
   ): JobsResponse {
     val configTypes: List<JobConfigType> = getJobConfigTypes(jobsFilter.jobType)
     val jobListRequestBody =
-      JobListRequestBody()
-        .configId(connectionId.toString())
-        .configTypes(configTypes)
-        .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-        .statuses(jobsFilter.getConfigApiStatuses())
-        .createdAtStart(jobsFilter.createdAtStart)
-        .createdAtEnd(jobsFilter.createdAtEnd)
-        .updatedAtStart(jobsFilter.updatedAtStart)
-        .updatedAtEnd(jobsFilter.updatedAtEnd)
-        .orderByField(JobListRequestBody.OrderByFieldEnum.valueOf(orderByField.name))
-        .orderByMethod(
-          JobListRequestBody.OrderByMethodEnum.valueOf(orderByMethod.name),
-        )
+      JobListRequestBody(
+        configId = connectionId.toString(),
+        configTypes = configTypes,
+        pagination = Pagination(pageSize = jobsFilter.limit, rowOffset = jobsFilter.offset),
+        statuses = jobsFilter.getConfigApiStatuses(),
+        createdAtStart = jobsFilter.createdAtStart,
+        createdAtEnd = jobsFilter.createdAtEnd,
+        updatedAtStart = jobsFilter.updatedAtStart,
+        updatedAtEnd = jobsFilter.updatedAtEnd,
+        orderByField = JobListRequestBody.OrderByField.valueOf(orderByField.name),
+        orderByMethod = JobListRequestBody.OrderByMethod.valueOf(orderByMethod.name),
+      )
 
     val result =
       kotlin
@@ -184,8 +189,8 @@ class JobServiceImpl(
   override fun getJobList(
     workspaceIds: List<UUID>,
     jobsFilter: JobsFilter,
-    orderByField: OrderByFieldEnum,
-    orderByMethod: OrderByMethodEnum,
+    orderByField: JobListForWorkspacesRequestBody.OrderByField,
+    orderByMethod: JobListForWorkspacesRequestBody.OrderByMethod,
   ): JobsResponse {
     val configTypes = getJobConfigTypes(jobsFilter.jobType)
 
@@ -193,17 +198,18 @@ class JobServiceImpl(
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
 
     val requestBody =
-      JobListForWorkspacesRequestBody()
-        .workspaceIds(workspaceIdsToQuery)
-        .configTypes(configTypes)
-        .pagination(Pagination().pageSize(jobsFilter.limit).rowOffset(jobsFilter.offset))
-        .statuses(jobsFilter.getConfigApiStatuses())
-        .createdAtStart(jobsFilter.createdAtStart)
-        .createdAtEnd(jobsFilter.createdAtEnd)
-        .updatedAtStart(jobsFilter.updatedAtStart)
-        .updatedAtEnd(jobsFilter.updatedAtEnd)
-        .orderByField(OrderByFieldEnum.valueOf(orderByField.name))
-        .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
+      JobListForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        configTypes = configTypes,
+        pagination = Pagination(pageSize = jobsFilter.limit, rowOffset = jobsFilter.offset),
+        statuses = jobsFilter.getConfigApiStatuses(),
+        createdAtStart = jobsFilter.createdAtStart,
+        createdAtEnd = jobsFilter.createdAtEnd,
+        updatedAtStart = jobsFilter.updatedAtStart,
+        updatedAtEnd = jobsFilter.updatedAtEnd,
+        orderByField = JobListForWorkspacesRequestBody.OrderByField.valueOf(orderByField.name),
+        orderByMethod = JobListForWorkspacesRequestBody.OrderByMethod.valueOf(orderByMethod.name),
+      )
 
     val result =
       kotlin

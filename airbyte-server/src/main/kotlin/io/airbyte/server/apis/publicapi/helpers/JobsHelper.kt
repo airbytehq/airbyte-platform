@@ -4,16 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.JobListForWorkspacesRequestBody
 import io.airbyte.commons.enums.toEnum
 
-fun orderByToFieldAndMethod(
-  orderBy: String?,
-): Pair<JobListForWorkspacesRequestBody.OrderByFieldEnum, JobListForWorkspacesRequestBody.OrderByMethodEnum> {
-  var field: JobListForWorkspacesRequestBody.OrderByFieldEnum = JobListForWorkspacesRequestBody.OrderByFieldEnum.CREATED_AT
-  var method: JobListForWorkspacesRequestBody.OrderByMethodEnum = JobListForWorkspacesRequestBody.OrderByMethodEnum.ASC
+fun orderByToFieldAndMethod(orderBy: String?): Pair<JobListForWorkspacesRequestBody.OrderByField, JobListForWorkspacesRequestBody.OrderByMethod> {
+  var field: JobListForWorkspacesRequestBody.OrderByField = JobListForWorkspacesRequestBody.OrderByField.CREATED_AT
+  var method: JobListForWorkspacesRequestBody.OrderByMethod = JobListForWorkspacesRequestBody.OrderByMethod.ASC
   if (orderBy != null) {
     val pattern: java.util.regex.Pattern =
       java.util.regex.Pattern
@@ -23,10 +21,10 @@ fun orderByToFieldAndMethod(
       throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
     }
     field =
-      matcher.group(1).toEnum<JobListForWorkspacesRequestBody.OrderByFieldEnum>()
+      matcher.group(1).toEnum<JobListForWorkspacesRequestBody.OrderByField>()
         ?: throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
     method =
-      matcher.group(2).toEnum<JobListForWorkspacesRequestBody.OrderByMethodEnum>()
+      matcher.group(2).toEnum<JobListForWorkspacesRequestBody.OrderByMethod>()
         ?: throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
   }
   return Pair(field, method)

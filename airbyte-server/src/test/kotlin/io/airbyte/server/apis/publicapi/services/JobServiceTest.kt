@@ -4,13 +4,13 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobReadList
-import io.airbyte.api.model.generated.JobStatus
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobReadList
+import io.airbyte.api.server.generated.models.JobStatus
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
@@ -73,14 +73,17 @@ class JobServiceTest {
   fun `test sync forwards organization id to scheduler handler`() {
     val organizationId = UUID.randomUUID()
     every { schedulerHandler.syncConnection(any(), organizationId, false) } returns
-      JobInfoRead().job(
-        JobRead()
-          .id(1L)
-          .status(JobStatus.PENDING)
-          .configId(connectionId.toString())
-          .configType(JobConfigType.SYNC)
-          .createdAt(100L)
-          .updatedAt(100L),
+      JobInfoRead(
+        attempts = emptyList(),
+        job =
+          JobRead(
+            id = 1L,
+            status = JobStatus.PENDING,
+            configId = connectionId.toString(),
+            configType = JobConfigType.SYNC,
+            createdAt = 100L,
+            updatedAt = 100L,
+          ),
       )
 
     jobService.sync(connectionId, organizationId)
@@ -98,14 +101,17 @@ class JobServiceTest {
   fun `test sync forwards return after job id to scheduler handler`() {
     val organizationId = UUID.randomUUID()
     every { schedulerHandler.syncConnection(any(), organizationId, true) } returns
-      JobInfoRead().job(
-        JobRead()
-          .id(1L)
-          .status(JobStatus.PENDING)
-          .configId(connectionId.toString())
-          .configType(JobConfigType.SYNC)
-          .createdAt(100L)
-          .updatedAt(100L),
+      JobInfoRead(
+        attempts = emptyList(),
+        job =
+          JobRead(
+            id = 1L,
+            status = JobStatus.PENDING,
+            configId = connectionId.toString(),
+            configType = JobConfigType.SYNC,
+            createdAt = 100L,
+            updatedAt = 100L,
+          ),
       )
 
     jobService.sync(connectionId, organizationId, returnAfterJobId = true)
@@ -137,8 +143,8 @@ class JobServiceTest {
 
   @Test
   fun `test getJobList with null jobType returns all job types`() {
-    val requestBodySlot = slot<io.airbyte.api.model.generated.JobListRequestBody>()
-    every { jobHistoryHandler.listJobsForLight(capture(requestBodySlot)) } returns JobReadList().jobs(emptyList()).totalJobCount(0L)
+    val requestBodySlot = slot<io.airbyte.api.server.generated.models.JobListRequestBody>()
+    every { jobHistoryHandler.listJobsForLight(capture(requestBodySlot)) } returns JobReadList(jobs = emptyList(), totalJobCount = 0L)
 
     val jobsFilter =
       JobsFilter(
@@ -168,8 +174,8 @@ class JobServiceTest {
     jobType: JobTypeEnum,
     expectedConfigType: JobConfigType,
   ) {
-    val requestBodySlot = slot<io.airbyte.api.model.generated.JobListRequestBody>()
-    every { jobHistoryHandler.listJobsForLight(capture(requestBodySlot)) } returns JobReadList().jobs(emptyList()).totalJobCount(0L)
+    val requestBodySlot = slot<io.airbyte.api.server.generated.models.JobListRequestBody>()
+    every { jobHistoryHandler.listJobsForLight(capture(requestBodySlot)) } returns JobReadList(jobs = emptyList(), totalJobCount = 0L)
 
     val filter =
       JobsFilter(

@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.BooleanRead
-import io.airbyte.api.model.generated.CheckDataWorkerCapacityRead
-import io.airbyte.api.model.generated.InternalOperationResult
-import io.airbyte.api.model.generated.JobFailureRequest
-import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
+import io.airbyte.api.server.generated.models.BooleanRead
+import io.airbyte.api.server.generated.models.CheckDataWorkerCapacityRead
+import io.airbyte.api.server.generated.models.InternalOperationResult
+import io.airbyte.api.server.generated.models.JobFailureRequest
+import io.airbyte.api.server.generated.models.JobSuccessWithAttemptNumberRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.JobStatus
 import io.airbyte.commons.server.errors.BadRequestException
@@ -115,7 +115,7 @@ open class JobsHandler(
         logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
 
-      return InternalOperationResult().succeeded(true)
+      return InternalOperationResult(succeeded = true)
     } catch (e: IOException) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(
         input.jobId,
@@ -211,7 +211,7 @@ open class JobsHandler(
         logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
 
-      return InternalOperationResult().succeeded(true)
+      return InternalOperationResult(succeeded = true)
     } catch (e: IOException) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(
         input.jobId,
@@ -239,7 +239,7 @@ open class JobsHandler(
    */
   fun reportJobStart(jobId: Long): InternalOperationResult {
     jobCreationAndStatusUpdateHelper.reportJobStart(jobId)
-    return InternalOperationResult().succeeded(true)
+    return InternalOperationResult(succeeded = true)
   }
 
   /**
@@ -247,7 +247,7 @@ open class JobsHandler(
    */
   fun setJobQueued(jobId: Long): InternalOperationResult {
     jobCreationAndStatusUpdateHelper.setJobQueued(jobId)
-    return InternalOperationResult().succeeded(true)
+    return InternalOperationResult(succeeded = true)
   }
 
   /**
@@ -255,7 +255,7 @@ open class JobsHandler(
    */
   fun cancelQueuedJob(jobId: Long): InternalOperationResult {
     jobCreationAndStatusUpdateHelper.cancelQueuedJob(jobId)
-    return InternalOperationResult().succeeded(true)
+    return InternalOperationResult(succeeded = true)
   }
 
   /**
@@ -269,9 +269,7 @@ open class JobsHandler(
     val job = jobPersistence.getJob(jobId)
     // Data worker enforcement only applies to sync jobs. Other job types bypass capacity gating.
     if (job.configType != JobConfig.ConfigType.SYNC) {
-      return CheckDataWorkerCapacityRead()
-        .capacityAvailable(true)
-        .useOnDemandCapacity(false)
+      return CheckDataWorkerCapacityRead(capacityAvailable = true, useOnDemandCapacity = false)
     }
 
     val onDemandEnabled = connectionService.getStandardSync(connectionId).onDemandEnabled ?: false
@@ -288,9 +286,10 @@ open class JobsHandler(
       jobPersistence.updateSyncJobOnDemandCapacity(job.id, true)
     }
 
-    return CheckDataWorkerCapacityRead()
-      .capacityAvailable(capacityResult.hasAvailableCapacity)
-      .useOnDemandCapacity(capacityResult.usedOnDemandCapacity)
+    return CheckDataWorkerCapacityRead(
+      capacityAvailable = capacityResult.hasAvailableCapacity,
+      useOnDemandCapacity = capacityResult.usedOnDemandCapacity,
+    )
   }
 
   /**
@@ -319,7 +318,7 @@ open class JobsHandler(
           )
         }.orElse(false)
 
-    return BooleanRead().value(previousJobSucceeded)
+    return BooleanRead(value = previousJobSucceeded)
   }
 
   /**

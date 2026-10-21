@@ -4,26 +4,24 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.AttemptFailureSummary
-import io.airbyte.api.model.generated.AttemptInfoRead
 import io.airbyte.api.model.generated.AttemptInfoReadLogs
-import io.airbyte.api.model.generated.AttemptRead
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.AttemptStreamStats
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.FailureOrigin
-import io.airbyte.api.model.generated.FailureType
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobDebugRead
-import io.airbyte.api.model.generated.JobInfoLightRead
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobRefreshConfig
-import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.api.model.generated.LogFormatType
-import io.airbyte.api.model.generated.ResetConfig
-import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SynchronousJobRead
+import io.airbyte.api.server.generated.models.AttemptFailureSummary
+import io.airbyte.api.server.generated.models.AttemptInfoRead
+import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.AttemptStreamStats
+import io.airbyte.api.server.generated.models.FailureOrigin
+import io.airbyte.api.server.generated.models.FailureType
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobDebugRead
+import io.airbyte.api.server.generated.models.JobInfoLightRead
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobRefreshConfig
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.LogFormatType
+import io.airbyte.api.server.generated.models.ResetConfig
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.LogClientManager
@@ -67,6 +65,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
+import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -143,95 +142,105 @@ internal class JobConverterTest {
       )
 
   private val jobInfoUnstructuredLogs: JobInfoRead =
-    JobInfoRead()
-      .job(
-        JobRead()
-          .id(jobId)
-          .configId(jobConfigId)
-          .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
-          .configType(JobConfigType.SYNC)
-          .enabledStreams(
+    JobInfoRead(
+      job =
+        JobRead(
+          id = jobId,
+          configId = jobConfigId,
+          status = io.airbyte.api.server.generated.models.JobStatus.RUNNING,
+          configType = JobConfigType.SYNC,
+          enabledStreams =
             listOf(
-              io.airbyte.api.model.generated.StreamDescriptor().name(
-                USERS,
-              ),
-              io.airbyte.api.model.generated
-                .StreamDescriptor()
-                .name(ACCOUNTS),
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(name = USERS),
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(name = ACCOUNTS),
             ),
-          ).createdAt(CREATED_AT)
-          .updatedAt(CREATED_AT)
-          .startedAt(CREATED_AT),
-      ).attempts(
-        listOf(
-          AttemptInfoRead()
-            .attempt(
-              AttemptRead()
-                .id(attemptNumber.toLong())
-                .status(io.airbyte.api.model.generated.AttemptStatus.RUNNING)
-                .recordsSynced(recordsEmitted)
-                .bytesSynced(bytesEmitted)
-                .totalStats(
-                  AttemptStats()
-                    .recordsEmitted(recordsEmitted)
-                    .bytesEmitted(bytesEmitted)
-                    .stateMessagesEmitted(stateMessagesEmitted)
-                    .recordsCommitted(recordsCommitted),
-                ).streamStats(
-                  listOf(
-                    AttemptStreamStats()
-                      .streamName(streamName)
-                      .stats(
-                        AttemptStats()
-                          .recordsEmitted(recordsEmitted)
-                          .bytesEmitted(bytesEmitted)
-                          .stateMessagesEmitted(stateMessagesEmitted)
-                          .recordsCommitted(recordsCommitted),
-                      ),
-                  ),
-                ).updatedAt(CREATED_AT)
-                .createdAt(CREATED_AT)
-                .endedAt(CREATED_AT)
-                .failureSummary(
-                  AttemptFailureSummary()
-                    .failures(
-                      listOf(
-                        io.airbyte.api.model.generated
-                          .FailureReason()
-                          .failureOrigin(FailureOrigin.SOURCE)
-                          .failureType(FailureType.SYSTEM_ERROR)
-                          .externalMessage(FAILURE_EXTERNAL_MESSAGE)
-                          .stacktrace(FAILURE_STACKTRACE)
-                          .timestamp(FAILURE_TIMESTAMP),
-                      ),
-                    ).partialSuccess(partialSuccess),
-                ),
-            ).logType(LogFormatType.FORMATTED)
-            .logs(AttemptInfoReadLogs().logLines(mutableListOf<String?>())),
+          createdAt = CREATED_AT,
+          updatedAt = CREATED_AT,
+          startedAt = CREATED_AT,
         ),
-      )
+      attempts =
+        listOf(
+          AttemptInfoRead(
+            attempt =
+              AttemptRead(
+                id = attemptNumber.toLong(),
+                status = io.airbyte.api.server.generated.models.AttemptStatus.RUNNING,
+                recordsSynced = recordsEmitted,
+                bytesSynced = bytesEmitted,
+                totalStats =
+                  AttemptStats(
+                    recordsEmitted = recordsEmitted,
+                    bytesEmitted = bytesEmitted,
+                    stateMessagesEmitted = stateMessagesEmitted,
+                    recordsCommitted = recordsCommitted,
+                  ),
+                streamStats =
+                  listOf(
+                    AttemptStreamStats(
+                      streamName = streamName,
+                      stats =
+                        AttemptStats(
+                          recordsEmitted = recordsEmitted,
+                          bytesEmitted = bytesEmitted,
+                          stateMessagesEmitted = stateMessagesEmitted,
+                          recordsCommitted = recordsCommitted,
+                        ),
+                    ),
+                  ),
+                updatedAt = CREATED_AT,
+                createdAt = CREATED_AT,
+                endedAt = CREATED_AT,
+                failureSummary =
+                  AttemptFailureSummary(
+                    failures = listOf(apiFailureReason()),
+                    partialSuccess = partialSuccess,
+                  ),
+              ),
+            logType = LogFormatType.FORMATTED,
+            logs = AttemptInfoReadLogs().logLines(mutableListOf<String?>()),
+          ),
+        ),
+    )
 
   private val version = "0.33.4"
   private val airbyteVersion = AirbyteVersion(version)
-  private val sourceDefinitionRead: SourceDefinitionRead? = SourceDefinitionRead().sourceDefinitionId(UUID.randomUUID())
-  private val destinationDefinitionRead: DestinationDefinitionRead? = DestinationDefinitionRead().destinationDefinitionId(UUID.randomUUID())
+  private val sourceDefinitionId = UUID.randomUUID()
+  private val destinationDefinitionId = UUID.randomUUID()
+  private val sourceDefinitionRead =
+    io.airbyte.api.server.generated.models.SourceDefinitionRead(
+      sourceDefinitionId = sourceDefinitionId,
+      name = "source",
+      dockerRepository = "airbyte/source",
+      dockerImageTag = "1.0.0",
+      documentationUrl = URI.create("https://docs.airbyte.com/source"),
+    )
+  private val destinationDefinitionRead =
+    io.airbyte.api.server.generated.models.DestinationDefinitionRead(
+      destinationDefinitionId = destinationDefinitionId,
+      name = "destination",
+      dockerRepository = "airbyte/destination",
+      dockerImageTag = "1.0.0",
+      documentationUrl = URI.create("https://docs.airbyte.com/destination"),
+    )
 
-  private val jobDebugInfo: JobDebugRead? =
-    JobDebugRead()
-      .id(jobId)
-      .configId(jobConfigId)
-      .status(io.airbyte.api.model.generated.JobStatus.RUNNING)
-      .configType(JobConfigType.SYNC)
-      .airbyteVersion(airbyteVersion.serialize())
-      .sourceDefinition(sourceDefinitionRead)
-      .destinationDefinition(destinationDefinitionRead)
+  private val jobDebugInfo: JobDebugRead =
+    JobDebugRead(
+      id = jobId,
+      configId = jobConfigId,
+      status = io.airbyte.api.server.generated.models.JobStatus.RUNNING,
+      configType = JobConfigType.SYNC,
+      airbyteVersion = airbyteVersion.serialize(),
+      sourceDefinition = sourceDefinitionRead,
+      destinationDefinition = destinationDefinitionRead,
+    )
 
   private val jobWithAttemptsReadUnstructuredLogs: JobWithAttemptsRead? =
-    JobWithAttemptsRead()
-      .job(jobInfoUnstructuredLogs.getJob())
-      .attempts(
-        jobInfoUnstructuredLogs.attempts.map { obj: AttemptInfoRead? -> obj!!.attempt },
-      )
+    JobWithAttemptsRead(
+      job = jobInfoUnstructuredLogs.job,
+      attempts = jobInfoUnstructuredLogs.attempts.map { obj: AttemptInfoRead? -> obj!!.attempt },
+    )
 
   private val failureSummary: io.airbyte.config.AttemptFailureSummary? =
     io.airbyte.config
@@ -242,8 +251,8 @@ internal class JobConverterTest {
   @Test
   fun testEnumCompatibility() {
     Assertions.assertTrue(isCompatible<ConfigType, JobConfigType>())
-    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>())
-    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.model.generated.AttemptStatus>())
+    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.server.generated.models.JobStatus>())
+    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.server.generated.models.AttemptStatus>())
     Assertions.assertTrue(isCompatible<FailureReason.FailureOrigin, FailureOrigin>())
     Assertions.assertTrue(isCompatible<FailureReason.FailureType, FailureType>())
   }
@@ -285,7 +294,7 @@ internal class JobConverterTest {
       job =
         Job(
           jobId,
-          jobConfig.getConfigType(),
+          jobConfig.configType,
           jobConfigId,
           jobConfig,
           listOf(attempt),
@@ -307,7 +316,7 @@ internal class JobConverterTest {
 
     @Test
     fun testGetJobInfoLightRead() {
-      val expected = JobInfoLightRead().job(jobInfoUnstructuredLogs.job)
+      val expected = JobInfoLightRead(job = jobInfoUnstructuredLogs.job)
       Assertions.assertEquals(expected, jobConverter.getJobInfoLightRead(job!!))
     }
 
@@ -332,23 +341,9 @@ internal class JobConverterTest {
       )
       val jobInfoRead = jobConverter.getJobInfoRead(job!!)
       Assertions.assertEquals(LogFormatType.STRUCTURED, jobInfoRead.attempts.first().logType)
-      Assertions.assertEquals(
-        logEventVersion,
-        jobInfoRead
-          .attempts
-          .first()
-          .logs
-          .version,
-      )
-      Assertions.assertEquals(
-        1,
-        jobInfoRead
-          .attempts
-          .first()
-          .logs
-          .events
-          .size,
-      )
+      val logs = jobInfoRead.attempts.first().logs as AttemptInfoReadLogs
+      Assertions.assertEquals(logEventVersion, logs.version)
+      Assertions.assertEquals(1, logs.events.size)
     }
 
     // this test intentionally only looks at the reset config as the rest is the same here.
@@ -382,15 +377,14 @@ internal class JobConverterTest {
         )
 
       val expectedResetConfig =
-        ResetConfig().streamsToReset(
-          listOf(
-            io.airbyte.api.model.generated
-              .StreamDescriptor()
-              .name(USERS),
-            io.airbyte.api.model.generated
-              .StreamDescriptor()
-              .name(ACCOUNTS),
-          ),
+        ResetConfig(
+          streamsToReset =
+            listOf(
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(name = USERS),
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(name = ACCOUNTS),
+            ),
         )
       Assertions.assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).job.resetConfig)
     }
@@ -430,19 +424,19 @@ internal class JobConverterTest {
     private val synchronousJobInfoUnstructuredLogs: SynchronousJobRead? =
       SynchronousJobRead()
         .id(jobId)
-        .configType(JobConfigType.DISCOVER_SCHEMA)
+        .configType(io.airbyte.api.model.generated.JobConfigType.DISCOVER_SCHEMA)
         .configId(configId.toString())
         .createdAt(CREATED_AT)
         .endedAt(CREATED_AT)
         .succeeded(jobSucceeded)
         .connectorConfigurationUpdated(connectorConfigUpdated)
-        .logType(LogFormatType.FORMATTED)
+        .logType(io.airbyte.api.model.generated.LogFormatType.FORMATTED)
         .logs(AttemptInfoReadLogs().logLines(emptyList()))
         .failureReason(
           io.airbyte.api.model.generated
             .FailureReason()
-            .failureOrigin(FailureOrigin.SOURCE)
-            .failureType(FailureType.SYSTEM_ERROR)
+            .failureOrigin(io.airbyte.api.model.generated.FailureOrigin.SOURCE)
+            .failureType(io.airbyte.api.model.generated.FailureType.SYSTEM_ERROR)
             .externalMessage(FAILURE_EXTERNAL_MESSAGE)
             .stacktrace(FAILURE_STACKTRACE)
             .timestamp(FAILURE_TIMESTAMP),
@@ -483,6 +477,16 @@ internal class JobConverterTest {
     private const val FAILURE_STACKTRACE = "stacktrace"
     private const val USERS = "users"
     private const val ACCOUNTS = "accounts"
+
+    private fun apiFailureReason() =
+      io.airbyte.api.server.generated.models.FailureReason(
+        timestamp = FAILURE_TIMESTAMP,
+        failureOrigin = FailureOrigin.SOURCE,
+        failureType = FailureType.SYSTEM_ERROR,
+        externalMessage = FAILURE_EXTERNAL_MESSAGE,
+        stacktrace = FAILURE_STACKTRACE,
+      )
+
     private val FAILURE_REASON: FailureReason =
       FailureReason()
         .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
@@ -547,12 +551,12 @@ internal class JobConverterTest {
             true,
           ),
           Optional.of<JobRefreshConfig?>(
-            JobRefreshConfig().streamsToRefresh(
-              listOf(
-                io.airbyte.api.model.generated
-                  .StreamDescriptor()
-                  .name("test"),
-              ),
+            JobRefreshConfig(
+              streamsToRefresh =
+                listOf(
+                  io.airbyte.api.server.generated.models
+                    .StreamDescriptor(name = "test"),
+                ),
             ),
           ),
         ),

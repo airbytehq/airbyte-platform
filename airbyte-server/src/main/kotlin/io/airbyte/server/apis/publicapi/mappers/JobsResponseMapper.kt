@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobReadList
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobReadList
 import io.airbyte.publicApi.server.generated.models.JobResponse
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import io.airbyte.publicApi.server.generated.models.JobsResponse
@@ -44,7 +44,7 @@ object JobsResponseMapper {
       jobsList.jobs
         .filter { j ->
           ALLOWED_CONFIG_TYPES.contains(j.job!!.configType)
-        }.map { obj -> JobResponseMapper.from(obj!!) }
+        }.map { obj -> JobResponseMapper.from(obj) }
     val uriBuilder =
       PaginationMapper
         .getBuilder(apiHost, removePublicApiPathPrefix(JOBS_PATH))
@@ -79,7 +79,7 @@ object JobsResponseMapper {
     val jobs: List<JobResponse> =
       jobsList.jobs
         .filter { j -> ALLOWED_CONFIG_TYPES.contains(j.job!!.configType) }
-        .map { obj -> JobResponseMapper.from(obj!!) }
+        .map { obj -> JobResponseMapper.from(obj) }
 
     val uriBuilder =
       PaginationMapper

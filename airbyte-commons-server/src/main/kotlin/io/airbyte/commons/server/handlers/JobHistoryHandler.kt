@@ -4,32 +4,30 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
-import io.airbyte.api.model.generated.DestinationDefinitionRead
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobDebugInfoRead
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobInfoLightRead
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody
-import io.airbyte.api.model.generated.JobListRequestBody
-import io.airbyte.api.model.generated.JobOptionalRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobReadList
-import io.airbyte.api.model.generated.JobStatus
-import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.api.model.generated.SourceDefinitionRead
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
-import io.airbyte.api.model.generated.WorkflowStateRead
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationDefinitionRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobDebugInfoRead
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobInfoLightRead
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobListForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.JobListRequestBody
+import io.airbyte.api.server.generated.models.JobOptionalRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobReadList
+import io.airbyte.api.server.generated.models.JobStatus
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.StreamDescriptor
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.JobConverter.Companion.getDebugJobInfoRead
@@ -37,7 +35,6 @@ import io.airbyte.commons.server.converters.JobConverter.Companion.getJobWithAtt
 import io.airbyte.commons.server.converters.WorkflowStateConverter
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.hydrateWithStats
 import io.airbyte.commons.temporal.TemporalClient
-import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Attempt
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -102,11 +99,7 @@ class JobHistoryHandler(
     val configId = request.configId
 
     val pageSize =
-      if (request.pagination != null && request.pagination.pageSize != null) {
-        request.pagination.pageSize
-      } else {
-        DEFAULT_PAGE_SIZE
-      }
+      request.pagination?.pageSize ?: DEFAULT_PAGE_SIZE
 
     val tags: MutableMap<String?, Any?> = HashMap(mapOf(MetricTags.CONFIG_TYPES to configTypes.toString()))
     if (configId != null) {
@@ -119,7 +112,7 @@ class JobHistoryHandler(
         jobPersistence.listJobsIncludingId(
           configTypes,
           configId,
-          request.includingJobId,
+          request.includingJobId!!,
           pageSize,
         )
       } else {
@@ -127,37 +120,36 @@ class JobHistoryHandler(
           configTypes,
           configId,
           pageSize,
-          if (request.pagination != null && request.pagination.rowOffset != null) request.pagination.rowOffset else 0,
-          if (CollectionUtils.isEmpty(request.statuses)) emptyList() else mapToDomainJobStatus(request.statuses),
+          request.pagination?.rowOffset ?: 0,
+          if (CollectionUtils.isEmpty(request.statuses)) emptyList() else mapToDomainJobStatus(request.statuses!!),
           request.createdAtStart,
           request.createdAtEnd,
           request.updatedAtStart,
           request.updatedAtEnd,
-          if (request.orderByField == null) null else request.orderByField.value(),
-          if (request.orderByMethod == null) null else request.orderByMethod.value(),
+          request.orderByField?.value,
+          request.orderByMethod?.value,
         )
       }
 
-    val jobReads = jobs.map { obj: Job -> getJobWithAttemptsRead(obj) }
-
-    hydrateWithStats(
-      jobReads,
-      jobs,
-      featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
-      jobPersistence,
-    )
+    val jobReads =
+      hydrateWithStats(
+        jobs.map { obj: Job -> getJobWithAttemptsRead(obj) },
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
+        jobPersistence,
+      )
 
     val totalJobCount =
       jobPersistence.getJobCount(
         configTypes,
         configId,
-        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses),
+        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses!!),
         request.createdAtStart,
         request.createdAtEnd,
         request.updatedAtStart,
         request.updatedAtEnd,
       )
-    return JobReadList().jobs(jobReads).totalJobCount(totalJobCount)
+    return JobReadList(jobs = jobReads, totalJobCount = totalJobCount)
   }
 
   fun listJobsForLight(request: JobListRequestBody): JobReadList {
@@ -173,11 +165,7 @@ class JobHistoryHandler(
     val configId = request.configId
 
     val pageSize =
-      if (request.pagination != null && request.pagination.pageSize != null) {
-        request.pagination.pageSize
-      } else {
-        DEFAULT_PAGE_SIZE
-      }
+      request.pagination?.pageSize ?: DEFAULT_PAGE_SIZE
 
     val tags: MutableMap<String?, Any?> = hashMapOf(MetricTags.CONFIG_TYPES to configTypes.toString())
     if (configId != null) {
@@ -190,7 +178,7 @@ class JobHistoryHandler(
         jobPersistence.listJobsIncludingId(
           configTypes,
           configId,
-          request.includingJobId,
+          request.includingJobId!!,
           pageSize,
         )
       } else {
@@ -198,37 +186,36 @@ class JobHistoryHandler(
           configTypes,
           configId,
           pageSize,
-          if (request.pagination != null && request.pagination.rowOffset != null) request.pagination.rowOffset else 0,
-          if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses),
+          request.pagination?.rowOffset ?: 0,
+          if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses!!),
           request.createdAtStart,
           request.createdAtEnd,
           request.updatedAtStart,
           request.updatedAtEnd,
-          if (request.orderByField == null) null else request.orderByField.value(),
-          if (request.orderByMethod == null) null else request.orderByMethod.value(),
+          request.orderByField?.value,
+          request.orderByMethod?.value,
         )
       }
 
-    val jobReads = jobs.stream().map { obj: Job -> getJobWithAttemptsRead(obj) }.collect(Collectors.toList())
-
-    hydrateWithStats(
-      jobReads,
-      jobs,
-      featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
-      jobPersistence,
-    )
+    val jobReads =
+      hydrateWithStats(
+        jobs.stream().map { obj: Job -> getJobWithAttemptsRead(obj) }.collect(Collectors.toList()),
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
+        jobPersistence,
+      )
 
     val totalJobCount =
       jobPersistence.getJobCount(
         configTypes,
         configId,
-        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses),
+        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses!!),
         request.createdAtStart,
         request.createdAtEnd,
         request.updatedAtStart,
         request.updatedAtEnd,
       )
-    return JobReadList().jobs(jobReads).totalJobCount(totalJobCount)
+    return JobReadList(jobs = jobReads, totalJobCount = totalJobCount)
   }
 
   fun listJobsForWorkspaces(request: JobListForWorkspacesRequestBody): JobReadList {
@@ -242,40 +229,35 @@ class JobHistoryHandler(
         }.toSet()
 
     val pageSize =
-      if (request.pagination != null && request.pagination.pageSize != null) {
-        request.pagination.pageSize
-      } else {
-        DEFAULT_PAGE_SIZE
-      }
+      request.pagination?.pageSize ?: DEFAULT_PAGE_SIZE
 
     val offset =
-      if (request.pagination != null && request.pagination.rowOffset != null) request.pagination.rowOffset else 0
+      request.pagination?.rowOffset ?: 0
 
     val jobs =
       jobPersistence.listJobsLight(
         configTypes,
-        request.workspaceIds,
+        request.workspaceIds!!,
         pageSize,
         offset,
-        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses),
+        if (CollectionUtils.isEmpty(request.statuses)) null else mapToDomainJobStatus(request.statuses!!),
         request.createdAtStart,
         request.createdAtEnd,
         request.updatedAtStart,
         request.updatedAtEnd,
-        if (request.orderByField == null) null else request.orderByField.value(),
-        if (request.orderByMethod == null) null else request.orderByMethod.value(),
+        request.orderByField?.value,
+        request.orderByMethod?.value,
       )
 
-    val jobReads = jobs.stream().map { obj: Job -> getJobWithAttemptsRead(obj) }.collect(Collectors.toList())
+    val jobReads =
+      hydrateWithStats(
+        jobs.stream().map { obj: Job -> getJobWithAttemptsRead(obj) }.collect(Collectors.toList()),
+        jobs,
+        featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
+        jobPersistence,
+      )
 
-    hydrateWithStats(
-      jobReads,
-      jobs,
-      featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
-      jobPersistence,
-    )
-
-    return JobReadList().jobs(jobReads).totalJobCount(jobs.size.toLong())
+    return JobReadList(jobs = jobReads, totalJobCount = jobs.size.toLong())
   }
 
   fun getJob(jobId: Long): Job = jobPersistence.getJob(jobId)
@@ -304,30 +286,22 @@ class JobHistoryHandler(
 
   fun getJobDebugInfo(jobId: Long): JobDebugInfoRead {
     val job = jobPersistence.getJob(jobId)
-    val jobinfoRead = jobConverter.getJobInfoRead(job)
+    val jobInfoRead = jobConverter.getJobInfoRead(job)
+    val hydratedJobInfoRead =
+      jobInfoRead.copy(
+        attempts =
+          jobInfoRead.attempts.map { a ->
+            val attemptStats = jobPersistence.getAttemptStats(job.id, a.attempt.id.toInt())
+            a.copy(attempt = hydrateWithStats(a.attempt, attemptStats))
+          },
+      )
 
-    for (a in jobinfoRead.attempts) {
-      val attemptNumber = a.attempt.id.toInt()
-      val attemptStats = jobPersistence.getAttemptStats(job.id, attemptNumber)
-      hydrateWithStats(a.attempt, attemptStats)
+    val jobDebugInfoRead = buildJobDebugInfoRead(hydratedJobInfoRead)
+    if (temporalClient == null) {
+      return jobDebugInfoRead
     }
-
-    val jobDebugInfoRead = buildJobDebugInfoRead(jobinfoRead)
-    if (temporalClient != null) {
-      val connectionId = UUID.fromString(job.scope)
-      Optional
-        .ofNullable(temporalClient.getWorkflowState(connectionId))
-        .map { workflowState: WorkflowState? ->
-          workflowStateConverter.getWorkflowStateRead(
-            workflowState!!,
-          )
-        }.ifPresent { workflowState: WorkflowStateRead? ->
-          jobDebugInfoRead.workflowState =
-            workflowState
-        }
-    }
-
-    return jobDebugInfoRead
+    val workflowState = temporalClient.getWorkflowState(UUID.fromString(job.scope)) ?: return jobDebugInfoRead
+    return jobDebugInfoRead.copy(workflowState = workflowStateConverter.getWorkflowStateRead(workflowState))
   }
 
   @WithSpan
@@ -360,32 +334,33 @@ class JobHistoryHandler(
     jobs: List<Job>,
     jobReads: List<JobWithAttemptsRead>,
   ): ConnectionSyncProgressRead {
-    hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)), jobPersistence)
+    val hydratedJobReads =
+      hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)), jobPersistence)
 
-    if (jobReads.isEmpty()) {
+    if (hydratedJobReads.isEmpty()) {
       return ConnectionSyncProgressRead()
         .connectionId(connectionIdRequestBody.connectionId)
         .streams(emptyList<@Valid StreamSyncProgressReadItem?>())
     }
-    val runningJob: JobWithAttemptsRead = jobReads.first()
+    val runningJob = hydratedJobReads.first().job!!
 
     // Create a map from the stream stats list
     val streamStatsMap =
-      runningJob.job.streamAggregatedStats.associateBy { streamStats -> "${streamStats.streamName}-${streamStats.streamNamespace}" }
+      runningJob.streamAggregatedStats.orEmpty().associateBy { streamStats -> "${streamStats.streamName}-${streamStats.streamNamespace}" }
 
     // Iterate through ALL enabled streams from the job, enriching with stream stats data
-    val runningJobConfigType = runningJob.job.configType
+    val runningJobConfigType = runningJob.configType
     val streamToTrackPerConfigType: SortedMap<JobConfigType, List<StreamDescriptor>> = TreeMap()
-    val enabledStreams = runningJob.job.enabledStreams
+    val enabledStreams = runningJob.enabledStreams.orEmpty()
     if (runningJobConfigType == JobConfigType.SYNC) {
       streamToTrackPerConfigType[JobConfigType.SYNC] = enabledStreams
     } else if (runningJobConfigType == JobConfigType.REFRESH) {
-      val streamsToRefresh = runningJob.job.refreshConfig.streamsToRefresh
+      val streamsToRefresh = runningJob.refreshConfig!!.streamsToRefresh.orEmpty()
       streamToTrackPerConfigType[JobConfigType.REFRESH] = streamsToRefresh
       streamToTrackPerConfigType[JobConfigType.SYNC] =
         enabledStreams.stream().filter { s: StreamDescriptor -> !streamsToRefresh.contains(s) }.toList()
     } else if (runningJobConfigType == JobConfigType.RESET_CONNECTION || runningJobConfigType == JobConfigType.CLEAR) {
-      streamToTrackPerConfigType[runningJobConfigType] = runningJob.job.resetConfig.streamsToReset
+      streamToTrackPerConfigType[runningJobConfigType] = runningJob.resetConfig!!.streamsToReset.orEmpty()
     }
 
     val finalStreamsWithStats =
@@ -400,7 +375,7 @@ class JobHistoryHandler(
               StreamSyncProgressReadItem()
                 .streamName(stream.name)
                 .streamNamespace(stream.namespace)
-                .configType(entry.key)
+                .configType(entry.key.convertTo<io.airbyte.api.model.generated.JobConfigType>())
 
             if (streamStats != null) {
               item
@@ -414,17 +389,17 @@ class JobHistoryHandler(
           }
         }.collect(Collectors.toList())
 
-    val aggregatedStats = runningJob.job.aggregatedStats
+    val aggregatedStats = runningJob.aggregatedStats
     return ConnectionSyncProgressRead()
       .connectionId(connectionIdRequestBody.connectionId)
-      .jobId(runningJob.job.id)
-      .syncStartedAt(runningJob.job.createdAt)
+      .jobId(runningJob.id)
+      .syncStartedAt(runningJob.createdAt)
       .bytesEmitted(aggregatedStats?.bytesEmitted)
       .bytesCommitted(aggregatedStats?.bytesCommitted)
       .recordsEmitted(aggregatedStats?.recordsEmitted)
       .recordsCommitted(aggregatedStats?.recordsCommitted)
       .recordsRejected(aggregatedStats?.recordsRejected)
-      .configType(runningJobConfigType)
+      .configType(runningJobConfigType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
       .streams(finalStreamsWithStats)
   }
 
@@ -441,26 +416,21 @@ class JobHistoryHandler(
       .getRunningSyncJobForConnections(connectionIds)
       .map { obj: Job -> JobConverter.getJobRead(obj) }
 
-  // the source and destination handlers return Kotlin models; this handler still builds the Java ones
   private fun getSourceRead(connectionRead: ConnectionRead): SourceRead {
     val sourceIdRequestBody = SourceIdRequestBody(sourceId = connectionRead.sourceId)
-    return Jsons.convertValue(sourceHandler.getSource(sourceIdRequestBody), SourceRead::class.java)
+    return sourceHandler.getSource(sourceIdRequestBody)
   }
 
   private fun getDestinationRead(connectionRead: ConnectionRead): DestinationRead {
     val destinationIdRequestBody = DestinationIdRequestBody(destinationId = connectionRead.destinationId)
-    return Jsons.convertValue(destinationHandler.getDestination(destinationIdRequestBody), DestinationRead::class.java)
+    return destinationHandler.getDestination(destinationIdRequestBody)
   }
 
-  // the definitions handlers return Kotlin models; this handler still builds the Java ones
   private fun getSourceDefinitionRead(sourceRead: SourceRead): SourceDefinitionRead =
-    Jsons.convertValue(sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true), SourceDefinitionRead::class.java)
+    sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true)
 
   private fun getDestinationDefinitionRead(destinationRead: DestinationRead): DestinationDefinitionRead =
-    Jsons.convertValue(
-      destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true),
-      DestinationDefinitionRead::class.java,
-    )
+    destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true)
 
   private fun buildJobDebugInfoRead(jobInfoRead: JobInfoRead): JobDebugInfoRead {
     val configId = jobInfoRead.job.configId
@@ -479,9 +449,7 @@ class JobHistoryHandler(
     val destinationDefinitionRead = getDestinationDefinitionRead(destination)
     val jobDebugRead = getDebugJobInfoRead(jobInfoRead, sourceDefinitionRead, destinationDefinitionRead, airbyteVersion)
 
-    return JobDebugInfoRead()
-      .attempts(jobInfoRead.attempts)
-      .job(jobDebugRead)
+    return JobDebugInfoRead(attempts = jobInfoRead.attempts, job = jobDebugRead)
   }
 
   fun mapToDomainJobStatus(apiJobStatuses: List<JobStatus>): List<io.airbyte.config.JobStatus> =
@@ -524,15 +492,14 @@ class JobHistoryHandler(
       jobPersistence: JobPersistence,
       job: Job,
     ): JobInfoRead {
-      val jobWithAttemptsRead = getJobWithAttemptsRead(job)
-      hydrateWithStats(listOf(jobWithAttemptsRead), listOf(job), true, jobPersistence)
+      val jobWithAttemptsRead = hydrateWithStats(listOf(getJobWithAttemptsRead(job)), listOf(job), true, jobPersistence).single()
 
-      return JobInfoRead()
-        .job(jobWithAttemptsRead.job)
-        .attempts(
+      return JobInfoRead(
+        job = jobWithAttemptsRead.job!!,
+        attempts =
           job.attempts
             .map { obj: Attempt -> JobConverter.getAttemptInfoWithoutLogsRead(obj) },
-        )
+      )
     }
   }
 }

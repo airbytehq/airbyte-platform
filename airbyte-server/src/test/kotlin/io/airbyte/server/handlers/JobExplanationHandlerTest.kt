@@ -5,8 +5,11 @@
 package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.model.generated.AttemptInfoRead
-import io.airbyte.api.model.generated.JobInfoRead
+import io.airbyte.api.server.generated.models.AttemptInfoRead
+import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
@@ -42,6 +45,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import io.airbyte.api.server.generated.models.AttemptStatus as ApiAttemptStatus
+import io.airbyte.api.server.generated.models.JobStatus as ApiJobStatus
 
 class JobExplanationHandlerTest {
   private val connectionService = mockk<ConnectionService>()
@@ -134,9 +139,23 @@ class JobExplanationHandlerTest {
       }
 
     val jobInfo =
-      JobInfoRead().apply {
-        attempts = listOf(AttemptInfoRead())
-      }
+      JobInfoRead(
+        job =
+          JobRead(
+            id = 0L,
+            configType = JobConfigType.SYNC,
+            configId = connectionId.toString(),
+            createdAt = 0L,
+            updatedAt = 0L,
+            status = ApiJobStatus.FAILED,
+          ),
+        attempts =
+          listOf(
+            AttemptInfoRead(
+              attempt = AttemptRead(id = 0L, status = ApiAttemptStatus.FAILED, createdAt = 0L, updatedAt = 0L),
+            ),
+          ),
+      )
 
     val spec =
       CatalogHelpers.fieldsToJsonSchema(

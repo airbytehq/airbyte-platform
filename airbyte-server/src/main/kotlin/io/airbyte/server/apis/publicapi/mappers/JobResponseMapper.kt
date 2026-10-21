@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobStatus
-import io.airbyte.api.model.generated.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobStatus
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
 import io.airbyte.publicApi.server.generated.models.JobResponse
 import io.airbyte.publicApi.server.generated.models.JobStatusEnum
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
@@ -38,7 +38,7 @@ object JobResponseMapper {
    * @param jobWithAttemptsRead Output of a job get with attempts from config api
    * @return JobResponse Response object which contains job id, status, and job type
    */
-  fun from(jobWithAttemptsRead: JobWithAttemptsRead): JobResponse = fromJobRead(jobWithAttemptsRead.job)
+  fun from(jobWithAttemptsRead: JobWithAttemptsRead): JobResponse = fromJobRead(jobWithAttemptsRead.job!!)
 
   /**
    * Converts a JobRead object from the config api to a JobResponse object.

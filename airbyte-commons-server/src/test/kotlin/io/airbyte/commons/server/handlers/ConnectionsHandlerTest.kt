@@ -37,11 +37,8 @@ import io.airbyte.api.model.generated.DestinationSearch
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.FieldAdd
 import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.JobAggregatedStats
 import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.JobSyncResultRead
-import io.airbyte.api.model.generated.JobWithAttemptsRead
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference
@@ -49,7 +46,6 @@ import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.StreamMapperType
-import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.api.model.generated.Tag
@@ -75,6 +71,10 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
+import io.airbyte.api.server.generated.models.JobAggregatedStats
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.StreamStats
 import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
@@ -266,6 +266,7 @@ import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import io.airbyte.api.server.generated.models.DestinationSyncMode as KotlinDestinationSyncMode
+import io.airbyte.api.server.generated.models.JobConfigType as ApiJobConfigType
 import io.airbyte.api.server.generated.models.JobConfigType as KotlinJobConfigType
 
 internal class ConnectionsHandlerTest {
@@ -3642,25 +3643,44 @@ internal class ConnectionsHandlerTest {
             }.thenReturn(
               mapOf(
                 jobOneId to
-                  JobWithAttemptsRead().job(
-                    JobRead().createdAt(jobOneCreatedAt).updatedAt(jobOneUpdatedAt).configType(JobConfigType.SYNC).aggregatedStats(
-                      JobAggregatedStats()
-                        .bytesCommitted(jobOneBytesCommitted)
-                        .bytesEmitted(jobOneBytesEmitted)
-                        .recordsCommitted(jobOneRecordsCommitted)
-                        .recordsEmitted(jobOneRecordsEmmitted),
-                    ),
+                  JobWithAttemptsRead(
+                    job =
+                      JobRead(
+                        id = jobOneId,
+                        configId = connectionId.toString(),
+                        status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+                        createdAt = jobOneCreatedAt,
+                        updatedAt = jobOneUpdatedAt,
+                        configType = ApiJobConfigType.SYNC,
+                        aggregatedStats =
+                          JobAggregatedStats(
+                            bytesCommitted = jobOneBytesCommitted,
+                            bytesEmitted = jobOneBytesEmitted,
+                            recordsCommitted = jobOneRecordsCommitted,
+                            recordsEmitted = jobOneRecordsEmmitted,
+                            recordsRejected = 0L,
+                          ),
+                      ),
                   ),
                 jobTwoId to
-                  JobWithAttemptsRead().job(
-                    JobRead().createdAt(jobTwoCreatedAt).updatedAt(jobTwoUpdatedAt).configType(JobConfigType.SYNC).aggregatedStats(
-                      JobAggregatedStats()
-                        .bytesCommitted(jobTwoBytesCommitted)
-                        .bytesEmitted(jobTwoBytesEmmitted)
-                        .recordsCommitted(jobTwoRecordsCommitted)
-                        .recordsRejected(jobTwoRecordsRejected)
-                        .recordsEmitted(jobTwoRecordsEmittted),
-                    ),
+                  JobWithAttemptsRead(
+                    job =
+                      JobRead(
+                        id = jobTwoId,
+                        configId = connectionId.toString(),
+                        status = io.airbyte.api.server.generated.models.JobStatus.FAILED,
+                        createdAt = jobTwoCreatedAt,
+                        updatedAt = jobTwoUpdatedAt,
+                        configType = ApiJobConfigType.SYNC,
+                        aggregatedStats =
+                          JobAggregatedStats(
+                            bytesCommitted = jobTwoBytesCommitted,
+                            bytesEmitted = jobTwoBytesEmmitted,
+                            recordsCommitted = jobTwoRecordsCommitted,
+                            recordsRejected = jobTwoRecordsRejected,
+                            recordsEmitted = jobTwoRecordsEmittted,
+                          ),
+                      ),
                   ),
               ),
             )
@@ -3673,6 +3693,7 @@ internal class ConnectionsHandlerTest {
                 .bytesEmitted(jobOneBytesEmitted)
                 .recordsCommitted(jobOneRecordsCommitted)
                 .recordsEmitted(jobOneRecordsEmmitted)
+                .recordsRejected(0L)
                 .jobCreatedAt(jobOneCreatedAt)
                 .jobUpdatedAt(jobOneUpdatedAt),
               JobSyncResultRead()
@@ -5707,11 +5728,13 @@ internal class ConnectionsHandlerTest {
       val jobStatus = JobStatus.SUCCEEDED
       val apiJobStatus = io.airbyte.api.model.generated.JobStatus.SUCCEEDED
       val jobAggregatedStats =
-        JobAggregatedStats()
-          .bytesCommitted(bytesCommitted1 + bytesCommitted2)
-          .bytesEmitted(bytesEmitted1 + bytesEmitted2)
-          .recordsCommitted(recordsCommitted1 + recordsCommitted2)
-          .recordsEmitted(recordsEmitted1 + recordsEmitted2)
+        JobAggregatedStats(
+          bytesCommitted = bytesCommitted1 + bytesCommitted2,
+          bytesEmitted = bytesEmitted1 + bytesEmitted2,
+          recordsCommitted = recordsCommitted1 + recordsCommitted2,
+          recordsEmitted = recordsEmitted1 + recordsEmitted2,
+          recordsRejected = 0L,
+        )
       val job =
         Job(
           jobId,
@@ -5727,31 +5750,38 @@ internal class ConnectionsHandlerTest {
         )
       val jobList = listOf(job)
       val jobRead =
-        JobRead()
-          .id(job.id)
-          .configType(jobConfigType)
-          .status(apiJobStatus)
-          .aggregatedStats(jobAggregatedStats)
-          .createdAt(job.createdAtInSecond)
-          .updatedAt(job.updatedAtInSecond)
-          .startedAt(job.startedAtInSecond)
-          .streamAggregatedStats(
-            listOf<@Valid StreamStats?>(
-              StreamStats()
-                .streamName(stream1Name)
-                .streamNamespace(stream1Namespace)
-                .bytesCommitted(bytesCommitted1)
-                .recordsCommitted(recordsCommitted1),
-              StreamStats()
-                .streamName(stream2Name)
-                .streamNamespace(null)
-                .bytesCommitted(bytesCommitted2)
-                .recordsCommitted(recordsCommitted2),
+        JobRead(
+          id = job.id,
+          configId = connectionId.toString(),
+          configType = ApiJobConfigType.SYNC,
+          status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          aggregatedStats = jobAggregatedStats,
+          createdAt = job.createdAtInSecond,
+          updatedAt = job.updatedAtInSecond,
+          startedAt = job.startedAtInSecond,
+          streamAggregatedStats =
+            listOf(
+              StreamStats(
+                streamName = stream1Name,
+                streamNamespace = stream1Namespace,
+                bytesCommitted = bytesCommitted1,
+                recordsCommitted = recordsCommitted1,
+                bytesEmitted = 0L,
+                recordsEmitted = 0L,
+                recordsRejected = 0L,
+              ),
+              StreamStats(
+                streamName = stream2Name,
+                streamNamespace = null,
+                bytesCommitted = bytesCommitted2,
+                recordsCommitted = recordsCommitted2,
+                bytesEmitted = 0L,
+                recordsEmitted = 0L,
+                recordsRejected = 0L,
+              ),
             ),
-          )
-      val jobWithAttemptsRead =
-        JobWithAttemptsRead()
-          .job(jobRead)
+        )
+      val jobWithAttemptsRead = JobWithAttemptsRead(job = jobRead, attempts = emptyList())
 
       val apiReq =
         ConnectionLastJobPerStreamRequestBody()

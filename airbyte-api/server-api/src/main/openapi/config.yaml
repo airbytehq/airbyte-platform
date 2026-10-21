@@ -4898,7 +4898,6 @@ paths:
                 - jobId
                 - attemptNumber
                 - connectionId
-                - standardSyncOutput
               properties:
                 jobId:
                   $ref: "#/components/schemas/JobId"
@@ -4907,6 +4906,7 @@ paths:
                 connectionId:
                   $ref: "#/components/schemas/ConnectionId"
                 standardSyncOutput:
+                  description: Absent when the attempt produced no output; the attempt still succeeds.
                   type: object
         required: true
       responses:

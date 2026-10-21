@@ -9,7 +9,6 @@ import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.UserReadInConnectionEvent
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.JobStatus
@@ -265,11 +264,11 @@ class ConnectionTimelineEventHelper
 
     fun logManuallyStartedEventInConnectionTimeline(
       connectionId: UUID,
-      jobInfo: JobInfoRead?,
+      jobInfo: io.airbyte.api.server.generated.models.JobInfoRead?,
       streams: List<StreamDescriptor>?,
     ) {
       try {
-        if (jobInfo != null && jobInfo.job != null && jobInfo.job.configType != null) {
+        if (jobInfo != null) {
           val event =
             ManuallyStartedEvent(
               jobInfo.job.id,

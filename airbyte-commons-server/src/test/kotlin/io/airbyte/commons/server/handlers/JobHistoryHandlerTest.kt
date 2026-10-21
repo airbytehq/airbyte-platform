@@ -4,33 +4,33 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AttemptInfoRead
 import io.airbyte.api.model.generated.AttemptInfoReadLogs
-import io.airbyte.api.model.generated.AttemptRead
-import io.airbyte.api.model.generated.AttemptStats
-import io.airbyte.api.model.generated.AttemptStreamStats
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
-import io.airbyte.api.model.generated.JobAggregatedStats
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobDebugInfoRead
-import io.airbyte.api.model.generated.JobDebugRead
-import io.airbyte.api.model.generated.JobIdRequestBody
-import io.airbyte.api.model.generated.JobInfoLightRead
-import io.airbyte.api.model.generated.JobInfoRead
-import io.airbyte.api.model.generated.JobListRequestBody
-import io.airbyte.api.model.generated.JobRead
-import io.airbyte.api.model.generated.JobReadList
-import io.airbyte.api.model.generated.JobRefreshConfig
-import io.airbyte.api.model.generated.JobWithAttemptsRead
-import io.airbyte.api.model.generated.LogFormatType
-import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.model.generated.ResetConfig
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
+import io.airbyte.api.server.generated.models.AttemptInfoRead
+import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.AttemptStats
+import io.airbyte.api.server.generated.models.AttemptStreamStats
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.JobAggregatedStats
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobDebugInfoRead
+import io.airbyte.api.server.generated.models.JobDebugRead
+import io.airbyte.api.server.generated.models.JobIdRequestBody
+import io.airbyte.api.server.generated.models.JobInfoLightRead
+import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.JobListRequestBody
+import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobReadList
+import io.airbyte.api.server.generated.models.JobRefreshConfig
+import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.LogFormatType
+import io.airbyte.api.server.generated.models.Pagination
+import io.airbyte.api.server.generated.models.ResetConfig
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamStats
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
@@ -92,6 +92,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
+import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -114,6 +115,9 @@ internal class JobHistoryHandlerTest {
   private lateinit var jobHistoryHandler: JobHistoryHandler
   private lateinit var temporalClient: TemporalClient
   private lateinit var jobService: JobService
+  private lateinit var sourceDefinitionsHandler: SourceDefinitionsHandler
+  private lateinit var destinationDefinitionsHandler: DestinationDefinitionsHandler
+  private lateinit var airbyteVersion: AirbyteVersion
 
   @BeforeEach
   fun setUp() {
@@ -128,9 +132,9 @@ internal class JobHistoryHandlerTest {
     featureFlagClient = Mockito.mock(TestClient::class.java)
     temporalClient = Mockito.mock(TemporalClient::class.java)
     jobConverter = JobConverter(logClientManager, logUtils)
-    val sourceDefinitionsHandler = Mockito.mock(SourceDefinitionsHandler::class.java)
-    val destinationDefinitionsHandler = Mockito.mock(DestinationDefinitionsHandler::class.java)
-    val airbyteVersion = Mockito.mock(AirbyteVersion::class.java)
+    sourceDefinitionsHandler = Mockito.mock(SourceDefinitionsHandler::class.java)
+    destinationDefinitionsHandler = Mockito.mock(DestinationDefinitionsHandler::class.java)
+    airbyteVersion = Mockito.mock(AirbyteVersion::class.java)
     jobService = Mockito.mock(JobService::class.java)
     jobHistoryHandler =
       JobHistoryHandler(
@@ -230,73 +234,78 @@ internal class JobHistoryHandlerTest {
       )
 
       val requestBody =
-        JobListRequestBody()
-          .configTypes(listOf(CONFIG_TYPE_FOR_API))
-          .configId(JOB_CONFIG_ID)
-          .pagination(Pagination().pageSize(pageSize).rowOffset(rowOffset))
+        JobListRequestBody(
+          configTypes = listOf(CONFIG_TYPE_FOR_API),
+          configId = JOB_CONFIG_ID,
+          pagination = Pagination(pageSize = pageSize, rowOffset = rowOffset),
+        )
 
       val jobReadList = jobHistoryHandler.listJobsFor(requestBody)
 
       val expectedAttemptRead1 =
-        toAttemptRead(testJobAttempt)
-          .totalStats(FIRST_ATTEMPT_STATS_API)
-          .streamStats(FIRST_ATTEMPT_STREAM_STATS)
+        toAttemptRead(testJobAttempt).copy(totalStats = FIRST_ATTEMPT_STATS_API, streamStats = FIRST_ATTEMPT_STREAM_STATS)
 
       val expectedAttemptRead2 =
-        toAttemptRead(successfulJobAttempt2)
-          .totalStats(SECOND_ATTEMPT_STATS_API)
-          .streamStats(SECOND_ATTEMPT_STREAM_STATS)
+        toAttemptRead(successfulJobAttempt2).copy(totalStats = SECOND_ATTEMPT_STATS_API, streamStats = SECOND_ATTEMPT_STREAM_STATS)
 
       val successfulJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(successfulJob)
-              .aggregatedStats(
-                JobAggregatedStats()
-                  .recordsEmitted(5550L)
-                  .bytesEmitted(2220L)
-                  .recordsCommitted(5550L)
-                  .bytesCommitted(2220L)
-                  .recordsRejected(152L),
-              ).streamAggregatedStats(
-                listOf(
-                  StreamStats()
-                    .streamName("stream1")
-                    .streamNamespace("ns1")
-                    .recordsEmitted(500L)
-                    .bytesEmitted(200L)
-                    .recordsCommitted(500L)
-                    .bytesCommitted(200L)
-                    .recordsRejected(50L),
-                  StreamStats()
-                    .streamName("stream2")
-                    .recordsEmitted(5050L)
-                    .bytesEmitted(2020L)
-                    .recordsCommitted(5050L)
-                    .bytesCommitted(2020L)
-                    .recordsRejected(102L),
+        JobWithAttemptsRead(
+          job =
+            toJobInfo(successfulJob).copy(
+              aggregatedStats =
+                JobAggregatedStats(
+                  recordsEmitted = 5550L,
+                  bytesEmitted = 2220L,
+                  recordsCommitted = 5550L,
+                  bytesCommitted = 2220L,
+                  recordsRejected = 152L,
                 ),
-              ),
-          ).attempts(listOf(expectedAttemptRead1, expectedAttemptRead2))
+              streamAggregatedStats =
+                listOf(
+                  StreamStats(
+                    streamName = "stream1",
+                    streamNamespace = "ns1",
+                    recordsEmitted = 500L,
+                    bytesEmitted = 200L,
+                    recordsCommitted = 500L,
+                    bytesCommitted = 200L,
+                    recordsRejected = 50L,
+                  ),
+                  StreamStats(
+                    streamName = "stream2",
+                    recordsEmitted = 5050L,
+                    bytesEmitted = 2020L,
+                    recordsCommitted = 5050L,
+                    bytesCommitted = 2020L,
+                    recordsRejected = 102L,
+                  ),
+                ),
+            ),
+          attempts = listOf(expectedAttemptRead1, expectedAttemptRead2),
+        )
 
       val latestJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(latestJobNoAttempt)
-              .aggregatedStats(
-                JobAggregatedStats()
-                  .recordsEmitted(0L)
-                  .bytesEmitted(0L)
-                  .recordsCommitted(0L)
-                  .bytesCommitted(0L)
-                  .recordsRejected(0L),
-              ).streamAggregatedStats(emptyList()),
-          ).attempts(emptyList())
+        JobWithAttemptsRead(
+          job =
+            toJobInfo(latestJobNoAttempt).copy(
+              aggregatedStats =
+                JobAggregatedStats(
+                  recordsEmitted = 0L,
+                  bytesEmitted = 0L,
+                  recordsCommitted = 0L,
+                  bytesCommitted = 0L,
+                  recordsRejected = 0L,
+                ),
+              streamAggregatedStats = emptyList(),
+            ),
+          attempts = emptyList(),
+        )
 
       val expectedJobReadList =
-        JobReadList()
-          .jobs(listOf(latestJobWithAttemptRead, successfulJobWithAttemptRead))
-          .totalJobCount(2L)
+        JobReadList(
+          jobs = listOf(latestJobWithAttemptRead, successfulJobWithAttemptRead),
+          totalJobCount = 2L,
+        )
 
       Assertions.assertEquals(expectedJobReadList, jobReadList)
     }
@@ -402,86 +411,84 @@ internal class JobHistoryHandlerTest {
       )
 
       val requestBody =
-        JobListRequestBody()
-          .configTypes(listOf(CONFIG_TYPE_FOR_API, JobConfigType.SYNC, JobConfigType.DISCOVER_SCHEMA))
-          .configId(JOB_CONFIG_ID)
-          .pagination(Pagination().pageSize(pageSize).rowOffset(rowOffset))
+        JobListRequestBody(
+          configTypes = listOf(CONFIG_TYPE_FOR_API, JobConfigType.SYNC, JobConfigType.DISCOVER_SCHEMA),
+          configId = JOB_CONFIG_ID,
+          pagination = Pagination(pageSize = pageSize, rowOffset = rowOffset),
+        )
 
       val jobReadList = jobHistoryHandler.listJobsFor(requestBody)
 
       val expectedStats =
-        JobAggregatedStats()
-          .recordsEmitted(55L)
-          .bytesEmitted(22L)
-          .recordsCommitted(55L)
-          .bytesCommitted(22L)
-          .recordsRejected(3L)
+        JobAggregatedStats(
+          recordsEmitted = 55L,
+          bytesEmitted = 22L,
+          recordsCommitted = 55L,
+          bytesCommitted = 22L,
+          recordsRejected = 3L,
+        )
 
       val expectedStreams =
         listOf(
-          StreamStats()
-            .streamName("stream1")
-            .streamNamespace("ns1")
-            .recordsEmitted(5L)
-            .bytesEmitted(2L)
-            .recordsCommitted(5L)
-            .bytesCommitted(2L)
-            .recordsRejected(1L),
-          StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(50L)
-            .bytesCommitted(20L)
-            .recordsRejected(2L),
+          StreamStats(
+            streamName = "stream1",
+            streamNamespace = "ns1",
+            recordsEmitted = 5L,
+            bytesEmitted = 2L,
+            recordsCommitted = 5L,
+            bytesCommitted = 2L,
+            recordsRejected = 1L,
+          ),
+          StreamStats(
+            streamName = "stream2",
+            recordsEmitted = 50L,
+            bytesEmitted = 20L,
+            recordsCommitted = 50L,
+            bytesCommitted = 20L,
+            recordsRejected = 2L,
+          ),
         )
 
       val firstJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(firstJob)
-              .aggregatedStats(expectedStats)
-              .streamAggregatedStats(expectedStreams),
-          ).attempts(
+        JobWithAttemptsRead(
+          job = toJobInfo(firstJob).copy(aggregatedStats = expectedStats, streamAggregatedStats = expectedStreams),
+          attempts =
             listOf(
-              toAttemptRead(testJobAttempt)
-                .totalStats(FIRST_ATTEMPT_STATS_API)
-                .streamStats(FIRST_ATTEMPT_STREAM_STATS),
+              toAttemptRead(testJobAttempt).copy(totalStats = FIRST_ATTEMPT_STATS_API, streamStats = FIRST_ATTEMPT_STREAM_STATS),
             ),
-          )
+        )
 
       val secondJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(secondJob)
-              .aggregatedStats(expectedStats)
-              .streamAggregatedStats(expectedStreams),
-          ).attempts(
+        JobWithAttemptsRead(
+          job = toJobInfo(secondJob).copy(aggregatedStats = expectedStats, streamAggregatedStats = expectedStreams),
+          attempts =
             listOf(
-              toAttemptRead(secondJobAttempt)
-                .totalStats(FIRST_ATTEMPT_STATS_API)
-                .streamStats(FIRST_ATTEMPT_STREAM_STATS),
+              toAttemptRead(secondJobAttempt).copy(totalStats = FIRST_ATTEMPT_STATS_API, streamStats = FIRST_ATTEMPT_STREAM_STATS),
             ),
-          )
+        )
 
       val latestJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(latestJob)
-              .aggregatedStats(
-                JobAggregatedStats()
-                  .recordsEmitted(0L)
-                  .bytesEmitted(0L)
-                  .recordsCommitted(0L)
-                  .bytesCommitted(0L)
-                  .recordsRejected(0L),
-              ).streamAggregatedStats(emptyList()),
-          ).attempts(emptyList())
+        JobWithAttemptsRead(
+          job =
+            toJobInfo(latestJob).copy(
+              aggregatedStats =
+                JobAggregatedStats(
+                  recordsEmitted = 0L,
+                  bytesEmitted = 0L,
+                  recordsCommitted = 0L,
+                  bytesCommitted = 0L,
+                  recordsRejected = 0L,
+                ),
+              streamAggregatedStats = emptyList(),
+            ),
+          attempts = emptyList(),
+        )
 
       val expectedJobReadList =
-        JobReadList()
-          .jobs(listOf(latestJobWithAttemptRead, secondJobWithAttemptRead, firstJobWithAttemptRead))
-          .totalJobCount(3L)
+        JobReadList(
+          jobs = listOf(latestJobWithAttemptRead, secondJobWithAttemptRead, firstJobWithAttemptRead),
+          totalJobCount = 3L,
+        )
 
       Assertions.assertEquals(expectedJobReadList, jobReadList)
     }
@@ -557,73 +564,76 @@ internal class JobHistoryHandlerTest {
       )
 
       val requestBody =
-        JobListRequestBody()
-          .configTypes(listOf(CONFIG_TYPE_FOR_API))
-          .configId(JOB_CONFIG_ID)
-          .includingJobId(jobId2)
-          .pagination(Pagination().pageSize(pageSize).rowOffset(rowOffset))
+        JobListRequestBody(
+          configTypes = listOf(CONFIG_TYPE_FOR_API),
+          configId = JOB_CONFIG_ID,
+          includingJobId = jobId2,
+          pagination = Pagination(pageSize = pageSize, rowOffset = rowOffset),
+        )
 
       val jobReadList = jobHistoryHandler.listJobsFor(requestBody)
 
       val expectedStats =
-        JobAggregatedStats()
-          .recordsEmitted(55L)
-          .bytesEmitted(22L)
-          .recordsCommitted(55L)
-          .bytesCommitted(22L)
-          .recordsRejected(3L)
+        JobAggregatedStats(
+          recordsEmitted = 55L,
+          bytesEmitted = 22L,
+          recordsCommitted = 55L,
+          bytesCommitted = 22L,
+          recordsRejected = 3L,
+        )
 
       val expectedStreams =
         listOf(
-          StreamStats()
-            .streamName("stream1")
-            .streamNamespace("ns1")
-            .recordsEmitted(5L)
-            .bytesEmitted(2L)
-            .recordsCommitted(5L)
-            .bytesCommitted(2L)
-            .recordsRejected(1L),
-          StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(50L)
-            .bytesCommitted(20L)
-            .recordsRejected(2L),
+          StreamStats(
+            streamName = "stream1",
+            streamNamespace = "ns1",
+            recordsEmitted = 5L,
+            bytesEmitted = 2L,
+            recordsCommitted = 5L,
+            bytesCommitted = 2L,
+            recordsRejected = 1L,
+          ),
+          StreamStats(
+            streamName = "stream2",
+            recordsEmitted = 50L,
+            bytesEmitted = 20L,
+            recordsCommitted = 50L,
+            bytesCommitted = 20L,
+            recordsRejected = 2L,
+          ),
         )
 
       val successfulJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(successfulJob)
-              .aggregatedStats(expectedStats)
-              .streamAggregatedStats(expectedStreams),
-          ).attempts(
+        JobWithAttemptsRead(
+          job = toJobInfo(successfulJob).copy(aggregatedStats = expectedStats, streamAggregatedStats = expectedStreams),
+          attempts =
             listOf(
-              toAttemptRead(testJobAttempt)
-                .totalStats(FIRST_ATTEMPT_STATS_API)
-                .streamStats(FIRST_ATTEMPT_STREAM_STATS),
+              toAttemptRead(testJobAttempt).copy(totalStats = FIRST_ATTEMPT_STATS_API, streamStats = FIRST_ATTEMPT_STREAM_STATS),
             ),
-          )
+        )
 
       val latestJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(
-            toJobInfo(latestJobNoAttempt)
-              .aggregatedStats(
-                JobAggregatedStats()
-                  .recordsEmitted(0L)
-                  .bytesEmitted(0L)
-                  .recordsCommitted(0L)
-                  .bytesCommitted(0L)
-                  .recordsRejected(0L),
-              ).streamAggregatedStats(emptyList()),
-          ).attempts(emptyList())
+        JobWithAttemptsRead(
+          job =
+            toJobInfo(latestJobNoAttempt).copy(
+              aggregatedStats =
+                JobAggregatedStats(
+                  recordsEmitted = 0L,
+                  bytesEmitted = 0L,
+                  recordsCommitted = 0L,
+                  bytesCommitted = 0L,
+                  recordsRejected = 0L,
+                ),
+              streamAggregatedStats = emptyList(),
+            ),
+          attempts = emptyList(),
+        )
 
       val expectedJobReadList =
-        JobReadList()
-          .jobs(listOf(latestJobWithAttemptRead, successfulJobWithAttemptRead))
-          .totalJobCount(2L)
+        JobReadList(
+          jobs = listOf(latestJobWithAttemptRead, successfulJobWithAttemptRead),
+          totalJobCount = 2L,
+        )
 
       Assertions.assertEquals(expectedJobReadList, jobReadList)
     }
@@ -652,9 +662,7 @@ internal class JobHistoryHandlerTest {
     val jobInfoActual = jobHistoryHandler.getJobInfo(JOB_ID)
 
     val expected =
-      JobInfoRead()
-        .job(toJobInfo(job))
-        .attempts(toAttemptInfoList(listOf(testJobAttempt)))
+      JobInfoRead(job = toJobInfo(job), attempts = toAttemptInfoList(listOf(testJobAttempt)))
 
     Assertions.assertEquals(expected, jobInfoActual)
   }
@@ -665,7 +673,7 @@ internal class JobHistoryHandlerTest {
     val job =
       Job(
         JOB_ID,
-        JOB_CONFIG.getConfigType(),
+        JOB_CONFIG.configType,
         JOB_CONFIG_ID,
         JOB_CONFIG,
         listOf(testJobAttempt),
@@ -677,10 +685,10 @@ internal class JobHistoryHandlerTest {
       )
     Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
 
-    val requestBody = JobIdRequestBody().id(JOB_ID)
+    val requestBody = JobIdRequestBody(id = JOB_ID)
     val jobInfoLightActual = jobHistoryHandler.getJobInfoLight(requestBody)
 
-    val exp = JobInfoLightRead().job(toJobInfo(job))
+    val exp = JobInfoLightRead(job = toJobInfo(job))
 
     Assertions.assertEquals(exp, jobInfoLightActual)
   }
@@ -725,18 +733,20 @@ internal class JobHistoryHandlerTest {
     whenever(jobPersistence.getJob(JOB_ID)).thenReturn(job)
     whenever(jobPersistence.getAttemptStats(anyOrNull(), anyOrNull())).thenReturn(FIRST_ATTEMPT_STATS)
     whenever(logClientManager.getLogs(anyOrNull())).thenReturn(LogEvents(emptyList(), "1"))
+    whenever(sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true)).thenReturn(SOURCE_DEFINITION_API)
+    whenever(destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true))
+      .thenReturn(DESTINATION_DEFINITION_API)
+    whenever(airbyteVersion.serialize()).thenReturn(AIRBYTE_VERSION)
 
     val jobDebugInfoActual = jobHistoryHandler.getJobDebugInfo(JOB_ID)
 
     val attemptInfoReads =
-      toAttemptInfoList(listOf(testJobAttempt)).onEach {
-        it.attempt.totalStats(FIRST_ATTEMPT_STATS_API).streamStats(FIRST_ATTEMPT_STREAM_STATS)
+      toAttemptInfoList(listOf(testJobAttempt)).map {
+        it.copy(attempt = it.attempt.copy(totalStats = FIRST_ATTEMPT_STATS_API, streamStats = FIRST_ATTEMPT_STREAM_STATS))
       }
 
     val expected =
-      JobDebugInfoRead()
-        .job(toDebugJobInfo(job))
-        .attempts(attemptInfoReads)
+      JobDebugInfoRead(job = toDebugJobInfo(job), attempts = attemptInfoReads)
 
     Assertions.assertEquals(expected, jobDebugInfoActual)
   }
@@ -825,7 +835,7 @@ internal class JobHistoryHandlerTest {
     fun testGetConnectionSyncProgressNoJobs() {
       val connectionId = UUID.randomUUID()
 
-      val request = ConnectionIdRequestBody().connectionId(connectionId)
+      val request = ConnectionIdRequestBody(connectionId = connectionId)
 
       val expectedSyncProgress =
         ConnectionSyncProgressRead().connectionId(connectionId).streams(mutableListOf<@Valid StreamSyncProgressReadItem?>())
@@ -839,12 +849,12 @@ internal class JobHistoryHandlerTest {
     @DisplayName("Should return data for a running sync")
     fun testGetConnectionSyncProgressWithRunningJob() {
       val connectionId = UUID.randomUUID()
-      val request = ConnectionIdRequestBody().connectionId(connectionId)
+      val request = ConnectionIdRequestBody(connectionId = connectionId)
 
       val firstJob =
         Job(
           JOB_ID,
-          JOB_CONFIG.getConfigType(),
+          JOB_CONFIG.configType,
           JOB_CONFIG_ID,
           JOB_CONFIG,
           listOf(testJobAttempt),
@@ -855,47 +865,47 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      val jobRead: JobRead = toJobInfo(firstJob)
-      jobRead.setEnabledStreams(
-        listOf<@Valid StreamDescriptor?>(
-          StreamDescriptor().name("stream1").namespace("ns1"),
-          StreamDescriptor().name("stream2"),
-          StreamDescriptor().name("stream3"),
-        ),
-      )
-
-      jobRead.setStreamAggregatedStats(
-        listOf<@Valid StreamStats?>(
-          StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(45L)
-            .bytesCommitted(15L)
-            .recordsRejected(2L),
-          StreamStats()
-            .streamName("stream1")
-            .streamNamespace("ns1")
-            .recordsEmitted(5L)
-            .bytesEmitted(2L)
-            .recordsCommitted(5L)
-            .bytesCommitted(2L),
-        ),
-      )
-
       val jobAggregatedStats =
-        JobAggregatedStats()
-          .bytesCommitted(17L)
-          .recordsCommitted(50L)
-          .bytesEmitted(22L)
-          .recordsEmitted(55L)
-          .recordsRejected(2L)
-      jobRead.setAggregatedStats(jobAggregatedStats)
+        JobAggregatedStats(
+          bytesCommitted = 17L,
+          recordsCommitted = 50L,
+          bytesEmitted = 22L,
+          recordsEmitted = 55L,
+          recordsRejected = 2L,
+        )
+      val jobRead: JobRead =
+        toJobInfo(firstJob).copy(
+          enabledStreams =
+            listOf(
+              StreamDescriptor(name = "stream1", namespace = "ns1"),
+              StreamDescriptor(name = "stream2"),
+              StreamDescriptor(name = "stream3"),
+            ),
+          streamAggregatedStats =
+            listOf(
+              StreamStats(
+                streamName = "stream2",
+                recordsEmitted = 50L,
+                bytesEmitted = 20L,
+                recordsCommitted = 45L,
+                bytesCommitted = 15L,
+                recordsRejected = 2L,
+              ),
+              StreamStats(
+                streamName = "stream1",
+                streamNamespace = "ns1",
+                recordsEmitted = 5L,
+                bytesEmitted = 2L,
+                recordsCommitted = 5L,
+                bytesCommitted = 2L,
+                recordsRejected = 0L,
+              ),
+            ),
+          aggregatedStats = jobAggregatedStats,
+        )
 
       val firstJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(jobRead)
-          .attempts(listOf(toAttemptRead(testJobAttempt)))
+        JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
@@ -903,12 +913,12 @@ internal class JobHistoryHandlerTest {
         ConnectionSyncProgressRead()
           .jobId(JOB_ID)
           .connectionId(connectionId)
-          .bytesCommitted(jobAggregatedStats.getBytesCommitted())
-          .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
-          .recordsRejected(jobAggregatedStats.getRecordsRejected())
-          .bytesEmitted(jobAggregatedStats.getBytesEmitted())
-          .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
-          .configType(JobConfigType.SYNC)
+          .bytesCommitted(jobAggregatedStats.bytesCommitted)
+          .recordsCommitted(jobAggregatedStats.recordsCommitted)
+          .recordsRejected(jobAggregatedStats.recordsRejected)
+          .bytesEmitted(jobAggregatedStats.bytesEmitted)
+          .recordsEmitted(jobAggregatedStats.recordsEmitted)
+          .configType(io.airbyte.api.model.generated.JobConfigType.SYNC)
           .syncStartedAt(CREATED_AT)
           .streams(
             listOf<@Valid StreamSyncProgressReadItem?>(
@@ -919,7 +929,8 @@ internal class JobHistoryHandlerTest {
                 .bytesEmitted(2L)
                 .recordsCommitted(5L)
                 .bytesCommitted(2L)
-                .configType(JobConfigType.SYNC),
+                .recordsRejected(0L)
+                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
               StreamSyncProgressReadItem()
                 .streamName("stream2")
                 .recordsEmitted(50L)
@@ -927,10 +938,10 @@ internal class JobHistoryHandlerTest {
                 .recordsCommitted(45L)
                 .bytesCommitted(15L)
                 .recordsRejected(2L)
-                .configType(JobConfigType.SYNC),
+                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
               StreamSyncProgressReadItem()
                 .streamName("stream3")
-                .configType(JobConfigType.SYNC),
+                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
             ),
           )
 
@@ -948,7 +959,7 @@ internal class JobHistoryHandlerTest {
     @DisplayName("Should return data for a running refresh")
     fun testGetConnectionSyncProgressWithRefresh() {
       val connectionId = UUID.randomUUID()
-      val request = ConnectionIdRequestBody().connectionId(connectionId)
+      val request = ConnectionIdRequestBody(connectionId = connectionId)
 
       val jobConfig = clone(JOB_CONFIG).withConfigType(ConfigType.REFRESH)
 
@@ -966,51 +977,50 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      val jobRead: JobRead = toJobInfo(firstJob)
-      jobRead.setEnabledStreams(
-        listOf<@Valid StreamDescriptor?>(
-          StreamDescriptor().name("stream2"),
-          StreamDescriptor().name("stream3"),
-        ),
-      )
-      jobRead.setRefreshConfig(
-        JobRefreshConfig().streamsToRefresh(
-          listOf<@Valid StreamDescriptor?>(
-            StreamDescriptor().name("stream2"),
-          ),
-        ),
-      )
-
-      jobRead.setStreamAggregatedStats(
-        listOf<@Valid StreamStats?>(
-          StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(45L)
-            .bytesCommitted(15L),
-          StreamStats()
-            .streamName("stream1")
-            .streamNamespace("ns1")
-            .recordsEmitted(5L)
-            .bytesEmitted(2L)
-            .recordsCommitted(5L)
-            .bytesCommitted(2L),
-        ),
-      )
-
       val jobAggregatedStats =
-        JobAggregatedStats()
-          .recordsEmitted(55L)
-          .bytesEmitted(22L)
-          .recordsCommitted(50L)
-          .bytesCommitted(17L)
-      jobRead.setAggregatedStats(jobAggregatedStats)
+        JobAggregatedStats(
+          recordsEmitted = 55L,
+          bytesEmitted = 22L,
+          recordsCommitted = 50L,
+          bytesCommitted = 17L,
+          recordsRejected = 0L,
+        )
+      val jobRead: JobRead =
+        toJobInfo(firstJob).copy(
+          enabledStreams =
+            listOf(
+              StreamDescriptor(name = "stream2"),
+              StreamDescriptor(name = "stream3"),
+            ),
+          refreshConfig =
+            JobRefreshConfig(
+              streamsToRefresh = listOf(StreamDescriptor(name = "stream2")),
+            ),
+          streamAggregatedStats =
+            listOf(
+              StreamStats(
+                streamName = "stream2",
+                recordsEmitted = 50L,
+                bytesEmitted = 20L,
+                recordsCommitted = 45L,
+                bytesCommitted = 15L,
+                recordsRejected = 0L,
+              ),
+              StreamStats(
+                streamName = "stream1",
+                streamNamespace = "ns1",
+                recordsEmitted = 5L,
+                bytesEmitted = 2L,
+                recordsCommitted = 5L,
+                bytesCommitted = 2L,
+                recordsRejected = 0L,
+              ),
+            ),
+          aggregatedStats = jobAggregatedStats,
+        )
 
       val firstJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(jobRead)
-          .attempts(listOf(toAttemptRead(testJobAttempt)))
+        JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
@@ -1018,24 +1028,25 @@ internal class JobHistoryHandlerTest {
         ConnectionSyncProgressRead()
           .jobId(JOB_ID)
           .connectionId(connectionId)
-          .bytesCommitted(jobAggregatedStats.getBytesCommitted())
-          .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
-          .bytesEmitted(jobAggregatedStats.getBytesEmitted())
-          .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
-          .configType(JobConfigType.REFRESH)
+          .bytesCommitted(jobAggregatedStats.bytesCommitted)
+          .recordsCommitted(jobAggregatedStats.recordsCommitted)
+          .bytesEmitted(jobAggregatedStats.bytesEmitted)
+          .recordsEmitted(jobAggregatedStats.recordsEmitted)
+          .configType(io.airbyte.api.model.generated.JobConfigType.REFRESH)
           .syncStartedAt(CREATED_AT)
           .streams(
             listOf<@Valid StreamSyncProgressReadItem?>(
               StreamSyncProgressReadItem()
                 .streamName("stream3")
-                .configType(JobConfigType.SYNC),
+                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
               StreamSyncProgressReadItem()
                 .streamName("stream2")
                 .recordsEmitted(50L)
                 .bytesEmitted(20L)
                 .recordsCommitted(45L)
                 .bytesCommitted(15L)
-                .configType(JobConfigType.REFRESH),
+                .recordsRejected(0L)
+                .configType(io.airbyte.api.model.generated.JobConfigType.REFRESH),
             ),
           )
 
@@ -1056,7 +1067,7 @@ internal class JobHistoryHandlerTest {
     @Disabled
     fun testGetConnectionSyncProgressWithClear() {
       val connectionId = UUID.randomUUID()
-      val request = ConnectionIdRequestBody().connectionId(connectionId)
+      val request = ConnectionIdRequestBody(connectionId = connectionId)
 
       val firstJob =
         Job(
@@ -1072,26 +1083,22 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      val jobRead: JobRead = toJobInfo(firstJob)
-      jobRead.setResetConfig(
-        ResetConfig().streamsToReset(
-          listOf<@Valid StreamDescriptor?>(
-            StreamDescriptor().name("stream1").namespace("ns1"),
-          ),
-        ),
-      )
-      jobRead.setEnabledStreams(
-        listOf<@Valid StreamDescriptor?>(
-          StreamDescriptor().name("stream1").namespace("ns1"),
-          StreamDescriptor().name("stream2"),
-          StreamDescriptor().name("stream3"),
-        ),
-      )
+      val jobRead: JobRead =
+        toJobInfo(firstJob).copy(
+          resetConfig =
+            ResetConfig(
+              streamsToReset = listOf(StreamDescriptor(name = "stream1", namespace = "ns1")),
+            ),
+          enabledStreams =
+            listOf(
+              StreamDescriptor(name = "stream1", namespace = "ns1"),
+              StreamDescriptor(name = "stream2"),
+              StreamDescriptor(name = "stream3"),
+            ),
+        )
 
       val firstJobWithAttemptRead =
-        JobWithAttemptsRead()
-          .job(jobRead)
-          .attempts(listOf(toAttemptRead(testJobAttempt)))
+        JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
       Mockito.mockStatic(JobConverter::class.java).use { mockedConverter ->
@@ -1100,14 +1107,14 @@ internal class JobHistoryHandlerTest {
           ConnectionSyncProgressRead()
             .connectionId(connectionId)
             .jobId(JOB_ID)
-            .configType(JobConfigType.RESET_CONNECTION)
+            .configType(io.airbyte.api.model.generated.JobConfigType.RESET_CONNECTION)
             .syncStartedAt(CREATED_AT)
             .streams(
               listOf<@Valid StreamSyncProgressReadItem?>(
                 StreamSyncProgressReadItem()
                   .streamName("stream1")
                   .streamNamespace("ns1")
-                  .configType(JobConfigType.RESET_CONNECTION),
+                  .configType(io.airbyte.api.model.generated.JobConfigType.RESET_CONNECTION),
               ),
             )
 
@@ -1151,8 +1158,8 @@ internal class JobHistoryHandlerTest {
   @Test
   fun testEnumCompatibility() {
     Assertions.assertTrue(isCompatible<ConfigType, JobConfigType>())
-    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>())
-    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.model.generated.AttemptStatus>())
+    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.server.generated.models.JobStatus>())
+    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.server.generated.models.AttemptStatus>())
   }
 
   @Test
@@ -1163,7 +1170,7 @@ internal class JobHistoryHandlerTest {
       .thenReturn(
         Job(
           JOB_ID,
-          JOB_CONFIG.getConfigType(),
+          JOB_CONFIG.configType,
           JOB_CONFIG_ID,
           JOB_CONFIG,
           listOf(testJobAttempt),
@@ -1184,16 +1191,16 @@ internal class JobHistoryHandlerTest {
 
     val resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(JOB_ID)
     Assertions.assertEquals(
-      resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(),
-      FIRST_ATTEMPT_STATS.combinedStats!!.getBytesCommitted(),
+      resultingJobInfo.job.aggregatedStats!!.bytesCommitted,
+      FIRST_ATTEMPT_STATS.combinedStats!!.bytesCommitted,
     )
     Assertions.assertEquals(
-      resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(),
-      FIRST_ATTEMPT_STATS.combinedStats!!.getRecordsCommitted(),
+      resultingJobInfo.job.aggregatedStats!!.recordsCommitted,
+      FIRST_ATTEMPT_STATS.combinedStats!!.recordsCommitted,
     )
     Assertions.assertEquals(
-      resultingJobInfo.getJob().getAggregatedStats().getRecordsRejected(),
-      FIRST_ATTEMPT_STATS.combinedStats!!.getRecordsRejected(),
+      resultingJobInfo.job.aggregatedStats!!.recordsRejected,
+      FIRST_ATTEMPT_STATS.combinedStats!!.recordsRejected,
     )
   }
 
@@ -1263,8 +1270,30 @@ internal class JobHistoryHandlerTest {
             ),
           ),
         )
+    private const val AIRBYTE_VERSION = "0.33.4"
+    private val SOURCE_DEFINITION_ID = UUID.randomUUID()
+    private val DESTINATION_DEFINITION_ID = UUID.randomUUID()
+
+    private val SOURCE_DEFINITION_API =
+      io.airbyte.api.server.generated.models.SourceDefinitionRead(
+        sourceDefinitionId = SOURCE_DEFINITION_ID,
+        name = "marketo",
+        dockerRepository = "airbyte/source-marketo",
+        dockerImageTag = "1.0.0",
+        documentationUrl = URI.create("https://docs.airbyte.com/source"),
+      )
+
+    private val DESTINATION_DEFINITION_API =
+      io.airbyte.api.server.generated.models.DestinationDefinitionRead(
+        destinationDefinitionId = DESTINATION_DEFINITION_ID,
+        name = "db2",
+        dockerRepository = "airbyte/destination-db2",
+        dockerImageTag = "1.0.0",
+        documentationUrl = URI.create("https://docs.airbyte.com/destination"),
+      )
+
     private val LOG_PATH: Path = Path.of("log_path")
-    private val EMPTY_LOG_READ: AttemptInfoReadLogs? = AttemptInfoReadLogs().logLines(ArrayList<String?>())
+    private val EMPTY_LOG_READ: AttemptInfoReadLogs = AttemptInfoReadLogs().logLines(ArrayList<String?>())
     private val CREATED_AT = System.currentTimeMillis() / 1000
 
     private val FIRST_ATTEMPT_STATS =
@@ -1334,111 +1363,101 @@ internal class JobHistoryHandlerTest {
       )
 
     private val FIRST_ATTEMPT_STATS_API: AttemptStats? =
-      AttemptStats()
-        .recordsEmitted(55L)
-        .bytesEmitted(22L)
-        .recordsCommitted(55L)
-        .recordsRejected(3L)
+      AttemptStats(recordsEmitted = 55L, bytesEmitted = 22L, recordsCommitted = 55L, recordsRejected = 3L)
 
     private val FIRST_ATTEMPT_STREAM_STATS: List<AttemptStreamStats> =
       listOf(
-        AttemptStreamStats()
-          .streamNamespace("ns1")
-          .streamName("stream1")
-          .stats(
-            AttemptStats()
-              .recordsEmitted(5L)
-              .bytesEmitted(2L)
-              .recordsCommitted(5L)
-              .recordsRejected(1L),
-          ),
-        AttemptStreamStats()
-          .streamName("stream2")
-          .stats(
-            AttemptStats()
-              .recordsEmitted(50L)
-              .bytesEmitted(20L)
-              .recordsCommitted(50L)
-              .recordsRejected(2L),
-          ),
+        AttemptStreamStats(
+          streamNamespace = "ns1",
+          streamName = "stream1",
+          stats = AttemptStats(recordsEmitted = 5L, bytesEmitted = 2L, recordsCommitted = 5L, recordsRejected = 1L),
+        ),
+        AttemptStreamStats(
+          streamName = "stream2",
+          stats = AttemptStats(recordsEmitted = 50L, bytesEmitted = 20L, recordsCommitted = 50L, recordsRejected = 2L),
+        ),
       )
 
     private val SECOND_ATTEMPT_STATS_API: AttemptStats? =
-      AttemptStats()
-        .recordsEmitted(5500L)
-        .bytesEmitted(2200L)
-        .recordsCommitted(5500L)
-        .recordsRejected(150L)
+      AttemptStats(
+        recordsEmitted = 5500L,
+        bytesEmitted = 2200L,
+        recordsCommitted = 5500L,
+        recordsRejected = 150L,
+      )
 
     private val SECOND_ATTEMPT_STREAM_STATS: List<AttemptStreamStats> =
       listOf(
-        AttemptStreamStats()
-          .streamNamespace("ns1")
-          .streamName("stream1")
-          .stats(
-            AttemptStats()
-              .recordsEmitted(500L)
-              .bytesEmitted(200L)
-              .recordsCommitted(500L)
-              .recordsRejected(50L),
-          ),
-        AttemptStreamStats()
-          .streamName("stream2")
-          .stats(
-            AttemptStats()
-              .recordsEmitted(5000L)
-              .bytesEmitted(2000L)
-              .recordsCommitted(5000L)
-              .recordsRejected(100L),
-          ),
+        AttemptStreamStats(
+          streamNamespace = "ns1",
+          streamName = "stream1",
+          stats =
+            AttemptStats(
+              recordsEmitted = 500L,
+              bytesEmitted = 200L,
+              recordsCommitted = 500L,
+              recordsRejected = 50L,
+            ),
+        ),
+        AttemptStreamStats(
+          streamName = "stream2",
+          stats =
+            AttemptStats(
+              recordsEmitted = 5000L,
+              bytesEmitted = 2000L,
+              recordsCommitted = 5000L,
+              recordsRejected = 100L,
+            ),
+        ),
       )
 
     private fun toJobInfo(job: Job): JobRead =
-      JobRead()
-        .id(job.id)
-        .configId(job.scope)
-        .enabledStreams(
+      JobRead(
+        id = job.id,
+        configId = job.scope,
+        enabledStreams =
           job.config
             .getSync()
             .getConfiguredAirbyteCatalog()
             .streams
             .stream()
             .map { s: ConfiguredAirbyteStream? ->
-              StreamDescriptor().name(s!!.stream.name).namespace(s.stream.namespace)
+              StreamDescriptor(name = s!!.stream.name, namespace = s.stream.namespace)
             }.collect(Collectors.toList()),
-        ).status(
-          job.status.convertTo<io.airbyte.api.model.generated.JobStatus>(),
-        ).configType(job.configType.convertTo<JobConfigType>())
-        .createdAt(job.createdAtInSecond)
-        .updatedAt(job.updatedAtInSecond)
+        status = job.status.convertTo<io.airbyte.api.server.generated.models.JobStatus>(),
+        configType = job.configType.convertTo<JobConfigType>(),
+        createdAt = job.createdAtInSecond,
+        updatedAt = job.updatedAtInSecond,
+      )
 
-    private fun toDebugJobInfo(job: Job): JobDebugRead? =
-      JobDebugRead()
-        .id(job.id)
-        .configId(job.scope)
-        .status(
-          job.status.convertTo<io.airbyte.api.model.generated.JobStatus>(),
-        ).configType(job.configType.convertTo<JobConfigType>())
-        .sourceDefinition(null)
-        .destinationDefinition(null)
+    private fun toDebugJobInfo(job: Job): JobDebugRead =
+      JobDebugRead(
+        id = job.id,
+        configId = job.scope,
+        status = job.status.convertTo<io.airbyte.api.server.generated.models.JobStatus>(),
+        configType = job.configType.convertTo<JobConfigType>(),
+        airbyteVersion = AIRBYTE_VERSION,
+        sourceDefinition = SOURCE_DEFINITION_API,
+        destinationDefinition = DESTINATION_DEFINITION_API,
+      )
 
     private fun toAttemptInfoList(attempts: List<Attempt?>): MutableList<AttemptInfoRead> {
       val attemptReads = attempts.stream().map { a: Attempt? -> toAttemptRead(a!!) }.toList()
 
       val toAttemptInfoRead =
-        Function { a: AttemptRead? -> AttemptInfoRead().attempt(a).logType(LogFormatType.FORMATTED).logs(EMPTY_LOG_READ) }
+        Function { a: AttemptRead -> AttemptInfoRead(attempt = a, logType = LogFormatType.FORMATTED, logs = EMPTY_LOG_READ) }
       return attemptReads.stream().map(toAttemptInfoRead).collect(Collectors.toList())
     }
 
     private fun toAttemptRead(a: Attempt): AttemptRead =
-      AttemptRead()
-        .id(a.attemptNumber.toLong())
-        .status(
-          a.status.convertTo<io.airbyte.api.model.generated.AttemptStatus>(),
-        ).streamStats(null)
-        .createdAt(a.createdAtInSecond)
-        .updatedAt(a.updatedAtInSecond)
-        .endedAt(a.endedAtInSecond)
+      AttemptRead(
+        id = a.attemptNumber.toLong(),
+        status = a.status.convertTo<io.airbyte.api.server.generated.models.AttemptStatus>(),
+        streamStats = null,
+        createdAt = a.createdAtInSecond,
+        updatedAt = a.updatedAtInSecond,
+        endedAt = a.endedAtInSecond,
+      )
 
     private fun createAttempt(
       attemptNumber: Int,

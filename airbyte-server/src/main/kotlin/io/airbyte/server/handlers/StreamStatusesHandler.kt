@@ -16,6 +16,7 @@ import io.airbyte.api.server.generated.models.StreamStatusRead
 import io.airbyte.api.server.generated.models.StreamStatusReadList
 import io.airbyte.api.server.generated.models.StreamStatusRunState
 import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper
 import io.airbyte.config.Job
@@ -167,12 +168,12 @@ open class StreamStatusesHandler(
     val jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence)
 
     jobIdToStreamStatuses.forEach { (jobId: Long?, statuses: List<StreamStatusRead>) ->
-      val job = jobIdToJobRead[jobId]!!.job
-      val aggregatedStats = job.aggregatedStats
+      val job = jobIdToJobRead[jobId]!!.job!!
+      val aggregatedStats = job.aggregatedStats!!
       val jobResult =
         JobSyncResultRead()
           .jobId(jobId)
-          .configType(job.configType)
+          .configType(job.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
           .jobCreatedAt(job.createdAt)
           .jobUpdatedAt(job.updatedAt)
           .streamStatuses(statuses.map { streamStatus -> mapStreamStatusToSyncReadResult(streamStatus) })

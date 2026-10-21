@@ -8,8 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
-import io.airbyte.api.model.generated.SyncInput
+import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.server.generated.models.SyncInput
 import io.airbyte.commons.constants.WorkerConstants
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -173,7 +173,7 @@ internal class JobInputHandlerTest {
 
   @Test
   fun testGetSyncWorkflowInput() {
-    val syncInput = SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER)
+    val syncInput = SyncInput(jobId = JOB_ID, attemptNumber = ATTEMPT_NUMBER)
 
     val sourceDefinitionId = UUID.randomUUID()
     val sourceConnection =
@@ -336,17 +336,18 @@ internal class JobInputHandlerTest {
 
     verify {
       attemptHandler.saveSyncConfig(
-        SaveAttemptSyncConfigRequestBody()
-          .jobId(JOB_ID)
-          .attemptNumber(ATTEMPT_NUMBER)
-          .syncConfig(apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)),
+        SaveAttemptSyncConfigRequestBody(
+          jobId = JOB_ID,
+          attemptNumber = ATTEMPT_NUMBER,
+          syncConfig = apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)!!,
+        ),
       )
     }
   }
 
   @Test
   fun testGetResetSyncWorkflowInput() {
-    val syncInput = SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER)
+    val syncInput = SyncInput(jobId = JOB_ID, attemptNumber = ATTEMPT_NUMBER)
 
     every { stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID)) } returns
       ConnectionState()
@@ -450,10 +451,11 @@ internal class JobInputHandlerTest {
 
     verify {
       attemptHandler.saveSyncConfig(
-        SaveAttemptSyncConfigRequestBody()
-          .jobId(JOB_ID)
-          .attemptNumber(ATTEMPT_NUMBER)
-          .syncConfig(apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)),
+        SaveAttemptSyncConfigRequestBody(
+          jobId = JOB_ID,
+          attemptNumber = ATTEMPT_NUMBER,
+          syncConfig = apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)!!,
+        ),
       )
     }
   }

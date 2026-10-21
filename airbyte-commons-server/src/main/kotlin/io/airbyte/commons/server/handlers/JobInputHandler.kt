@@ -5,10 +5,10 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
-import io.airbyte.api.model.generated.SyncInput
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.server.generated.models.SyncInput
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.WorkerConstants
 import io.airbyte.commons.converters.ConfigReplacer
@@ -213,10 +213,11 @@ open class JobInputHandler(
     attemptSyncConfig: AttemptSyncConfig,
   ) {
     attemptHandler.saveSyncConfig(
-      SaveAttemptSyncConfigRequestBody()
-        .jobId(jobId)
-        .attemptNumber(attemptNumber)
-        .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)),
+      SaveAttemptSyncConfigRequestBody(
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+        syncConfig = apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)!!,
+      ),
     )
   }
 
@@ -316,9 +317,15 @@ open class JobInputHandler(
   }
 
   private fun getCurrentConnectionState(connectionId: UUID): Optional<State> {
-    val state = stateHandler.getState(ConnectionIdRequestBody().connectionId(connectionId))
+    // StateHandler still takes and returns the Java models
+    val state =
+      stateHandler.getState(
+        io.airbyte.api.model.generated
+          .ConnectionIdRequestBody()
+          .connectionId(connectionId),
+      )
 
-    if (state.stateType == ConnectionStateType.NOT_SET) {
+    if (state.stateType == io.airbyte.api.model.generated.ConnectionStateType.NOT_SET) {
       return Optional.empty()
     }
 
