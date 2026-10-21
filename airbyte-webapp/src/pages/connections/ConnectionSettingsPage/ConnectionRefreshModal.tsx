@@ -6,11 +6,15 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Form } from "components/ui/forms";
 import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
+import { Icon } from "components/ui/Icon/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { ConnectionStream, JobReadResponse, RefreshMode } from "core/api/types/AirbyteClient";
+import { links } from "core/utils/links";
 
+import styles from "./ConnectionRefreshModal.module.scss";
 import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";
 
 interface ConnectionRefreshModalProps {
@@ -27,6 +31,7 @@ interface ConnectionRefreshModalProps {
     refreshMode: RefreshMode;
   }) => Promise<JobReadResponse>;
   totalEnabledStreams?: number;
+  streamName?: string;
 }
 
 export interface ConnectionRefreshFormValues {
@@ -51,9 +56,7 @@ const ConnectionRefreshModalStreamsListBlock: React.FC<{
   );
 };
 
-const MergeTruncateRadioButtons: React.FC<{
-  refreshScope: "connection" | "stream";
-}> = ({ refreshScope }) => {
+const MergeTruncateRadioButtons: React.FC = () => {
   const { setValue, control } = useFormContext<ConnectionRefreshFormValues>();
 
   return (
@@ -69,42 +72,21 @@ const MergeTruncateRadioButtons: React.FC<{
               options={[
                 {
                   value: RefreshMode.Merge,
-                  label: (
-                    <FormattedMessage
-                      id="connection.actions.refreshStream.merge.label"
-                      values={{ value: refreshScope === "connection" ? 2 : 1 }}
-                    />
-                  ),
+                  label: <FormattedMessage id="connection.actions.refreshStream.merge.label" />,
                   description: (
                     <Text color="grey400" size="sm" as="span">
-                      <FormattedMessage
-                        id="connection.actions.refreshStream.merge.description"
-                        values={{
-                          value: refreshScope === "connection" ? 2 : 1,
-                          bold: (children) => (
-                            <Text as="span" bold color="grey400" size="sm">
-                              {children}
-                            </Text>
-                          ),
-                        }}
-                      />
+                      <FormattedMessage id="connection.actions.refreshStream.merge.description" />
                     </Text>
                   ),
                 },
                 {
                   value: RefreshMode.Truncate,
-                  label: (
-                    <FormattedMessage
-                      id="connection.actions.refreshStream.truncate.label"
-                      values={{ value: refreshScope === "connection" ? 2 : 1 }}
-                    />
-                  ),
+                  label: <FormattedMessage id="connection.actions.refreshStream.truncate.label" />,
                   description: (
                     <Text color="grey400" size="sm">
                       <FormattedMessage
                         id="connection.actions.refreshStream.truncate.description"
                         values={{
-                          value: refreshScope === "connection" ? 2 : 1,
                           bold: (children) => (
                             <Text as="span" bold color="grey400" size="sm">
                               {children}
@@ -137,6 +119,7 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
   onComplete,
   onCancel,
   refreshStreams,
+  streamName,
 }) => {
   const canMerge = streamsSupportingMergeRefresh.length > 0;
   const canTruncate = streamsSupportingTruncateRefresh.length > 0;
@@ -162,19 +145,16 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
           <FormattedMessage
             id="connection.actions.refreshStream.description"
             values={{
-              Bold: (children) => (
-                <Text as="span" bold>
+              refreshScope,
+              i: (children) => (
+                <Text as="span" italicized>
                   {children}
                 </Text>
               ),
+              streamName,
             }}
           />
         </Text>
-        <Box py="sm">
-          <Text>
-            <FormattedMessage id="connection.actions.refreshStream.description.note" />
-          </Text>
-        </Box>
       </Box>
       <Form<ConnectionRefreshFormValues>
         zodSchema={refreshConnectionFormSchema}
@@ -193,21 +173,11 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
       >
         {canMerge ? (
           canTruncate ? (
-            <MergeTruncateRadioButtons refreshScope={refreshScope} />
+            <MergeTruncateRadioButtons />
           ) : (
             <Box px="xl">
               <Text color="grey400">
-                <FormattedMessage
-                  id="connection.actions.refreshStream.merge.description"
-                  values={{
-                    value: streamsSupportingMergeRefresh.length,
-                    bold: (children) => (
-                      <Text as="span" bold color="grey400" size="sm">
-                        {children}
-                      </Text>
-                    ),
-                  }}
-                />
+                <FormattedMessage id="connection.actions.refreshStream.merge.description" />
               </Text>
             </Box>
           )
@@ -217,7 +187,6 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
               <FormattedMessage
                 id="connection.actions.refreshStream.truncate.description"
                 values={{
-                  value: streamsSupportingTruncateRefresh.length,
                   bold: (children) => (
                     <Text as="span" bold color="grey400" size="sm">
                       {children}
@@ -237,6 +206,12 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
             />
           </Box>
         )}
+        <Box px="xl" pt="xl">
+          <ExternalLink href={links.refreshes} variant="primary" opensInNewTab className={styles.externalLink}>
+            <Icon type="share" />
+            <FormattedMessage id="connection.stream.actions.refreshStream.learnMoreLink" />
+          </ExternalLink>
+        </Box>
         <Box p="lg">
           <FormSubmissionButtons
             submitKey={

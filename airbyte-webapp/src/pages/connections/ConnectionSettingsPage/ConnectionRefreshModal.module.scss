@@ -1,0 +1,8 @@
+@use "scss/variables";
+
+.externalLink {
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  font-size: variables.$font-size-sm;
+}

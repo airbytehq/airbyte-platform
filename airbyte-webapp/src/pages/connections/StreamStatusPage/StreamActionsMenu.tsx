@@ -120,6 +120,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
               streamsSupportingMergeRefresh={canMerge ? [{ streamNamespace, streamName }] : []}
               streamsSupportingTruncateRefresh={canTruncate ? [{ streamNamespace, streamName }] : []}
               refreshStreams={refreshStreams}
+              streamName={streamName}
             />
           );
         },
