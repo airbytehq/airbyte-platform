@@ -154,7 +154,7 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
           )}
           {selectedView === "new" && <CreateNewDestination />}
           {selectedView !== "new" && <BackToDefineSourceButton />}
-          <CloudInviteUsersHint connectorType="destination" />
+          {selectedView === "existing" && <CloudInviteUsersHint connectorType="destination" />}
         </FlexContainer>
       </Box>
     </PageContainer>

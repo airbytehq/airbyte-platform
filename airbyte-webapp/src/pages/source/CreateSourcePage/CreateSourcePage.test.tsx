@@ -46,7 +46,6 @@ jest.mock("area/connector/components/agents/ConnectorSetupViews", () => ({
 jest.mock("area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper", () => ({
   ConnectorDocumentationWrapper: ({ children }: PropsWithChildren) => <>{children}</>,
 }));
-jest.mock("area/organization/components/CloudInviteUsersHint", () => ({ CloudInviteUsersHint: () => null }));
 
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),

@@ -20,6 +20,7 @@ export interface FormRootProps {
   description?: React.ReactNode;
   full?: boolean;
   castValues: (values: ConnectorFormValues) => ConnectorFormValues;
+  formHeader?: ReactNode;
   renderFooter?: (formProps: {
     dirty: boolean;
     isSubmitting: boolean;
@@ -37,6 +38,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
   groupStructure,
   bodyClassName,
   headerBlock,
+  formHeader,
   renderFooter,
   castValues,
   ...props
@@ -66,6 +68,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
   );
   return (
     <FlexContainer direction="column" gap="xl">
+      {formHeader}
       <div className={bodyClassName}>{formBody}</div>
       {renderFooter &&
         renderFooter({

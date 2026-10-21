@@ -9,6 +9,7 @@ import { DestinationForm } from "area/connector/components/destination/Destinati
 import { DestinationFormValues } from "area/connector/components/destination/DestinationForm/DestinationForm";
 import { SelectConnector } from "area/connector/components/source/SelectConnector";
 import { useSuggestedDestinations } from "area/connector/utils";
+import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useCreateDestination, useDestinationDefinitionList } from "core/api";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 import { AppActionCodes, trackAction } from "core/utils/datadog";
@@ -88,6 +89,7 @@ export const CreateNewDestination: React.FC = () => {
         suggestedConnectorDefinitionIds={suggestedDestinationDefinitionIds}
       />
       <BackToDefineSourceButton />
+      <CloudInviteUsersHint connectorType="destination" />
     </>
   );
 };

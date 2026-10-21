@@ -5,35 +5,20 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
-import { FeatureItem, useFeature } from "core/services/features";
-import { useModalService } from "core/services/Modal";
-import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { AddUserModal } from "pages/SettingsPage/pages/AccessManagementPage/components/AddUserModal";
-
 import styles from "./InviteUsersHint.module.scss";
+import { useInviteUsers } from "../useInviteUsers";
 
 export interface InviteUsersHintProps {
   connectorType: "source" | "destination";
 }
 
 export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType }) => {
-  const workspace = useCurrentWorkspace();
   const { formatMessage } = useIntl();
-  const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
-  const canInviteUsers = useGeneratedIntent(Intent.UpdateWorkspacePermissions);
-  const { openModal } = useModalService();
+  const { showInviteUsers, openInviteUsersModal } = useInviteUsers();
 
-  if (!inviteUsersHintVisible || !canInviteUsers) {
+  if (!showInviteUsers) {
     return null;
   }
-
-  const onOpenInviteUsersModal = () =>
-    openModal<void>({
-      title: formatMessage({ id: "userInvitations.create.modal.title" }, { scopeName: workspace.name }),
-      content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} scope="workspace" />,
-      size: "md",
-    });
 
   return (
     <FlexContainer alignItems="center" justifyContent="center" className={styles.container}>
@@ -45,7 +30,7 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
           }}
         />
       </Text>
-      <Button variant="secondary" data-testid="inviteUsersHint-cta" onClick={onOpenInviteUsersModal}>
+      <Button variant="secondary" data-testid="inviteUsersHint-cta" onClick={openInviteUsersModal}>
         <FormattedMessage id="inviteUsersHint.cta" />
       </Button>
     </FlexContainer>

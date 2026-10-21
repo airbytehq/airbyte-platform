@@ -1,5 +1,6 @@
+import classNames from "classnames";
 import { useCallback } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Link } from "components/ui/Link";
@@ -15,14 +16,40 @@ import styles from "./ForkInBuilderButton.module.scss";
 import { isBuilderCompatible } from "./useBuilderCompatibleSourceDefinitions";
 import { getEditPath } from "../ConnectorBuilderRoutes";
 
+const BUTTON_CONTENT = {
+  fork: {
+    iconOnlyIcon: "fork",
+    label: "onboarding.sourceSetUp.forkInBuilder.button",
+    iconOnlyLabel: "onboarding.sourceSetUp.forkInBuilder.iconButton",
+    tooltip: "onboarding.sourceSetUp.forkInBuilder.tooltip.compatible",
+  },
+  edit: {
+    iconOnlyIcon: "pencil",
+    label: "onboarding.sourceSetUp.editInBuilder.button",
+    iconOnlyLabel: "onboarding.sourceSetUp.editInBuilder.button",
+    tooltip: "onboarding.sourceSetUp.editInBuilder.tooltip",
+  },
+} as const;
+
+type ButtonAction = keyof typeof BUTTON_CONTENT;
+
+const ActionTooltipContent = ({ action, iconOnly, name }: { action: ButtonAction; iconOnly: boolean; name: string }) =>
+  iconOnly ? (
+    <FormattedMessage id={BUTTON_CONTENT[action].iconOnlyLabel} />
+  ) : (
+    <FormattedMessage id={BUTTON_CONTENT[action].tooltip} values={{ name }} />
+  );
+
 const EditBuilderProjectButton = ({
   builderProjectId,
   builderProjectWorkspaceId,
   sourceDefinition,
+  iconOnly,
 }: {
   builderProjectId: string;
   builderProjectWorkspaceId: string;
   sourceDefinition: SourceDefinitionRead;
+  iconOnly: boolean;
 }) => {
   // Check if the user has permission to edit the project in the builder workspace,
   // custom connectors are scoped to the Organization, but Builder projects are scoped to the Workspace.
@@ -41,15 +68,19 @@ const EditBuilderProjectButton = ({
         // Explicitly render a Button instead of using Link variant="button" to ensure that the styles stay
         // consistent with the non-Link buttons below
         <Link to={createProjectEditLink(builderProjectId)} opensInNewTab>
-          <InnerButton label="edit" />
+          <InnerButton action="edit" iconOnly={iconOnly} />
         </Link>
       }
       placement="bottom"
     >
-      <FormattedMessage id="onboarding.sourceSetUp.editInBuilder.tooltip" values={{ name: sourceDefinition.name }} />
+      <ActionTooltipContent action="edit" iconOnly={iconOnly} name={sourceDefinition.name} />
     </Tooltip>
   ) : (
-    <Tooltip control={<InnerButton label="edit" disabled />} placement="bottom">
+    <Tooltip
+      control={<InnerButton action="edit" iconOnly={iconOnly} disabled />}
+      placement="bottom"
+      cursor="not-allowed"
+    >
       <FormattedMessage
         id="onboarding.sourceSetUp.editInBuilder.tooltip.forbidden"
         values={{ workspace: builderProjectWorkspaceId }}
@@ -58,7 +89,13 @@ const EditBuilderProjectButton = ({
   );
 };
 
-export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: SourceDefinitionRead }) => {
+export const ForkConnectorButton = ({
+  sourceDefinition,
+  iconOnly = false,
+}: {
+  sourceDefinition: SourceDefinitionRead;
+  iconOnly?: boolean;
+}) => {
   const createLink = useCurrentWorkspaceLink();
   const { data: builderProjectIdResponse } = useGetBuilderProjectIdByDefinitionId(sourceDefinition?.sourceDefinitionId);
   const builderProjectId = builderProjectIdResponse?.builderProjectId;
@@ -88,6 +125,7 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
         builderProjectId={builderProjectId}
         builderProjectWorkspaceId={builderProjectWorkspaceId}
         sourceDefinition={sourceDefinition}
+        iconOnly={iconOnly}
       />
     );
   }
@@ -95,19 +133,20 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
   if (isBuilderCompatible(sourceDefinition)) {
     return (
       <Tooltip
-        control={<InnerButton label="fork" onClick={forkAndOpenInBuilder} isLoading={isForking} />}
+        control={<InnerButton action="fork" iconOnly={iconOnly} onClick={forkAndOpenInBuilder} isLoading={isForking} />}
         placement="bottom"
       >
-        <FormattedMessage
-          id="onboarding.sourceSetUp.forkInBuilder.tooltip.compatible"
-          values={{ name: sourceDefinition.name }}
-        />
+        <ActionTooltipContent action="fork" iconOnly={iconOnly} name={sourceDefinition.name} />
       </Tooltip>
     );
   }
 
   return (
-    <Tooltip control={<InnerButton label="fork" disabled />} placement="bottom">
+    <Tooltip
+      control={<InnerButton action="fork" iconOnly={iconOnly} disabled />}
+      placement="bottom"
+      cursor="not-allowed"
+    >
       <FormattedMessage
         id="onboarding.sourceSetUp.forkInBuilder.tooltip.incompatible"
         values={{ name: sourceDefinition.name }}
@@ -117,30 +156,34 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
 };
 
 const InnerButton = ({
-  label,
+  action,
+  iconOnly,
   onClick,
   isLoading,
   disabled,
 }: {
-  label: "fork" | "edit";
+  action: ButtonAction;
+  iconOnly: boolean;
   onClick?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
-}) => (
-  <Button
-    className={styles.button}
-    variant="secondary"
-    icon="export"
-    iconSize="sm"
-    onClick={onClick}
-    isLoading={isLoading}
-    disabled={disabled || isLoading}
-    type="button"
-  >
-    <FormattedMessage
-      id={
-        label === "fork" ? "onboarding.sourceSetUp.forkInBuilder.button" : "onboarding.sourceSetUp.editInBuilder.button"
-      }
-    />
-  </Button>
-);
+}) => {
+  const { formatMessage } = useIntl();
+  const content = BUTTON_CONTENT[action];
+
+  return (
+    <Button
+      className={classNames(styles.button, { [styles.iconOnly]: iconOnly })}
+      variant="secondary"
+      icon={iconOnly ? content.iconOnlyIcon : "export"}
+      iconSize="sm"
+      aria-label={iconOnly ? formatMessage({ id: content.iconOnlyLabel }) : undefined}
+      onClick={onClick}
+      isLoading={isLoading}
+      disabled={disabled || isLoading}
+      type="button"
+    >
+      {!iconOnly && <FormattedMessage id={content.label} />}
+    </Button>
+  );
+};

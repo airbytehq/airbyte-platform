@@ -13,7 +13,6 @@ import { ConnectorSetupViews } from "area/connector/components/agents/ConnectorS
 import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 import { ConnectionConfiguration, ConnectorSetupFlow } from "area/connector/types";
-import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { SourceContextLayerOptIn } from "cloud/components/AgentsOptIn";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import {
@@ -215,7 +214,6 @@ export const CreateSourcePage: React.FC = () => {
           }
           formAutomation={formAutomation}
         />
-        <CloudInviteUsersHint connectorType="source" />
       </FormPageContent>
     </ConnectorDocumentationWrapper>
   );

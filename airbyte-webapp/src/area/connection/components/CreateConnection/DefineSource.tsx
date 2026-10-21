@@ -149,7 +149,7 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
           </PageContainer>
         )}
         {selectedView === "new" && <CreateNewSource />}
-        <CloudInviteUsersHint connectorType="source" />
+        {selectedView === "existing" && <CloudInviteUsersHint connectorType="source" />}
       </FlexContainer>
     </Box>
   );

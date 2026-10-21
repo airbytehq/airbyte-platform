@@ -1,0 +1,5 @@
+@use "scss/mixins";
+
+.button {
+  @include mixins.square-icon-button;
+}

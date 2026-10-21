@@ -14,7 +14,6 @@ import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { DestinationForm } from "area/connector/components/destination/DestinationForm";
 import { ConnectionConfiguration, ConnectorSetupFlow } from "area/connector/types";
-import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { DestinationContextLayerOptIn } from "cloud/components/AgentsOptIn";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import {
@@ -221,7 +220,6 @@ export const CreateDestinationPage: React.FC = () => {
           }
           formAutomation={formAutomation}
         />
-        <CloudInviteUsersHint connectorType="destination" />
       </FormPageContent>
     </ConnectorDocumentationWrapper>
   );

@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 
 import { mockSource } from "test-utils";
+import {
+  mockDestinationDefinition,
+  mockDestinationDefinitionSpecification,
+} from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 
 import { useTestConnectorCommand } from "core/api";
@@ -23,9 +27,11 @@ const mockTrackTestConnectorSuccess = jest.fn();
 jest.mock("area/connector/components/ConnectorForm", () => ({
   ConnectorForm: ({
     onSubmit,
+    formHeader,
     renderFooter,
   }: {
     onSubmit: (values: typeof formValues) => Promise<void>;
+    formHeader: React.ReactNode;
     renderFooter: (props: {
       dirty: boolean;
       isSubmitting: boolean;
@@ -35,6 +41,7 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
     }) => React.ReactNode;
   }) => (
     <>
+      {formHeader}
       <button type="button" onClick={() => onSubmit(formValues).catch(() => undefined)}>
         Submit form
       </button>
@@ -58,9 +65,20 @@ jest.mock("./components/Controls", () => ({
     ) : null,
 }));
 
+jest.mock("area/connector/components/ConnectorIcon", () => ({ ConnectorIcon: () => null }));
+
+jest.mock("pages/connectorBuilder/components/ForkConnectorButton", () => ({
+  ForkConnectorButton: ({ iconOnly }: { iconOnly?: boolean }) => (
+    <button type="button">{iconOnly ? "Fork in Builder icon" : "Fork in Builder"}</button>
+  ),
+}));
+
+jest.mock("area/organization/components/CloudInviteUsersButton", () => ({
+  CloudInviteUsersButton: () => <button type="button">Invite users</button>,
+}));
+
 jest.mock("core/api", () => ({
   CommandErrorWithJobInfo: { getJobInfo: jest.fn() },
-  useCurrentWorkspace: () => ({ workspaceId: "workspace-id" }),
   useTestConnectorCommand: jest.fn(),
 }));
 
@@ -166,5 +184,70 @@ describe("ConnectorCard draft setup", () => {
     expect(testConnector).toHaveBeenCalledWith(undefined, expect.objectContaining({ sourceId: mockSource.sourceId }));
     expect(onDraftPromoted).not.toHaveBeenCalled();
     expect(mockTrackTestConnectorSuccess).not.toHaveBeenCalled();
+  });
+});
+
+const newSourceCardProps = {
+  formType: "source" as const,
+  availableConnectorDefinitions: [mockSourceDefinition],
+  selectedConnectorDefinitionId: mockSourceDefinition.sourceDefinitionId,
+  selectedConnectorDefinitionSpecification: mockSourceDefinitionSpecification,
+  onSubmit: jest.fn(),
+};
+
+const renderCard = (props: React.ComponentProps<typeof ConnectorCard>) => {
+  mockUseTestConnectorCommand.mockReturnValue({
+    testConnector: jest.fn(),
+    isTestConnectionInProgress: false,
+    onStopTesting: jest.fn(),
+    error: null,
+    reset: jest.fn(),
+    isSuccess: false,
+  });
+
+  render(
+    <IntlProvider locale="en" messages={messages}>
+      <ConnectorCard {...props} />
+    </IntlProvider>
+  );
+};
+
+describe("ConnectorCard header", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("shows the connector name with Fork in Builder and Invite users for a new source", () => {
+    renderCard(newSourceCardProps);
+
+    expect(screen.getByRole("heading", { name: mockSourceDefinition.name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fork in Builder icon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invite users" })).toBeInTheDocument();
+  });
+
+  it("shows the connector name with Invite users and without Fork in Builder for a new destination", () => {
+    renderCard({
+      ...newSourceCardProps,
+      formType: "destination",
+      availableConnectorDefinitions: [mockDestinationDefinition],
+      selectedConnectorDefinitionId: mockDestinationDefinition.destinationDefinitionId,
+      selectedConnectorDefinitionSpecification: mockDestinationDefinitionSpecification,
+    });
+
+    expect(screen.getByRole("heading", { name: mockDestinationDefinition.name })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Fork in Builder/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Invite users" })).toBeInTheDocument();
+  });
+
+  it("shows no header in edit mode", () => {
+    renderCard({
+      ...newSourceCardProps,
+      isEditMode: true,
+      connector: { ...mockSource, sourceDefinitionId: mockSourceDefinition.sourceDefinitionId },
+    });
+
+    expect(screen.queryByRole("heading", { name: mockSourceDefinition.name })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Fork in Builder/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Invite users" })).not.toBeInTheDocument();
   });
 });

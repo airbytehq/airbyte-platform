@@ -159,3 +159,9 @@ $animation-length: 3s;
     animation-delay: calc($animation-length / 2);
   }
 }
+
+// Squares an icon-only Button at the xs size: its width matches its height, and the label padding is dropped
+@mixin square-icon-button {
+  width: variables.$button-height-xs;
+  padding: 0;
+}

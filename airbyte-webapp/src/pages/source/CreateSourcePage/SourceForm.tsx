@@ -8,7 +8,6 @@ import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead, SourceRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 
 export interface SourceFormValues {
   name: string;
@@ -80,7 +79,6 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       onDraftPromoted={onDraftPromoted}
       supportLevel={selectedSourceDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
-      leftFooterSlot={selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}
       formAutomation={formAutomation}
     />
   );

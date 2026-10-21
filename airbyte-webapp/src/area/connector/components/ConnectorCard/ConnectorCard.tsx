@@ -13,7 +13,7 @@ import { Spinner } from "components/ui/Spinner";
 
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
-import { CommandErrorWithJobInfo, useCurrentWorkspace, useTestConnectorCommand } from "core/api";
+import { CommandErrorWithJobInfo, useTestConnectorCommand } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -28,6 +28,7 @@ import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
+import { ConnectorCardHeader } from "./components/ConnectorCardHeader";
 import { Controls } from "./components/Controls";
 import ShowLoadingMessage from "./components/ShowLoadingMessage";
 import styles from "./ConnectorCard.module.scss";
@@ -66,7 +67,6 @@ interface ConnectorCardBaseProps<T extends ConnectorT> {
   preFooterSlot?: React.ReactNode;
   /** Reaches ConnectorForm through the props spread. Renders inside the form context, outside the footer. */
   formAutomation?: React.ReactNode;
-  hideCopyConfig?: boolean;
   skipCheckConnection?: boolean;
   onSaveDraft?: (values: ConnectorCardValues, existingDraft?: T) => Promise<T>;
   onDraftPromoted?: (draft: T, values: ConnectorCardValues) => Promise<void> | void;
@@ -112,7 +112,6 @@ export const ConnectorCard = <T extends ConnectorT>({
   supportLevel,
   leftFooterSlot = null,
   preFooterSlot = null,
-  hideCopyConfig = false,
   skipCheckConnection = false,
   onSaveDraft,
   onDraftPromoted,
@@ -126,7 +125,6 @@ export const ConnectorCard = <T extends ConnectorT>({
     props.isEditMode && props.connector.isDraft ? props.connector : undefined
   );
   const { formatMessage } = useIntl();
-  const { workspaceId } = useCurrentWorkspace();
   const { registerNotification } = useNotificationService();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
@@ -317,6 +315,7 @@ export const ConnectorCard = <T extends ConnectorT>({
       onSubmit={(values) => onHandleSubmit(values, skipCheckConnection)}
       formValues={formValues}
       connectorId={connectorId}
+      formHeader={!isEditMode && <ConnectorCardHeader connectorDefinition={selectedConnectorDefinition} />}
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
           <>
@@ -385,21 +384,6 @@ export const ConnectorCard = <T extends ConnectorT>({
               }
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
-              onCopyConfig={
-                hideCopyConfig
-                  ? undefined
-                  : () => {
-                      const values = getValues();
-                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
-                      return {
-                        name: values.name,
-                        workspaceId,
-                        definitionId,
-                        config: values.connectionConfiguration as Record<string, unknown>,
-                        schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
-                      };
-                    }
-              }
             />
           </>
         )

@@ -49,7 +49,6 @@ jest.mock("area/connector/components/agents/ConnectorSetupViews", () => ({
 jest.mock("area/connector/components/ConnectorDocumentationLayout", () => ({
   ConnectorDocumentationWrapper: ({ children }: PropsWithChildren) => <>{children}</>,
 }));
-jest.mock("area/organization/components/CloudInviteUsersHint", () => ({ CloudInviteUsersHint: () => null }));
 jest.mock("components/ui/HeadTitle", () => ({ HeadTitle: () => null }));
 jest.mock("cloud/components/AgentsOptIn", () => ({ DestinationContextLayerOptIn: () => null }));
 jest.mock("cloud/components/AgentsOptIn/useShowAgentsOptIn", () => ({ useShowAgentsOptIn: jest.fn() }));

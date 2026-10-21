@@ -7,6 +7,7 @@ import { PageContainer } from "components/ui/PageContainer";
 
 import { SelectConnector } from "area/connector/components/source/SelectConnector";
 import { useSuggestedSources } from "area/connector/utils";
+import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useCreateSource, useSourceDefinitionList } from "core/api";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 import { AppActionCodes, trackAction } from "core/utils/datadog";
@@ -71,11 +72,14 @@ export const CreateNewSource: React.FC = () => {
   }
 
   return (
-    <SelectConnector
-      connectorDefinitions={sourceDefinitions}
-      connectorType="source"
-      onSelectConnectorDefinition={(sourceDefinitionId) => onSelectSourceDefinitionId(sourceDefinitionId)}
-      suggestedConnectorDefinitionIds={suggestedSourceDefinitionIds}
-    />
+    <>
+      <SelectConnector
+        connectorDefinitions={sourceDefinitions}
+        connectorType="source"
+        onSelectConnectorDefinition={(sourceDefinitionId) => onSelectSourceDefinitionId(sourceDefinitionId)}
+        suggestedConnectorDefinitionIds={suggestedSourceDefinitionIds}
+      />
+      <CloudInviteUsersHint connectorType="source" />
+    </>
   );
 };

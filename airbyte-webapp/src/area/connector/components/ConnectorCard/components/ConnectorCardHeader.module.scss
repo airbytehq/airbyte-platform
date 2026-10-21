@@ -1,0 +1,11 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.icon {
+  width: variables.$button-height-xs;
+  height: variables.$button-height-xs;
+  padding: variables.$spacing-sm;
+  background-color: colors.$foreground;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+}
