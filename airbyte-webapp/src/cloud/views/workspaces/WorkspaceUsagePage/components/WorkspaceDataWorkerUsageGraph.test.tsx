@@ -620,6 +620,17 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     expect(screen.queryByTestId("data-worker-bar-chart")).not.toBeInTheDocument();
   });
 
+  it("shows a loader while historical usage loads for a non-empty current period", async () => {
+    mockOrganizationUsage = workspaceUsage([{ date: "2026-08-24T19:15:00Z", used: 1 }]);
+
+    await render(<WorkspaceDataWorkerUsageGraph />);
+    fireEvent.click(screen.getByText("Compare to previous period"));
+
+    expect(screen.getByText("Loading usage data...")).toBeInTheDocument();
+    expect(screen.queryByText("No usage data found for the selected date range.")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("data-worker-bar-chart")).not.toBeInTheDocument();
+  });
+
   it("shows a comparison error while retaining the current-period chart", async () => {
     mockOrganizationUsage = workspaceUsage([{ date: "2026-08-24T19:15:00Z", used: 1 }]);
     mockHistoricalOrganizationUsageError = true;

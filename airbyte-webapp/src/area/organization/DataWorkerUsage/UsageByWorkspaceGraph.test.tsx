@@ -237,21 +237,14 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     expect(chartProps.renderTooltipContent("#605cff").props.granularity).toBe("week");
   });
 
-  it("keeps the current single-period chart visible while historical usage loads", async () => {
+  it("shows a loader while historical usage loads", async () => {
     await renderGraph("1w", 4, true);
 
     expect(useOrganizationHistoricalWorkerUsage).toHaveBeenCalledWith(
       { startDate: "2026-08-10", endDate: "2026-08-17" },
       { enabled: true }
     );
-    expect(lastChartProps()).toEqual(
-      expect.objectContaining({
-        barDataKey: "maxWorkspaceUsage",
-        comparisonBarDataKey: undefined,
-        barSize: 4,
-        chartKey: "region-1-1w",
-      })
-    );
+    expect(screen.getByText("Loading usage data...")).toBeInTheDocument();
   });
 
   it("shows a loader instead of no data while historical usage loads for an empty current period", async () => {

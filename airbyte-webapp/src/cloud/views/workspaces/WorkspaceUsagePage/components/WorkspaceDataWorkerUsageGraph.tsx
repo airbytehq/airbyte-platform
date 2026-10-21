@@ -375,7 +375,7 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
           </Text>
         </FlexContainer>
       )}
-      {isLoadingTimeRange || (comparisonEnabled && isLoadingHistoricalUsage && hasNoData) ? (
+      {isLoadingTimeRange || (comparisonEnabled && isLoadingHistoricalUsage) ? (
         <FlexContainer className={styles.graphContainer} alignItems="center" justifyContent="center">
           <FlexContainer alignItems="center" gap="md">
             <LoadingSpinner />

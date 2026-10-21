@@ -215,7 +215,7 @@ export const UsageByWorkspaceGraph = ({
     ? !hasCurrentRegionSamples && !hasHistoricalRegionSamples
     : !selectedRegionUsage || selectedRegionUsage.workspaces.length === 0 || sortedWorkspaces.length === 0;
 
-  if (comparisonEnabled && isLoadingHistoricalUsage && hasNoData) {
+  if (comparisonEnabled && isLoadingHistoricalUsage) {
     return (
       <FlexContainer className={styles.usageByWorkspaceGraph} alignItems="center" justifyContent="center">
         <FlexContainer alignItems="center" gap="md">
