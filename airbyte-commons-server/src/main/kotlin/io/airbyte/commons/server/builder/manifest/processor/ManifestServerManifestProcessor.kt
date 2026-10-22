@@ -14,6 +14,10 @@ import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadL
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadSlicesInner
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner
 import io.airbyte.api.server.generated.models.ConnectorBuilderResolvedManifest
+import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.errors.KnownException
+import io.airbyte.commons.server.errors.UnprocessableContentException
 import io.airbyte.manifestserver.api.client.ManifestServerApiClient
 import io.airbyte.manifestserver.api.client.model.generated.FullResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.HttpRequest
@@ -21,8 +25,12 @@ import io.airbyte.manifestserver.api.client.model.generated.HttpResponse
 import io.airbyte.manifestserver.api.client.model.generated.RequestContext
 import io.airbyte.manifestserver.api.client.model.generated.ResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.StreamTestReadRequest
+import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
+import org.openapitools.client.infrastructure.ClientError
+import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Implementation of ManifestProcessor that uses the manifest-runner service.
@@ -42,7 +50,7 @@ class ManifestServerManifestProcessor(
         projectId = builderProjectId?.toString(),
       )
     val resolveRequest = ResolveRequest(manifest = manifest, requestContext)
-    val resolveManifest = manifestServerApiClient.manifestApi.resolve(resolveRequest)
+    val resolveManifest = callManifestServer { manifestServerApiClient.manifestApi.resolve(resolveRequest) }
     return resolveManifest.manifest
   }
 
@@ -66,9 +74,11 @@ class ManifestServerManifestProcessor(
         context = requestContext,
       )
     val resolveManifest =
-      manifestServerApiClient.manifestApi.fullResolve(
-        fullResolveRequest,
-      )
+      callManifestServer {
+        manifestServerApiClient.manifestApi.fullResolve(
+          fullResolveRequest,
+        )
+      }
     return ConnectorBuilderResolvedManifest(manifest = resolveManifest.manifest)
   }
 
@@ -102,13 +112,37 @@ class ManifestServerManifestProcessor(
         sliceLimit = sliceLimit,
         context = requestContext,
       )
-    val manifestServerStreamRead = manifestServerApiClient.manifestApi.testRead(testReadRequest)
+    val manifestServerStreamRead = callManifestServer { manifestServerApiClient.manifestApi.testRead(testReadRequest) }
     return convertStreamRead(manifestServerStreamRead)
   }
 
   override fun getCapabilities(): ConnectorBuilderCapabilities {
     val capabilities = manifestServerApiClient.capabilitiesApi.getCapabilities()
     return ConnectorBuilderCapabilities(customCodeExecution = capabilities.customCodeExecution)
+  }
+
+  private fun <T> callManifestServer(call: () -> T): T =
+    try {
+      call()
+    } catch (e: ClientException) {
+      throw toKnownException(e) ?: e
+    }
+
+  private fun toKnownException(e: ClientException): KnownException? {
+    val body = (e.response as? ClientError<*>)?.body as? String ?: return null
+    val detail =
+      Jsons
+        .tryDeserialize(body)
+        .getOrNull()
+        ?.get("detail")
+        ?.takeIf { it.isTextual }
+        ?.asText()
+        ?.takeIf { it.isNotBlank() } ?: return null
+    return when (e.statusCode) {
+      HttpStatus.BAD_REQUEST.code -> BadRequestException(detail, e)
+      HttpStatus.UNPROCESSABLE_ENTITY.code -> UnprocessableContentException(detail, e)
+      else -> null
+    }
   }
 
   private fun convertStreamRead(

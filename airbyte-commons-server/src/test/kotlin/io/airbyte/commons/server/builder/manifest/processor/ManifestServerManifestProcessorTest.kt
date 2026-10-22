@@ -6,6 +6,8 @@ package io.airbyte.commons.server.builder.manifest.processor
 
 import io.airbyte.api.server.generated.models.ConnectorBuilderProjectStreamReadLogsInner
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.errors.UnprocessableContentException
 import io.airbyte.manifestserver.api.client.ManifestServerApiClient
 import io.airbyte.manifestserver.api.client.generated.CapabilitiesApi
 import io.airbyte.manifestserver.api.client.generated.ManifestApi
@@ -28,11 +30,17 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.openapitools.client.infrastructure.ClientError
+import org.openapitools.client.infrastructure.ClientException
+import org.openapitools.client.infrastructure.ServerError
+import org.openapitools.client.infrastructure.ServerException
 import java.util.UUID
 
 internal class ManifestServerManifestProcessorTest {
@@ -457,5 +465,173 @@ internal class ManifestServerManifestProcessorTest {
     assertEquals(record, result.slices[0].pages[0].records[0])
     assertEquals(null, result.slices[0].pages[0].request)
     assertEquals(null, result.slices[0].pages[0].response)
+  }
+
+  @Test
+  fun testStreamTestReadSurfacesManifestServerBadRequestDetail() {
+    val detail = "Error reading stream: time data ' 2026-06-08T00:00:00Z' does not match format '%Y-%m-%dT%H:%M:%SZ'"
+    val clientException =
+      ClientException(
+        "Client error : 400 Bad Request {\"detail\":\"$detail\"}",
+        400,
+        ClientError<Any>(message = "Bad Request", body = """{"detail":"$detail"}""", statusCode = 400),
+      )
+
+    every { manifestApi.testRead(any()) } throws clientException
+
+    val thrown =
+      assertThrows<BadRequestException> {
+        streamTestRead()
+      }
+
+    assertEquals(detail, thrown.message)
+    assertSame(clientException, thrown.cause)
+  }
+
+  @Test
+  fun testStreamTestReadSurfacesManifestServerUnprocessableDetail() {
+    val clientException =
+      ClientException(
+        "Client error : 422 Unprocessable Content {\"detail\":\"Invalid manifest\"}",
+        422,
+        ClientError<Any>(message = "Unprocessable Content", body = """{"detail":"Invalid manifest"}""", statusCode = 422),
+      )
+
+    every { manifestApi.testRead(any()) } throws clientException
+
+    val thrown =
+      assertThrows<UnprocessableContentException> {
+        streamTestRead()
+      }
+
+    assertEquals("Invalid manifest", thrown.message)
+    assertSame(clientException, thrown.cause)
+  }
+
+  @Test
+  fun testStreamTestReadBadRequestWithoutDetailRethrowsClientException() {
+    val nonJsonBodyException =
+      ClientException(
+        "Client error : 400 Bad Request not json",
+        400,
+        ClientError<Any>(message = "Bad Request", body = "not json", statusCode = 400),
+      )
+    val missingDetailException =
+      ClientException(
+        "Client error : 400 Bad Request {\"error\":\"x\"}",
+        400,
+        ClientError<Any>(message = "Bad Request", body = """{"error":"x"}""", statusCode = 400),
+      )
+    val nullBodyException =
+      ClientException(
+        "Client error : 400 Bad Request",
+        400,
+        ClientError<Any>(message = "Bad Request", body = null, statusCode = 400),
+      )
+
+    every { manifestApi.testRead(any()) } throwsMany listOf(nonJsonBodyException, missingDetailException, nullBodyException)
+
+    assertSame(
+      nonJsonBodyException,
+      assertThrows<ClientException> { streamTestRead() },
+    )
+    assertSame(
+      missingDetailException,
+      assertThrows<ClientException> { streamTestRead() },
+    )
+    assertSame(
+      nullBodyException,
+      assertThrows<ClientException> { streamTestRead() },
+    )
+  }
+
+  @Test
+  fun testStreamTestReadServerErrorUnchanged() {
+    val serverException =
+      ServerException(
+        "Server error : 500 Internal {\"detail\":\"boom\"}",
+        500,
+        ServerError<Any>(message = "Internal", body = """{"detail":"boom"}""", statusCode = 500, headers = mapOf()),
+      )
+
+    every { manifestApi.testRead(any()) } throws serverException
+
+    assertSame(
+      serverException,
+      assertThrows<ServerException> { streamTestRead() },
+    )
+  }
+
+  @Test
+  fun testStreamTestReadNotFoundDetailRethrowsClientException() {
+    val clientException =
+      ClientException(
+        "Client error : 404 Not Found {\"detail\":\"gone\"}",
+        404,
+        ClientError<Any>(message = "Not Found", body = """{"detail":"gone"}""", statusCode = 404),
+      )
+
+    every { manifestApi.testRead(any()) } throws clientException
+
+    assertSame(
+      clientException,
+      assertThrows<ClientException> { streamTestRead() },
+    )
+  }
+
+  @Test
+  fun testResolveManifestSurfacesManifestServerBadRequestDetail() {
+    val clientException =
+      ClientException(
+        "Client error : 400 Bad Request {\"detail\":\"Invalid manifest\"}",
+        400,
+        ClientError<Any>(message = "Bad Request", body = """{"detail":"Invalid manifest"}""", statusCode = 400),
+      )
+
+    every { manifestApi.resolve(any()) } throws clientException
+
+    val thrown =
+      assertThrows<BadRequestException> {
+        processor.resolveManifest(manifestJson, builderProjectId, workspaceId)
+      }
+
+    assertEquals("Invalid manifest", thrown.message)
+    assertSame(clientException, thrown.cause)
+  }
+
+  @Test
+  fun testFullResolveManifestSurfacesManifestServerBadRequestDetail() {
+    val clientException =
+      ClientException(
+        "Client error : 400 Bad Request {\"detail\":\"Invalid manifest\"}",
+        400,
+        ClientError<Any>(message = "Bad Request", body = """{"detail":"Invalid manifest"}""", statusCode = 400),
+      )
+
+    every { manifestApi.fullResolve(any()) } throws clientException
+
+    val thrown =
+      assertThrows<BadRequestException> {
+        processor.fullResolveManifest(configJson, manifestJson, null, builderProjectId, workspaceId)
+      }
+
+    assertEquals("Invalid manifest", thrown.message)
+    assertSame(clientException, thrown.cause)
+  }
+
+  private fun streamTestRead() {
+    processor.streamTestRead(
+      configJson,
+      manifestJson,
+      "test_stream",
+      null,
+      null,
+      builderProjectId,
+      null,
+      null,
+      null,
+      null,
+      workspaceId,
+    )
   }
 }
