@@ -64,22 +64,14 @@ describe("AgentsSidebarLink", () => {
     expect(mockUseAgentsProvisioningStatus).toHaveBeenCalledWith({ enabled: true });
   });
 
-  it("shows Install MCP for an eligible unenrolled organization", () => {
-    render(<InstallMcpSidebarLink />);
-    expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("href", "/organization/test-org/install-mcp");
-    expect(mockUseAgentsProvisioningStatus).toHaveBeenCalledWith({ enabled: true });
-  });
-
-  it("hides Install MCP for an ineligible unenrolled organization", () => {
-    mockUseAgentsProvisioningStatus.mockReturnValue({ is_enrolled: false, external_cloud_eligible: false } as never);
-    render(<InstallMcpSidebarLink />);
-    expect(screen.queryByTestId("installMcpSidebarLink")).not.toBeInTheDocument();
-  });
-
-  it("hides Install MCP when the frontend opt-in is disabled", () => {
+  it.each([
+    { is_enrolled: false, external_cloud_eligible: false },
+    { is_enrolled: false, external_cloud_eligible: true },
+    { is_enrolled: true, external_cloud_eligible: false },
+  ])("shows Install MCP regardless of Agents provisioning (%o)", (status) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue(status as never);
     mockUseShowAgentsOptIn.mockReturnValue(false);
     render(<InstallMcpSidebarLink />);
-    expect(screen.queryByTestId("installMcpSidebarLink")).not.toBeInTheDocument();
-    expect(mockUseAgentsProvisioningStatus).toHaveBeenCalledWith({ enabled: false });
+    expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("href", "/organization/test-org/install-mcp");
   });
 });

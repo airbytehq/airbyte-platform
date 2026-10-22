@@ -11,7 +11,6 @@ import { LoadingPage } from "components/ui/LoadingPage";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
@@ -27,7 +26,6 @@ import {
   buildVsCodeInsidersDeeplink,
   CLOUD_MCP_URL,
 } from "./mcpInstallConfigs";
-import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 const CodeBlock: React.FC<{ content: string }> = ({ content }) => (
   <div className={styles.codeBlock}>
@@ -180,10 +178,8 @@ const InstallMcpPageContent: React.FC = () => {
 
 export const InstallMcpPage: React.FC = () => {
   const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
-  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
 
-  if (!isCloudApp || !showAgentsOptIn || !status || (!status.is_enrolled && !status.external_cloud_eligible)) {
+  if (!isCloudApp) {
     return null;
   }
 

@@ -60,13 +60,11 @@ const ContextLayerSidebarLink: React.FC = () => {
   );
 };
 
-const InstallMcpSidebarLinkContent: React.FC = () => {
+export const InstallMcpSidebarLink: React.FC = () => {
   const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
   const organizationId = useCurrentOrganizationId();
-  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
 
-  if (!isCloudApp || !showAgentsOptIn || !status || (!status.is_enrolled && !status.external_cloud_eligible)) {
+  if (!isCloudApp) {
     return null;
   }
 
@@ -86,14 +84,6 @@ export const AgentsSidebarLink: React.FC = () => {
   return (
     <React.Suspense>
       <ContextLayerSidebarLink />
-    </React.Suspense>
-  );
-};
-
-export const InstallMcpSidebarLink: React.FC = () => {
-  return (
-    <React.Suspense>
-      <InstallMcpSidebarLinkContent />
     </React.Suspense>
   );
 };
