@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import com.google.api.gax.grpc.GrpcStatusCode
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse
 import com.google.cloud.secretmanager.v1.Replication
@@ -177,6 +178,70 @@ class GoogleSecretManagerPersistenceTest {
       mockGoogleClient.createSecret("projects/test-project", any(), any<Secret>())
       mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>())
     }
+  }
+
+  @Test
+  fun `test write to secret without versions adds a version`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val secretName = SecretName.of("test-project", coordinate.fullCoordinate)
+    val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(secret)).build()
+
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.accessSecretVersion(SecretVersionName.of("test-project", coordinate.fullCoordinate, "latest")) } throws
+      NotFoundException(StatusRuntimeException(Status.NOT_FOUND), GrpcStatusCode.of(Status.Code.NOT_FOUND), false)
+    every { mockGoogleClient.createSecret("projects/test-project", coordinate.fullCoordinate, any<Secret>()) } throws
+      AlreadyExistsException(StatusRuntimeException(Status.ALREADY_EXISTS), GrpcStatusCode.of(Status.Code.ALREADY_EXISTS), false)
+    every { mockGoogleClient.addSecretVersion(secretName, secretPayload) } returns SecretVersion.getDefaultInstance()
+
+    val gsmClient = RuntimeGoogleSecretManagerClient(mockGoogleClient, GoogleSecretsManagerRuntimeConfig("test-project", "{}", ""))
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    GoogleSecretManagerPersistence(gsmClient, mockMetric).write(coordinate, secret)
+
+    verify(exactly = 1) { mockGoogleClient.addSecretVersion(secretName, secretPayload) }
+    verify(exactly = 0) { mockGoogleClient.deleteSecret(any<SecretName>()) }
+  }
+
+  @Test
+  fun `test write to secret without versions propagates version failure`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val versionFailure = IllegalStateException("version write failed")
+
+    val mockGsmClient: GoogleSecretManagerClient = mockk()
+    every { mockGsmClient.getSecret(coordinate) } returns ""
+    every { mockGsmClient.createSecret(coordinate, secret, null) } throws
+      AlreadyExistsException(StatusRuntimeException(Status.ALREADY_EXISTS), GrpcStatusCode.of(Status.Code.ALREADY_EXISTS), false)
+    every { mockGsmClient.addSecretVersion(coordinate, secret) } throws versionFailure
+
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    val actualFailure = assertThrows<IllegalStateException> { GoogleSecretManagerPersistence(mockGsmClient, mockMetric).write(coordinate, secret) }
+
+    Assertions.assertSame(versionFailure, actualFailure)
+    verify(exactly = 0) { mockGsmClient.deleteSecret(any()) }
+  }
+
+  @Test
+  fun `test write propagates create failure other than already exists`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val createFailure = IllegalStateException("create failed")
+
+    val mockGsmClient: GoogleSecretManagerClient = mockk()
+    every { mockGsmClient.getSecret(coordinate) } returns ""
+    every { mockGsmClient.createSecret(coordinate, secret, null) } throws createFailure
+
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    val actualFailure = assertThrows<IllegalStateException> { GoogleSecretManagerPersistence(mockGsmClient, mockMetric).write(coordinate, secret) }
+
+    Assertions.assertSame(createFailure, actualFailure)
+    verify(exactly = 0) { mockGsmClient.addSecretVersion(any(), any()) }
   }
 
   @Test

@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import com.google.api.gax.core.FixedCredentialsProvider
+import com.google.api.gax.rpc.AlreadyExistsException
 import com.google.api.gax.rpc.NotFoundException
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.secretmanager.v1.ListSecretVersionsRequest
@@ -73,7 +74,11 @@ class GoogleSecretManagerPersistence(
       metricClient.count(metric = OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, attributes = expTag.toTypedArray())
 
       logger.info { "GoogleSecretManagerPersistence createSecret coordinate=$coordinate expiry=$expiry" }
-      gsmClient.createSecret(coordinate, payload, expiry)
+      try {
+        gsmClient.createSecret(coordinate, payload, expiry)
+      } catch (_: AlreadyExistsException) {
+        gsmClient.addSecretVersion(coordinate, payload)
+      }
     } else {
       gsmClient.addSecretVersion(coordinate, payload)
       logger.warn {
