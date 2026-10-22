@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteCatalog
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.BasicSchedule
@@ -182,7 +182,7 @@ class ConnectionHelper(
     fun validateCatalogDoesntContainDuplicateStreamNames(syncCatalog: AirbyteCatalog) {
       val streamNames: MutableSet<StreamName> = HashSet()
       for (s in syncCatalog.streams) {
-        val stream = s.stream
+        val stream = s.stream!!
         require(streamNames.add(StreamName(stream.namespace, stream.name))) {
           String.format(
             "Catalog contains duplicate stream names: %s.%s",

@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.StateApi
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
+import io.airbyte.api.server.generated.apis.StateApi
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -17,17 +17,15 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/state")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class StateApiController(
   private val stateHandler: StateHandler,
 ) : StateApi {
-  @Post("/create_or_update")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -36,9 +34,8 @@ open class StateApiController(
   )
   override fun createOrUpdateState(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,
-  ): ConnectionState? = execute { stateHandler.createOrUpdateState(connectionStateCreateOrUpdate) }
+  ): ConnectionState = execute { stateHandler.createOrUpdateState(connectionStateCreateOrUpdate) }
 
-  @Post("/create_or_update_safe")
   @Secured(
     AuthRoleConstants.WORKSPACE_EDITOR,
     AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
@@ -52,9 +49,8 @@ open class StateApiController(
   )
   override fun createOrUpdateStateSafe(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,
-  ): ConnectionState? = execute { stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate) }
+  ): ConnectionState = execute { stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate) }
 
-  @Post("/get")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
@@ -63,5 +59,5 @@ open class StateApiController(
   )
   override fun getState(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
-  ): ConnectionState? = execute { stateHandler.getState(connectionIdRequestBody) }
+  ): ConnectionState = execute { stateHandler.getState(connectionIdRequestBody) }
 }

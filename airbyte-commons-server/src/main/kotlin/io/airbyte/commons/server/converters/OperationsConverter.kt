@@ -5,18 +5,16 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.OperationRead
-import io.airbyte.api.model.generated.OperatorConfiguration
-import io.airbyte.api.model.generated.OperatorType
-import io.airbyte.api.model.generated.OperatorWebhook
-import io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum
-import io.airbyte.api.model.generated.OperatorWebhookDbtCloud
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
+import io.airbyte.api.server.generated.models.OperatorWebhook
+import io.airbyte.api.server.generated.models.OperatorWebhookDbtCloud
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.WebhookOperationConfigs
-import java.util.Objects
 import java.util.Optional
 import java.util.regex.Pattern
 
@@ -32,9 +30,9 @@ object OperationsConverter {
     standardSyncOperation: StandardSyncOperation,
     standardWorkspace: StandardWorkspace,
   ) {
-    standardSyncOperation.withOperatorType(operatorConfig.operatorType?.convertTo<StandardSyncOperation.OperatorType>())
-    if (Objects.requireNonNull(operatorConfig.operatorType) == OperatorType.WEBHOOK) {
-      requireNotNull(operatorConfig.webhook)
+    standardSyncOperation.withOperatorType(operatorConfig.operatorType.convertTo<StandardSyncOperation.OperatorType>())
+    if (operatorConfig.operatorType == OperatorType.WEBHOOK) {
+      val webhook = requireNotNull(operatorConfig.webhook)
       // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
       val webhookConfigs =
         standardWorkspace.webhookOperationConfigs?.let { node: JsonNode ->
@@ -48,34 +46,26 @@ object OperationsConverter {
           }
         }
       }
-      standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(operatorConfig.webhook, customDbtHost))
+      standardSyncOperation.withOperatorWebhook(webhookOperatorFromConfig(webhook, customDbtHost))
     }
   }
 
   @JvmStatic
   fun operationReadFromPersistedOperation(standardSyncOperation: StandardSyncOperation): OperationRead {
-    val operatorConfiguration =
-      OperatorConfiguration()
-        .operatorType(standardSyncOperation.operatorType?.convertTo<OperatorType>())
-    if (standardSyncOperation.operatorType == null) {
-      // TODO(mfsiega-airbyte): this case shouldn't happen, but the API today would tolerate it. After
-      // verifying that it really can't happen, turn this into a precondition.
-      return OperationRead()
-        .workspaceId(standardSyncOperation.workspaceId)
-        .operationId(standardSyncOperation.operationId)
-        .name(standardSyncOperation.name)
-    }
-    if (Objects.requireNonNull<StandardSyncOperation.OperatorType>(standardSyncOperation.operatorType) ==
-      StandardSyncOperation.OperatorType.WEBHOOK
-    ) {
-      require(standardSyncOperation.operatorWebhook != null)
-      operatorConfiguration.webhook(webhookOperatorFromPersistence(standardSyncOperation.operatorWebhook))
-    }
-    return OperationRead()
-      .workspaceId(standardSyncOperation.workspaceId)
-      .operationId(standardSyncOperation.operationId)
-      .name(standardSyncOperation.name)
-      .operatorConfiguration(operatorConfiguration)
+    // operator_type is a non-null column
+    val operatorType = requireNotNull(standardSyncOperation.operatorType) { "Operation ${standardSyncOperation.operationId} has no operator type" }
+    val webhook =
+      if (operatorType == StandardSyncOperation.OperatorType.WEBHOOK) {
+        webhookOperatorFromPersistence(requireNotNull(standardSyncOperation.operatorWebhook))
+      } else {
+        null
+      }
+    return OperationRead(
+      workspaceId = standardSyncOperation.workspaceId,
+      operationId = standardSyncOperation.operationId,
+      name = standardSyncOperation.name,
+      operatorConfiguration = OperatorConfiguration(operatorType = operatorType.convertTo<OperatorType>(), webhook = webhook),
+    )
   }
 
   private fun webhookOperatorFromConfig(
@@ -92,10 +82,10 @@ object OperationsConverter {
         .withExecutionUrl(webhookConfig.executionUrl)
         .withExecutionBody(webhookConfig.executionBody)
     }
-    when (webhookConfig.webhookType) {
-      WebhookTypeEnum.DBT_CLOUD -> {
+    when (webhookConfig.webhookType!!) {
+      OperatorWebhook.WebhookType.DBT_CLOUD -> {
         return operatorWebhook
-          .withExecutionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(webhookConfig.dbtCloud, customDbtHost))
+          .withExecutionUrl(DbtCloudOperationConverter.getExecutionUrlFrom(webhookConfig.dbtCloud!!, customDbtHost))
           .withExecutionBody(DbtCloudOperationConverter.dbtCloudExecutionBody)
       }
     }
@@ -103,20 +93,17 @@ object OperationsConverter {
   }
 
   private fun webhookOperatorFromPersistence(persistedWebhook: io.airbyte.config.OperatorWebhook): OperatorWebhook {
-    val webhookOperator =
-      OperatorWebhook()
-        .webhookConfigId(persistedWebhook.webhookConfigId)
-    val dbtCloudOperator = DbtCloudOperationConverter.parseFrom(persistedWebhook)
-    if (dbtCloudOperator != null) {
-      webhookOperator.webhookType(WebhookTypeEnum.DBT_CLOUD).dbtCloud(dbtCloudOperator)
+    val dbtCloudOperator =
+      DbtCloudOperationConverter.parseFrom(persistedWebhook) ?: throw IllegalArgumentException("Unexpected webhook operator config")
+    return OperatorWebhook(
+      webhookConfigId = persistedWebhook.webhookConfigId,
+      webhookType = OperatorWebhook.WebhookType.DBT_CLOUD,
+      dbtCloud = dbtCloudOperator,
       // TODO(mfsiega-airbyte): remove once frontend switches to new format.
       // Dual-write deprecated webhook format.
-      webhookOperator.executionUrl(persistedWebhook.executionUrl)
-      webhookOperator.executionBody(persistedWebhook.executionBody)
-    } else {
-      throw IllegalArgumentException("Unexpected webhook operator config")
-    }
-    return webhookOperator
+      executionUrl = persistedWebhook.executionUrl,
+      executionBody = persistedWebhook.executionBody,
+    )
   }
 
   object DbtCloudOperationConverter {
@@ -130,13 +117,13 @@ object OperationsConverter {
     @JvmStatic
     fun parseFrom(persistedWebhook: io.airbyte.config.OperatorWebhook): OperatorWebhookDbtCloud? {
       val dbtCloudUrlMatcher = dbtUrlPattern.matcher(persistedWebhook.executionUrl)
-      val dbtCloudConfig = OperatorWebhookDbtCloud()
-      if (dbtCloudUrlMatcher.matches()) {
-        dbtCloudConfig.accountId = dbtCloudUrlMatcher.group(ACCOUNT_REGEX_GROUP).toLong()
-        dbtCloudConfig.jobId = dbtCloudUrlMatcher.group(JOB_REGEX_GROUP).toLong()
-        return dbtCloudConfig
+      if (!dbtCloudUrlMatcher.matches()) {
+        return null
       }
-      return null
+      return OperatorWebhookDbtCloud(
+        accountId = dbtCloudUrlMatcher.group(ACCOUNT_REGEX_GROUP).toLong(),
+        jobId = dbtCloudUrlMatcher.group(JOB_REGEX_GROUP).toLong(),
+      )
     }
 
     internal fun getExecutionUrlFrom(

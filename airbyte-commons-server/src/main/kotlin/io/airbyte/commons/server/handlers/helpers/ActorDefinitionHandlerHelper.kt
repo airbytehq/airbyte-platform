@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.DeadlineAction
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.DeadlineAction
 import io.airbyte.commons.server.ServerConstants
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException
@@ -355,14 +355,15 @@ class ActorDefinitionHandlerHelper(
       val apiDeadlineAction =
         if (minDeadlineAction == DeadlineAction.AUTO_UPGRADE.toString()) DeadlineAction.AUTO_UPGRADE else DeadlineAction.DISABLE
       return Optional.of(
-        ActorDefinitionVersionBreakingChanges()
-          .upcomingBreakingChanges(
+        ActorDefinitionVersionBreakingChanges(
+          upcomingBreakingChanges =
             breakingChanges
               .stream()
-              .map { breakingChange: ActorDefinitionBreakingChange? -> apiPojoConverters.toApiBreakingChange(breakingChange) }
+              .map { breakingChange: ActorDefinitionBreakingChange -> apiPojoConverters.toApiBreakingChange(breakingChange)!! }
               .toList(),
-          ).minUpgradeDeadline(minUpgradeDeadline)
-          .deadlineAction(apiDeadlineAction),
+          minUpgradeDeadline = minUpgradeDeadline,
+          deadlineAction = apiDeadlineAction,
+        ),
       )
     } else {
       return Optional.empty()

@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.errors
 
-import io.airbyte.api.model.generated.KnownExceptionInfo
+import io.airbyte.api.server.generated.models.KnownExceptionInfo
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.io.LineNumberReader
@@ -65,52 +65,38 @@ abstract class KnownException : RuntimeException {
       t: Throwable,
       message: String?,
       details: Map<String, Any>? = null,
-    ): KnownExceptionInfo {
-      val exceptionInfo =
-        KnownExceptionInfo().apply {
-          this.message = message
-          this.details = if (t is KnownException) t.details else null
-          this.errorId = if (t is KnownException) t.errorId else null
-        }
-
-      if (details != null) {
-        exceptionInfo.details(details)
-      }
-
-      return exceptionInfo
-    }
+    ): KnownExceptionInfo =
+      KnownExceptionInfo(
+        message = message,
+        details = details ?: if (t is KnownException) t.details else null,
+        errorId = if (t is KnownException) t.errorId else null,
+      )
 
     fun infoFromThrowableWithMessageAndStackTrace(t: Throwable): KnownExceptionInfo {
-      val exceptionInfo =
-        KnownExceptionInfo().apply {
-          this.message = t.message
-          this.details = if (t is KnownException) t.details else null
-          this.errorId = if (t is KnownException) t.errorId else null
-          this.exceptionStack = toStringList(t)
-          if (t.cause != null) {
-            this.rootCauseExceptionClassName = t.cause!!.javaClass.name
-            this.rootCauseExceptionStack = toStringList(t.cause!!)
-          }
-        }
-      return exceptionInfo
+      val cause = t.cause
+      return KnownExceptionInfo(
+        message = t.message,
+        details = if (t is KnownException) t.details else null,
+        errorId = if (t is KnownException) t.errorId else null,
+        exceptionStack = toStringList(t),
+        rootCauseExceptionClassName = cause?.javaClass?.name,
+        rootCauseExceptionStack = cause?.let { toStringList(it) },
+      )
     }
 
     fun infoFromThrowableWithMessageAndStackTrace(
       t: Throwable,
       message: String?,
     ): KnownExceptionInfo {
-      val exceptionInfo =
-        KnownExceptionInfo().apply {
-          this.message = message
-          this.details = if (t is KnownException) t.details else null
-          this.errorId = if (t is KnownException) t.errorId else null
-          this.exceptionStack = toStringList(t)
-          if (t.cause != null) {
-            this.rootCauseExceptionClassName = t.cause!!.javaClass.name
-            this.rootCauseExceptionStack = toStringList(t.cause!!)
-          }
-        }
-      return exceptionInfo
+      val cause = t.cause
+      return KnownExceptionInfo(
+        message = message,
+        details = if (t is KnownException) t.details else null,
+        errorId = if (t is KnownException) t.errorId else null,
+        exceptionStack = toStringList(t),
+        rootCauseExceptionClassName = cause?.javaClass?.name,
+        rootCauseExceptionStack = cause?.let { toStringList(it) },
+      )
     }
 
     fun infoFromThrowable(

@@ -5,28 +5,28 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
-import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.mappers.transformations.Mapper
-import jakarta.validation.Valid
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.whenever
+import java.util.UUID
 
 internal class AutoPropagateSchemaChangeHelperTest {
   private val applySchemaChangeHelper = ApplySchemaChangeHelper(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
@@ -49,14 +50,15 @@ internal class AutoPropagateSchemaChangeHelperTest {
 
   @Test
   fun extractStreamAndConfigPerStreamDescriptorTest() {
-    val airbyteCatalog = AirbyteCatalog()
     val airbyteStreamConfiguration1 =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().name(NAME1).namespace(NAMESPACE1).addSupportedSyncModesItem(SyncMode.FULL_REFRESH))
+      AirbyteStreamAndConfiguration(
+        stream = AirbyteStream(name = NAME1, namespace = NAMESPACE1, supportedSyncModes = listOf(SyncMode.FULL_REFRESH)),
+      )
     val airbyteStreamConfiguration2 =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().name(NAME2).namespace(NAMESPACE2).addSupportedSyncModesItem(SyncMode.INCREMENTAL))
-    airbyteCatalog.streams(listOf<AirbyteStreamAndConfiguration>(airbyteStreamConfiguration1, airbyteStreamConfiguration2))
+      AirbyteStreamAndConfiguration(
+        stream = AirbyteStream(name = NAME2, namespace = NAMESPACE2, supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+      )
+    val airbyteCatalog = AirbyteCatalog(streams = listOf(airbyteStreamConfiguration1, airbyteStreamConfiguration2))
 
     val result =
       applySchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor(airbyteCatalog)
@@ -64,22 +66,23 @@ internal class AutoPropagateSchemaChangeHelperTest {
     Assertions.assertThat(result).hasSize(2)
     Assertions.assertThat(result).isEqualTo(
       mapOf(
-        StreamDescriptor().name(NAME1).namespace(NAMESPACE1) to airbyteStreamConfiguration1,
-        StreamDescriptor().name(NAME2).namespace(NAMESPACE2) to airbyteStreamConfiguration2,
+        StreamDescriptor(name = NAME1, namespace = NAMESPACE1) to airbyteStreamConfiguration1,
+        StreamDescriptor(name = NAME2, namespace = NAMESPACE2) to airbyteStreamConfiguration2,
       ),
     )
   }
 
   @Test
   fun extractStreamAndConfigPerStreamDescriptorNoNamespaceTest() {
-    val airbyteCatalog = AirbyteCatalog()
     val airbyteStreamConfiguration1 =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().name(NAME1).addSupportedSyncModesItem(SyncMode.FULL_REFRESH))
+      AirbyteStreamAndConfiguration(
+        stream = AirbyteStream(name = NAME1, supportedSyncModes = listOf(SyncMode.FULL_REFRESH)),
+      )
     val airbyteStreamConfiguration2 =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().name(NAME2).addSupportedSyncModesItem(SyncMode.INCREMENTAL))
-    airbyteCatalog.streams(listOf<AirbyteStreamAndConfiguration>(airbyteStreamConfiguration1, airbyteStreamConfiguration2))
+      AirbyteStreamAndConfiguration(
+        stream = AirbyteStream(name = NAME2, supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+      )
+    val airbyteCatalog = AirbyteCatalog(streams = listOf(airbyteStreamConfiguration1, airbyteStreamConfiguration2))
 
     val result =
       applySchemaChangeHelper.extractStreamAndConfigPerStreamDescriptor(airbyteCatalog)
@@ -87,8 +90,8 @@ internal class AutoPropagateSchemaChangeHelperTest {
     Assertions.assertThat(result).hasSize(2)
     Assertions.assertThat(result).isEqualTo(
       mapOf(
-        StreamDescriptor().name(NAME1) to airbyteStreamConfiguration1,
-        StreamDescriptor().name(NAME2) to airbyteStreamConfiguration2,
+        StreamDescriptor(name = NAME1) to airbyteStreamConfiguration1,
+        StreamDescriptor(name = NAME2) to airbyteStreamConfiguration2,
       ),
     )
   }
@@ -102,9 +105,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, newSchema)
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME1))
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME1),
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -117,7 +121,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
         ).catalog
 
     Assertions.assertThat(result.streams).hasSize(1)
-    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(result.streams[0].stream!!.jsonSchema).isEqualTo(newSchema)
   }
 
   @Test
@@ -129,9 +133,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -144,11 +149,11 @@ internal class AutoPropagateSchemaChangeHelperTest {
         ).catalog
 
     Assertions.assertThat(result.streams).hasSize(2)
-    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
-    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
-    Assertions.assertThat(result.streams[0].config.selected).isTrue()
-    Assertions.assertThat(result.streams[1].stream.name).isEqualTo(NAME2)
-    Assertions.assertThat(result.streams[1].stream.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(result.streams[0].stream!!.name).isEqualTo(NAME1)
+    Assertions.assertThat(result.streams[0].stream!!.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(result.streams[0].config!!.selected).isTrue()
+    Assertions.assertThat(result.streams[1].stream!!.name).isEqualTo(NAME2)
+    Assertions.assertThat(result.streams[1].stream!!.jsonSchema).isEqualTo(newSchema)
   }
 
   @Test
@@ -160,9 +165,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -174,17 +180,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    Assertions.assertThat(result.streams).hasSize(2)
     val stream0 = result.streams[0]
     val stream1 = result.streams[1]
-    Assertions.assertThat(stream0.stream.name).isEqualTo(NAME1)
-    Assertions.assertThat(stream0.stream.jsonSchema).isEqualTo(oldSchema)
-    Assertions.assertThat(stream0.config.selected).isTrue()
-    Assertions.assertThat(stream1.stream.name).isEqualTo(NAME2)
-    Assertions.assertThat(stream1.stream.jsonSchema).isEqualTo(newSchema)
-    Assertions.assertThat(stream1.config.selected).isTrue()
-    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
-    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
+    Assertions.assertThat(stream0.stream!!.name).isEqualTo(NAME1)
+    Assertions.assertThat(stream0.stream!!.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(stream0.config!!.selected).isTrue()
+    Assertions.assertThat(stream1.stream!!.name).isEqualTo(NAME2)
+    Assertions.assertThat(stream1.stream!!.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(stream1.config!!.selected).isTrue()
+    Assertions.assertThat(stream1.config!!.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
+    Assertions.assertThat(stream1.config!!.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
   }
 
   @Test
@@ -193,17 +199,14 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema)
 
     val newSchema = deserialize(NEW_SCHEMA)
-    val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
-    newAirbyteCatalog.streams[0].stream.sourceDefinedCursor(true).sourceDefinedPrimaryKey(
-      listOf(
-        mutableListOf("test"),
-      ),
-    )
+    val newAirbyteCatalog =
+      createAirbyteCatalogWithSchema(NAME2, newSchema) { it.copy(sourceDefinedCursor = true, sourceDefinedPrimaryKey = listOf(listOf("test"))) }
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -215,17 +218,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    Assertions.assertThat(result.streams).hasSize(2)
     val stream0 = result.streams[0]
     val stream1 = result.streams[1]
-    Assertions.assertThat(stream0.stream.name).isEqualTo(NAME1)
-    Assertions.assertThat(stream0.stream.jsonSchema).isEqualTo(oldSchema)
-    Assertions.assertThat(stream0.config.selected).isTrue()
-    Assertions.assertThat(stream1.stream.name).isEqualTo(NAME2)
-    Assertions.assertThat(stream1.stream.jsonSchema).isEqualTo(newSchema)
-    Assertions.assertThat(stream1.config.selected).isTrue()
-    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.INCREMENTAL)
-    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND_DEDUP)
+    Assertions.assertThat(stream0.stream!!.name).isEqualTo(NAME1)
+    Assertions.assertThat(stream0.stream!!.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(stream0.config!!.selected).isTrue()
+    Assertions.assertThat(stream1.stream!!.name).isEqualTo(NAME2)
+    Assertions.assertThat(stream1.stream!!.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(stream1.config!!.selected).isTrue()
+    Assertions.assertThat(stream1.config!!.syncMode).isEqualTo(SyncMode.INCREMENTAL)
+    Assertions.assertThat(stream1.config!!.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND_DEDUP)
   }
 
   @Test
@@ -234,13 +237,13 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema)
 
     val newSchema = deserialize(NEW_SCHEMA)
-    val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
-    newAirbyteCatalog.streams[0].stream.sourceDefinedCursor(true)
+    val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema) { it.copy(sourceDefinedCursor = true) }
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -252,10 +255,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    Assertions.assertThat(result.streams).hasSize(2)
     val stream1 = result.streams[1]
-    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
-    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
+    Assertions.assertThat(stream1.config!!.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
+    Assertions.assertThat(stream1.config!!.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
   }
 
   @Test
@@ -264,17 +267,14 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema)
 
     val newSchema = deserialize(NEW_SCHEMA)
-    val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
-    newAirbyteCatalog
-      .streams[0]
-      .stream
-      .sourceDefinedCursor(true)
-      .supportedSyncModes(listOf(SyncMode.INCREMENTAL))
+    val newAirbyteCatalog =
+      createAirbyteCatalogWithSchema(NAME2, newSchema) { it.copy(sourceDefinedCursor = true, supportedSyncModes = listOf(SyncMode.INCREMENTAL)) }
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -286,10 +286,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    Assertions.assertThat(result.streams).hasSize(2)
     val stream1 = result.streams[1]
-    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.INCREMENTAL)
-    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND)
+    Assertions.assertThat(stream1.config!!.syncMode).isEqualTo(SyncMode.INCREMENTAL)
+    Assertions.assertThat(stream1.config!!.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND)
   }
 
   @Test
@@ -297,12 +297,13 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val oldSchema = deserialize(OLD_SCHEMA)
     val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, oldSchema)
 
-    val newAirbyteCatalog = AirbyteCatalog()
+    val newAirbyteCatalog = AirbyteCatalog(streams = emptyList())
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME1))
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME1),
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -314,7 +315,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(0)
+    Assertions.assertThat(result.streams).hasSize(0)
   }
 
   @Test
@@ -326,9 +327,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME2))
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME2),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper
@@ -340,21 +342,22 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(1)
-    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
-    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(result.streams).hasSize(1)
+    Assertions.assertThat(result.streams[0].stream!!.name).isEqualTo(NAME1)
+    Assertions.assertThat(result.streams[0].stream!!.jsonSchema).isEqualTo(oldSchema)
   }
 
   @Test
   fun applyRemoveNotFully() {
     val oldAirbyteCatalog = createAirbyteCatalogWithSchema(NAME1, deserialize(OLD_SCHEMA))
 
-    val newAirbyteCatalog = AirbyteCatalog()
+    val newAirbyteCatalog = AirbyteCatalog(streams = emptyList())
 
     val transform =
-      StreamTransform()
-        .streamDescriptor(StreamDescriptor().name(NAME1))
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = NAME1),
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+      )
 
     val result =
       applySchemaChangeHelper.getUpdatedSchema(
@@ -365,59 +368,69 @@ internal class AutoPropagateSchemaChangeHelperTest {
         SUPPORTED_DESTINATION_SYNC_MODES,
       )
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.catalog.streams).isEmpty()
-    Assertions.assertThat<@Valid StreamTransform?>(result.appliedDiff.transforms).containsExactly(transform)
+    Assertions.assertThat(result.catalog.streams).isEmpty()
+    Assertions.assertThat(result.appliedDiff.transforms).containsExactly(transform)
     Assertions.assertThat(result.changeDescription).containsExactly("Removed stream '$NAME1'")
   }
 
   @Test
   fun addStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
+      StreamTransform(
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+      )
     Assertions.assertThat(applySchemaChangeHelper.formatDiff(transform)).isEqualTo("Added new stream 'bar.foo'")
 
     val transformNoNS =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo"))
+      StreamTransform(
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo"),
+      )
     Assertions.assertThat(applySchemaChangeHelper.formatDiff(transformNoNS)).isEqualTo("Added new stream 'foo'")
   }
 
   @Test
   fun removeStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
+      StreamTransform(
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+      )
     Assertions.assertThat(applySchemaChangeHelper.formatDiff(transform)).isEqualTo("Removed stream 'bar.foo'")
 
     val transformNoNS =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo"))
+      StreamTransform(
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo"),
+      )
     Assertions.assertThat(applySchemaChangeHelper.formatDiff(transformNoNS)).isEqualTo("Removed stream 'foo'")
   }
 
   @Test
   fun newColumnInStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .fieldName(mutableListOf("path", "new_field"))
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD),
-              FieldTransform()
-                .fieldName(mutableListOf("path", "other_field"))
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD),
-            ),
+      StreamTransform(
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+        updateStream =
+          StreamTransformUpdateStream(
+            fieldTransforms =
+              listOf(
+                FieldTransform(
+                  fieldName = mutableListOf("path", "new_field"),
+                  transformType = FieldTransform.TransformType.ADD_FIELD,
+                  breaking = false,
+                ),
+                FieldTransform(
+                  fieldName = mutableListOf("path", "other_field"),
+                  transformType = FieldTransform.TransformType.ADD_FIELD,
+                  breaking = false,
+                ),
+              ),
+            streamAttributeTransforms = emptyList(),
           ),
-        )
+      )
 
     Assertions
       .assertThat(applySchemaChangeHelper.formatDiff(transform))
@@ -427,21 +440,27 @@ internal class AutoPropagateSchemaChangeHelperTest {
   @Test
   fun updatedColumnInStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .fieldName(mutableListOf("path", "new_field"))
-                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA),
-              FieldTransform()
-                .fieldName(mutableListOf("path", "other_field"))
-                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA),
-            ),
+      StreamTransform(
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+        updateStream =
+          StreamTransformUpdateStream(
+            fieldTransforms =
+              listOf(
+                FieldTransform(
+                  fieldName = mutableListOf("path", "new_field"),
+                  transformType = FieldTransform.TransformType.UPDATE_FIELD_SCHEMA,
+                  breaking = false,
+                ),
+                FieldTransform(
+                  fieldName = mutableListOf("path", "other_field"),
+                  transformType = FieldTransform.TransformType.UPDATE_FIELD_SCHEMA,
+                  breaking = false,
+                ),
+              ),
+            streamAttributeTransforms = emptyList(),
           ),
-        )
+      )
 
     Assertions
       .assertThat(applySchemaChangeHelper.formatDiff(transform))
@@ -451,21 +470,23 @@ internal class AutoPropagateSchemaChangeHelperTest {
   @Test
   fun removedColumnsInStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .fieldName(mutableListOf("path", "new_field"))
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
-              FieldTransform()
-                .fieldName(mutableListOf("other_field"))
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
-            ),
+      StreamTransform(
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+        updateStream =
+          StreamTransformUpdateStream(
+            fieldTransforms =
+              listOf(
+                FieldTransform(
+                  fieldName = mutableListOf("path", "new_field"),
+                  transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                  breaking = false,
+                ),
+                FieldTransform(fieldName = mutableListOf("other_field"), transformType = FieldTransform.TransformType.REMOVE_FIELD, breaking = false),
+              ),
+            streamAttributeTransforms = emptyList(),
           ),
-        )
+      )
 
     Assertions
       .assertThat(applySchemaChangeHelper.formatDiff(transform))
@@ -473,45 +494,69 @@ internal class AutoPropagateSchemaChangeHelperTest {
   }
 
   private fun createAirbyteCatalogWithSchema(
-    name: String?,
+    name: String,
     schema: JsonNode?,
+    customizeStream: (AirbyteStream) -> AirbyteStream = { it },
   ): AirbyteCatalog {
-    val airbyteCatalog = AirbyteCatalog()
-
     val airbyteStreamConfiguration1 =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().name(name).jsonSchema(schema).supportedSyncModes(listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL)))
-        .config(AirbyteStreamConfiguration().selected(true))
+      AirbyteStreamAndConfiguration(
+        stream =
+          customizeStream(
+            AirbyteStream(
+              name = name,
+              jsonSchema = schema,
+              supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+            ),
+          ),
+        config = streamConfig(selected = true),
+      )
 
-    airbyteCatalog.streams(listOf<AirbyteStreamAndConfiguration>(airbyteStreamConfiguration1))
-
-    return airbyteCatalog
+    return AirbyteCatalog(streams = listOf(airbyteStreamConfiguration1))
   }
+
+  private fun streamConfig(
+    selected: Boolean,
+    fieldSelectionEnabled: Boolean? = null,
+    selectedFields: List<SelectedFieldInfo> = emptyList(),
+  ): AirbyteStreamConfiguration =
+    AirbyteStreamConfiguration(
+      syncMode = SyncMode.FULL_REFRESH,
+      destinationSyncMode = DestinationSyncMode.OVERWRITE,
+      selected = selected,
+      fieldSelectionEnabled = fieldSelectionEnabled,
+      selectedFields = selectedFields,
+    )
 
   @Test
   fun mixedChangesInStreamFormat() {
     val transform =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("bar"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .fieldName(mutableListOf("path", "new_field"))
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD),
-              FieldTransform()
-                .fieldName(mutableListOf("old_field"))
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
-              FieldTransform()
-                .fieldName(mutableListOf("old_path", "deprecated"))
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD),
-              FieldTransform()
-                .fieldName(mutableListOf("properties", "changed_type"))
-                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA),
-            ),
+      StreamTransform(
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "foo", namespace = "bar"),
+        updateStream =
+          StreamTransformUpdateStream(
+            fieldTransforms =
+              listOf(
+                FieldTransform(
+                  fieldName = mutableListOf("path", "new_field"),
+                  transformType = FieldTransform.TransformType.ADD_FIELD,
+                  breaking = false,
+                ),
+                FieldTransform(fieldName = mutableListOf("old_field"), transformType = FieldTransform.TransformType.REMOVE_FIELD, breaking = false),
+                FieldTransform(
+                  fieldName = mutableListOf("old_path", "deprecated"),
+                  transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                  breaking = false,
+                ),
+                FieldTransform(
+                  fieldName = mutableListOf("properties", "changed_type"),
+                  transformType = FieldTransform.TransformType.UPDATE_FIELD_SCHEMA,
+                  breaking = false,
+                ),
+              ),
+            streamAttributeTransforms = emptyList(),
           ),
-        )
+      )
 
     Assertions
       .assertThat(applySchemaChangeHelper.formatDiff(transform))
@@ -525,8 +570,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
     Assertions
       .assertThat(
         applySchemaChangeHelper.shouldAutoPropagate(
-          CatalogDiff(),
-          ConnectionRead().nonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE),
+          CatalogDiff(transforms = emptyList()),
+          ConnectionRead(
+            connectionId = UUID.randomUUID(),
+            name = "connection",
+            sourceId = UUID.randomUUID(),
+            destinationId = UUID.randomUUID(),
+            syncCatalog = AirbyteCatalog(streams = emptyList()),
+            status = ConnectionStatus.ACTIVE,
+            breakingChange = false,
+            nonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE,
+          ),
         ),
       ).isTrue()
   }
@@ -546,49 +600,76 @@ internal class AutoPropagateSchemaChangeHelperTest {
       )
 
     Assertions.assertThat(result.catalog).isEqualTo(oldAirbyteCatalog)
-    Assertions.assertThat<@Valid StreamTransform?>(result.appliedDiff.transforms).isEmpty()
+    Assertions.assertThat(result.appliedDiff.transforms).isEmpty()
     Assertions.assertThat(result.changeDescription).isEmpty()
   }
 
   @Test
   fun testContainsBreakingChange() {
     val updateWithNoBreakingTransforms =
-      StreamTransformUpdateStream()
-        .addFieldTransformsItem(FieldTransform().breaking(false))
-        .addStreamAttributeTransformsItem(StreamAttributeTransform().breaking(false))
+      StreamTransformUpdateStream(
+        fieldTransforms = listOf(FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = emptyList(), breaking = false)),
+        streamAttributeTransforms =
+          listOf(
+            StreamAttributeTransform(transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY, breaking = false),
+          ),
+      )
     val catalogDiff1 =
-      CatalogDiff().transforms(
-        listOf(
-          StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithNoBreakingTransforms),
-        ),
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = NAME1),
+              updateStream = updateWithNoBreakingTransforms,
+            ),
+          ),
       )
 
     org.junit.jupiter.api.Assertions
       .assertFalse(applySchemaChangeHelper.containsBreakingChange(catalogDiff1))
 
     val updateWithBreakingFieldTransform =
-      StreamTransformUpdateStream()
-        .addFieldTransformsItem(FieldTransform().breaking(true))
-        .addStreamAttributeTransformsItem(StreamAttributeTransform().breaking(false))
+      StreamTransformUpdateStream(
+        fieldTransforms = listOf(FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = emptyList(), breaking = true)),
+        streamAttributeTransforms =
+          listOf(
+            StreamAttributeTransform(transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY, breaking = false),
+          ),
+      )
     val catalogDiff2 =
-      CatalogDiff().transforms(
-        listOf(
-          StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithBreakingFieldTransform),
-        ),
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = NAME1),
+              updateStream = updateWithBreakingFieldTransform,
+            ),
+          ),
       )
 
     org.junit.jupiter.api.Assertions
       .assertTrue(applySchemaChangeHelper.containsBreakingChange(catalogDiff2))
 
     val updateWithBreakingAttributeTransform =
-      StreamTransformUpdateStream()
-        .addFieldTransformsItem(FieldTransform().breaking(false))
-        .addStreamAttributeTransformsItem(StreamAttributeTransform().breaking(true))
+      StreamTransformUpdateStream(
+        fieldTransforms = listOf(FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = emptyList(), breaking = false)),
+        streamAttributeTransforms =
+          listOf(
+            StreamAttributeTransform(transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY, breaking = true),
+          ),
+      )
     val catalogDiff3 =
-      CatalogDiff().transforms(
-        listOf(
-          StreamTransform().transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM).updateStream(updateWithBreakingAttributeTransform),
-        ),
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = NAME1),
+              updateStream = updateWithBreakingAttributeTransform,
+            ),
+          ),
       )
 
     org.junit.jupiter.api.Assertions
@@ -598,67 +679,63 @@ internal class AutoPropagateSchemaChangeHelperTest {
   @Nested
   internal inner class FieldSelectionInteractions {
     val oldCatalog: AirbyteCatalog =
-      AirbyteCatalog()
-        .streams(
+      AirbyteCatalog(
+        streams =
           listOf(
-            AirbyteStreamAndConfiguration()
-              .stream(
-                AirbyteStream()
-                  .name("users")
-                  .namespace("public"),
-              ).config(
-                AirbyteStreamConfiguration()
-                  .selected(true)
-                  .fieldSelectionEnabled(true)
-                  .selectedFields(
+            AirbyteStreamAndConfiguration(
+              stream = AirbyteStream(name = "users", namespace = "public"),
+              config =
+                streamConfig(
+                  selected = true,
+                  fieldSelectionEnabled = true,
+                  selectedFields =
                     listOf(
-                      SelectedFieldInfo().fieldPath(mutableListOf("id")),
-                      SelectedFieldInfo().fieldPath(mutableListOf("address")),
+                      SelectedFieldInfo(fieldPath = mutableListOf("id")),
+                      SelectedFieldInfo(fieldPath = mutableListOf("address")),
                     ),
-                  ),
-              ),
+                ),
+            ),
           ),
-        )
+      )
     val newCatalog: AirbyteCatalog =
-      AirbyteCatalog()
-        .streams(
+      AirbyteCatalog(
+        streams =
           listOf(
-            AirbyteStreamAndConfiguration()
-              .stream(
-                AirbyteStream()
-                  .name("users")
-                  .namespace("public"),
-              ).config(AirbyteStreamConfiguration().selected(true).fieldSelectionEnabled(true)),
+            AirbyteStreamAndConfiguration(
+              stream = AirbyteStream(name = "users", namespace = "public"),
+              config = streamConfig(selected = true, fieldSelectionEnabled = true),
+            ),
           ),
-        )
+      )
 
     private fun fieldIsSelected(
       catalog: AirbyteCatalog,
-      path: MutableList<String?>?,
+      path: List<String>,
     ): Int =
       catalog
         .streams[0]
-        .config
+        .config!!
         .selectedFields
-        .filter { selected: SelectedFieldInfo? -> selected == SelectedFieldInfo().fieldPath(path) }
+        .orEmpty()
+        .filter { selected: SelectedFieldInfo -> selected == SelectedFieldInfo(fieldPath = path) }
         .size
 
     @Test
     fun testPropagateChangesDoesNotRemoveAlreadySelectedFields() {
       val transformations =
         listOf(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("users").namespace("public"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf(
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("ssn")),
-                ),
+          StreamTransform(
+            transformType = StreamTransform.TransformType.UPDATE_STREAM,
+            streamDescriptor = StreamDescriptor(name = "users", namespace = "public"),
+            updateStream =
+              StreamTransformUpdateStream(
+                fieldTransforms =
+                  listOf(
+                    FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = mutableListOf("ssn"), breaking = false),
+                  ),
+                streamAttributeTransforms = emptyList(),
               ),
-            ),
+          ),
         )
       val result =
         applySchemaChangeHelper.getUpdatedSchema(
@@ -678,18 +755,18 @@ internal class AutoPropagateSchemaChangeHelperTest {
     fun testPropagateChangesNewFieldIsSelected() {
       val transformations =
         listOf(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("users").namespace("public"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf(
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("ssn")),
-                ),
+          StreamTransform(
+            transformType = StreamTransform.TransformType.UPDATE_STREAM,
+            streamDescriptor = StreamDescriptor(name = "users", namespace = "public"),
+            updateStream =
+              StreamTransformUpdateStream(
+                fieldTransforms =
+                  listOf(
+                    FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = mutableListOf("ssn"), breaking = false),
+                  ),
+                streamAttributeTransforms = emptyList(),
               ),
-            ),
+          ),
         )
       val result =
         applySchemaChangeHelper.getUpdatedSchema(
@@ -707,18 +784,22 @@ internal class AutoPropagateSchemaChangeHelperTest {
     fun testNewSubfieldAlreadySelected() {
       val transformations =
         listOf(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("users").namespace("public"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf(
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("address", "zip")),
-                ),
+          StreamTransform(
+            transformType = StreamTransform.TransformType.UPDATE_STREAM,
+            streamDescriptor = StreamDescriptor(name = "users", namespace = "public"),
+            updateStream =
+              StreamTransformUpdateStream(
+                fieldTransforms =
+                  listOf(
+                    FieldTransform(
+                      transformType = FieldTransform.TransformType.ADD_FIELD,
+                      fieldName = mutableListOf("address", "zip"),
+                      breaking = false,
+                    ),
+                  ),
+                streamAttributeTransforms = emptyList(),
               ),
-            ),
+          ),
         )
       val result =
         applySchemaChangeHelper.getUpdatedSchema(
@@ -736,18 +817,22 @@ internal class AutoPropagateSchemaChangeHelperTest {
     fun testNewSubfieldNotSelected() {
       val transformations =
         listOf(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("users").namespace("public"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf(
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("username", "domain")),
-                ),
+          StreamTransform(
+            transformType = StreamTransform.TransformType.UPDATE_STREAM,
+            streamDescriptor = StreamDescriptor(name = "users", namespace = "public"),
+            updateStream =
+              StreamTransformUpdateStream(
+                fieldTransforms =
+                  listOf(
+                    FieldTransform(
+                      transformType = FieldTransform.TransformType.ADD_FIELD,
+                      fieldName = mutableListOf("username", "domain"),
+                      breaking = false,
+                    ),
+                  ),
+                streamAttributeTransforms = emptyList(),
               ),
-            ),
+          ),
         )
       val result =
         applySchemaChangeHelper.getUpdatedSchema(
@@ -767,21 +852,23 @@ internal class AutoPropagateSchemaChangeHelperTest {
     fun testNewFieldAndSubField() {
       val transformations =
         listOf(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("users").namespace("public"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf(
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("username", "domain")),
-                  FieldTransform()
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .fieldName(mutableListOf("username")),
-                ),
+          StreamTransform(
+            transformType = StreamTransform.TransformType.UPDATE_STREAM,
+            streamDescriptor = StreamDescriptor(name = "users", namespace = "public"),
+            updateStream =
+              StreamTransformUpdateStream(
+                fieldTransforms =
+                  listOf(
+                    FieldTransform(
+                      transformType = FieldTransform.TransformType.ADD_FIELD,
+                      fieldName = mutableListOf("username", "domain"),
+                      breaking = false,
+                    ),
+                    FieldTransform(transformType = FieldTransform.TransformType.ADD_FIELD, fieldName = mutableListOf("username"), breaking = false),
+                  ),
+                streamAttributeTransforms = emptyList(),
               ),
-            ),
+          ),
         )
       val result =
         applySchemaChangeHelper.getUpdatedSchema(

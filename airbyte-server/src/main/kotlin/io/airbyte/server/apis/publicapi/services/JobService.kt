@@ -74,11 +74,7 @@ class JobServiceImpl(
     organizationId: UUID?,
     returnAfterJobId: Boolean,
   ): JobResponse {
-    // SchedulerHandler still takes the Java request body
-    val connectionIdRequestBody =
-      io.airbyte.api.model.generated
-        .ConnectionIdRequestBody()
-        .connectionId(connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val result =
       kotlin
         .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId, returnAfterJobId) }
@@ -92,11 +88,7 @@ class JobServiceImpl(
    * Starts a reset job for the given connection ID.
    */
   override fun reset(connectionId: UUID): JobResponse {
-    // SchedulerHandler still takes the Java request body
-    val connectionIdRequestBody =
-      io.airbyte.api.model.generated
-        .ConnectionIdRequestBody()
-        .connectionId(connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val result =
       kotlin
         .runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }

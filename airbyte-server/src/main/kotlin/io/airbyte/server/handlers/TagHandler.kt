@@ -4,10 +4,10 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.Tag
 import io.airbyte.api.model.generated.TagCreateRequestBody
 import io.airbyte.api.model.generated.TagDeleteRequestBody
 import io.airbyte.api.model.generated.TagUpdateRequestBody
+import io.airbyte.api.server.generated.models.Tag
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.TagService
@@ -22,11 +22,7 @@ class TagHandler(
 ) {
   fun getTagsForWorkspaces(workspaceIds: List<UUID>): List<Tag> =
     tagService.getTagsByWorkspaceIds(workspaceIds).map {
-      Tag()
-        .tagId(it.tagId)
-        .workspaceId(it.workspaceId)
-        .name(it.name)
-        .color(it.color)
+      Tag(tagId = it.tagId, workspaceId = it.workspaceId, name = it.name, color = it.color)
     }
 
   fun createTag(tagCreateRequestBody: TagCreateRequestBody): Tag {
@@ -38,11 +34,7 @@ class TagHandler(
       }
     try {
       return tagService.createTag(tag).let {
-        Tag()
-          .tagId(it.tagId)
-          .workspaceId(it.workspaceId)
-          .name(it.name)
-          .color(it.color)
+        Tag(tagId = it.tagId, workspaceId = it.workspaceId, name = it.name, color = it.color)
       }
     } catch (e: DataAccessException) {
       handleDataAccessException(e)
@@ -69,11 +61,7 @@ class TagHandler(
         }
     try {
       return tagService.updateTag(updatedTag).let {
-        Tag()
-          .tagId(it.tagId)
-          .workspaceId(it.workspaceId)
-          .name(it.name)
-          .color(it.color)
+        Tag(tagId = it.tagId, workspaceId = it.workspaceId, name = it.name, color = it.color)
       }
     } catch (e: DataAccessException) {
       handleDataAccessException(e)
@@ -87,11 +75,7 @@ class TagHandler(
 
   fun getTag(tagId: UUID): Tag {
     val tag = tagService.getTagById(tagId)
-    return Tag()
-      .tagId(tag.tagId)
-      .workspaceId(tag.workspaceId)
-      .name(tag.name)
-      .color(tag.color)
+    return Tag(tagId = tag.tagId, workspaceId = tag.workspaceId, name = tag.name, color = tag.color)
   }
 
   private fun checkTagExists(

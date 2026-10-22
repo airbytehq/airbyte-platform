@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.services
 
-import io.airbyte.api.model.generated.DiffCatalogsRequest
-import io.airbyte.api.model.generated.SchemaChange
+import io.airbyte.api.server.generated.models.DiffCatalogsRequest
+import io.airbyte.api.server.generated.models.SchemaChange
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.config.ActorCatalog
@@ -91,10 +91,11 @@ internal class CatalogDiffServiceTest {
     setupMocks(catalog, catalog, configuredCatalog)
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -115,10 +116,11 @@ internal class CatalogDiffServiceTest {
     whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -139,10 +141,11 @@ internal class CatalogDiffServiceTest {
     whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(true)
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -242,10 +245,11 @@ internal class CatalogDiffServiceTest {
     // catalogConverter is a real instance, so no need to mock it
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -261,7 +265,7 @@ internal class CatalogDiffServiceTest {
     // The merged catalog should preserve the 'selected' state from the configured catalog
     // but have the fields from the new catalog
     val mergedStream = result.mergedCatalog!!.streams[0]
-    assertTrue(mergedStream.config.selected, "Stream should remain selected from configured catalog")
+    assertEquals(true, mergedStream.config!!.selected, "Stream should remain selected from configured catalog")
   }
 
   @Test
@@ -285,9 +289,7 @@ internal class CatalogDiffServiceTest {
     whenever(catalogService.getActorCatalogById(newCatalogId)).thenReturn(newActorCatalog)
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
+      DiffCatalogsRequest(currentCatalogId = currentCatalogId, newCatalogId = newCatalogId)
     // No connectionId
 
     // Execute
@@ -313,11 +315,12 @@ internal class CatalogDiffServiceTest {
     val originalStatus = originalConnection.status
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
-        .persistChanges(true)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+        persistChanges = true,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -350,11 +353,12 @@ internal class CatalogDiffServiceTest {
     val originalCatalog = originalConnection.catalog
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
-        .persistChanges(true)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+        persistChanges = true,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -383,11 +387,12 @@ internal class CatalogDiffServiceTest {
     whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
-        .persistChanges(false)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+        persistChanges = false,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -413,11 +418,12 @@ internal class CatalogDiffServiceTest {
     val originalStatus = originalConnection.status
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
-        .persistChanges(true)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+        persistChanges = true,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)
@@ -453,11 +459,12 @@ internal class CatalogDiffServiceTest {
     val originalCatalog = connection.catalog
 
     val request =
-      DiffCatalogsRequest()
-        .currentCatalogId(currentCatalogId)
-        .newCatalogId(newCatalogId)
-        .connectionId(connectionId)
-        .persistChanges(true)
+      DiffCatalogsRequest(
+        currentCatalogId = currentCatalogId,
+        newCatalogId = newCatalogId,
+        connectionId = connectionId,
+        persistChanges = true,
+      )
 
     // Execute
     val result = catalogDiffService.diffCatalogs(request)

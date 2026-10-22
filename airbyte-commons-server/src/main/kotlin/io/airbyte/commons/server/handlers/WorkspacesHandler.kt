@@ -307,12 +307,7 @@ class WorkspacesHandler
       }
 
       // disable all connections associated with this workspace
-      // ConnectionsHandler still takes the Java-generated request body
-      val connectionsRequest =
-        io.airbyte.api.model.generated
-          .WorkspaceIdRequestBody()
-          .workspaceId(workspaceIdRequestBody.workspaceId)
-      for (connectionRead in connectionsHandler.listConnectionsForWorkspace(connectionsRequest).connections) {
+      for (connectionRead in connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody).connections) {
         connectionsHandler.deleteConnection(connectionRead.connectionId)
       }
 

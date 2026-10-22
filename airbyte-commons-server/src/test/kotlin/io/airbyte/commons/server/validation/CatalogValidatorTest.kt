@@ -5,11 +5,13 @@
 package io.airbyte.commons.server.validation
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
 import io.airbyte.commons.server.runtime.AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration.AirbyteServerConnectionLimitsConfiguration
@@ -111,7 +113,7 @@ internal class CatalogValidatorTest {
 
       streams.add(stream)
     }
-    val catalog = AirbyteCatalog().streams(streams)
+    val catalog = AirbyteCatalog(streams = streams)
 
     val validator1 =
       CatalogValidator(
@@ -247,11 +249,12 @@ internal class CatalogValidatorTest {
   @Test
   internal fun `test getting the field count when no fields are present`() {
     val streamAndConfig =
-      AirbyteStreamAndConfiguration()
-        .stream(AirbyteStream().jsonSchema(Jsons.jsonNode(emptyMap<String, String>())))
-        .config(AirbyteStreamConfiguration().selected(true))
+      AirbyteStreamAndConfiguration(
+        stream = AirbyteStream(name = "stream", jsonSchema = Jsons.jsonNode(emptyMap<String, String>())),
+        config = AirbyteStreamConfiguration(syncMode = SyncMode.FULL_REFRESH, destinationSyncMode = DestinationSyncMode.APPEND, selected = true),
+      )
     val streams = mutableListOf<AirbyteStreamAndConfiguration>(streamAndConfig)
-    val catalog = AirbyteCatalog().streams(streams)
+    val catalog = AirbyteCatalog(streams = streams)
     val fieldCount = validator.fieldCount(catalog = catalog, ctx = mockk<Connection>())
     assertNull(fieldCount)
   }
@@ -307,44 +310,44 @@ internal class CatalogValidatorTest {
 
         streams.add(stream)
       }
-      return AirbyteCatalog().streams(streams)
+      return AirbyteCatalog(streams = streams)
     }
 
     fun buildStreamFieldSelection(
       cols: Int,
       selected: Boolean = true,
     ): AirbyteStreamAndConfiguration {
-      val stream = AirbyteStream()
+      val stream = AirbyteStream(name = "stream")
       val config =
-        AirbyteStreamConfiguration()
-          .fieldSelectionEnabled(true)
-          .selected(selected)
+        AirbyteStreamConfiguration(
+          syncMode = SyncMode.FULL_REFRESH,
+          destinationSyncMode = DestinationSyncMode.APPEND,
+          fieldSelectionEnabled = true,
+          selected = selected,
+          selectedFields = List(cols) { SelectedFieldInfo() },
+        )
 
-      repeat(cols) {
-        config.addSelectedFieldsItem(SelectedFieldInfo())
-      }
-
-      return AirbyteStreamAndConfiguration()
-        .stream(stream)
-        .config(config)
+      return AirbyteStreamAndConfiguration(stream = stream, config = config)
     }
 
     fun buildStreamNoFieldSelection(
       cols: Int,
       selected: Boolean = true,
     ): AirbyteStreamAndConfiguration {
-      val stream = AirbyteStream()
       val config =
-        AirbyteStreamConfiguration()
-          .fieldSelectionEnabled(false)
-          .selected(selected)
+        AirbyteStreamConfiguration(
+          syncMode = SyncMode.FULL_REFRESH,
+          destinationSyncMode = DestinationSyncMode.APPEND,
+          fieldSelectionEnabled = false,
+          selected = selected,
+        )
 
       // Unfortunately, we define our data model as a JsonNode in json schema format
       val jsonSchemaNode = MAPPER.createObjectNode()
       // The properties node contains the columns keyed by name
       val propertiesNode = MAPPER.createObjectNode()
       jsonSchemaNode.replace(PROPERTIES_KEY, propertiesNode)
-      stream.jsonSchema = jsonSchemaNode
+      val stream = AirbyteStream(name = "stream", jsonSchema = jsonSchemaNode)
 
       repeat(cols) {
         val colName = "col-$it"
@@ -352,9 +355,7 @@ internal class CatalogValidatorTest {
         propertiesNode.put(colName, it)
       }
 
-      return AirbyteStreamAndConfiguration()
-        .stream(stream)
-        .config(config)
+      return AirbyteStreamAndConfiguration(stream = stream, config = config)
     }
   }
 }

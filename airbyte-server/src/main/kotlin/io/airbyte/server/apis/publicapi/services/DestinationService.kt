@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationSyncMode
 import io.airbyte.api.server.generated.models.DestinationUpdate
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.Pagination
@@ -280,7 +280,6 @@ class DestinationServiceImpl(
         }
 
     val destinationDefinitionSpecificationRead = result.getOrNull()!!
-    // Callers in the connection code still use the Java sync mode enum.
-    return destinationDefinitionSpecificationRead.supportedDestinationSyncModes!!.map { DestinationSyncMode.fromValue(it.value) }
+    return destinationDefinitionSpecificationRead.supportedDestinationSyncModes!!
   }
 }

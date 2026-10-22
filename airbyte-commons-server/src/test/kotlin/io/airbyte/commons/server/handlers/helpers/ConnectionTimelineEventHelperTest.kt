@@ -4,10 +4,13 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -257,20 +260,27 @@ class ConnectionTimelineEventHelperTest {
     val connectionId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
     val originalConnectionRead =
-      ConnectionRead()
-        .connectionId(connectionId)
-        .name("old name")
-        .prefix("old prefix")
-        .notifySchemaChanges(false)
-        .dataplaneGroupId(dataplaneGroupId)
-        .notifySchemaChangesByEmail(false)
+      ConnectionRead(
+        connectionId = connectionId,
+        name = "old name",
+        prefix = "old prefix",
+        notifySchemaChanges = false,
+        dataplaneGroupId = dataplaneGroupId,
+        notifySchemaChangesByEmail = false,
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+      )
     val patch =
-      ConnectionUpdate()
-        .connectionId(connectionId)
-        .name("new name")
-        .prefix("new prefix")
-        .dataplaneGroupId(dataplaneGroupId)
-        .notifySchemaChanges(true)
+      ConnectionUpdate(
+        connectionId = connectionId,
+        name = "new name",
+        prefix = "new prefix",
+        dataplaneGroupId = dataplaneGroupId,
+        notifySchemaChanges = true,
+      )
 
     val expectedPatches =
       mapOf(
@@ -303,7 +313,11 @@ class ConnectionTimelineEventHelperTest {
       )
 
     val connectionId = UUID.randomUUID()
-    val diff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM))
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(StreamTransform(transformType = StreamTransform.TransformType.ADD_STREAM, streamDescriptor = StreamDescriptor(name = "stream"))),
+      )
 
     connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, diff)
     val eventCaptor = argumentCaptor<SchemaChangeAutoPropagationEvent>()

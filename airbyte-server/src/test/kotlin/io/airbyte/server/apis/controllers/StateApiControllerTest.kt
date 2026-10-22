@@ -4,9 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
+import io.airbyte.api.server.generated.models.ConnectionStateType
 import io.airbyte.commons.server.handlers.StateHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
@@ -22,6 +23,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -43,17 +45,29 @@ internal class StateApiControllerTest {
 
   @Test
   fun testCreateOrUpdateState() {
-    every { stateHandler.createOrUpdateState(any()) } returns ConnectionState()
+    every { stateHandler.createOrUpdateState(any()) } returns
+      ConnectionState(stateType = ConnectionStateType.NOT_SET, connectionId = UUID.randomUUID())
 
     val path = "/api/v1/state/create_or_update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionStateCreateOrUpdate())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(
+          path,
+          ConnectionStateCreateOrUpdate(
+            connectionId = UUID.randomUUID(),
+            connectionState = ConnectionState(stateType = ConnectionStateType.NOT_SET, connectionId = UUID.randomUUID()),
+          ),
+        ),
+      ),
+    )
   }
 
   @Test
   fun testGetState() {
-    every { stateHandler.getState(any()) } returns ConnectionState()
+    every { stateHandler.getState(any()) } returns ConnectionState(stateType = ConnectionStateType.NOT_SET, connectionId = UUID.randomUUID())
 
     val path = "/api/v1/state/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody(connectionId = UUID.randomUUID()))))
   }
 }

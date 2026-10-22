@@ -4,52 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
-import io.airbyte.api.model.generated.ActorDefinitionRequestBody
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.ConnectionAutoPropagateResult
-import io.airbyte.api.model.generated.ConnectionAutoPropagateSchemaChange
-import io.airbyte.api.model.generated.ConnectionContextRead
-import io.airbyte.api.model.generated.ConnectionCreate
-import io.airbyte.api.model.generated.ConnectionDataHistoryRequestBody
-import io.airbyte.api.model.generated.ConnectionEventIdRequestBody
-import io.airbyte.api.model.generated.ConnectionEventList
-import io.airbyte.api.model.generated.ConnectionEventListMinimal
-import io.airbyte.api.model.generated.ConnectionEventMinimal
-import io.airbyte.api.model.generated.ConnectionEventType
-import io.airbyte.api.model.generated.ConnectionEventWithDetails
-import io.airbyte.api.model.generated.ConnectionEventsBackfillRequestBody
-import io.airbyte.api.model.generated.ConnectionEventsListMinimalRequestBody
-import io.airbyte.api.model.generated.ConnectionEventsRequestBody
-import io.airbyte.api.model.generated.ConnectionLastJobPerStreamReadItem
-import io.airbyte.api.model.generated.ConnectionLastJobPerStreamRequestBody
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionStatusRead
-import io.airbyte.api.model.generated.ConnectionStatusesRequestBody
-import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem
-import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody
-import io.airbyte.api.model.generated.ConnectionSyncStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.FailureOrigin
-import io.airbyte.api.model.generated.FailureType
-import io.airbyte.api.model.generated.JobSyncResultRead
-import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.model.generated.Tag
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem
 import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
@@ -81,11 +38,55 @@ import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.ActorDefinitionRequestBody
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
 import io.airbyte.api.server.generated.models.AttemptRead
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.ConnectionAutoPropagateResult
+import io.airbyte.api.server.generated.models.ConnectionAutoPropagateSchemaChange
+import io.airbyte.api.server.generated.models.ConnectionContextRead
+import io.airbyte.api.server.generated.models.ConnectionCreate
+import io.airbyte.api.server.generated.models.ConnectionDataHistoryRequestBody
+import io.airbyte.api.server.generated.models.ConnectionEventIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionEventList
+import io.airbyte.api.server.generated.models.ConnectionEventListMinimal
+import io.airbyte.api.server.generated.models.ConnectionEventMinimal
+import io.airbyte.api.server.generated.models.ConnectionEventType
+import io.airbyte.api.server.generated.models.ConnectionEventWithDetails
+import io.airbyte.api.server.generated.models.ConnectionEventsBackfillRequestBody
+import io.airbyte.api.server.generated.models.ConnectionEventsListMinimalRequestBody
+import io.airbyte.api.server.generated.models.ConnectionEventsRequestBody
+import io.airbyte.api.server.generated.models.ConnectionLastJobPerStreamReadItem
+import io.airbyte.api.server.generated.models.ConnectionLastJobPerStreamRequestBody
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionReadList
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionStatusRead
+import io.airbyte.api.server.generated.models.ConnectionStatusesRequestBody
+import io.airbyte.api.server.generated.models.ConnectionStreamHistoryReadItem
+import io.airbyte.api.server.generated.models.ConnectionStreamHistoryRequestBody
+import io.airbyte.api.server.generated.models.ConnectionSyncStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.FailureOrigin
+import io.airbyte.api.server.generated.models.FailureType
 import io.airbyte.api.server.generated.models.JobRead
+import io.airbyte.api.server.generated.models.JobSyncResultRead
 import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.ListConnectionsForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.PostprocessDiscoveredCatalogResult
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.api.server.generated.models.StreamStats
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.SyncMode
+import io.airbyte.api.server.generated.models.Tag
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
@@ -188,7 +189,6 @@ import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -264,25 +264,25 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       // update the sync's schedule using the patch's scheduleType and scheduleData. validations occur in
       // the helper to ensure both fields
       // make sense together.
-      if (patch.scheduleType != null) {
-        connectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, patch.scheduleType, patch.scheduleData)
+      patch.scheduleType?.let { scheduleType ->
+        connectionScheduleHelper.populateSyncFromScheduleTypeAndData(sync, scheduleType, patch.scheduleData)
       }
 
       // the rest of the fields are straightforward to patch. If present in the patch, set the field to
       // the value
       // in the patch. Otherwise, leave the field unchanged.
-      if (patch.syncCatalog != null) {
-        validateCatalogDoesntContainDuplicateStreamNames(patch.syncCatalog)
-        validateCatalogSize(patch.syncCatalog, workspaceId, "update")
+      patch.syncCatalog?.let { patchCatalog ->
+        validateCatalogDoesntContainDuplicateStreamNames(patchCatalog)
+        validateCatalogSize(patchCatalog, workspaceId, "update")
 
-        assignIdsToIncomingMappers(patch.syncCatalog)
-        val configuredCatalog = catalogConverter.toConfiguredInternal(patch.syncCatalog)
+        val syncCatalog = assignIdsToIncomingMappers(patchCatalog)
+        val configuredCatalog = catalogConverter.toConfiguredInternal(syncCatalog)
         validateConfiguredMappers(configuredCatalog)
 
         val configuredCatalogNoSecrets =
           mapperSecretHelper.updateAndReplaceMapperSecrets(workspaceId, sync.catalog, configuredCatalog)
         sync.catalog = configuredCatalogNoSecrets
-        sync.withFieldSelectionData(catalogConverter.getFieldSelectionData(patch.syncCatalog))
+        sync.withFieldSelectionData(catalogConverter.getFieldSelectionData(syncCatalog))
       }
 
       if (patch.name != null) {
@@ -341,15 +341,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         sync.backfillPreference = apiPojoConverters.toPersistenceBackfillPreference(patch.backfillPreference)
       }
 
-      if (patch.tags != null) {
-        sync.tags =
-          patch.tags
-            .stream()
-            .map { tag: Tag? ->
-              apiPojoConverters.toInternalTag(
-                tag!!,
-              )
-            }.toList()
+      patch.tags?.let { tags ->
+        sync.tags = tags.map { tag: Tag -> apiPojoConverters.toInternalTag(tag) }
       }
 
       if (patch.onDemandEnabled != null) {
@@ -357,19 +350,28 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    private fun assignIdsToIncomingMappers(catalog: AirbyteCatalog) {
-      catalog.streams.forEach(
-        Consumer { stream: AirbyteStreamAndConfiguration ->
-          stream.config.mappers.forEach(
-            Consumer { mapper: ConfiguredStreamMapper ->
-              if (mapper.id == null) {
-                mapper.id = uuidGenerator.get()
-              }
-            },
-          )
-        },
+    private fun assignIdsToIncomingMappers(catalog: AirbyteCatalog): AirbyteCatalog =
+      catalog.copy(
+        streams =
+          catalog.streams.map { stream: AirbyteStreamAndConfiguration ->
+            val config = stream.config!!
+            stream.copy(
+              config =
+                config.copy(
+                  mappers =
+                    config.mappers?.map { mapper: ConfiguredStreamMapper ->
+                      if (mapper.id ==
+                        null
+                      ) {
+                        mapper.copy(id = uuidGenerator.get())
+                      } else {
+                        mapper
+                      }
+                    },
+                ),
+            )
+          },
       )
-    }
 
     private fun validateConfiguredMappers(configuredCatalog: ConfiguredAirbyteCatalog) {
       val result = destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)
@@ -452,7 +454,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val selectedStreams =
         newCatalog.streams
           .stream()
-          .filter { s: AirbyteStreamAndConfiguration -> s.config.selected }
+          .filter { s: AirbyteStreamAndConfiguration -> s.config!!.selected == true }
           .toList()
 
       // Process all selected streams
@@ -465,8 +467,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 namespaceDefinitionType,
                 namespaceFormat,
                 prefix,
-                streamAndConfig.stream.namespace,
-                streamAndConfig.stream.name,
+                streamAndConfig.stream!!.namespace,
+                streamAndConfig.stream!!.name,
               )
             existingStreamMap.getOrDefault(key, null)
           }.filter { obj: StreamDescriptorForDestination? -> Objects.nonNull(obj) }
@@ -571,21 +573,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.nonBreakingChangesPreference),
           ).withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.backfillPreference))
-          .withTags(
-            connectionCreate.tags
-              .stream()
-              .map { tag: Tag? ->
-                apiPojoConverters.toInternalTag(
-                  tag!!,
-                )
-              }.toList(),
-          )
+          .withTags(connectionCreate.tags.orEmpty().map { tag: Tag -> apiPojoConverters.toInternalTag(tag) })
       if (connectionCreate.resourceRequirements != null) {
         standardSync.withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(connectionCreate.resourceRequirements))
       }
 
       // TODO Undesirable behavior: sending a null configured catalog should not be valid?
-      if (connectionCreate.syncCatalog != null) {
+      val createCatalog = connectionCreate.syncCatalog
+      if (createCatalog != null) {
         val sourceDefinition =
           sourceService
             .getStandardSourceDefinition(sourceConnection.sourceDefinitionId)
@@ -599,13 +594,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           actorDefinitionVersionHelper
             .getDestinationVersion(destinationDefinition, destinationConnection.workspaceId, destinationConnection.destinationId)
 
-        validateCatalogIncludeFiles(connectionCreate.syncCatalog, sourceVersion, destinationVersion)
-        validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.syncCatalog)
-        validateCatalogSize(connectionCreate.syncCatalog, workspaceId, "create")
+        validateCatalogIncludeFiles(createCatalog, sourceVersion, destinationVersion)
+        validateCatalogDoesntContainDuplicateStreamNames(createCatalog)
+        validateCatalogSize(createCatalog, workspaceId, "create")
 
         if (featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId))) {
           validateStreamsDoNotConflictWithExistingDestinationStreams(
-            connectionCreate.syncCatalog,
+            createCatalog,
             connectionCreate.destinationId,
             connectionCreate.namespaceDefinition?.toString(),
             connectionCreate.namespaceFormat,
@@ -625,20 +620,19 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
           if (hasDestinationCatalog) {
             val destinationCatalog =
-              actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(connectionCreate.destinationCatalogId)).catalog
-            validateCatalogWithDestinationCatalog(connectionCreate.syncCatalog, destinationCatalog)
+              actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(connectionCreate.destinationCatalogId!!)).catalog
+            validateCatalogWithDestinationCatalog(createCatalog, destinationCatalog)
           }
         }
 
-        applyDefaultIncludeFiles(connectionCreate.syncCatalog, sourceVersion, destinationVersion)
-        assignIdsToIncomingMappers(connectionCreate.syncCatalog)
+        val syncCatalog = assignIdsToIncomingMappers(applyDefaultIncludeFiles(createCatalog, sourceVersion, destinationVersion))
         val configuredCatalog =
-          catalogConverter.toConfiguredInternal(connectionCreate.syncCatalog)
+          catalogConverter.toConfiguredInternal(syncCatalog)
         validateConfiguredMappers(configuredCatalog)
 
         val configuredCatalogNoSecrets = mapperSecretHelper.createAndReplaceMapperSecrets(workspaceId, configuredCatalog)
         standardSync.withCatalog(configuredCatalogNoSecrets)
-        standardSync.withFieldSelectionData(catalogConverter.getFieldSelectionData(connectionCreate.syncCatalog))
+        standardSync.withFieldSelectionData(catalogConverter.getFieldSelectionData(syncCatalog))
       } else {
         standardSync.withCatalog(ConfiguredAirbyteCatalog().withStreams(emptyList()))
         standardSync.withFieldSelectionData(FieldSelectionData())
@@ -648,10 +642,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         throw JsonValidationException("supply old or new schedule schema but not both")
       }
 
-      if (connectionCreate.scheduleType != null) {
+      val createScheduleType = connectionCreate.scheduleType
+      if (createScheduleType != null) {
         connectionScheduleHelper.populateSyncFromScheduleTypeAndData(
           standardSync,
-          connectionCreate.scheduleType,
+          createScheduleType,
           connectionCreate.scheduleData,
         )
       } else {
@@ -682,11 +677,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       standardSync: StandardSync,
       connectionCreate: ConnectionCreate,
     ) {
-      if (connectionCreate.schedule != null) {
+      val legacySchedule = connectionCreate.schedule
+      if (legacySchedule != null) {
         val schedule =
           Schedule()
-            .withTimeUnit(apiPojoConverters.toPersistenceTimeUnit(connectionCreate.schedule.timeUnit))
-            .withUnits(connectionCreate.schedule.units)
+            .withTimeUnit(apiPojoConverters.toPersistenceTimeUnit(legacySchedule.timeUnit))
+            .withUnits(legacySchedule.units)
         // Populate the legacy field.
         // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove.
         standardSync
@@ -698,8 +694,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         standardSync.withScheduleData(
           ScheduleData().withBasicSchedule(
             BasicSchedule()
-              .withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(connectionCreate.schedule.timeUnit))
-              .withUnits(connectionCreate.schedule.units),
+              .withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(legacySchedule.timeUnit))
+              .withUnits(legacySchedule.units),
           ),
         )
       } else {
@@ -774,10 +770,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         connectionPatch.prefix != null
 
     fun updateConnection(
-      connectionPatch: ConnectionUpdate,
+      requestedPatch: ConnectionUpdate,
       updateReason: String?,
       autoUpdate: Boolean,
     ): ConnectionRead {
+      // reassigned as the catalog is normalized, so the timeline event records the patch that was applied
+      var connectionPatch = requestedPatch
       val connectionId = connectionPatch.connectionId
       val workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId)
 
@@ -813,15 +811,17 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         throw ApiNotImplementedInOssProblem()
       }
 
-      if (connectionPatch.syncCatalog != null) {
+      val requestedCatalog = connectionPatch.syncCatalog
+      if (requestedCatalog != null) {
         val sourceVersion =
           actorDefinitionVersionHelper
             .getSourceVersion(sourceDefinition, workspaceId, sync.sourceId)
         val destinationVersion =
           actorDefinitionVersionHelper
             .getDestinationVersion(destinationDefinition, workspaceId, sync.destinationId)
-        validateCatalogIncludeFiles(connectionPatch.syncCatalog, sourceVersion, destinationVersion)
-        applyDefaultIncludeFiles(connectionPatch.syncCatalog, sourceVersion, destinationVersion)
+        validateCatalogIncludeFiles(requestedCatalog, sourceVersion, destinationVersion)
+        val patchCatalog = applyDefaultIncludeFiles(requestedCatalog, sourceVersion, destinationVersion)
+        connectionPatch = connectionPatch.copy(syncCatalog = patchCatalog)
 
         if (featureFlagClient.boolVariation(
             EnableDestinationCatalogValidation,
@@ -841,7 +841,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           if (hasDestinationCatalog) {
             val destinationCatalog =
               actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(destCatalogId)).catalog
-            validateCatalogWithDestinationCatalog(connectionPatch.syncCatalog, destinationCatalog)
+            validateCatalogWithDestinationCatalog(patchCatalog, destinationCatalog)
           }
         }
       }
@@ -854,7 +854,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         )
       ) {
         validateStreamsDoNotConflictWithExistingDestinationStreams(
-          if (connectionPatch.syncCatalog != null) connectionPatch.syncCatalog else catalogConverter.toApi(sync.catalog, null),
+          connectionPatch.syncCatalog ?: catalogConverter.toApi(sync.catalog, null),
           sync.destinationId,
           if (connectionPatch.namespaceDefinition != null) {
             connectionPatch.namespaceDefinition.toString()
@@ -872,36 +872,31 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val initialConnectionRead = apiPojoConverters.internalToConnectionRead(sync)
       log.debug { "initial ConnectionRead: $initialConnectionRead" }
 
-      if (connectionPatch.syncCatalog != null &&
+      val patchCatalog = connectionPatch.syncCatalog
+      if (patchCatalog != null &&
         featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled, Workspace(workspaceId))
       ) {
         val newCatalogActiveStream =
-          connectionPatch.syncCatalog.streams
-            .stream()
-            .filter { s: AirbyteStreamAndConfiguration -> s.config.selected }
+          patchCatalog.streams
+            .filter { s: AirbyteStreamAndConfiguration -> s.config!!.selected == true }
             .map { s: AirbyteStreamAndConfiguration ->
-              io.airbyte.api.model.generated
-                .StreamDescriptor()
-                .namespace(s.stream.namespace)
-                .name(s.stream.name)
-            }.toList()
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(namespace = s.stream!!.namespace, name = s.stream!!.name)
+            }
         val deactivatedStreams =
           sync.catalog.streams
-            .stream()
             .map { s: ConfiguredAirbyteStream ->
-              io.airbyte.api.model.generated
-                .StreamDescriptor()
-                .name(s.stream.name)
-                .namespace(s.stream.namespace)
-            }.collect(Collectors.toSet())
-        newCatalogActiveStream.forEach(Consumer { o: io.airbyte.api.model.generated.StreamDescriptor -> deactivatedStreams.remove(o) })
+              io.airbyte.api.server.generated.models
+                .StreamDescriptor(name = s.stream.name, namespace = s.stream.namespace)
+            }.toMutableSet()
+        newCatalogActiveStream.forEach(Consumer { o: io.airbyte.api.server.generated.models.StreamDescriptor -> deactivatedStreams.remove(o) })
         log.debug {
           "Wiping out the state of deactivated streams: [{}]".format(
             java.lang.String.join(
               ", ",
               deactivatedStreams
                 .stream()
-                .map { obj: io.airbyte.api.model.generated.StreamDescriptor ->
+                .map { obj: io.airbyte.api.server.generated.models.StreamDescriptor ->
                   buildFullyQualifiedName(obj)
                 }.toList(),
             ),
@@ -911,7 +906,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           connectionId,
           deactivatedStreams
             .stream()
-            .map { obj: io.airbyte.api.model.generated.StreamDescriptor -> obj.toInternal() }
+            .map { obj: io.airbyte.api.server.generated.models.StreamDescriptor -> obj.toInternal() }
             .collect(
               Collectors.toSet(),
             ),
@@ -920,6 +915,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
       deleteStateForStreamsWithSyncModeChanged(connectionPatch, sync, connectionId)
 
+      connectionPatch = connectionPatch.copy(syncCatalog = connectionPatch.syncCatalog?.let { assignIdsToIncomingMappers(it) })
       applyPatchToStandardSync(sync, connectionPatch, workspaceId)
 
       log.debug { "patched StandardSync before persisting: $sync" }
@@ -949,50 +945,35 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       sync: StandardSync,
       connectionId: UUID,
     ) {
-      if (connectionPatch.syncCatalog != null) {
-        validateCatalogDoesntContainDuplicateStreamNames(connectionPatch.syncCatalog)
+      val patchCatalog = connectionPatch.syncCatalog
+      if (patchCatalog != null) {
+        validateCatalogDoesntContainDuplicateStreamNames(patchCatalog)
         val activeStreams =
-          connectionPatch.syncCatalog.streams
-            .stream()
-            .filter { streamAndConfig: AirbyteStreamAndConfiguration -> streamAndConfig.config != null && streamAndConfig.config.selected }
-            .collect(
-              Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, io.airbyte.api.model.generated.StreamDescriptor, SyncMode>(
-                { streamAndConfig: AirbyteStreamAndConfiguration? ->
-                  io.airbyte.api.model.generated
-                    .StreamDescriptor()
-                    .name(
-                      streamAndConfig!!.stream.name,
-                    ).namespace(streamAndConfig.stream.namespace)
-                },
-                { streamAndConfig: AirbyteStreamAndConfiguration? -> streamAndConfig!!.config.syncMode },
-              ),
-            )
+          patchCatalog.streams
+            .filter { streamAndConfig: AirbyteStreamAndConfiguration -> streamAndConfig.config?.selected == true }
+            .associate { streamAndConfig: AirbyteStreamAndConfiguration ->
+              io.airbyte.api.server.generated.models.StreamDescriptor(
+                name = streamAndConfig.stream!!.name,
+                namespace = streamAndConfig.stream!!.namespace,
+              ) to streamAndConfig.config!!.syncMode
+            }
 
         val existingStreams =
-          sync.catalog.streams
-            .stream()
-            .collect(
-              Collectors.toMap(
-                { streamAndConfig: ConfiguredAirbyteStream ->
-                  io.airbyte.api.model.generated
-                    .StreamDescriptor()
-                    .name(streamAndConfig.stream.name)
-                    .namespace(streamAndConfig.stream.namespace)
-                },
-                { streamAndConfig: ConfiguredAirbyteStream ->
-                  streamAndConfig.syncMode.convertTo<SyncMode>()
-                },
-              ),
-            )
+          sync.catalog.streams.associate { streamAndConfig: ConfiguredAirbyteStream ->
+            io.airbyte.api.server.generated.models.StreamDescriptor(
+              name = streamAndConfig.stream.name,
+              namespace = streamAndConfig.stream.namespace,
+            ) to streamAndConfig.syncMode.convertTo<SyncMode>()
+          }
         val streamsWithChangedSyncMode =
           activeStreams.entries
             .stream()
-            .filter { entry: Map.Entry<io.airbyte.api.model.generated.StreamDescriptor, SyncMode> ->
+            .filter { entry: Map.Entry<io.airbyte.api.server.generated.models.StreamDescriptor, SyncMode> ->
               val streamDescriptor = entry.key
               val newSyncMode = entry.value
               val existingSyncMode = existingStreams[streamDescriptor]
               existingSyncMode != null && newSyncMode != existingSyncMode
-            }.map { obj: Map.Entry<io.airbyte.api.model.generated.StreamDescriptor, SyncMode> -> obj.key }
+            }.map { obj: Map.Entry<io.airbyte.api.server.generated.models.StreamDescriptor, SyncMode> -> obj.key }
             .collect(Collectors.toSet())
 
         if (!streamsWithChangedSyncMode.isEmpty()) {
@@ -1000,7 +981,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             connectionId,
             streamsWithChangedSyncMode
               .stream()
-              .map<StreamDescriptor> { obj: io.airbyte.api.model.generated.StreamDescriptor -> obj.toInternal() }
+              .map<StreamDescriptor> { obj: io.airbyte.api.server.generated.models.StreamDescriptor -> obj.toInternal() }
               .collect(
                 Collectors.toSet(),
               ),
@@ -1017,11 +998,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val enabledStreamsIncludingFiles =
         newCatalog.streams
           .stream()
-          .filter { s: AirbyteStreamAndConfiguration ->
-            s.config.selected &&
-              s.config.includeFiles != null &&
-              s.config.includeFiles
-          }.toList()
+          .filter { s: AirbyteStreamAndConfiguration -> s.config!!.selected == true && s.config!!.includeFiles == true }
+          .toList()
 
       if (enabledStreamsIncludingFiles.isEmpty()) {
         // No file streams are enabled, so we don't need to do any validation.
@@ -1035,20 +1013,20 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             .stream()
             .map { stream: AirbyteStreamAndConfiguration ->
               ProblemStreamDataItem()
-                .streamName(stream.stream.name)
-                .streamNamespace(stream.stream.namespace)
+                .streamName(stream.stream!!.name)
+                .streamNamespace(stream.stream!!.namespace)
             }.toList()
         throw ConnectionDoesNotSupportFileTransfersProblem(ProblemConnectionUnsupportedFileTransfersData().streams(problemStreams))
       }
 
       // If the stream isn't file based, we can't enable file transfers for that stream
       for (stream in enabledStreamsIncludingFiles) {
-        if (stream.stream.isFileBased == null || !stream.stream.isFileBased) {
+        if (stream.stream!!.isFileBased != true) {
           throw StreamDoesNotSupportFileTransfersProblem(
             ProblemConnectionUnsupportedFileTransfersData().addstreamsItem(
               ProblemStreamDataItem()
-                .streamName(stream.stream.name)
-                .streamNamespace(stream.stream.namespace),
+                .streamName(stream.stream!!.name)
+                .streamNamespace(stream.stream!!.namespace),
             ),
           )
         }
@@ -1238,7 +1216,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             apiPojoConverters.internalToConnectionRead(connection)
           }.toList()
 
-      return ConnectionReadList().connections(connectionReads)
+      return ConnectionReadList(connections = connectionReads)
     }
 
     fun listAllConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList =
@@ -1254,7 +1232,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           .map {
             apiPojoConverters.internalToConnectionRead(it)
           }.toList()
-      return ConnectionReadList().connections(connectionReads)
+      return ConnectionReadList(connections = connectionReads)
     }
 
     fun listConnections(): ConnectionReadList {
@@ -1266,7 +1244,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               StandardSync.Status.DEPRECATED
           }.map { connection -> apiPojoConverters.internalToConnectionRead(connection) }
           .toList()
-      return ConnectionReadList().connections(connectionReads)
+      return ConnectionReadList(connections = connectionReads)
     }
 
     @WithSpan
@@ -1310,15 +1288,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     fun getConfigurationDiff(
       oldCatalog: AirbyteCatalog,
       newCatalog: AirbyteCatalog,
-    ): Set<io.airbyte.api.model.generated.StreamDescriptor> {
+    ): Set<io.airbyte.api.server.generated.models.StreamDescriptor> {
       val oldStreams = catalogToPerStreamConfiguration(oldCatalog)
       val newStreams = catalogToPerStreamConfiguration(newCatalog)
 
-      val streamWithDifferentConf: MutableSet<io.airbyte.api.model.generated.StreamDescriptor> = HashSet()
+      val streamWithDifferentConf: MutableSet<io.airbyte.api.server.generated.models.StreamDescriptor> = HashSet()
 
       newStreams.forEach(
         (
-          BiConsumer { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor, airbyteStreamConfiguration: AirbyteStreamConfiguration ->
+          BiConsumer {
+            streamDescriptor: io.airbyte.api.server.generated.models.StreamDescriptor,
+            airbyteStreamConfiguration: AirbyteStreamConfiguration,
+            ->
             val oldConfig =
               oldStreams[streamDescriptor]
             if (oldConfig != null && haveConfigChange(oldConfig, airbyteStreamConfiguration)) {
@@ -1352,18 +1333,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
     private fun catalogToPerStreamConfiguration(
       catalog: AirbyteCatalog,
-    ): Map<io.airbyte.api.model.generated.StreamDescriptor, AirbyteStreamConfiguration> =
-      catalog.streams.stream().collect(
-        Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, io.airbyte.api.model.generated.StreamDescriptor, AirbyteStreamConfiguration>(
-          { stream: AirbyteStreamAndConfiguration? ->
-            io.airbyte.api.model.generated
-              .StreamDescriptor()
-              .name(stream!!.stream.name)
-              .namespace(stream.stream.namespace)
-          },
-          { obj: AirbyteStreamAndConfiguration? -> obj!!.config },
-        ),
-      )
+    ): Map<io.airbyte.api.server.generated.models.StreamDescriptor, AirbyteStreamConfiguration> =
+      catalog.streams.associate { stream: AirbyteStreamAndConfiguration ->
+        io.airbyte.api.server.generated.models.StreamDescriptor(
+          name = stream.stream!!.name,
+          namespace = stream.stream!!.namespace,
+        ) to stream.config!!
+      }
 
     @WithSpan
     fun getConnectionAirbyteCatalog(connectionId: UUID): Optional<AirbyteCatalog> {
@@ -1384,18 +1360,15 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         actorDefinitionVersionHelper.getDestinationVersion(destination, sourceConnection.workspaceId)
       val supportedDestinationSyncModes =
         destinationVersion.spec.supportedDestinationSyncModes?.convertTo<DestinationSyncMode>() ?: emptyList()
-      val convertedCatalog = Optional.of(catalogConverter.toApi(jsonCatalog, sourceVersion))
-      if (convertedCatalog.isPresent) {
-        convertedCatalog.get().streams.forEach(
-          Consumer { streamAndConfiguration: AirbyteStreamAndConfiguration? ->
-            catalogConverter.ensureCompatibleDestinationSyncMode(
-              streamAndConfiguration!!,
-              supportedDestinationSyncModes,
-            )
-          },
-        )
-      }
-      return convertedCatalog
+      val convertedCatalog = catalogConverter.toApi(jsonCatalog, sourceVersion)
+      return Optional.of(
+        convertedCatalog.copy(
+          streams =
+            convertedCatalog.streams.map { streamAndConfiguration: AirbyteStreamAndConfiguration ->
+              catalogConverter.withCompatibleDestinationSyncMode(streamAndConfiguration, supportedDestinationSyncModes)
+            },
+        ),
+      )
     }
 
     fun deleteConnection(connectionId: UUID) {
@@ -1468,20 +1441,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val workspaceIdToStandardSyncsMap =
         connectionService.listWorkspaceStandardSyncsLimitOffsetPaginated(
           listConnectionsForWorkspacesRequestBody.workspaceIds,
-          listConnectionsForWorkspacesRequestBody.tagIds,
-          listConnectionsForWorkspacesRequestBody.includeDeleted,
+          listConnectionsForWorkspacesRequestBody.tagIds.orEmpty(),
+          listConnectionsForWorkspacesRequestBody.includeDeleted ?: false,
           pageSize(listConnectionsForWorkspacesRequestBody.pagination),
           rowOffset(listConnectionsForWorkspacesRequestBody.pagination),
         )
 
       for ((workspaceId, value) in workspaceIdToStandardSyncsMap) {
         for (standardSync in value) {
-          val connectionRead = apiPojoConverters.internalToConnectionRead(standardSync)
-          connectionRead.workspaceId = workspaceId
-          connectionReads.add(connectionRead)
+          connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync).copy(workspaceId = workspaceId))
         }
       }
-      return ConnectionReadList().connections(connectionReads)
+      return ConnectionReadList(connections = connectionReads)
     }
 
     fun listConnectionsForActorDefinition(actorDefinitionRequestBody: ActorDefinitionRequestBody): ConnectionReadList {
@@ -1499,22 +1470,19 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         val connectionRead = apiPojoConverters.internalToConnectionRead(standardSync)
         connectionReads.add(connectionRead)
       }
-      return ConnectionReadList().connections(connectionReads)
+      return ConnectionReadList(connections = connectionReads)
     }
 
-    fun mapFailureReason(data: FailureReason): io.airbyte.api.model.generated.FailureReason {
-      val failureReason =
-        io.airbyte.api.model.generated
-          .FailureReason()
-      failureReason.failureOrigin = data.failureOrigin?.convertTo<FailureOrigin>()
-      failureReason.failureType = data.failureType?.convertTo<FailureType>()
-      failureReason.externalMessage = data.externalMessage
-      failureReason.internalMessage = data.internalMessage
-      failureReason.stacktrace = data.stacktrace
-      failureReason.retryable = data.retryable
-      failureReason.timestamp = data.timestamp
-      return failureReason
-    }
+    fun mapFailureReason(data: FailureReason): io.airbyte.api.server.generated.models.FailureReason =
+      io.airbyte.api.server.generated.models.FailureReason(
+        failureOrigin = data.failureOrigin?.convertTo<FailureOrigin>(),
+        failureType = data.failureType?.convertTo<FailureType>(),
+        externalMessage = data.externalMessage,
+        internalMessage = data.internalMessage,
+        stacktrace = data.stacktrace,
+        retryable = data.retryable,
+        timestamp = data.timestamp,
+      )
 
     @WithSpan
     fun getConnectionStatuses(connectionStatusesRequestBody: ConnectionStatusesRequestBody): List<ConnectionStatusRead> {
@@ -1540,7 +1508,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           jobs.stream().filter { job: Job -> JobStatus.TERMINAL_STATUSES.contains(job.status) && job.status != JobStatus.CANCELLED }.findFirst()
         val lastSyncStatus = lastSucceededOrFailedJob.map { j: Job -> j.status }
         val lastSyncJobStatus =
-          lastSyncStatus.orElse(null)?.convertTo<io.airbyte.api.model.generated.JobStatus>()
+          lastSyncStatus.orElse(null)?.convertTo<io.airbyte.api.server.generated.models.JobStatus>()
         val lastJobWasCancelled = !jobs.isEmpty() && jobs.first().status == JobStatus.CANCELLED
         val lastJobWasResetOrClear =
           !jobs.isEmpty() &&
@@ -1550,84 +1518,57 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         val lastSuccessTimestamp = lastSuccessfulJob.map { j: Job -> j.updatedAtInSecond }
 
         val connectionRead = buildConnectionRead(connectionId)
-        val hasBreakingSchemaChange = connectionRead.breakingChange != null && connectionRead.breakingChange
+        val hasBreakingSchemaChange = connectionRead.breakingChange
 
-        val connectionStatus =
-          ConnectionStatusRead()
-            .connectionId(connectionId)
-            // TODO: ConnectionStatusRead is still the Java model; drop this conversion when the connection API moves to Kotlin
-            .activeJob(
-              activeJob
-                .map { obj: Job -> Jsons.convertValue(JobConverter.getJobRead(obj), io.airbyte.api.model.generated.JobRead::class.java) }
-                .orElse(null),
-            ).lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
-            .scheduleData(connectionRead.scheduleData)
-        if (lastSucceededOrFailedJob.isPresent) {
-          connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().id)
-          val lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt()
-          lastAttempt.ifPresent { attempt: Attempt -> connectionStatus.lastSyncAttemptNumber(attempt.attemptNumber) }
-        }
-        val failureReason =
+        val lastFailedJobFailureReasons =
           lastSucceededOrFailedJob
+            .filter { job: Job -> job.status == JobStatus.FAILED }
             .flatMap { obj: Job -> obj.getLastFailedAttempt() }
             .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
-            .flatMap { s: AttemptFailureSummary -> s.failures.stream().findFirst() }
-            .map { data: FailureReason -> this.mapFailureReason(data) }
-        if (failureReason.isPresent && lastSucceededOrFailedJob.get().status == JobStatus.FAILED) {
-          connectionStatus.failureReason = failureReason.get()
-        }
-
-        var hasConfigError = false
-        if (lastSucceededOrFailedJob.isPresent && lastSucceededOrFailedJob.get().status == JobStatus.FAILED) {
-          val failureReasons =
-            lastSucceededOrFailedJob
-              .flatMap { obj: Job -> obj.getLastFailedAttempt() }
-              .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
-              .map { s: AttemptFailureSummary ->
-                s.failures
-                  .stream()
-                  .map { data: FailureReason ->
-                    this.mapFailureReason(
-                      data,
-                    )
-                  }.collect(Collectors.toList())
-              }
-
-          if (failureReasons.isPresent && !failureReasons.get().isEmpty()) {
-            connectionStatus.failureReason = failureReasons.get().first()
-
-            hasConfigError =
-              failureReasons
-                .get()
-                .stream()
-                .anyMatch { reason: io.airbyte.api.model.generated.FailureReason -> reason.failureType == FailureType.CONFIG_ERROR }
-          }
-        }
+            .map { s: AttemptFailureSummary -> s.failures.map { data: FailureReason -> this.mapFailureReason(data) } }
+            .orElse(emptyList())
+        val hasConfigError = lastFailedJobFailureReasons.any { reason -> reason.failureType == FailureType.CONFIG_ERROR }
 
         val latestSyncJob = jobPersistence.getLastSyncJob(connectionId).map { obj: Job -> JobConverter.getJobRead(obj) }
-        latestSyncJob.ifPresent { job: JobRead ->
-          connectionStatus.lastSyncJobCreatedAt = job.createdAt
-        }
 
-        if (activeJobStatus == JobStatus.RUNNING) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.RUNNING
-        } else if (activeJobStatus == JobStatus.QUEUED) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.QUEUED
-        } else if (activeJobStatus != null) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.PENDING
-        } else if (hasBreakingSchemaChange || hasConfigError) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.FAILED
-        } else if (connectionRead.status != ConnectionStatus.ACTIVE) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.PAUSED
-        } else if (lastJobWasCancelled) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.INCOMPLETE
-        } else if (lastSyncJobStatus == null || lastJobWasResetOrClear) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.PENDING
-        } else if (lastSyncJobStatus == io.airbyte.api.model.generated.JobStatus.FAILED) {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.INCOMPLETE
-        } else {
-          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.SYNCED
-        }
+        val connectionSyncStatus =
+          if (activeJobStatus == JobStatus.RUNNING) {
+            ConnectionSyncStatus.RUNNING
+          } else if (activeJobStatus == JobStatus.QUEUED) {
+            ConnectionSyncStatus.QUEUED
+          } else if (activeJobStatus != null) {
+            ConnectionSyncStatus.PENDING
+          } else if (hasBreakingSchemaChange || hasConfigError) {
+            ConnectionSyncStatus.FAILED
+          } else if (connectionRead.status != ConnectionStatus.ACTIVE) {
+            ConnectionSyncStatus.PAUSED
+          } else if (lastJobWasCancelled) {
+            ConnectionSyncStatus.INCOMPLETE
+          } else if (lastSyncJobStatus == null || lastJobWasResetOrClear) {
+            ConnectionSyncStatus.PENDING
+          } else if (lastSyncJobStatus == io.airbyte.api.server.generated.models.JobStatus.FAILED) {
+            ConnectionSyncStatus.INCOMPLETE
+          } else {
+            ConnectionSyncStatus.SYNCED
+          }
+
+        val connectionStatus =
+          ConnectionStatusRead(
+            connectionId = connectionId,
+            connectionSyncStatus = connectionSyncStatus,
+            activeJob = activeJob.map { obj: Job -> JobConverter.getJobRead(obj) }.orElse(null),
+            lastSuccessfulSync = lastSuccessTimestamp.orElse(null),
+            scheduleData = connectionRead.scheduleData,
+            lastSyncJobId = lastSucceededOrFailedJob.map { job: Job -> job.id }.orElse(null),
+            lastSyncAttemptNumber =
+              lastSucceededOrFailedJob
+                .flatMap { job: Job ->
+                  job.getLastAttempt()
+                }.map { attempt: Attempt -> attempt.attemptNumber }
+                .orElse(null),
+            failureReason = lastFailedJobFailureReasons.firstOrNull(),
+            lastSyncJobCreatedAt = latestSyncJob.map { job: JobRead -> job.createdAt }.orElse(null),
+          )
 
         result.add(connectionStatus)
       }
@@ -1642,25 +1583,25 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return eventTypes.stream().map { eventType: ConnectionEventType -> ConnectionEvent.Type.valueOf(eventType.name) }.collect(Collectors.toList())
     }
 
-    private fun convertConnectionEvent(event: ConnectionTimelineEvent): io.airbyte.api.model.generated.ConnectionEvent {
-      val connectionEvent =
-        io.airbyte.api.model.generated
-          .ConnectionEvent()
-      connectionEvent.id(event.id)
-      connectionEvent.eventType(ConnectionEventType.fromString(event.eventType))
-      connectionEvent.createdAt(event.createdAt!!.toEpochSecond())
-      connectionEvent.connectionId(event.connectionId)
-      event.summary?.let { connectionEvent.summary(Jsons.deserialize(it)) }
-      if (event.userId != null) {
-        connectionEvent.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.userId, event.connectionId))
-      }
-      return connectionEvent
-    }
+    private fun convertConnectionEvent(event: ConnectionTimelineEvent): io.airbyte.api.server.generated.models.ConnectionEvent =
+      io.airbyte.api.server.generated.models.ConnectionEvent(
+        id = event.id!!,
+        eventType = connectionEventType(event.eventType),
+        createdAt = event.createdAt!!.toEpochSecond(),
+        connectionId = event.connectionId,
+        summary = eventSummary(event),
+        user = event.userId?.let { connectionTimelineEventHelper.getUserReadInConnectionEvent(it, event.connectionId) },
+      )
+
+    // every writer stores a serialized event; an empty summary only covers rows that predate that
+    private fun eventSummary(event: ConnectionTimelineEvent): JsonNode = event.summary?.let { Jsons.deserialize(it) } ?: Jsons.emptyObject()
+
+    private fun connectionEventType(eventType: String): ConnectionEventType = ConnectionEventType.entries.first { it.value == eventType }
 
     private fun convertConnectionEventList(events: List<ConnectionTimelineEvent>): ConnectionEventList {
       val eventsRead =
         events.stream().map { event: ConnectionTimelineEvent -> this.convertConnectionEvent(event) }.collect(Collectors.toList())
-      return ConnectionEventList().events(eventsRead)
+      return ConnectionEventList(events = eventsRead)
     }
 
     fun listConnectionEventsForJob(jobId: Long): ConnectionEventList {
@@ -1670,18 +1611,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
     fun listConnectionEvents(connectionEventsRequestBody: ConnectionEventsRequestBody): ConnectionEventList {
       // 1. set page size and offset
-      val pageSize =
-        if (connectionEventsRequestBody.pagination != null && connectionEventsRequestBody.pagination.pageSize != null) {
-          connectionEventsRequestBody.pagination.pageSize
-        } else {
-          DEFAULT_PAGE_SIZE
-        }
-      val rowOffset =
-        if (connectionEventsRequestBody.pagination != null && connectionEventsRequestBody.pagination.rowOffset != null) {
-          connectionEventsRequestBody.pagination.rowOffset
-        } else {
-          DEFAULT_ROW_OFFSET
-        }
+      val pageSize = connectionEventsRequestBody.pagination?.pageSize ?: DEFAULT_PAGE_SIZE
+      val rowOffset = connectionEventsRequestBody.pagination?.rowOffset ?: DEFAULT_ROW_OFFSET
       // 2. get list of events
       val events =
         connectionTimelineEventService.listEvents(
@@ -1700,21 +1631,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return hydrateConnectionEvent(eventData)
     }
 
-    private fun hydrateConnectionEvent(event: ConnectionTimelineEvent): ConnectionEventWithDetails {
-      val connectionEventWithDetails = ConnectionEventWithDetails()
-      connectionEventWithDetails.id(event.id)
-      connectionEventWithDetails.connectionId(event.connectionId)
-      // enforce event type consistency
-      connectionEventWithDetails.eventType(ConnectionEventType.fromString(event.eventType))
-      event.summary?.let { connectionEventWithDetails.summary(Jsons.deserialize(it)) }
-      // TODO(@keyi): implement details generation for different types of events.
-      connectionEventWithDetails.details(null)
-      connectionEventWithDetails.createdAt(event.createdAt!!.toEpochSecond())
-      if (event.userId != null) {
-        connectionEventWithDetails.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.userId, event.connectionId))
-      }
-      return connectionEventWithDetails
-    }
+    private fun hydrateConnectionEvent(event: ConnectionTimelineEvent): ConnectionEventWithDetails =
+      ConnectionEventWithDetails(
+        id = event.id!!,
+        connectionId = event.connectionId,
+        // enforce event type consistency
+        eventType = connectionEventType(event.eventType),
+        summary = eventSummary(event),
+        // TODO(@keyi): implement details generation for different types of events.
+        details = null,
+        createdAt = event.createdAt!!.toEpochSecond(),
+        user = event.userId?.let { connectionTimelineEventHelper.getUserReadInConnectionEvent(it, event.connectionId) },
+      )
 
     /**
      * Backfill jobs to timeline events. Supported event types:
@@ -1821,10 +1749,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     fun listConnectionEventsMinimal(requestBody: ConnectionEventsListMinimalRequestBody): ConnectionEventListMinimal {
-      if (requestBody.workspaceId == null) {
-        return ConnectionEventListMinimal()
-      }
-
       // Get all connection IDs for the workspace using the lightweight method
       val connectionIds = connectionService.listConnectionIdsForWorkspace(requestBody.workspaceId)
 
@@ -1835,20 +1759,19 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           requestBody.createdAtStart,
           requestBody.createdAtEnd,
         )
-      return ConnectionEventListMinimal().events(
-        events.stream().map { timelineEvent: ConnectionTimelineEventMinimal -> this.minimalTimelineEventToApiResponse(timelineEvent) }.collect(
-          Collectors.toList<@Valid ConnectionEventMinimal?>(),
-        ),
+      return ConnectionEventListMinimal(
+        events = events.map { timelineEvent: ConnectionTimelineEventMinimal -> this.minimalTimelineEventToApiResponse(timelineEvent) },
       )
     }
 
     private fun minimalTimelineEventToApiResponse(timelineEvent: ConnectionTimelineEventMinimal): ConnectionEventMinimal =
-      ConnectionEventMinimal()
-        .connectionId(timelineEvent.connectionId)
-        .connectionName(timelineEvent.connectionName)
-        .createdAt(timelineEvent.createdAt)
-        .eventType(ConnectionEventType.fromString(timelineEvent.eventType))
-        .eventId(timelineEvent.id)
+      ConnectionEventMinimal(
+        connectionId = timelineEvent.connectionId,
+        connectionName = timelineEvent.connectionName!!,
+        createdAt = timelineEvent.createdAt!!,
+        eventType = connectionEventType(timelineEvent.eventType),
+        eventId = timelineEvent.id,
+      )
 
     /**
      * Returns data history for the given connection for requested number of jobs.
@@ -1878,16 +1801,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           val jobRead = jobIdToJobRead[jobId]!!.job!!
           val aggregatedStats = jobRead.aggregatedStats!!
           val jobResult =
-            JobSyncResultRead()
-              .jobId(jobId)
-              .configType(jobRead.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
-              .jobCreatedAt(jobRead.createdAt)
-              .jobUpdatedAt(jobRead.updatedAt)
-              .bytesEmitted(aggregatedStats.bytesEmitted)
-              .bytesCommitted(aggregatedStats.bytesCommitted)
-              .recordsEmitted(aggregatedStats.recordsEmitted)
-              .recordsCommitted(aggregatedStats.recordsCommitted)
-              .recordsRejected(aggregatedStats.recordsRejected)
+            JobSyncResultRead(
+              jobId = jobId,
+              configType = jobRead.configType.convertTo<io.airbyte.api.server.generated.models.JobConfigType>(),
+              jobCreatedAt = jobRead.createdAt,
+              jobUpdatedAt = jobRead.updatedAt,
+              bytesEmitted = aggregatedStats.bytesEmitted,
+              bytesCommitted = aggregatedStats.bytesCommitted,
+              recordsEmitted = aggregatedStats.recordsEmitted,
+              recordsCommitted = aggregatedStats.recordsCommitted,
+              recordsRejected = aggregatedStats.recordsRejected,
+              streamStatuses = emptyList(),
+            )
           result.add(jobResult)
         },
       )
@@ -1985,11 +1910,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             val streamNamespaceAndName = streamRecords.key
             val recordsCommitted = streamRecords.value
             result.add(
-              ConnectionStreamHistoryReadItem()
-                .timestamp(Math.toIntExact(date1.atStartOfDay(userTimeZone).toEpochSecond()))
-                .streamNamespace(streamNamespaceAndName[0])
-                .streamName(streamNamespaceAndName[1])
-                .recordsCommitted(recordsCommitted),
+              ConnectionStreamHistoryReadItem(
+                timestamp = Math.toIntExact(date1.atStartOfDay(userTimeZone).toEpochSecond()),
+                streamNamespace = streamNamespaceAndName[0],
+                streamName = streamNamespaceAndName[1],
+                recordsCommitted = recordsCommitted,
+              ),
             )
           }
       }
@@ -2017,8 +1943,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           catalogConverter.toConfiguredInternal(currentCatalog),
           connectionId,
         )
-      val updateObject =
-        ConnectionUpdate().connectionId(connection.connectionId)
       val destinationDefinitionId =
         destinationService.getDestinationDefinitionFromConnection(connection.connectionId).destinationDefinitionId
       val supportedDestinationSyncModes =
@@ -2030,25 +1954,24 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             ),
           ).supportedDestinationSyncModes
           .orEmpty()
-          // the spec handler returns Kotlin models; the rest of this handler still uses the Java ones
-          .map { it.convertTo<DestinationSyncMode>() }
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
       val source = sourceService.getSourceConnection(connection.sourceId)
       val appliedDiff: CatalogDiff?
       if (applySchemaChangeHelper.shouldAutoPropagate(diffToApply, connection)) {
         // NOTE: appliedDiff is the part of the diff that were actually applied.
-        appliedDiff =
+        val propagateResult =
           applySchemaChangeInternal(
-            updateObject.connectionId,
+            connection.connectionId,
             workspaceId,
-            updateObject,
             currentCatalog,
             catalog,
             diffToApply.transforms,
-            catalogId,
-            connection.nonBreakingChangesPreference,
+            connection.nonBreakingChangesPreference!!,
             supportedDestinationSyncModes,
           )
+        appliedDiff = propagateResult.appliedDiff
+        val updateObject =
+          ConnectionUpdate(connectionId = connection.connectionId, syncCatalog = propagateResult.catalog, sourceCatalogId = catalogId)
         updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name, autoApply)
         log.info { "Propagating changes for connectionId: '${connection.connectionId}', new catalogId '$catalogId'" }
         connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff)
@@ -2089,20 +2012,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           }
         }
       }
-      return ConnectionAutoPropagateResult().propagatedDiff(appliedDiff)
+      return ConnectionAutoPropagateResult(propagatedDiff = appliedDiff)
     }
 
     private fun applySchemaChangeInternal(
       connectionId: UUID,
       workspaceId: UUID,
-      updateObject: ConnectionUpdate,
       currentSyncCatalog: AirbyteCatalog,
       newCatalog: AirbyteCatalog,
       transformations: List<StreamTransform>,
-      sourceCatalogId: UUID,
       nonBreakingChangesPreference: NonBreakingChangesPreference,
-      supportedDestinationSyncModes: List<DestinationSyncMode?>,
-    ): CatalogDiff {
+      supportedDestinationSyncModes: List<DestinationSyncMode>,
+    ): UpdateSchemaResult {
       metricClient.count(
         OssMetricsRegistry.SCHEMA_CHANGE_AUTO_PROPAGATED,
         1L,
@@ -2116,10 +2037,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           nonBreakingChangesPreference,
           supportedDestinationSyncModes,
         )
-      updateObject.syncCatalog = propagateResult.catalog
-      updateObject.sourceCatalogId = sourceCatalogId
       trackSchemaChange(workspaceId, connectionId, propagateResult)
-      return propagateResult.appliedDiff
+      return propagateResult
     }
 
     private fun validateCatalogSize(
@@ -2159,7 +2078,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             payload["stream_namespace"] = streamDescriptor.namespace
           }
           payload["stream_name"] = streamDescriptor.name
-          if (streamTransform.transformType == StreamTransform.TransformTypeEnum.UPDATE_STREAM) {
+          if (streamTransform.transformType == StreamTransform.TransformType.UPDATE_STREAM) {
             payload["stream_field_changes"] =
               Jsons.serialize(streamTransform.updateStream)
           }
@@ -2225,10 +2144,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val read = diffCatalogAndConditionallyDisable(connectionId, mostRecentCatalogId)
 
       val autoPropResult =
-        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), mostRecentCatalogId, read.catalog, true)
+        applySchemaChange(connectionId, workspaceHelper.getWorkspaceForConnectionId(connectionId), mostRecentCatalogId, read.catalog!!, true)
       val diff = autoPropResult.propagatedDiff
 
-      return PostprocessDiscoveredCatalogResult().appliedDiff(diff)
+      return PostprocessDiscoveredCatalogResult(appliedDiff = diff)
     }
 
     /**
@@ -2259,21 +2178,23 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
       // Update connection
       // 1. update flag for breaking changes
-      val patch =
-        ConnectionUpdate()
-          .breakingChange(containsBreakingChange)
-          .connectionId(connectionId)
       // 2. disable connection and log a timeline event (connection_disabled) if needed
-      var autoDisabledReason: ConnectionAutoDisabledReason? = null
-      if (containsBreakingChange) {
-        patch.status(ConnectionStatus.INACTIVE)
-        autoDisabledReason = ConnectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING
-      } else if (connectionRead.nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE &&
-        applySchemaChangeHelper.containsChanges(diff)
-      ) {
-        patch.status(ConnectionStatus.INACTIVE)
-        autoDisabledReason = ConnectionAutoDisabledReason.DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES
-      }
+      val autoDisabledReason =
+        if (containsBreakingChange) {
+          ConnectionAutoDisabledReason.SCHEMA_CHANGES_ARE_BREAKING
+        } else if (connectionRead.nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE &&
+          applySchemaChangeHelper.containsChanges(diff)
+        ) {
+          ConnectionAutoDisabledReason.DISABLE_CONNECTION_IF_ANY_SCHEMA_CHANGES
+        } else {
+          null
+        }
+      val patch =
+        ConnectionUpdate(
+          breakingChange = containsBreakingChange,
+          connectionId = connectionId,
+          status = if (autoDisabledReason != null) ConnectionStatus.INACTIVE else null,
+        )
       val updated = updateConnection(patch, autoDisabledReason?.name, true)
       return updated
     }
@@ -2296,12 +2217,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val diff = getDiff(connectionRead, discoveredCatalog)
       val containsBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff)
       val updatedConnection = disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff)
-      return SourceDiscoverSchemaRead()
-        .breakingChange(containsBreakingChange)
-        .catalogDiff(diff)
-        .catalog(discoveredCatalog)
-        .catalogId(discoveredCatalogId)
-        .connectionStatus(updatedConnection.status)
+      return SourceDiscoverSchemaRead(
+        breakingChange = containsBreakingChange,
+        catalogDiff = diff,
+        catalog = discoveredCatalog,
+        catalogId = discoveredCatalogId,
+        connectionStatus = updatedConnection.status,
+      )
     }
 
     fun getConnectionContext(connectionId: UUID): ConnectionContextRead {
@@ -2341,16 +2263,17 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           memo[jobRead.id]!![streamDescriptor],
         )
 
-      return ConnectionLastJobPerStreamReadItem()
-        .streamName(streamDescriptor.name)
-        .streamNamespace(streamDescriptor.namespace)
-        .jobId(jobRead.id)
-        .configType(jobRead.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
-        .jobStatus(jobRead.status.convertTo<io.airbyte.api.model.generated.JobStatus>())
-        .startedAt(jobRead.startedAt)
-        .endedAt(jobRead.updatedAt) // assumes the job ended at the last updated time
-        .bytesCommitted(statsForThisStream.map { obj: StreamStats -> obj.bytesCommitted }.orElse(null))
-        .recordsCommitted(statsForThisStream.map { obj: StreamStats -> obj.recordsCommitted }.orElse(null))
+      return ConnectionLastJobPerStreamReadItem(
+        streamName = streamDescriptor.name,
+        streamNamespace = streamDescriptor.namespace,
+        jobId = jobRead.id,
+        configType = jobRead.configType.convertTo<io.airbyte.api.server.generated.models.JobConfigType>(),
+        jobStatus = jobRead.status.convertTo<io.airbyte.api.server.generated.models.JobStatus>(),
+        startedAt = jobRead.startedAt!!,
+        endedAt = jobRead.updatedAt,
+        bytesCommitted = statsForThisStream.map { obj: StreamStats -> obj.bytesCommitted }.orElse(null),
+        recordsCommitted = statsForThisStream.map { obj: StreamStats -> obj.recordsCommitted }.orElse(null),
+      )
     }
 
     /**
@@ -2384,16 +2307,19 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         return catalog
       }
 
-      for (pair in catalog.streams) {
-        val streamIsFileBased = pair.stream.isFileBased != null && pair.stream.isFileBased
-        val includeFilesIsUnset = pair.config.includeFiles == null
-        if (streamIsFileBased && includeFilesIsUnset) {
-          val defaultValue = destinationVersion.supportsFileTransfer
-          pair.config.includeFiles = defaultValue
-        }
-      }
-
-      return catalog
+      return catalog.copy(
+        streams =
+          catalog.streams.map { pair ->
+            val config = pair.config!!
+            val streamIsFileBased = pair.stream!!.isFileBased == true
+            val includeFilesIsUnset = config.includeFiles == null
+            if (streamIsFileBased && includeFilesIsUnset) {
+              pair.copy(config = config.copy(includeFiles = destinationVersion.supportsFileTransfer))
+            } else {
+              pair
+            }
+          },
+      )
     }
 
     companion object {

@@ -4,7 +4,7 @@
 
 package io.airbyte.notification.messages
 
-import io.airbyte.api.model.generated.CatalogDiff
+import io.airbyte.api.server.generated.models.CatalogDiff
 
 data class SchemaUpdateNotification(
   val workspace: WorkspaceInfo,

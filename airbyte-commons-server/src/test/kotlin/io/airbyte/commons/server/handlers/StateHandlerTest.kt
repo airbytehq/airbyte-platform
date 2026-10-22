@@ -4,15 +4,15 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.GlobalState
-import io.airbyte.api.model.generated.StreamState
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.GlobalState
 import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.JobRead
 import io.airbyte.api.server.generated.models.JobStatus
+import io.airbyte.api.server.generated.models.StreamState
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.errors.SyncIsRunningException
@@ -24,7 +24,6 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -51,8 +50,13 @@ internal class StateHandlerTest {
   fun testGetCurrentStateEmpty() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(Optional.empty<StateWrapper>())
 
-    val expected = ConnectionState().connectionId(CONNECTION_ID).stateType(ConnectionStateType.NOT_SET).streamState(null)
-    val actual = stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID))
+    val expected =
+      ConnectionState(
+        connectionId = CONNECTION_ID,
+        stateType = ConnectionStateType.NOT_SET,
+        streamState = null,
+      )
+    val actual = stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID))
     Assertions.assertEquals(expected, actual)
   }
 
@@ -67,12 +71,13 @@ internal class StateHandlerTest {
     )
 
     val expected =
-      ConnectionState()
-        .connectionId(CONNECTION_ID)
-        .stateType(ConnectionStateType.LEGACY)
-        .streamState(null)
-        .state(JSON_BLOB)
-    val actual = stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID))
+      ConnectionState(
+        connectionId = CONNECTION_ID,
+        stateType = ConnectionStateType.LEGACY,
+        streamState = null,
+        state = JSON_BLOB,
+      )
+    val actual = stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID))
     Assertions.assertEquals(expected, actual)
   }
 
@@ -98,19 +103,21 @@ internal class StateHandlerTest {
     )
 
     val expected =
-      ConnectionState()
-        .connectionId(CONNECTION_ID)
-        .stateType(ConnectionStateType.GLOBAL)
-        .streamState(null)
-        .globalState(
-          GlobalState().sharedState(JSON_BLOB).streamStates(
-            listOf<@Valid StreamState?>(
-              StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
-              StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB),
-            ),
+      ConnectionState(
+        connectionId = CONNECTION_ID,
+        stateType = ConnectionStateType.GLOBAL,
+        streamState = null,
+        globalState =
+          GlobalState(
+            sharedState = JSON_BLOB,
+            streamStates =
+              listOf(
+                StreamState(streamDescriptor = toApi(STREAM_DESCRIPTOR1), streamState = JSON_BLOB),
+                StreamState(streamDescriptor = toApi(STREAM_DESCRIPTOR2), streamState = JSON_BLOB),
+              ),
           ),
-        )
-    val actual = stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID))
+      )
+    val actual = stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID))
     Assertions.assertEquals(expected, actual)
   }
 
@@ -134,16 +141,16 @@ internal class StateHandlerTest {
     )
 
     val expected =
-      ConnectionState()
-        .connectionId(CONNECTION_ID)
-        .stateType(ConnectionStateType.STREAM)
-        .streamState(
-          listOf<@Valid StreamState?>(
-            StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
-            StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB),
+      ConnectionState(
+        connectionId = CONNECTION_ID,
+        stateType = ConnectionStateType.STREAM,
+        streamState =
+          listOf(
+            StreamState(streamDescriptor = toApi(STREAM_DESCRIPTOR1), streamState = JSON_BLOB),
+            StreamState(streamDescriptor = toApi(STREAM_DESCRIPTOR2), streamState = JSON_BLOB),
           ),
-        )
-    val actual = stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID))
+      )
+    val actual = stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID))
     Assertions.assertEquals(expected, actual)
   }
 
@@ -186,9 +193,10 @@ internal class StateHandlerTest {
   @Test
   fun testCreateOrUpdateState() {
     val input =
-      ConnectionStateCreateOrUpdate()
-        .connectionId(CONNECTION_ID)
-        .connectionState(ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB))
+      ConnectionStateCreateOrUpdate(
+        connectionId = CONNECTION_ID,
+        connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
+      )
     stateHandler.createOrUpdateState(input)
     verify(statePersistence, times(1)).updateOrCreateState(
       CONNECTION_ID,
@@ -199,9 +207,10 @@ internal class StateHandlerTest {
   @Test
   fun testCreateOrUpdateStateSafe() {
     val input =
-      ConnectionStateCreateOrUpdate()
-        .connectionId(CONNECTION_ID)
-        .connectionState(ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB))
+      ConnectionStateCreateOrUpdate(
+        connectionId = CONNECTION_ID,
+        connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
+      )
     whenever<Optional<JobRead>?>(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.empty<JobRead>())
     stateHandler.createOrUpdateStateSafe(input)
     verify(statePersistence, times(1)).updateOrCreateState(
@@ -213,9 +222,10 @@ internal class StateHandlerTest {
   @Test
   fun testCreateOrUpdateStateSafeThrowsWhenSyncRunning() {
     val input =
-      ConnectionStateCreateOrUpdate()
-        .connectionId(CONNECTION_ID)
-        .connectionState(ConnectionState().stateType(ConnectionStateType.LEGACY).state(JSON_BLOB))
+      ConnectionStateCreateOrUpdate(
+        connectionId = CONNECTION_ID,
+        connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
+      )
     whenever<Optional<JobRead>?>(
       jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID),
     ).thenReturn(
@@ -241,10 +251,8 @@ internal class StateHandlerTest {
     val STREAM_DESCRIPTOR1: StreamDescriptor = StreamDescriptor().withName("coffee")
     val STREAM_DESCRIPTOR2: StreamDescriptor = StreamDescriptor().withName("tea")
 
-    private fun toApi(protocolStreamDescriptor: StreamDescriptor): io.airbyte.api.model.generated.StreamDescriptor? =
-      io.airbyte.api.model.generated
-        .StreamDescriptor()
-        .name(protocolStreamDescriptor.name)
-        .namespace(protocolStreamDescriptor.namespace)
+    private fun toApi(protocolStreamDescriptor: StreamDescriptor): io.airbyte.api.server.generated.models.StreamDescriptor =
+      io.airbyte.api.server.generated.models
+        .StreamDescriptor(name = protocolStreamDescriptor.name, namespace = protocolStreamDescriptor.namespace)
   }
 }

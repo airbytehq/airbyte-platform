@@ -4,10 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionSyncProgressRead
-import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionSyncProgressRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationRead
@@ -27,6 +26,7 @@ import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamSyncProgressReadItem
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
@@ -57,7 +57,6 @@ import io.airbyte.persistence.job.JobPersistence
 import io.micronaut.core.util.CollectionUtils
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import java.util.Locale
 import java.util.Optional
 import java.util.SortedMap
@@ -338,9 +337,10 @@ class JobHistoryHandler(
       hydrateWithStats(jobReads, jobs, featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)), jobPersistence)
 
     if (hydratedJobReads.isEmpty()) {
-      return ConnectionSyncProgressRead()
-        .connectionId(connectionIdRequestBody.connectionId)
-        .streams(emptyList<@Valid StreamSyncProgressReadItem?>())
+      return ConnectionSyncProgressRead(
+        connectionId = connectionIdRequestBody.connectionId,
+        streams = emptyList(),
+      )
     }
     val runningJob = hydratedJobReads.first().job!!
 
@@ -371,36 +371,32 @@ class JobHistoryHandler(
             val key = stream.name + "-" + stream.namespace
             val streamStats = streamStatsMap[key]
 
-            val item =
-              StreamSyncProgressReadItem()
-                .streamName(stream.name)
-                .streamNamespace(stream.namespace)
-                .configType(entry.key.convertTo<io.airbyte.api.model.generated.JobConfigType>())
-
-            if (streamStats != null) {
-              item
-                .recordsEmitted(streamStats.recordsEmitted)
-                .recordsCommitted(streamStats.recordsCommitted)
-                .bytesEmitted(streamStats.bytesEmitted)
-                .bytesCommitted(streamStats.bytesCommitted)
-                .recordsRejected(streamStats.recordsRejected)
-            }
-            item
+            StreamSyncProgressReadItem(
+              streamName = stream.name,
+              streamNamespace = stream.namespace,
+              configType = entry.key,
+              recordsEmitted = streamStats?.recordsEmitted,
+              recordsCommitted = streamStats?.recordsCommitted,
+              bytesEmitted = streamStats?.bytesEmitted,
+              bytesCommitted = streamStats?.bytesCommitted,
+              recordsRejected = streamStats?.recordsRejected,
+            )
           }
         }.collect(Collectors.toList())
 
     val aggregatedStats = runningJob.aggregatedStats
-    return ConnectionSyncProgressRead()
-      .connectionId(connectionIdRequestBody.connectionId)
-      .jobId(runningJob.id)
-      .syncStartedAt(runningJob.createdAt)
-      .bytesEmitted(aggregatedStats?.bytesEmitted)
-      .bytesCommitted(aggregatedStats?.bytesCommitted)
-      .recordsEmitted(aggregatedStats?.recordsEmitted)
-      .recordsCommitted(aggregatedStats?.recordsCommitted)
-      .recordsRejected(aggregatedStats?.recordsRejected)
-      .configType(runningJobConfigType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
-      .streams(finalStreamsWithStats)
+    return ConnectionSyncProgressRead(
+      connectionId = connectionIdRequestBody.connectionId,
+      jobId = runningJob.id,
+      syncStartedAt = runningJob.createdAt,
+      bytesEmitted = aggregatedStats?.bytesEmitted,
+      bytesCommitted = aggregatedStats?.bytesCommitted,
+      recordsEmitted = aggregatedStats?.recordsEmitted,
+      recordsCommitted = aggregatedStats?.recordsCommitted,
+      recordsRejected = aggregatedStats?.recordsRejected,
+      configType = runningJobConfigType,
+      streams = finalStreamsWithStats,
+    )
   }
 
   @WithSpan

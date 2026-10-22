@@ -5,57 +5,58 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
-import io.airbyte.api.model.generated.ActorStatus
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionCreate
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionSchedule
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.FieldAdd
-import io.airbyte.api.model.generated.FieldRemove
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.OperationRead
-import io.airbyte.api.model.generated.OperationReadList
-import io.airbyte.api.model.generated.ResourceRequirements
-import io.airbyte.api.model.generated.SchemaChange
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
-import io.airbyte.api.model.generated.Tag
-import io.airbyte.api.model.generated.WebBackendConnectionCreate
-import io.airbyte.api.model.generated.WebBackendConnectionListFilters
-import io.airbyte.api.model.generated.WebBackendConnectionListFilters.StatusesEnum
-import io.airbyte.api.model.generated.WebBackendConnectionListItem
-import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody
-import io.airbyte.api.model.generated.WebBackendConnectionListSortKey
-import io.airbyte.api.model.generated.WebBackendConnectionRead
-import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
-import io.airbyte.api.model.generated.WebBackendConnectionUpdate
-import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
-import io.airbyte.api.model.generated.WebBackendWorkspaceState
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
 import io.airbyte.api.server.generated.models.AttemptRead
 import io.airbyte.api.server.generated.models.AttemptStatus
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionCreate
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionSchedule
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.FieldAdd
+import io.airbyte.api.server.generated.models.FieldRemove
+import io.airbyte.api.server.generated.models.FieldTransform
 import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.JobInfoRead
 import io.airbyte.api.server.generated.models.JobRead
 import io.airbyte.api.server.generated.models.JobWithAttemptsRead
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperationReadList
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
+import io.airbyte.api.server.generated.models.ResourceRequirements
+import io.airbyte.api.server.generated.models.SchemaChange
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.Tag
+import io.airbyte.api.server.generated.models.WebBackendConnectionCreate
+import io.airbyte.api.server.generated.models.WebBackendConnectionListFilters
+import io.airbyte.api.server.generated.models.WebBackendConnectionListItem
+import io.airbyte.api.server.generated.models.WebBackendConnectionListRequestBody
+import io.airbyte.api.server.generated.models.WebBackendConnectionListSortKey
+import io.airbyte.api.server.generated.models.WebBackendConnectionRead
+import io.airbyte.api.server.generated.models.WebBackendConnectionRequestBody
+import io.airbyte.api.server.generated.models.WebBackendConnectionUpdate
+import io.airbyte.api.server.generated.models.WebBackendOperationCreateOrUpdate
+import io.airbyte.api.server.generated.models.WebBackendWorkspaceState
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConfigurationUpdate
@@ -124,15 +125,13 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
-import io.mockk.verifyOrder
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
@@ -370,12 +369,24 @@ internal class WebBackendConnectionsHandlerTest {
       CatalogGenerationResult(firstArg(), mapOf())
     }
 
-    connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
-    brokenConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(brokenStandardSync)
+    // the web backend read requires the preference, which is a non-null connection column
+    connectionRead =
+      ConnectionHelpers
+        .generateExpectedConnectionRead(standardSync)
+        .copy(nonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE)
+    brokenConnectionRead =
+      ConnectionHelpers
+        .generateExpectedConnectionRead(brokenStandardSync)
+        .copy(nonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE)
 
-    operationReadList = OperationReadList().operations(listOf(OperationRead().operationId(connectionRead.operationIds[0]).name("Test Operation")))
+    operationReadList =
+      OperationReadList(
+        operations = listOf(testOperationRead(connectionRead.operationIds!![0])),
+      )
     brokenOperationReadList =
-      OperationReadList().operations(listOf(OperationRead().operationId(brokenConnectionRead.operationIds[0]).name("Test Operation")))
+      OperationReadList(
+        operations = listOf(testOperationRead(brokenConnectionRead.operationIds!![0])),
+      )
 
     val now = Instant.now()
 
@@ -481,11 +492,12 @@ internal class WebBackendConnectionsHandlerTest {
           destinationRead,
           false,
           jobRead.job!!.createdAt,
-          io.airbyte.api.model.generated.JobStatus
+          io.airbyte.api.server.generated.models.JobStatus
             .valueOf(jobRead.job!!.status.name),
           SchemaChange.NO_CHANGE,
-        ).sourceActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
-        .destinationActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
+          actorDefinitionVersionRead(),
+          actorDefinitionVersionRead(),
+        )
 
     expected =
       expectedWebBackendConnectionReadObject(
@@ -513,37 +525,35 @@ internal class WebBackendConnectionsHandlerTest {
 
     val modifiedCatalog = generateMultipleStreamsApiCatalog(2)
     val sourceDiscoverSchema =
-      SourceDiscoverSchemaRequestBody().apply {
-        sourceId = connectionRead.sourceId
-        disableCache = true
-      }
+      SourceDiscoverSchemaRequestBody(
+        sourceId = connectionRead.sourceId,
+        disableCache = true,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchema) } returns
-      SourceDiscoverSchemaRead()
-        .jobInfo(mockk())
-        .catalog(modifiedCatalog)
+      SourceDiscoverSchemaRead(jobInfo = mockk(), catalog = modifiedCatalog)
 
     expectedWithNewSchema =
       expectedWebBackendConnectionReadObject(
         connectionRead,
         sourceRead,
         destinationRead,
-        OperationReadList().operations(expected.operations),
+        OperationReadList(operations = expected.operations!!),
         SchemaChange.NON_BREAKING,
         now,
         modifiedCatalog,
         null,
-      ).catalogDiff(
-        CatalogDiff().transforms(
-          listOf(
-            StreamTransform()
-              .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-              .streamDescriptor(
-                io.airbyte.api.model.generated
-                  .StreamDescriptor()
-                  .name("users-data1"),
-              ).updateStream(null),
+      ).copy(
+        catalogDiff =
+          CatalogDiff(
+            transforms =
+              listOf(
+                StreamTransform(
+                  transformType = StreamTransform.TransformType.ADD_STREAM,
+                  streamDescriptor = StreamDescriptor(name = "users-data1"),
+                  updateStream = null,
+                ),
+              ),
           ),
-        ),
       )
 
     expectedWithNewSchemaAndBreakingChange =
@@ -551,23 +561,23 @@ internal class WebBackendConnectionsHandlerTest {
         brokenConnectionRead,
         sourceRead,
         destinationRead,
-        OperationReadList().operations(expected.operations),
+        OperationReadList(operations = expected.operations!!),
         SchemaChange.BREAKING,
         now,
         modifiedCatalog,
         null,
-      ).catalogDiff(
-        CatalogDiff().transforms(
-          listOf(
-            StreamTransform()
-              .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-              .streamDescriptor(
-                io.airbyte.api.model.generated
-                  .StreamDescriptor()
-                  .name("users-data1"),
-              ).updateStream(null),
+      ).copy(
+        catalogDiff =
+          CatalogDiff(
+            transforms =
+              listOf(
+                StreamTransform(
+                  transformType = StreamTransform.TransformType.ADD_STREAM,
+                  streamDescriptor = StreamDescriptor(name = "users-data1"),
+                  updateStream = null,
+                ),
+              ),
           ),
-        ),
       )
 
     expectedWithNewSchemaBroken =
@@ -599,53 +609,57 @@ internal class WebBackendConnectionsHandlerTest {
 
   fun expectedWebBackendConnectionReadObject(
     connectionRead: ConnectionRead,
-    sourceRead: SourceRead?,
-    destinationRead: DestinationRead?,
+    sourceRead: SourceRead,
+    destinationRead: DestinationRead,
     operationReadList: OperationReadList,
-    schemaChange: SchemaChange?,
+    schemaChange: SchemaChange,
     now: Instant,
-    syncCatalog: AirbyteCatalog?,
+    syncCatalog: AirbyteCatalog,
     catalogId: UUID?,
   ): WebBackendConnectionRead =
-    WebBackendConnectionRead()
-      .connectionId(connectionRead.connectionId)
-      .sourceId(connectionRead.sourceId)
-      .destinationId(connectionRead.destinationId)
-      .operationIds(connectionRead.operationIds)
-      .name(connectionRead.name)
-      .namespaceDefinition(connectionRead.namespaceDefinition)
-      .namespaceFormat(connectionRead.namespaceFormat)
-      .prefix(connectionRead.prefix)
-      .syncCatalog(syncCatalog)
-      .catalogId(catalogId)
-      .status(connectionRead.status)
-      .schedule(connectionRead.schedule)
-      .scheduleType(connectionRead.scheduleType)
-      .scheduleData(connectionRead.scheduleData)
-      .source(sourceRead)
-      .destination(destinationRead)
-      .operations(operationReadList.operations)
-      .latestSyncJobCreatedAt(now.epochSecond)
-      .latestSyncJobStatus(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-      .isSyncing(false)
-      .schemaChange(schemaChange)
-      .dataplaneGroupId(connectionRead.dataplaneGroupId)
-      .resourceRequirements(
-        ResourceRequirements()
-          .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.cpuRequest)
-          .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.cpuLimit)
-          .memoryRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryRequest)
-          .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryLimit),
-      ).notifySchemaChanges(false)
-      .notifySchemaChangesByEmail(true)
-      .onDemandEnabled(connectionRead.onDemandEnabled ?: false)
-      .sourceActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
-      .destinationActorDefinitionVersion(Jsons.convertValue(actorDefinitionVersionRead(), ActorDefinitionVersionRead::class.java))
+    WebBackendConnectionRead(
+      connectionId = connectionRead.connectionId,
+      sourceId = connectionRead.sourceId,
+      destinationId = connectionRead.destinationId,
+      operationIds = connectionRead.operationIds,
+      name = connectionRead.name,
+      namespaceDefinition = connectionRead.namespaceDefinition,
+      namespaceFormat = connectionRead.namespaceFormat,
+      prefix = connectionRead.prefix,
+      syncCatalog = syncCatalog,
+      catalogId = catalogId,
+      status = connectionRead.status,
+      schedule = connectionRead.schedule,
+      scheduleType = connectionRead.scheduleType,
+      scheduleData = connectionRead.scheduleData,
+      source = sourceRead,
+      destination = destinationRead,
+      operations = operationReadList.operations,
+      latestSyncJobCreatedAt = now.epochSecond,
+      latestSyncJobStatus = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+      isSyncing = false,
+      schemaChange = schemaChange,
+      dataplaneGroupId = connectionRead.dataplaneGroupId,
+      resourceRequirements =
+        ResourceRequirements(
+          cpuRequest = ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.cpuRequest,
+          cpuLimit = ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.cpuLimit,
+          memoryRequest = ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryRequest,
+          memoryLimit = ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryLimit,
+        ),
+      notifySchemaChanges = false,
+      notifySchemaChangesByEmail = true,
+      onDemandEnabled = connectionRead.onDemandEnabled ?: false,
+      nonBreakingChangesPreference = connectionRead.nonBreakingChangesPreference!!,
+      tags = connectionRead.tags!!,
+      sourceActorDefinitionVersion = actorDefinitionVersionRead(),
+      destinationActorDefinitionVersion = actorDefinitionVersionRead(),
+    )
 
   @Test
   fun testGetWorkspaceState() {
     val uuid = UUID.randomUUID()
-    val request = WebBackendWorkspaceState().workspaceId(uuid)
+    val request = WebBackendWorkspaceState(workspaceId = uuid)
     every { workspaceService.countSourcesForWorkspace(uuid) } returns 5
     every { workspaceService.countDestinationsForWorkspace(uuid) } returns 2
     every { workspaceService.countConnectionsForWorkspace(uuid) } returns 8
@@ -658,7 +672,7 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testGetWorkspaceStateEmpty() {
     val uuid = UUID.randomUUID()
-    val request = WebBackendWorkspaceState().workspaceId(uuid)
+    val request = WebBackendWorkspaceState(workspaceId = uuid)
     every { workspaceService.countSourcesForWorkspace(uuid) } returns 0
     every { workspaceService.countDestinationsForWorkspace(uuid) } returns 0
     every { workspaceService.countConnectionsForWorkspace(uuid) } returns 0
@@ -671,9 +685,7 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testWebBackendListConnectionsForWorkspace() {
     val requestBody =
-      WebBackendConnectionListRequestBody().apply {
-        workspaceId = sourceRead.workspaceId
-      }
+      WebBackendConnectionListRequestBody(workspaceId = sourceRead.workspaceId)
 
     every {
       connectionService.buildCursorPagination(
@@ -707,9 +719,8 @@ internal class WebBackendConnectionsHandlerTest {
       )
 
     val requestBody =
-      io.airbyte.api.model.generated.WorkspaceIdRequestBody().apply {
-        workspaceId = sourceRead.workspaceId
-      }
+      io.airbyte.api.server.generated.models
+        .WorkspaceIdRequestBody(workspaceId = sourceRead.workspaceId)
 
     val result = wbHandler.webBackendGetConnectionStatusCounts(requestBody)
 
@@ -723,11 +734,9 @@ internal class WebBackendConnectionsHandlerTest {
 
   @Test
   fun testWebBackendGetConnection() {
-    val connectionIdRequestBody = ConnectionIdRequestBody()
-    connectionIdRequestBody.connectionId = connectionRead.connectionId
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionRead.connectionId)
 
-    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody()
-    webBackendConnectionRequestBody.connectionId = connectionRead.connectionId
+    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody(connectionId = connectionRead.connectionId)
 
     every { connectionsHandler.getConnection(connectionRead.connectionId) } returns connectionRead
     every { operationsHandler.listOperationsForConnection(connectionIdRequestBody) } returns operationReadList
@@ -742,9 +751,9 @@ internal class WebBackendConnectionsHandlerTest {
 
   @Test
   fun testWebBackendGetConnectionIncludesOnDemandEnabled() {
-    val onDemandConnectionRead = clone(connectionRead).onDemandEnabled(true)
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(onDemandConnectionRead.connectionId)
-    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody().connectionId(onDemandConnectionRead.connectionId)
+    val onDemandConnectionRead = connectionRead.copy(onDemandEnabled = true)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = onDemandConnectionRead.connectionId)
+    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody(connectionId = onDemandConnectionRead.connectionId)
     val expectedConnectionRead =
       expectedWebBackendConnectionReadObject(
         onDemandConnectionRead,
@@ -752,7 +761,7 @@ internal class WebBackendConnectionsHandlerTest {
         expected.destination,
         operationReadList,
         SchemaChange.NO_CHANGE,
-        Instant.ofEpochSecond(expected.latestSyncJobCreatedAt),
+        Instant.ofEpochSecond(expected.latestSyncJobCreatedAt!!),
         onDemandConnectionRead.syncCatalog,
         onDemandConnectionRead.sourceCatalogId,
       )
@@ -771,14 +780,13 @@ internal class WebBackendConnectionsHandlerTest {
     connectionRead: ConnectionRead,
     operationReadList: OperationReadList?,
   ): WebBackendConnectionRead {
-    val connectionIdRequestBody = ConnectionIdRequestBody()
-    connectionIdRequestBody.connectionId = connectionRead.connectionId
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionRead.connectionId)
 
-    val webBackendConnectionIdRequestBody = WebBackendConnectionRequestBody()
-    webBackendConnectionIdRequestBody.connectionId = connectionRead.connectionId
-    if (withCatalogRefresh) {
-      webBackendConnectionIdRequestBody.withRefreshedCatalog = true
-    }
+    val webBackendConnectionIdRequestBody =
+      WebBackendConnectionRequestBody(
+        connectionId = connectionRead.connectionId,
+        withRefreshedCatalog = if (withCatalogRefresh) true else null,
+      )
 
     every { connectionsHandler.getConnection(connectionRead.connectionId) } returns connectionRead
     every { operationsHandler.listOperationsForConnection(connectionIdRequestBody) } returns operationReadList!!
@@ -793,11 +801,12 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(newCatalogId))
     every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
     val schemaRead =
-      SourceDiscoverSchemaRead()
-        .catalogDiff(expectedWithNewSchema.catalogDiff)
-        .catalog(expectedWithNewSchema.syncCatalog)
-        .breakingChange(false)
-        .connectionStatus(ConnectionStatus.ACTIVE)
+      SourceDiscoverSchemaRead(
+        catalogDiff = expectedWithNewSchema.catalogDiff,
+        catalog = expectedWithNewSchema.syncCatalog,
+        breakingChange = false,
+        connectionStatus = ConnectionStatus.ACTIVE,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns schemaRead
     every { connectionsHandler.getConnectionAirbyteCatalog(connectionRead.connectionId) } returns Optional.of(connectionRead.syncCatalog)
 
@@ -807,7 +816,7 @@ internal class WebBackendConnectionsHandlerTest {
         connectionRead,
         operationReadList,
       )
-    Assertions.assertEquals(expectedWithNewSchema, result)
+    Assertions.assertEquals(expectedWithNewSchema.withNewStreamDeselected(), result)
   }
 
   @Test
@@ -817,11 +826,12 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(newCatalogId))
     every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
     val schemaRead =
-      SourceDiscoverSchemaRead()
-        .catalogDiff(expectedWithNewSchema.catalogDiff)
-        .catalog(expectedWithNewSchema.syncCatalog)
-        .breakingChange(true)
-        .connectionStatus(ConnectionStatus.INACTIVE)
+      SourceDiscoverSchemaRead(
+        catalogDiff = expectedWithNewSchema.catalogDiff,
+        catalog = expectedWithNewSchema.syncCatalog,
+        breakingChange = true,
+        connectionStatus = ConnectionStatus.INACTIVE,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns schemaRead
     every { connectionsHandler.getConnectionAirbyteCatalog(brokenConnectionRead.connectionId) } returns
       Optional.of(connectionRead.syncCatalog)
@@ -832,7 +842,7 @@ internal class WebBackendConnectionsHandlerTest {
         brokenConnectionRead,
         operationReadList,
       )
-    Assertions.assertEquals(expectedWithNewSchemaAndBreakingChange, result)
+    Assertions.assertEquals(expectedWithNewSchemaAndBreakingChange.withNewStreamDeselected(), result)
   }
 
   @Test
@@ -842,11 +852,12 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(newCatalogId))
     every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
     val schemaRead =
-      SourceDiscoverSchemaRead()
-        .catalogDiff(expectedWithNewSchema.catalogDiff)
-        .catalog(expectedWithNewSchema.syncCatalog)
-        .breakingChange(false)
-        .connectionStatus(ConnectionStatus.ACTIVE)
+      SourceDiscoverSchemaRead(
+        catalogDiff = expectedWithNewSchema.catalogDiff,
+        catalog = expectedWithNewSchema.syncCatalog,
+        breakingChange = false,
+        connectionStatus = ConnectionStatus.ACTIVE,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns schemaRead
     every { connectionsHandler.getConnectionAirbyteCatalog(connectionRead.connectionId) } returns Optional.empty<AirbyteCatalog>()
 
@@ -856,7 +867,7 @@ internal class WebBackendConnectionsHandlerTest {
         connectionRead,
         operationReadList,
       )
-    Assertions.assertEquals(expectedWithNewSchema, result)
+    Assertions.assertEquals(expectedWithNewSchema.withNewStreamDeselected(), result)
   }
 
   @Test
@@ -866,19 +877,14 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
 
     // Original configured catalog has two fields, and only one of them is selected.
-    val originalConfiguredCatalog = generateApiCatalogWithTwoFields()
-    originalConfiguredCatalog
-      .streams[0]
-      .config
-      .fieldSelectionEnabled(true)
-      .selectedFields(
-        listOf<@Valid SelectedFieldInfo?>(
-          SelectedFieldInfo().addFieldPathItem(
-            ConnectionHelpers.FIELD_NAME,
-          ),
-        ),
-      )
-    connectionRead.syncCatalog(originalConfiguredCatalog)
+    val originalConfiguredCatalog =
+      generateApiCatalogWithTwoFields().withFirstStreamConfig {
+        it.copy(
+          fieldSelectionEnabled = true,
+          selectedFields = listOf(SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.FIELD_NAME))),
+        )
+      }
+    connectionRead = connectionRead.copy(syncCatalog = originalConfiguredCatalog)
 
     // Original discovered catalog has the same two fields but no selection info because it's a
     // discovered catalog.
@@ -892,30 +898,40 @@ internal class WebBackendConnectionsHandlerTest {
     (
       newCatalogToDiscover
         .streams[0]
-        .stream
-        .jsonSchema
+        .stream!!
+        .jsonSchema!!
         .findPath("properties") as ObjectNode
     ).putObject("a-new-field")
       .put("type", "string")
     val schemaRead =
-      SourceDiscoverSchemaRead()
-        .catalogDiff(
-          CatalogDiff()
-            .addTransformsItem(
-              StreamTransform().updateStream(
-                StreamTransformUpdateStream().addFieldTransformsItem(
-                  FieldTransform()
-                    .transformType(
-                      FieldTransform.TransformTypeEnum.ADD_FIELD,
-                    ).addFieldNameItem("a-new-field")
-                    .breaking(false)
-                    .addField(FieldAdd().schema(newFieldSchema)),
+      SourceDiscoverSchemaRead(
+        catalogDiff =
+          CatalogDiff(
+            transforms =
+              listOf(
+                StreamTransform(
+                  transformType = StreamTransform.TransformType.UPDATE_STREAM,
+                  streamDescriptor = StreamDescriptor(name = STREAM_NAME),
+                  updateStream =
+                    StreamTransformUpdateStream(
+                      fieldTransforms =
+                        listOf(
+                          FieldTransform(
+                            transformType = FieldTransform.TransformType.ADD_FIELD,
+                            fieldName = listOf("a-new-field"),
+                            breaking = false,
+                            addField = FieldAdd(schema = newFieldSchema),
+                          ),
+                        ),
+                      streamAttributeTransforms = emptyList(),
+                    ),
                 ),
               ),
-            ),
-        ).catalog(newCatalogToDiscover)
-        .breakingChange(false)
-        .connectionStatus(ConnectionStatus.ACTIVE)
+          ),
+        catalog = newCatalogToDiscover,
+        breakingChange = false,
+        connectionStatus = ConnectionStatus.ACTIVE,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns schemaRead
 
     val result =
@@ -927,15 +943,18 @@ internal class WebBackendConnectionsHandlerTest {
 
     // We expect the discovered catalog with two fields selected: the one that was originally selected,
     // plus the newly-discovered field.
-    val expectedNewCatalog = clone(newCatalogToDiscover)
-    expectedNewCatalog.streams[0].config.fieldSelectionEnabled(true).selectedFields(
-      listOf<@Valid SelectedFieldInfo?>(
-        SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME),
-        SelectedFieldInfo().addFieldPathItem("a-new-field"),
-      ),
-    )
-    expectedWithNewSchema.catalogDiff(schemaRead.catalogDiff).syncCatalog(expectedNewCatalog)
-    Assertions.assertEquals(expectedWithNewSchema, result)
+    val expectedNewCatalog =
+      newCatalogToDiscover.withFirstStreamConfig {
+        it.copy(
+          fieldSelectionEnabled = true,
+          selectedFields =
+            listOf(
+              SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.FIELD_NAME)),
+              SelectedFieldInfo(fieldPath = listOf("a-new-field")),
+            ),
+        )
+      }
+    Assertions.assertEquals(expectedWithNewSchema.copy(catalogDiff = schemaRead.catalogDiff, syncCatalog = expectedNewCatalog), result)
   }
 
   @Test
@@ -945,20 +964,18 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
 
     // Original configured catalog has two fields, and both of them are selected.
-    val originalConfiguredCatalog = generateApiCatalogWithTwoFields()
-    originalConfiguredCatalog
-      .streams[0]
-      .config
-      .fieldSelectionEnabled(true)
-      .selectedFields(
-        listOf<@Valid SelectedFieldInfo?>(
-          SelectedFieldInfo().addFieldPathItem(
-            ConnectionHelpers.FIELD_NAME,
-          ),
-          SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME + "2"),
-        ),
-      )
-    connectionRead.syncCatalog(originalConfiguredCatalog)
+    val originalConfiguredCatalog =
+      generateApiCatalogWithTwoFields().withFirstStreamConfig {
+        it.copy(
+          fieldSelectionEnabled = true,
+          selectedFields =
+            listOf(
+              SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.FIELD_NAME)),
+              SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.FIELD_NAME + "2")),
+            ),
+        )
+      }
+    connectionRead = connectionRead.copy(syncCatalog = originalConfiguredCatalog)
 
     // Original discovered catalog has the same two fields but no selection info because it's a
     // discovered catalog.
@@ -971,22 +988,34 @@ internal class WebBackendConnectionsHandlerTest {
     val newCatalogToDiscover = generateBasicApiCatalog()
     val removedFieldSchema = deserialize("{\"type\": \"string\"}")
     val schemaRead =
-      SourceDiscoverSchemaRead()
-        .catalogDiff(
-          CatalogDiff().addTransformsItem(
-            StreamTransform().updateStream(
-              StreamTransformUpdateStream().addFieldTransformsItem(
-                FieldTransform()
-                  .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
-                  .addFieldNameItem(ConnectionHelpers.FIELD_NAME + "2")
-                  .breaking(false)
-                  .removeField(FieldRemove().schema(removedFieldSchema)),
+      SourceDiscoverSchemaRead(
+        catalogDiff =
+          CatalogDiff(
+            transforms =
+              listOf(
+                StreamTransform(
+                  transformType = StreamTransform.TransformType.UPDATE_STREAM,
+                  streamDescriptor = StreamDescriptor(name = STREAM_NAME),
+                  updateStream =
+                    StreamTransformUpdateStream(
+                      fieldTransforms =
+                        listOf(
+                          FieldTransform(
+                            transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                            fieldName = listOf(ConnectionHelpers.FIELD_NAME + "2"),
+                            breaking = false,
+                            removeField = FieldRemove(schema = removedFieldSchema),
+                          ),
+                        ),
+                      streamAttributeTransforms = emptyList(),
+                    ),
+                ),
               ),
-            ),
           ),
-        ).catalog(newCatalogToDiscover)
-        .breakingChange(false)
-        .connectionStatus(ConnectionStatus.ACTIVE)
+        catalog = newCatalogToDiscover,
+        breakingChange = false,
+        connectionStatus = ConnectionStatus.ACTIVE,
+      )
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns schemaRead
 
     val result =
@@ -998,12 +1027,14 @@ internal class WebBackendConnectionsHandlerTest {
 
     // We expect the discovered catalog with two fields selected: the one that was originally selected,
     // plus the newly-discovered field.
-    val expectedNewCatalog = clone(newCatalogToDiscover)
-    expectedNewCatalog.streams[0].config.fieldSelectionEnabled(true).selectedFields(
-      listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME)),
-    )
-    expectedWithNewSchema.catalogDiff(schemaRead.catalogDiff).syncCatalog(expectedNewCatalog)
-    Assertions.assertEquals(expectedWithNewSchema, result)
+    val expectedNewCatalog =
+      newCatalogToDiscover.withFirstStreamConfig {
+        it.copy(
+          fieldSelectionEnabled = true,
+          selectedFields = listOf(SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.FIELD_NAME))),
+        )
+      }
+    Assertions.assertEquals(expectedWithNewSchema.copy(catalogDiff = schemaRead.catalogDiff, syncCatalog = expectedNewCatalog), result)
   }
 
   @Test
@@ -1028,7 +1059,7 @@ internal class WebBackendConnectionsHandlerTest {
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
     every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
     // A failed discover job returns a SourceDiscoverSchemaRead with jobInfo but no catalog.
-    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead().jobInfo(mockk())
+    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead(jobInfo = mockk())
 
     val result = testWebBackendGetConnection(true, connectionRead, operationReadList)
 
@@ -1050,14 +1081,11 @@ internal class WebBackendConnectionsHandlerTest {
   fun testToConnectionCreate() {
     val source = generateSource(UUID.randomUUID())
     val standardSync = generateSyncWithSourceId(source.sourceId)
-    val tags = listOf<Tag?>(Tag().name("tag1"), Tag().name("tag2"))
+    val tags = listOf(testTag("tag1"), testTag("tag2"))
 
-    val catalog = generateBasicApiCatalog()
-    catalog
-      .streams[0]
-      .stream.name = "azkaban_users"
+    val catalog = generateBasicApiCatalog().withFirstStream { it.copy(name = "azkaban_users") }
 
-    val schedule = ConnectionSchedule().units(1L).timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
+    val schedule = ConnectionSchedule(units = 1L, timeUnit = ConnectionSchedule.TimeUnit.MINUTES)
 
     val newSourceId = UUID.randomUUID()
     val newDestinationId = UUID.randomUUID()
@@ -1065,42 +1093,42 @@ internal class WebBackendConnectionsHandlerTest {
     val sourceCatalogId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
     val input =
-      WebBackendConnectionCreate()
-        .name("testConnectionCreate")
-        .namespaceDefinition(
-          standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
-        ).namespaceFormat(standardSync.namespaceFormat)
-        .prefix(standardSync.prefix)
-        .sourceId(newSourceId)
-        .destinationId(newDestinationId)
-        .operationIds(listOf<UUID?>(newOperationId))
-        .status(ConnectionStatus.INACTIVE)
-        .schedule(schedule)
-        .syncCatalog(catalog)
-        .sourceCatalogId(sourceCatalogId)
-        .dataplaneGroupId(dataplaneGroupId)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .tags(tags)
+      WebBackendConnectionCreate(
+        name = "testConnectionCreate",
+        namespaceDefinition = standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
+        namespaceFormat = standardSync.namespaceFormat,
+        prefix = standardSync.prefix,
+        sourceId = newSourceId,
+        destinationId = newDestinationId,
+        operationIds = listOf<UUID>(newOperationId),
+        status = ConnectionStatus.INACTIVE,
+        schedule = schedule,
+        syncCatalog = catalog,
+        sourceCatalogId = sourceCatalogId,
+        dataplaneGroupId = dataplaneGroupId,
+        nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        tags = tags,
+      )
 
-    val operationIds = listOf<UUID?>(newOperationId)
+    val operationIds = listOf<UUID>(newOperationId)
 
     val expected =
-      ConnectionCreate()
-        .name("testConnectionCreate")
-        .namespaceDefinition(
-          standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
-        ).namespaceFormat(standardSync.namespaceFormat)
-        .prefix(standardSync.prefix)
-        .sourceId(newSourceId)
-        .destinationId(newDestinationId)
-        .operationIds(operationIds)
-        .status(ConnectionStatus.INACTIVE)
-        .schedule(schedule)
-        .syncCatalog(catalog)
-        .sourceCatalogId(sourceCatalogId)
-        .dataplaneGroupId(dataplaneGroupId)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .tags(tags)
+      ConnectionCreate(
+        name = "testConnectionCreate",
+        namespaceDefinition = standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
+        namespaceFormat = standardSync.namespaceFormat,
+        prefix = standardSync.prefix,
+        sourceId = newSourceId,
+        destinationId = newDestinationId,
+        operationIds = operationIds,
+        status = ConnectionStatus.INACTIVE,
+        schedule = schedule,
+        syncCatalog = catalog,
+        sourceCatalogId = sourceCatalogId,
+        dataplaneGroupId = dataplaneGroupId,
+        nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        tags = tags,
+      )
 
     val actual = toConnectionCreate(input, operationIds)
 
@@ -1111,55 +1139,60 @@ internal class WebBackendConnectionsHandlerTest {
   fun testToConnectionPatch() {
     val source = generateSource(UUID.randomUUID())
     val standardSync = generateSyncWithSourceId(source.sourceId)
-    val tags = listOf<Tag?>(Tag().name("tag1"), Tag().name("tag2"))
+    val tags = listOf(testTag("tag1"), testTag("tag2"))
 
-    val catalog = generateBasicApiCatalog()
-    catalog
-      .streams[0]
-      .stream.name = "azkaban_users"
+    val catalog = generateBasicApiCatalog().withFirstStream { it.copy(name = "azkaban_users") }
 
-    val schedule = ConnectionSchedule().units(1L).timeUnit(ConnectionSchedule.TimeUnitEnum.MINUTES)
+    val schedule = ConnectionSchedule(units = 1L, timeUnit = ConnectionSchedule.TimeUnit.MINUTES)
 
     val newOperationId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
     val input =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(
-          standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
-        ).namespaceFormat(standardSync.namespaceFormat)
-        .prefix(standardSync.prefix)
-        .connectionId(standardSync.connectionId)
-        .operations(listOf<@Valid WebBackendOperationCreateOrUpdate?>(WebBackendOperationCreateOrUpdate().operationId(newOperationId)))
-        .status(ConnectionStatus.INACTIVE)
-        .schedule(schedule)
-        .name(standardSync.name)
-        .syncCatalog(catalog)
-        .dataplaneGroupId(dataplaneGroupId)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .notifySchemaChanges(false)
-        .notifySchemaChangesByEmail(true)
-        .tags(tags)
+      WebBackendConnectionUpdate(
+        namespaceDefinition = standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
+        namespaceFormat = standardSync.namespaceFormat,
+        prefix = standardSync.prefix,
+        connectionId = standardSync.connectionId,
+        operations =
+          listOf<WebBackendOperationCreateOrUpdate>(
+            WebBackendOperationCreateOrUpdate(
+              workspaceId = sourceRead.workspaceId,
+              name = "Test Operation",
+              operatorConfiguration = TEST_OPERATOR_CONFIGURATION,
+              operationId = newOperationId,
+            ),
+          ),
+        status = ConnectionStatus.INACTIVE,
+        schedule = schedule,
+        name = standardSync.name,
+        syncCatalog = catalog,
+        dataplaneGroupId = dataplaneGroupId,
+        nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        notifySchemaChanges = false,
+        notifySchemaChangesByEmail = true,
+        tags = tags,
+      )
 
-    val operationIds = listOf<UUID?>(newOperationId)
+    val operationIds = listOf<UUID>(newOperationId)
 
     val expected =
-      ConnectionUpdate()
-        .namespaceDefinition(
-          standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
-        ).namespaceFormat(standardSync.namespaceFormat)
-        .prefix(standardSync.prefix)
-        .connectionId(standardSync.connectionId)
-        .operationIds(operationIds)
-        .status(ConnectionStatus.INACTIVE)
-        .schedule(schedule)
-        .name(standardSync.name)
-        .syncCatalog(catalog)
-        .dataplaneGroupId(dataplaneGroupId)
-        .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
-        .notifySchemaChanges(false)
-        .notifySchemaChangesByEmail(true)
-        .breakingChange(false)
-        .tags(tags)
+      ConnectionUpdate(
+        namespaceDefinition = standardSync.namespaceDefinition.convertTo<NamespaceDefinitionType>(),
+        namespaceFormat = standardSync.namespaceFormat,
+        prefix = standardSync.prefix,
+        connectionId = standardSync.connectionId,
+        operationIds = operationIds,
+        status = ConnectionStatus.INACTIVE,
+        schedule = schedule,
+        name = standardSync.name,
+        syncCatalog = catalog,
+        dataplaneGroupId = dataplaneGroupId,
+        nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        notifySchemaChanges = false,
+        notifySchemaChangesByEmail = true,
+        breakingChange = false,
+        tags = tags,
+      )
 
     val actual = toConnectionPatch(input, operationIds, false)
 
@@ -1169,7 +1202,7 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testForConnectionCreateCompleteness() {
     val handledMethods =
-      mutableSetOf<String?>(
+      mutableSetOf<String>(
         "name",
         "namespaceDefinition",
         "namespaceFormat",
@@ -1177,8 +1210,6 @@ internal class WebBackendConnectionsHandlerTest {
         "sourceId",
         "destinationId",
         "operationIds",
-        "addOperationIdsItem",
-        "removeOperationIdsItem",
         "syncCatalog",
         "schedule",
         "scheduleType",
@@ -1193,8 +1224,6 @@ internal class WebBackendConnectionsHandlerTest {
         "notifySchemaChangesByEmail",
         "backfillPreference",
         "tags",
-        "addTagsItem",
-        "removeTagsItem",
         "onDemandEnabled",
         // Deliberately not wired into toConnectionCreate: WebBackendConnectionCreate has no
         // equivalent field. Fusion indexing is set through connection create/update directly, or
@@ -1202,11 +1231,12 @@ internal class WebBackendConnectionsHandlerTest {
         "enableIndexing",
       )
 
+    // the Kotlin model is an immutable data class: its fields are the constructor parameters
     val methods =
       ConnectionCreate::class.java
-        .getMethods()
-        .filter { method: Method? -> method!!.returnType == ConnectionCreate::class.java }
-        .map { obj: Method? -> obj!!.name }
+        .declaredFields
+        .filter { field -> !Modifier.isStatic(field.modifiers) }
+        .map { field -> field.name }
         .toSet()
 
     val message =
@@ -1223,7 +1253,7 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testForConnectionPatchCompleteness() {
     val handledMethods =
-      mutableSetOf<String?>(
+      mutableSetOf<String>(
         "schedule",
         "connectionId",
         "syncCatalog",
@@ -1232,8 +1262,6 @@ internal class WebBackendConnectionsHandlerTest {
         "prefix",
         "status",
         "operationIds",
-        "addOperationIdsItem",
-        "removeOperationIdsItem",
         "resourceRequirements",
         "name",
         "sourceCatalogId",
@@ -1247,8 +1275,6 @@ internal class WebBackendConnectionsHandlerTest {
         "nonBreakingChangesPreference",
         "backfillPreference",
         "tags",
-        "addTagsItem",
-        "removeTagsItem",
         "onDemandEnabled",
         // Deliberately not wired into toConnectionPatch: WebBackendConnectionUpdate has no
         // equivalent field. Fusion indexing is set through connection create/update directly, or
@@ -1256,11 +1282,12 @@ internal class WebBackendConnectionsHandlerTest {
         "enableIndexing",
       )
 
+    // the Kotlin model is an immutable data class: its fields are the constructor parameters
     val methods =
       ConnectionUpdate::class.java
-        .getMethods()
-        .filter { method: Method? -> method!!.returnType == ConnectionUpdate::class.java }
-        .map { obj: Method? -> obj!!.name }
+        .declaredFields
+        .filter { field -> !Modifier.isStatic(field.modifiers) }
+        .map { field -> field.name }
         .toSet()
 
     val message =
@@ -1277,21 +1304,22 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testUpdateConnection() {
     val updateBody =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .connectionId(expected.connectionId)
-        .schedule(expected.schedule)
-        .status(expected.status)
-        .syncCatalog(expected.syncCatalog)
-        .sourceCatalogId(expected.catalogId)
-        .notifySchemaChanges(expected.notifySchemaChanges)
-        .notifySchemaChangesByEmail(expected.notifySchemaChangesByEmail)
+      WebBackendConnectionUpdate(
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        connectionId = expected.connectionId,
+        schedule = expected.schedule,
+        status = expected.status,
+        syncCatalog = expected.syncCatalog,
+        sourceCatalogId = expected.catalogId,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+      )
 
     every { connectionService.getConfiguredCatalogForConnection(expected.connectionId) } returns generateBasicConfiguredAirbyteCatalog()
 
-    val catalogDiff = CatalogDiff().transforms(mutableListOf<@Valid StreamTransform?>())
+    val catalogDiff = CatalogDiff(transforms = emptyList())
     every {
       connectionsHandler.getDiff(
         any(),
@@ -1300,11 +1328,12 @@ internal class WebBackendConnectionsHandlerTest {
         any(),
       )
     } returns catalogDiff
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(expected.connectionId)
-    every { stateHandler.getState(connectionIdRequestBody) } returns ConnectionState().stateType(ConnectionStateType.LEGACY)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = expected.connectionId)
+    every { stateHandler.getState(connectionIdRequestBody) } returns
+      ConnectionState(stateType = ConnectionStateType.LEGACY, connectionId = expected.connectionId)
 
     every { connectionsHandler.getConnection(expected.connectionId) } returns
-      ConnectionRead().connectionId(expected.connectionId).sourceId(expected.sourceId)
+      minimalConnectionRead(sourceId = expected.sourceId)
     every {
       connectionsHandler.updateConnection(
         any(),
@@ -1312,23 +1341,25 @@ internal class WebBackendConnectionsHandlerTest {
         any<Boolean>(),
       )
     } returns
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .destinationId(expected.destinationId)
-        .name(expected.name)
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .syncCatalog(expected.syncCatalog)
-        .status(expected.status)
-        .schedule(expected.schedule)
-        .breakingChange(false)
-        .notifySchemaChanges(expected.notifySchemaChanges)
-        .notifySchemaChangesByEmail(expected.notifySchemaChangesByEmail)
+      ConnectionRead(
+        connectionId = expected.connectionId,
+        sourceId = expected.sourceId,
+        destinationId = expected.destinationId,
+        name = expected.name,
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        syncCatalog = expected.syncCatalog,
+        status = expected.status,
+        schedule = expected.schedule,
+        breakingChange = false,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+        nonBreakingChangesPreference = expected.nonBreakingChangesPreference,
+      )
 
     every { operationsHandler.listOperationsForConnection(any()) } returns operationReadList
-    val connectionId = ConnectionIdRequestBody().connectionId(connectionRead.connectionId)
+    val connectionId = ConnectionIdRequestBody(connectionId = connectionRead.connectionId)
 
     val fullAirbyteCatalog = generateMultipleStreamsApiCatalog(2)
     every { connectionsHandler.getConnectionAirbyteCatalog(connectionRead.connectionId) } returns
@@ -1351,24 +1382,28 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testUpdateConnectionWithOperations() {
     val operationCreateOrUpdate =
-      WebBackendOperationCreateOrUpdate()
-        .name("Test Operation")
-        .operationId(connectionRead.operationIds[0])
+      WebBackendOperationCreateOrUpdate(
+        workspaceId = sourceRead.workspaceId,
+        name = "Test Operation",
+        operatorConfiguration = TEST_OPERATOR_CONFIGURATION,
+        operationId = connectionRead.operationIds!![0],
+      )
     val operationUpdate = toOperationUpdate(operationCreateOrUpdate)
     val updateBody =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .connectionId(expected.connectionId)
-        .schedule(expected.schedule)
-        .status(expected.status)
-        .syncCatalog(expected.syncCatalog)
-        .operations(listOf<@Valid WebBackendOperationCreateOrUpdate?>(operationCreateOrUpdate))
+      WebBackendConnectionUpdate(
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        connectionId = expected.connectionId,
+        schedule = expected.schedule,
+        status = expected.status,
+        syncCatalog = expected.syncCatalog,
+        operations = listOf<WebBackendOperationCreateOrUpdate>(operationCreateOrUpdate),
+      )
 
     every { connectionService.getConfiguredCatalogForConnection(expected.connectionId) } returns generateBasicConfiguredAirbyteCatalog()
 
-    val catalogDiff = CatalogDiff().transforms(mutableListOf<@Valid StreamTransform?>())
+    val catalogDiff = CatalogDiff(transforms = emptyList())
     every {
       connectionsHandler.getDiff(
         any(),
@@ -1377,31 +1412,32 @@ internal class WebBackendConnectionsHandlerTest {
         any(),
       )
     } returns catalogDiff
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(expected.connectionId)
-    every { stateHandler.getState(connectionIdRequestBody) } returns ConnectionState().stateType(ConnectionStateType.LEGACY)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = expected.connectionId)
+    every { stateHandler.getState(connectionIdRequestBody) } returns
+      ConnectionState(stateType = ConnectionStateType.LEGACY, connectionId = expected.connectionId)
 
     every { connectionsHandler.getConnection(expected.connectionId) } returns
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .operationIds(connectionRead.operationIds)
-        .breakingChange(false)
+      minimalConnectionRead(sourceId = expected.sourceId).copy(operationIds = connectionRead.operationIds)
 
     every { connectionsHandler.updateConnection(any(), any(), any<Boolean>()) } returns
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .destinationId(expected.destinationId)
-        .operationIds(connectionRead.operationIds)
-        .name(expected.name)
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .syncCatalog(expected.syncCatalog)
-        .status(expected.status)
-        .schedule(expected.schedule)
-        .breakingChange(false)
-    every { operationsHandler.updateOperation(operationUpdate) } returns OperationRead().operationId(operationUpdate.operationId)
+      ConnectionRead(
+        connectionId = expected.connectionId,
+        sourceId = expected.sourceId,
+        destinationId = expected.destinationId,
+        operationIds = connectionRead.operationIds,
+        name = expected.name,
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        syncCatalog = expected.syncCatalog,
+        status = expected.status,
+        schedule = expected.schedule,
+        breakingChange = false,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+        nonBreakingChangesPreference = expected.nonBreakingChangesPreference,
+      )
+    every { operationsHandler.updateOperation(operationUpdate) } returns testOperationRead(operationUpdate.operationId)
     every { operationsHandler.listOperationsForConnection(any()) } returns operationReadList
 
     val actualConnectionRead = wbHandler.webBackendUpdateConnection(updateBody)
@@ -1417,69 +1453,67 @@ internal class WebBackendConnectionsHandlerTest {
       actorDefinitionVersionRead(supportsRefreshes = useRefresh)
 
     val updateBody =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .connectionId(expected.connectionId)
-        .schedule(expected.schedule)
-        .status(expected.status)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
+      WebBackendConnectionUpdate(
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        connectionId = expected.connectionId,
+        schedule = expected.schedule,
+        status = expected.status,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+      )
 
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(expected.connectionId)
-    every { stateHandler.getState(connectionIdRequestBody) } returns ConnectionState().stateType(ConnectionStateType.STREAM)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = expected.connectionId)
+    every { stateHandler.getState(connectionIdRequestBody) } returns
+      ConnectionState(stateType = ConnectionStateType.STREAM, connectionId = expected.connectionId)
     every { connectionService.getConfiguredCatalogForConnection(expected.connectionId) } returns
       generateBasicConfiguredAirbyteCatalog()
 
     val streamTransformAdd =
-      StreamTransform()
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("addStream"),
-        ).transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = "addStream"),
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+      )
     val streamTransformRemove =
-      StreamTransform()
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("removeStream"),
-        ).transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = "removeStream"),
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+      )
     val streamTransformUpdate =
-      StreamTransform()
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("updateStream"),
-        ).transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .updateStream(StreamTransformUpdateStream())
+      StreamTransform(
+        streamDescriptor = StreamDescriptor(name = "updateStream"),
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        updateStream = StreamTransformUpdateStream(fieldTransforms = emptyList(), streamAttributeTransforms = emptyList()),
+      )
 
-    val catalogDiff = CatalogDiff().transforms(listOf(streamTransformAdd, streamTransformRemove, streamTransformUpdate))
+    val catalogDiff = CatalogDiff(transforms = listOf(streamTransformAdd, streamTransformRemove, streamTransformUpdate))
     every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
     every { connectionsHandler.getConfigurationDiff(any(), any()) } returns
       setOf(
-        io.airbyte.api.model.generated
-          .StreamDescriptor()
-          .name("configUpdateStream"),
+        StreamDescriptor(name = "configUpdateStream"),
       )
 
     every { operationsHandler.listOperationsForConnection(any()) } returns operationReadList
     every { connectionsHandler.getConnection(expected.connectionId) } returns
-      ConnectionRead().connectionId(expected.connectionId).breakingChange(false)
+      minimalConnectionRead(sourceId = expected.sourceId)
 
     val connectionRead =
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .destinationId(expected.destinationId)
-        .name(expected.name)
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
-        .status(expected.status)
-        .schedule(expected.schedule)
-        .breakingChange(false)
+      ConnectionRead(
+        connectionId = expected.connectionId,
+        sourceId = expected.sourceId,
+        destinationId = expected.destinationId,
+        name = expected.name,
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+        status = expected.status,
+        schedule = expected.schedule,
+        breakingChange = false,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+        nonBreakingChangesPreference = expected.nonBreakingChangesPreference,
+      )
     every { connectionsHandler.updateConnection(any(), any(), any()) } returns connectionRead
     every { connectionsHandler.getConnection(expected.connectionId) } returns connectionRead
 
@@ -1496,7 +1530,7 @@ internal class WebBackendConnectionsHandlerTest {
     verify { destinationCatalogGenerator.generateDestinationCatalog(catalogConverter.toConfiguredInternal(expectedWithNewSchema.syncCatalog)) }
     verify { destinationCatalogGenerator.generateDestinationCatalog(generateBasicConfiguredAirbyteCatalog()) }
 
-    val connectionId = ConnectionIdRequestBody().connectionId(result.connectionId)
+    val connectionId = ConnectionIdRequestBody(connectionId = result.connectionId)
     verify(exactly = 0) { schedulerHandler.resetConnection(connectionId) }
     verify(exactly = 0) { schedulerHandler.syncConnection(connectionId) }
     verify(exactly = 1) { connectionsHandler.updateConnection(any(), any(), any()) }
@@ -1517,50 +1551,60 @@ internal class WebBackendConnectionsHandlerTest {
           .withName("removeStream"),
       )
 
+    // the handler collects the streams in a set, so their order is not defined
+    val streamsCaptor = slot<List<io.airbyte.config.StreamDescriptor>>()
     if (useRefresh) {
-      verifyOrder {
-        eventRunner.refreshConnectionAsync(connectionId.connectionId, expectedStreams, io.airbyte.config.RefreshStream.RefreshType.MERGE)
+      verify {
+        eventRunner.refreshConnectionAsync(connectionId.connectionId, capture(streamsCaptor), io.airbyte.config.RefreshStream.RefreshType.MERGE)
       }
     } else {
-      verifyOrder {
-        eventRunner.resetConnectionAsync(connectionId.connectionId, expectedStreams)
+      verify {
+        eventRunner.resetConnectionAsync(connectionId.connectionId, capture(streamsCaptor))
       }
     }
+    Assertions.assertEquals(expectedStreams.size, streamsCaptor.captured.size)
+    Assertions.assertEquals(expectedStreams.toSet(), streamsCaptor.captured.toSet())
   }
 
   @Test
   fun testUpdateConnectionNoStreamsToReset() {
     val updateBody =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .connectionId(expected.connectionId)
-        .schedule(expected.schedule)
-        .status(expected.status)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
+      WebBackendConnectionUpdate(
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        connectionId = expected.connectionId,
+        schedule = expected.schedule,
+        status = expected.status,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+      )
 
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(expected.connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = expected.connectionId)
     val configuredCatalog = generateBasicConfiguredAirbyteCatalog()
-    every { stateHandler.getState(connectionIdRequestBody) } returns ConnectionState().stateType(ConnectionStateType.STREAM)
+    every { stateHandler.getState(connectionIdRequestBody) } returns
+      ConnectionState(stateType = ConnectionStateType.STREAM, connectionId = expected.connectionId)
     every { connectionService.getConfiguredCatalogForConnection(expected.connectionId) } returns configuredCatalog
-    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns CatalogDiff().transforms(emptyList())
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns CatalogDiff(transforms = emptyList())
     every { operationsHandler.listOperationsForConnection(any()) } returns operationReadList
-    every { connectionsHandler.getConnection(expected.connectionId) } returns ConnectionRead().connectionId(expected.connectionId)
+    every { connectionsHandler.getConnection(expected.connectionId) } returns minimalConnectionRead(sourceId = expected.sourceId)
 
     val connectionRead =
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .destinationId(expected.destinationId)
-        .name(expected.name)
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
-        .status(expected.status)
-        .schedule(expected.schedule)
-        .breakingChange(false)
+      ConnectionRead(
+        connectionId = expected.connectionId,
+        sourceId = expected.sourceId,
+        destinationId = expected.destinationId,
+        name = expected.name,
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+        status = expected.status,
+        schedule = expected.schedule,
+        breakingChange = false,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+        nonBreakingChangesPreference = expected.nonBreakingChangesPreference,
+      )
     every { connectionsHandler.updateConnection(any(), any(), any()) } returns connectionRead
     every { connectionsHandler.getConnection(expected.connectionId) } returns connectionRead
 
@@ -1568,7 +1612,7 @@ internal class WebBackendConnectionsHandlerTest {
 
     Assertions.assertEquals(expectedWithNewSchema.syncCatalog, result.syncCatalog)
 
-    val connectionId = ConnectionIdRequestBody().connectionId(result.connectionId)
+    val connectionId = ConnectionIdRequestBody(connectionId = result.connectionId)
 
     verify {
       connectionsHandler.getDiff(
@@ -1587,24 +1631,24 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testUpdateConnectionFixingBreakingSchemaChange() {
     val updateBody =
-      WebBackendConnectionUpdate()
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .connectionId(expected.connectionId)
-        .schedule(expected.schedule)
-        .status(expected.status)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
-        .skipReset(false)
+      WebBackendConnectionUpdate(
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        connectionId = expected.connectionId,
+        schedule = expected.schedule,
+        status = expected.status,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+        skipReset = false,
+      )
 
     val sourceId = sourceRead.sourceId
 
     every { connectionsHandler.getConnection(expected.connectionId) } returns
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .breakingChange(true)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
-        .sourceId(sourceId)
+      minimalConnectionRead(sourceId = sourceId).copy(
+        breakingChange = true,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+      )
 
     val catalogJson =
       """
@@ -1625,7 +1669,7 @@ internal class WebBackendConnectionsHandlerTest {
       }
       """.trimIndent()
 
-    val catalogDiff = CatalogDiff().transforms(emptyList())
+    val catalogDiff = CatalogDiff(transforms = emptyList())
     every { catalogService.getMostRecentActorCatalogForSource(sourceId) } returns
       Optional.of(ActorCatalog().withCatalog(deserialize(catalogJson)))
     every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff andThen catalogDiff
@@ -1635,25 +1679,29 @@ internal class WebBackendConnectionsHandlerTest {
     every { operationsHandler.listOperationsForConnection(any()) } returns operationReadList
 
     val connectionRead =
-      ConnectionRead()
-        .connectionId(expected.connectionId)
-        .sourceId(expected.sourceId)
-        .destinationId(expected.destinationId)
-        .name(expected.name)
-        .namespaceDefinition(expected.namespaceDefinition)
-        .namespaceFormat(expected.namespaceFormat)
-        .prefix(expected.prefix)
-        .syncCatalog(expectedWithNewSchema.syncCatalog)
-        .status(expected.status)
-        .schedule(expected.schedule)
-        .breakingChange(false)
+      ConnectionRead(
+        connectionId = expected.connectionId,
+        sourceId = expected.sourceId,
+        destinationId = expected.destinationId,
+        name = expected.name,
+        namespaceDefinition = expected.namespaceDefinition,
+        namespaceFormat = expected.namespaceFormat,
+        prefix = expected.prefix,
+        syncCatalog = expectedWithNewSchema.syncCatalog,
+        status = expected.status,
+        schedule = expected.schedule,
+        breakingChange = false,
+        notifySchemaChanges = expected.notifySchemaChanges,
+        notifySchemaChangesByEmail = expected.notifySchemaChangesByEmail,
+        nonBreakingChangesPreference = expected.nonBreakingChangesPreference,
+      )
     every { connectionsHandler.updateConnection(any(), any(), any()) } returns connectionRead
 
     val result = wbHandler.webBackendUpdateConnection(updateBody)
 
     Assertions.assertEquals(expectedWithNewSchema.syncCatalog, result.syncCatalog)
 
-    val connectionId = ConnectionIdRequestBody().connectionId(result.connectionId)
+    val connectionId = ConnectionIdRequestBody(connectionId = result.connectionId)
 
     val captor = slot<ConnectionUpdate>()
     verify(exactly = 1) { connectionsHandler.updateConnection(capture(captor), any(), any()) }
@@ -1668,34 +1716,27 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testGetStreamsToReset() {
     val streamTransformAdd =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("added_stream"),
-        )
+      StreamTransform(
+        transformType = StreamTransform.TransformType.ADD_STREAM,
+        streamDescriptor = StreamDescriptor(name = "added_stream"),
+      )
     val streamTransformRemove =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("removed_stream"),
-        )
+      StreamTransform(
+        transformType = StreamTransform.TransformType.REMOVE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "removed_stream"),
+      )
     val streamTransformUpdate =
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(
-          io.airbyte.api.model.generated
-            .StreamDescriptor()
-            .name("updated_stream"),
-        )
+      StreamTransform(
+        transformType = StreamTransform.TransformType.UPDATE_STREAM,
+        streamDescriptor = StreamDescriptor(name = "updated_stream"),
+      )
     val catalogDiff =
-      CatalogDiff().transforms(listOf<@Valid StreamTransform?>(streamTransformAdd, streamTransformRemove, streamTransformUpdate))
-    val resultList: List<io.airbyte.api.model.generated.StreamDescriptor> = getStreamsToReset(catalogDiff)
+      CatalogDiff(
+        transforms = listOf<StreamTransform>(streamTransformAdd, streamTransformRemove, streamTransformUpdate),
+      )
+    val resultList: List<io.airbyte.api.server.generated.models.StreamDescriptor> = getStreamsToReset(catalogDiff)
     Assertions.assertTrue(
-      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor? ->
+      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.server.generated.models.StreamDescriptor? ->
         "added_stream".equals(
           streamDescriptor!!.name,
           ignoreCase = true,
@@ -1703,7 +1744,7 @@ internal class WebBackendConnectionsHandlerTest {
       },
     )
     Assertions.assertTrue(
-      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor? ->
+      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.server.generated.models.StreamDescriptor? ->
         "removed_stream".equals(
           streamDescriptor!!.name,
           ignoreCase = true,
@@ -1711,7 +1752,7 @@ internal class WebBackendConnectionsHandlerTest {
       },
     )
     Assertions.assertTrue(
-      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor? ->
+      resultList.stream().anyMatch { streamDescriptor: io.airbyte.api.server.generated.models.StreamDescriptor? ->
         "updated_stream".equals(
           streamDescriptor!!.name,
           ignoreCase = true,
@@ -1722,7 +1763,7 @@ internal class WebBackendConnectionsHandlerTest {
 
   @Test
   fun testGetSchemaChangeNoChange() {
-    val connectionReadNotBreaking = ConnectionRead().breakingChange(false)
+    val connectionReadNotBreaking = minimalConnectionRead(sourceId = UUID.randomUUID())
 
     Assertions.assertEquals(
       SchemaChange.NO_CHANGE,
@@ -1748,7 +1789,8 @@ internal class WebBackendConnectionsHandlerTest {
   @Test
   fun testGetSchemaChangeBreaking() {
     val sourceId = UUID.randomUUID()
-    val connectionReadWithSourceId = ConnectionRead().sourceCatalogId(UUID.randomUUID()).sourceId(sourceId).breakingChange(true)
+    val connectionReadWithSourceId =
+      minimalConnectionRead(sourceId = sourceId).copy(sourceCatalogId = UUID.randomUUID(), breakingChange = true)
 
     Assertions.assertEquals(
       SchemaChange.BREAKING,
@@ -1765,7 +1807,7 @@ internal class WebBackendConnectionsHandlerTest {
     val catalogId = UUID.randomUUID()
     val differentCatalogId = UUID.randomUUID()
     val connectionReadWithSourceId =
-      ConnectionRead().breakingChange(false)
+      minimalConnectionRead(sourceId = UUID.randomUUID())
 
     Assertions.assertEquals(
       SchemaChange.NON_BREAKING,
@@ -1862,13 +1904,26 @@ internal class WebBackendConnectionsHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testBuildConnectionFiltersWithOnDemandEnabled(onDemandEnabled: Boolean) {
-    val result = buildFilters(WebBackendConnectionListFilters().onDemandEnabled(onDemandEnabled))
+    val result = buildFilters(WebBackendConnectionListFilters(onDemandEnabled = onDemandEnabled))
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(onDemandEnabled, result!!.onDemandEnabled)
   }
 
+  private fun minimalConnectionRead(sourceId: UUID): ConnectionRead =
+    ConnectionRead(
+      connectionId = expected.connectionId,
+      name = expected.name,
+      sourceId = sourceId,
+      destinationId = expected.destinationId,
+      syncCatalog = expected.syncCatalog,
+      status = expected.status,
+      breakingChange = false,
+    )
+
   companion object {
+    private const val STREAM_NAME = "users-data0"
+    private val TEST_OPERATOR_CONFIGURATION = OperatorConfiguration(operatorType = OperatorType.WEBHOOK)
     private const val STREAM1 = "stream1"
     private const val STREAM2 = "stream2"
     private const val FIELD1 = "field1"
@@ -1889,7 +1944,7 @@ internal class WebBackendConnectionsHandlerTest {
       return arrayOf( // Search term only
         arrayOf(
           "Search term only",
-          WebBackendConnectionListFilters().searchTerm("test search"),
+          WebBackendConnectionListFilters(searchTerm = "test search"),
           "test search",
           0,
           0,
@@ -1899,7 +1954,7 @@ internal class WebBackendConnectionsHandlerTest {
         ), // Source definition IDs only
         arrayOf(
           "Source definition IDs only",
-          WebBackendConnectionListFilters().sourceDefinitionIds(listOf<UUID?>(sourceDefId1, sourceDefId2)),
+          WebBackendConnectionListFilters(sourceDefinitionIds = listOf<UUID>(sourceDefId1, sourceDefId2)),
           null,
           2,
           0,
@@ -1909,7 +1964,7 @@ internal class WebBackendConnectionsHandlerTest {
         ), // Destination definition IDs only
         arrayOf(
           "Destination definition IDs only",
-          WebBackendConnectionListFilters().destinationDefinitionIds(listOf<UUID?>(destDefId)),
+          WebBackendConnectionListFilters(destinationDefinitionIds = listOf<UUID>(destDefId)),
           null,
           0,
           1,
@@ -1919,7 +1974,7 @@ internal class WebBackendConnectionsHandlerTest {
         ), // Tag IDs only
         arrayOf(
           "Tag IDs only",
-          WebBackendConnectionListFilters().tagIds(listOf<UUID?>(tagId1, tagId2)),
+          WebBackendConnectionListFilters(tagIds = listOf<UUID>(tagId1, tagId2)),
           null,
           0,
           0,
@@ -1929,11 +1984,12 @@ internal class WebBackendConnectionsHandlerTest {
         ), // Statuses only
         arrayOf(
           "Statuses only",
-          WebBackendConnectionListFilters().statuses(
-            listOf<StatusesEnum?>(
-              StatusesEnum.HEALTHY,
-              StatusesEnum.FAILED,
-            ),
+          WebBackendConnectionListFilters(
+            statuses =
+              listOf(
+                WebBackendConnectionListFilters.Statuses.HEALTHY.value,
+                WebBackendConnectionListFilters.Statuses.FAILED.value,
+              ),
           ),
           null,
           0,
@@ -1944,11 +2000,12 @@ internal class WebBackendConnectionsHandlerTest {
         ), // States only
         arrayOf(
           "States only",
-          WebBackendConnectionListFilters().states(
-            listOf<ActorStatus?>(
-              ActorStatus.ACTIVE,
-              ActorStatus.INACTIVE,
-            ),
+          WebBackendConnectionListFilters(
+            states =
+              listOf(
+                ActorStatus.ACTIVE,
+                ActorStatus.INACTIVE,
+              ),
           ),
           null,
           0,
@@ -1959,13 +2016,14 @@ internal class WebBackendConnectionsHandlerTest {
         ), // Multiple filters combined
         arrayOf(
           "Multiple filters combined",
-          WebBackendConnectionListFilters()
-            .searchTerm("production")
-            .sourceDefinitionIds(listOf<UUID?>(sourceDefId1))
-            .destinationDefinitionIds(listOf<UUID?>(destDefId))
-            .statuses(listOf<StatusesEnum?>(StatusesEnum.HEALTHY))
-            .states(listOf<ActorStatus?>(ActorStatus.ACTIVE))
-            .tagIds(listOf<UUID?>(tagId1)),
+          WebBackendConnectionListFilters(
+            searchTerm = "production",
+            sourceDefinitionIds = listOf<UUID>(sourceDefId1),
+            destinationDefinitionIds = listOf<UUID>(destDefId),
+            statuses = listOf(WebBackendConnectionListFilters.Statuses.HEALTHY.value),
+            states = listOf(ActorStatus.ACTIVE),
+            tagIds = listOf<UUID>(tagId1),
+          ),
           "production",
           1,
           1,
@@ -1987,4 +2045,42 @@ private fun actorDefinitionVersionRead(supportsRefreshes: Boolean = false) =
     supportState = SupportState.SUPPORTED,
     supportsFileTransfer = false,
     supportsDataActivation = false,
+  )
+
+private fun testOperationRead(operationId: UUID) =
+  OperationRead(
+    workspaceId = TEST_OPERATION_WORKSPACE_ID,
+    operationId = operationId,
+    name = "Test Operation",
+    operatorConfiguration = OperatorConfiguration(operatorType = OperatorType.WEBHOOK),
+  )
+
+private val TEST_OPERATION_WORKSPACE_ID: UUID = UUID.randomUUID()
+
+private fun testTag(name: String) =
+  Tag(
+    tagId = UUID.randomUUID(),
+    workspaceId = TEST_OPERATION_WORKSPACE_ID,
+    name = name,
+    color = "000000",
+  )
+
+private fun AirbyteCatalog.withFirstStreamConfig(transform: (AirbyteStreamConfiguration) -> AirbyteStreamConfiguration): AirbyteCatalog =
+  copy(streams = streams.mapIndexed { index, stream -> if (index == 0) stream.copy(config = transform(stream.config!!)) else stream })
+
+private fun AirbyteCatalog.withFirstStream(
+  transform: (io.airbyte.api.server.generated.models.AirbyteStream) -> io.airbyte.api.server.generated.models.AirbyteStream,
+): AirbyteCatalog =
+  copy(streams = streams.mapIndexed { index, stream -> if (index == 0) stream.copy(stream = transform(stream.stream!!)) else stream })
+
+// The merge helper deselects streams that are new in the refreshed catalog ("users-data1" in these fixtures).
+private fun WebBackendConnectionRead.withNewStreamDeselected(): WebBackendConnectionRead =
+  copy(
+    syncCatalog =
+      syncCatalog.copy(
+        streams =
+          syncCatalog.streams.map { stream ->
+            if (stream.stream!!.name == "users-data1") stream.copy(config = stream.config!!.copy(selected = false)) else stream
+          },
+      ),
   )

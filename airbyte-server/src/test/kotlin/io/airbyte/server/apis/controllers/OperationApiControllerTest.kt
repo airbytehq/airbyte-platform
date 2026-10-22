@@ -4,14 +4,15 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.CheckOperationRead
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.OperationCreate
-import io.airbyte.api.model.generated.OperationIdRequestBody
-import io.airbyte.api.model.generated.OperationRead
-import io.airbyte.api.model.generated.OperationReadList
-import io.airbyte.api.model.generated.OperationUpdate
-import io.airbyte.api.model.generated.OperatorConfiguration
+import io.airbyte.api.server.generated.models.CheckOperationRead
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.OperationCreate
+import io.airbyte.api.server.generated.models.OperationIdRequestBody
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperationReadList
+import io.airbyte.api.server.generated.models.OperationUpdate
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
 import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -29,6 +30,17 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
+
+private val OPERATOR_CONFIGURATION = OperatorConfiguration(operatorType = OperatorType.WEBHOOK)
+
+private fun operationRead() =
+  OperationRead(
+    workspaceId = UUID.randomUUID(),
+    operationId = UUID.randomUUID(),
+    name = "op",
+    operatorConfiguration = OPERATOR_CONFIGURATION,
+  )
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -50,18 +62,23 @@ internal class OperationApiControllerTest {
 
   @Test
   fun testCheckOperation() {
-    every { operationsHandler.checkOperation(any()) } returns CheckOperationRead()
+    every { operationsHandler.checkOperation(any()) } returns CheckOperationRead(status = CheckOperationRead.Status.SUCCEEDED)
 
     val path = "/api/v1/operations/check"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OperatorConfiguration())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OPERATOR_CONFIGURATION)))
   }
 
   @Test
   fun testCreateOperation() {
-    every { operationsHandler.createOperation(any()) } returns OperationRead()
+    every { operationsHandler.createOperation(any()) } returns operationRead()
 
     val path = "/api/v1/operations/create"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OperationCreate())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(path, OperationCreate(workspaceId = UUID.randomUUID(), name = "op", operatorConfiguration = OPERATOR_CONFIGURATION)),
+      ),
+    )
   }
 
   @Test
@@ -69,33 +86,44 @@ internal class OperationApiControllerTest {
     every { operationsHandler.deleteOperation(any()) } returns Unit
 
     val path = "/api/v1/operations/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, OperationIdRequestBody())))
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, OperationIdRequestBody(operationId = UUID.randomUUID()))))
   }
 
   @Test
   fun testGetOperation() {
-    every { operationsHandler.getOperation(any()) } returns OperationRead() andThenThrows ConfigNotFoundException("", "")
+    every { operationsHandler.getOperation(any()) } returns operationRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/operations/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OperationIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, OperationIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OperationIdRequestBody(operationId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, OperationIdRequestBody(operationId = UUID.randomUUID()))))
   }
 
   @Test
   fun testListOperationsForConnection() {
-    every { operationsHandler.listOperationsForConnection(any()) } returns OperationReadList() andThenThrows ConfigNotFoundException("", "")
+    every { operationsHandler.listOperationsForConnection(any()) } returns OperationReadList(operations = emptyList()) andThenThrows
+      ConfigNotFoundException("", "")
 
     val path = "/api/v1/operations/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionIdRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody(connectionId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionIdRequestBody(connectionId = UUID.randomUUID()))))
   }
 
   @Test
   fun testUpdateOperation() {
-    every { operationsHandler.updateOperation(any()) } returns OperationRead() andThenThrows ConfigNotFoundException("", "")
+    every { operationsHandler.updateOperation(any()) } returns operationRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/operations/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OperationUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, OperationUpdate())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(path, OperationUpdate(operationId = UUID.randomUUID(), name = "op", operatorConfiguration = OPERATOR_CONFIGURATION)),
+      ),
+    )
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(
+        HttpRequest.POST(path, OperationUpdate(operationId = UUID.randomUUID(), name = "op", operatorConfiguration = OPERATOR_CONFIGURATION)),
+      ),
+    )
   }
 }

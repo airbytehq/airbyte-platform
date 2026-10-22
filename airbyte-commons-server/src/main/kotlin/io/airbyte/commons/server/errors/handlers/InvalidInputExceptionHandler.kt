@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.errors.handlers
 
-import io.airbyte.api.model.generated.InvalidInputExceptionInfo
-import io.airbyte.api.model.generated.InvalidInputProperty
+import io.airbyte.api.server.generated.models.InvalidInputExceptionInfo
+import io.airbyte.api.server.generated.models.InvalidInputProperty
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.KnownException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -58,24 +58,19 @@ class InvalidInputExceptionHandler : ExceptionHandler<ConstraintViolationExcepti
      * @param cve exception with invalidity info
      * @return exception
      */
-    fun infoFromConstraintsWithStackTrace(cve: ConstraintViolationException): InvalidInputExceptionInfo {
-      val exceptionInfo =
-        InvalidInputExceptionInfo()
-          .exceptionClassName(cve.javaClass.getName())
-          .message("Some properties contained invalid input.")
-          .exceptionStack(KnownException.getStackTraceAsList(cve))
-
-      val props: MutableList<InvalidInputProperty?> = ArrayList<InvalidInputProperty?>()
-      for (cv in cve.constraintViolations) {
-        props.add(
-          InvalidInputProperty()
-            .propertyPath(cv.propertyPath.toString())
-            .message(cv.message)
-            .invalidValue(cv.invalidValue?.toString() ?: "null"),
-        )
-      }
-      exceptionInfo.validationErrors(props)
-      return exceptionInfo
-    }
+    fun infoFromConstraintsWithStackTrace(cve: ConstraintViolationException): InvalidInputExceptionInfo =
+      InvalidInputExceptionInfo(
+        exceptionClassName = cve.javaClass.getName(),
+        message = "Some properties contained invalid input.",
+        exceptionStack = KnownException.getStackTraceAsList(cve),
+        validationErrors =
+          cve.constraintViolations.map { cv ->
+            InvalidInputProperty(
+              propertyPath = cv.propertyPath.toString(),
+              message = cv.message,
+              invalidValue = cv.invalidValue?.toString() ?: "null",
+            )
+          },
+      )
   }
 }

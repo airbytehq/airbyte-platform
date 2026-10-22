@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import io.airbyte.api.model.generated.ActorStatus
+import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.ConfiguredAirbyteCatalog

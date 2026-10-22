@@ -4,9 +4,12 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DestinationCoreConfig
-import io.airbyte.api.model.generated.SourceCoreConfig
+import io.airbyte.api.server.generated.models.CheckConnectionRead
+import io.airbyte.api.server.generated.models.DestinationCoreConfig
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.SourceCoreConfig
+import io.airbyte.api.server.generated.models.SynchronousJobRead
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -24,6 +27,19 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.UUID
+
+private fun checkConnectionRead() =
+  CheckConnectionRead(
+    jobInfo =
+      SynchronousJobRead(
+        id = UUID.randomUUID(),
+        configType = JobConfigType.CHECK_CONNECTION_SOURCE,
+        createdAt = 0L,
+        endedAt = 0L,
+        succeeded = true,
+      ),
+  )
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -45,29 +61,89 @@ internal class SchedulerApiControllerTest {
 
   @Test
   fun testExecuteDestinationCheckConnection() {
-    every { schedulerHandler.checkDestinationConnectionFromDestinationCreate(any()) } returns CheckConnectionRead() andThenThrows
+    every { schedulerHandler.checkDestinationConnectionFromDestinationCreate(any()) } returns checkConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/scheduler/destinations/check_connection"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationCoreConfig())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationCoreConfig())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(
+          path,
+          DestinationCoreConfig(
+            destinationDefinitionId = UUID.randomUUID(),
+            connectionConfiguration = Jsons.emptyObject(),
+            workspaceId = UUID.randomUUID(),
+          ),
+        ),
+      ),
+    )
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(
+        HttpRequest.POST(
+          path,
+          DestinationCoreConfig(
+            destinationDefinitionId = UUID.randomUUID(),
+            connectionConfiguration = Jsons.emptyObject(),
+            workspaceId = UUID.randomUUID(),
+          ),
+        ),
+      ),
+    )
   }
 
   @Test
   fun testExecuteSourceCheckConnection() {
-    every { schedulerHandler.checkSourceConnectionFromSourceCreate(any()) } returns CheckConnectionRead() andThenThrows
+    every { schedulerHandler.checkSourceConnectionFromSourceCreate(any()) } returns checkConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/scheduler/sources/check_connection"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceCoreConfig())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceCoreConfig())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(
+          path,
+          SourceCoreConfig(
+            sourceDefinitionId = UUID.randomUUID(),
+            connectionConfiguration = Jsons.emptyObject(),
+            workspaceId = UUID.randomUUID(),
+          ),
+        ),
+      ),
+    )
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(
+        HttpRequest.POST(
+          path,
+          SourceCoreConfig(
+            sourceDefinitionId = UUID.randomUUID(),
+            connectionConfiguration = Jsons.emptyObject(),
+            workspaceId = UUID.randomUUID(),
+          ),
+        ),
+      ),
+    )
   }
 
   @Test
   fun testExecuteSourceDiscoverSchema() {
-    every { schedulerHandler.checkSourceConnectionFromSourceCreate(any()) } returns CheckConnectionRead()
+    every { schedulerHandler.checkSourceConnectionFromSourceCreate(any()) } returns checkConnectionRead()
 
     val path = "/api/v1/scheduler/sources/check_connection"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceCoreConfig())))
+    assertStatus(
+      HttpStatus.OK,
+      client.status(
+        HttpRequest.POST(
+          path,
+          SourceCoreConfig(
+            sourceDefinitionId = UUID.randomUUID(),
+            connectionConfiguration = Jsons.emptyObject(),
+            workspaceId = UUID.randomUUID(),
+          ),
+        ),
+      ),
+    )
   }
 }

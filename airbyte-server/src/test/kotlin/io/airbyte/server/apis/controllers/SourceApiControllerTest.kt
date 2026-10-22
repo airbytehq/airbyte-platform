@@ -5,16 +5,15 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.DiscoverCatalogResult
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
@@ -24,6 +23,7 @@ import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.api.server.generated.models.SourceReadWithMetadata
 import io.airbyte.api.server.generated.models.SourceSearch
 import io.airbyte.api.server.generated.models.SourceUpdate
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
@@ -304,17 +304,19 @@ internal class SourceApiControllerTest {
     )
 
   private fun synchronousJobRead(configType: JobConfigType) =
-    SynchronousJobRead()
-      .id(UUID.randomUUID())
-      .configType(configType)
-      .createdAt(0L)
-      .endedAt(0L)
-      .succeeded(true)
+    SynchronousJobRead(
+      id = UUID.randomUUID(),
+      configType = configType,
+      createdAt = 0L,
+      endedAt = 0L,
+      succeeded = true,
+    )
 
   private fun checkConnectionRead() =
-    CheckConnectionRead()
-      .status(CheckConnectionRead.StatusEnum.SUCCEEDED)
-      .jobInfo(synchronousJobRead(JobConfigType.CHECK_CONNECTION_SOURCE))
+    CheckConnectionRead(
+      status = CheckConnectionRead.Status.SUCCEEDED,
+      jobInfo = synchronousJobRead(JobConfigType.CHECK_CONNECTION_SOURCE),
+    )
 
-  private fun sourceDiscoverSchemaRead() = SourceDiscoverSchemaRead().jobInfo(synchronousJobRead(JobConfigType.DISCOVER_SCHEMA))
+  private fun sourceDiscoverSchemaRead() = SourceDiscoverSchemaRead(jobInfo = synchronousJobRead(JobConfigType.DISCOVER_SCHEMA))
 }

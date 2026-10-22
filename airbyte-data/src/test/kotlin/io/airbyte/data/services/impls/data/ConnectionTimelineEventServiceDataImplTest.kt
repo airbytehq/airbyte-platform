@@ -4,8 +4,9 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobConfig
@@ -69,7 +70,13 @@ internal class ConnectionTimelineEventServiceDataImplTest {
     } returns ConnectionTimelineEvent(connectionId = connectionId, eventType = "")
     val schemaChangeEvent =
       SchemaChangeAutoPropagationEvent(
-        catalogDiff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)),
+        catalogDiff =
+          CatalogDiff(
+            transforms =
+              listOf(
+                StreamTransform(transformType = StreamTransform.TransformType.ADD_STREAM, streamDescriptor = StreamDescriptor(name = "stream")),
+              ),
+          ),
       )
     val writtenEvent = service.writeEvent(connectionId = connectionId, event = schemaChangeEvent, userId = null)
     verify {

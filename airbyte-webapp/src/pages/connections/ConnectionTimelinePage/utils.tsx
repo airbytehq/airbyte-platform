@@ -72,12 +72,17 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
 };
 
 /**
- * Create a purely FE running event from a job
+ * Create a purely FE running event from a job. Returns null when there is no running job to describe.
  */
 export const createRunningEventFromJob = (
   syncProgressData: ConnectionSyncProgressRead,
   connectionId: string
-): ConnectionTimelineRunningEvent => {
+): ConnectionTimelineRunningEvent | null => {
+  const { configType } = syncProgressData;
+  if (!configType) {
+    return null;
+  }
+
   const jobMapping: Record<
     keyof Pick<typeof JobConfigType, "sync" | "refresh" | "clear" | "reset_connection">,
     ConnectionRunningEventType
@@ -88,7 +93,7 @@ export const createRunningEventFromJob = (
     [JobConfigType.reset_connection]: ConnectionRunningEventType.CONNECTION_RESET_RUNNING,
   };
 
-  const eventType = jobMapping[syncProgressData.configType as keyof typeof jobMapping];
+  const eventType = jobMapping[configType as keyof typeof jobMapping];
 
   return {
     id: "running",
@@ -101,7 +106,7 @@ export const createRunningEventFromJob = (
         streamNamespace: stream.streamNamespace,
         configType: stream.configType,
       })),
-      configType: syncProgressData.configType,
+      configType,
       jobId: syncProgressData.jobId ?? 0,
     },
     user: { email: "", name: "", id: "", isDeleted: false },

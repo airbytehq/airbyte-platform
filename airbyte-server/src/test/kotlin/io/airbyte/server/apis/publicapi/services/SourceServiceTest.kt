@@ -4,13 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.FailureReason
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.FailureReason
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -124,9 +125,19 @@ class SourceServiceTest {
 
   @Test
   fun `schema discovery hides internal failure messages including absent failure reason`() {
-    for (failureReason in listOf(null, FailureReason().internalMessage("internal connector stack trace"))) {
+    for (failureReason in listOf(null, FailureReason(internalMessage = "internal connector stack trace", timestamp = 0L))) {
       every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns
-        SourceDiscoverSchemaRead().jobInfo(SynchronousJobRead().succeeded(false).failureReason(failureReason))
+        SourceDiscoverSchemaRead(
+          jobInfo =
+            SynchronousJobRead(
+              succeeded = false,
+              failureReason = failureReason,
+              id = UUID.randomUUID(),
+              configType = JobConfigType.DISCOVER_SCHEMA,
+              createdAt = 0L,
+              endedAt = 0L,
+            ),
+        )
 
       val error = assertThrows<UnexpectedProblem> { sourceService.getSourceSchema(sourceId, false) }
       assertNull(error.problem.getData())
@@ -138,8 +149,16 @@ class SourceServiceTest {
   fun `schema discovery preserves connector user-facing failure messages`() {
     val externalMessage = "The configured account cannot read this table."
     every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns
-      SourceDiscoverSchemaRead().jobInfo(
-        SynchronousJobRead().succeeded(false).failureReason(FailureReason().internalMessage("secret internal text").externalMessage(externalMessage)),
+      SourceDiscoverSchemaRead(
+        jobInfo =
+          SynchronousJobRead(
+            succeeded = false,
+            failureReason = FailureReason(internalMessage = "secret internal text", externalMessage = externalMessage, timestamp = 0L),
+            id = UUID.randomUUID(),
+            configType = JobConfigType.DISCOVER_SCHEMA,
+            createdAt = 0L,
+            endedAt = 0L,
+          ),
       )
 
     val error = assertThrows<UnexpectedProblem> { sourceService.getSourceSchema(sourceId, false) }

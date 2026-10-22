@@ -57,7 +57,6 @@ import java.util.function.Function
 import java.util.function.Supplier
 import java.util.stream.Collectors
 import java.util.stream.Stream
-import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * DestinationDefinitionsHandler. Javadocs suppressed because api docs should be used as source of
@@ -393,7 +392,7 @@ open class DestinationDefinitionsHandler
           .withCustom(true)
           .withResourceRequirements(
             apiPojoConverters.scopedResourceReqsToInternal(
-              Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+              resourceRequirements,
             ),
           )
 
@@ -478,7 +477,7 @@ open class DestinationDefinitionsHandler
       val updatedResourceReqs =
         if (resourceRequirements != null) {
           apiPojoConverters.scopedResourceReqsToInternal(
-            Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java),
+            resourceRequirements,
           )
         } else {
           currentDestination.resourceRequirements

@@ -4,14 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.model.generated.Tag
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.SyncMode
+import io.airbyte.api.server.generated.models.Tag
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -40,35 +40,36 @@ object ConnectionReadMapper {
     workspaceId: UUID?,
   ): ConnectionResponse {
     val streamConfigurations =
-      connectionRead.syncCatalog?.let { catalog ->
+      connectionRead.syncCatalog.let { catalog ->
         StreamConfigurations(
           streams =
             catalog.streams
               .map { streamAndConfiguration ->
-                assert(streamAndConfiguration.config != null)
+                val config = streamAndConfiguration.config!!
+                val stream = streamAndConfiguration.stream!!
                 val connectionSyncMode: ConnectionSyncModeEnum? =
                   syncModesToConnectionSyncModeEnum(
-                    streamAndConfiguration.config!!.syncMode,
-                    streamAndConfiguration.config!!.destinationSyncMode,
+                    config.syncMode,
+                    config.destinationSyncMode,
                   )
                 val selectedFields: List<SelectedFieldInfo>? =
-                  streamAndConfiguration.config!!.selectedFields?.map {
+                  config.selectedFields?.map {
                     selectedFieldInfoConverter(it)
                   }
                 StreamConfiguration(
-                  name = streamAndConfiguration.stream.name,
-                  destinationObjectName = streamAndConfiguration.config.destinationObjectName,
-                  namespace = streamAndConfiguration.stream.namespace,
-                  primaryKey = streamAndConfiguration.config.primaryKey,
-                  cursorField = streamAndConfiguration.config.cursorField,
-                  mappers = convertMappers(streamAndConfiguration.config.mappers),
-                  includeFiles = streamAndConfiguration.config.includeFiles,
+                  name = stream.name,
+                  destinationObjectName = config.destinationObjectName,
+                  namespace = stream.namespace,
+                  primaryKey = config.primaryKey,
+                  cursorField = config.cursorField,
+                  mappers = convertMappers(config.mappers),
+                  includeFiles = config.includeFiles,
                   syncMode = connectionSyncMode,
                   selectedFields = selectedFields,
                 )
               }.toList(),
         )
-      } ?: StreamConfigurations()
+      }
 
     val connectionScheduleResponse =
       ConnectionScheduleResponse(
@@ -97,7 +98,7 @@ object ConnectionReadMapper {
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,
-      createdAt = connectionRead.createdAt,
+      createdAt = connectionRead.createdAt!!,
       tags = connectionRead.tags?.let { t -> convertTags(t) } ?: emptyList(),
     )
   }
@@ -153,7 +154,7 @@ object ConnectionReadMapper {
   /**
    * Convert selected fields from airbyte_api model to public_api model
    * */
-  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.model.generated.SelectedFieldInfo): SelectedFieldInfo =
+  private fun selectedFieldInfoConverter(selectedField: io.airbyte.api.server.generated.models.SelectedFieldInfo): SelectedFieldInfo =
     SelectedFieldInfo(
       fieldPath = selectedField.fieldPath,
     )

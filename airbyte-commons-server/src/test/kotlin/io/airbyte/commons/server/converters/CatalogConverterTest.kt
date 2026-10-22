@@ -5,11 +5,13 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.StreamMapperType
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.StreamMapperType
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -59,7 +61,7 @@ internal class CatalogConverterTest {
 
   @Test
   fun testEnumCompatibility() {
-    Assertions.assertTrue(isCompatible<io.airbyte.config.SyncMode, io.airbyte.api.model.generated.SyncMode>())
+    Assertions.assertTrue(isCompatible<io.airbyte.config.SyncMode, io.airbyte.api.server.generated.models.SyncMode>())
     Assertions.assertTrue(isCompatible<io.airbyte.config.DestinationSyncMode, DestinationSyncMode>())
     Assertions.assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.model.generated.DataType>())
   }
@@ -68,19 +70,23 @@ internal class CatalogConverterTest {
   fun testConvertInternal() {
     val hashingMapper = createHashingMapper(ConnectionHelpers.SECOND_FIELD_NAME)
     val hashingMapper2 = createHashingMapper(ConnectionHelpers.FIELD_NAME, UUID.randomUUID())
-    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
-    apiStream.getConfig().setMappers(
-      listOf(
-        ConfiguredStreamMapper()
-          .type(StreamMapperType.HASHING)
-          .mapperConfiguration(jsonNode<HashingConfig?>(hashingMapper.config)),
-        ConfiguredStreamMapper()
-          .id(hashingMapper2.id())
-          .type(StreamMapperType.HASHING)
-          .mapperConfiguration(jsonNode<HashingConfig?>(hashingMapper2.config)),
-      ),
-    )
+    val apiCatalog =
+      ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+        it.copy(
+          mappers =
+            listOf(
+              ConfiguredStreamMapper(
+                type = StreamMapperType.HASHING,
+                mapperConfiguration = jsonNode<HashingConfig?>(hashingMapper.config),
+              ),
+              ConfiguredStreamMapper(
+                id = hashingMapper2.id(),
+                type = StreamMapperType.HASHING,
+                mapperConfiguration = jsonNode<HashingConfig?>(hashingMapper2.config),
+              ),
+            ),
+        )
+      }
 
     val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
     Assertions.assertEquals(1, internalCatalog.streams.size)
@@ -98,9 +104,7 @@ internal class CatalogConverterTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testConvertInternalWithFiles(includeFiles: Boolean) {
-    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
-    apiStream.getConfig().setIncludeFiles(includeFiles)
+    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig { it.copy(includeFiles = includeFiles) }
 
     val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
     Assertions.assertEquals(1, internalCatalog.streams.size)
@@ -110,10 +114,9 @@ internal class CatalogConverterTest {
 
   @Test
   fun testConvertInternalWithDestinationObjectName() {
-    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
     val destinationObjectName = "test_destination_object_name"
-    apiStream.getConfig().setDestinationObjectName(destinationObjectName)
+    val apiCatalog =
+      ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig { it.copy(destinationObjectName = destinationObjectName) }
 
     val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
     Assertions.assertEquals(1, internalCatalog.streams.size)
@@ -123,11 +126,10 @@ internal class CatalogConverterTest {
 
   @Test
   fun testConvertInternalWithHashedFields() {
-    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
-    apiStream
-      .getConfig()
-      .setHashedFields(listOf(SelectedFieldInfo().fieldPath(listOf(ConnectionHelpers.SECOND_FIELD_NAME))))
+    val apiCatalog =
+      ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+        it.copy(hashedFields = listOf(SelectedFieldInfo(fieldPath = listOf(ConnectionHelpers.SECOND_FIELD_NAME))))
+      }
 
     val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
     Assertions.assertEquals(1, internalCatalog.streams.size)
@@ -144,18 +146,18 @@ internal class CatalogConverterTest {
 
   @Test
   fun testConvertToInternalOnlyIncludeSelectedFields() {
-    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
+    val twoFieldsCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
+    val apiStream: AirbyteStreamAndConfiguration = twoFieldsCatalog.streams.first()
     Assertions.assertEquals(
       2,
       apiStream
-        .getStream()
-        .getJsonSchema()
+        .stream!!
+        .jsonSchema!!
         .get("properties")
         .size(),
     )
 
-    apiStream.getConfig().fieldSelectionEnabled(true).addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
+    val apiCatalog = twoFieldsCatalog.withFirstConfig { it.selectFields(ConnectionHelpers.FIELD_NAME) }
 
     val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
     Assertions.assertEquals(1, internalCatalog.streams.size)
@@ -177,157 +179,98 @@ internal class CatalogConverterTest {
   fun testConvertToProtocolColumnSelectionValidation() {
     Assertions.assertThrows(JsonValidationException::class.java) {
       // fieldSelectionEnabled=true but selectedFields=null.
-      val catalog = ConnectionHelpers.generateBasicApiCatalog()
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .selectedFields(null)
+      val catalog = ConnectionHelpers.generateBasicApiCatalog().withFirstConfig { it.copy(fieldSelectionEnabled = true, selectedFields = null) }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(JsonValidationException::class.java) {
       // JSON schema has no `properties` node.
-      val catalog = ConnectionHelpers.generateBasicApiCatalog()
-      (
-        catalog
-          .getStreams()
-          .get(0)
-          .getStream()
-          .getJsonSchema() as ObjectNode
-      ).remove("properties")
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem("foo"))
+      val basicCatalog = ConnectionHelpers.generateBasicApiCatalog()
+      (basicCatalog.streams[0].stream!!.jsonSchema as ObjectNode).remove("properties")
+      val catalog = basicCatalog.withFirstConfig { it.selectFields("foo") }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(JsonValidationException::class.java) {
       // SelectedFieldInfo with empty path.
-      val catalog = ConnectionHelpers.generateBasicApiCatalog()
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo())
+      val catalog =
+        ConnectionHelpers.generateBasicApiCatalog().withFirstConfig {
+          it.copy(fieldSelectionEnabled = true, selectedFields = it.selectedFields.orEmpty() + SelectedFieldInfo())
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(UnsupportedOperationException::class.java) {
       // SelectedFieldInfo with nested field path.
-      val catalog = ConnectionHelpers.generateBasicApiCatalog()
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem("foo").addFieldPathItem("bar"))
+      val catalog =
+        ConnectionHelpers.generateBasicApiCatalog().withFirstConfig {
+          it.copy(fieldSelectionEnabled = true, selectedFields = it.selectedFields.orEmpty() + SelectedFieldInfo(fieldPath = listOf("foo", "bar")))
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(JsonValidationException::class.java) {
       // SelectedFieldInfo with empty path.
-      val catalog = ConnectionHelpers.generateBasicApiCatalog()
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem("foo"))
+      val catalog = ConnectionHelpers.generateBasicApiCatalog().withFirstConfig { it.selectFields("foo") }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(JsonValidationException::class.java) {
-      val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
       // Only FIELD_NAME is selected.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
       // The sync mode is INCREMENTAL and SECOND_FIELD_NAME is a cursor field.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .syncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL)
-        .cursorField(listOf(ConnectionHelpers.SECOND_FIELD_NAME))
+      val catalog =
+        ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+          it
+            .selectFields(
+              ConnectionHelpers.FIELD_NAME,
+            ).copy(syncMode = io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL, cursorField = listOf(ConnectionHelpers.SECOND_FIELD_NAME))
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertDoesNotThrow {
-      val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
       // Only FIELD_NAME is selected.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
       // The cursor field is not selected, but it's okay because it's FULL_REFRESH so it doesn't throw.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .syncMode(io.airbyte.api.model.generated.SyncMode.FULL_REFRESH)
-        .cursorField(listOf(ConnectionHelpers.SECOND_FIELD_NAME))
+      val catalog =
+        ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+          it
+            .selectFields(
+              ConnectionHelpers.FIELD_NAME,
+            ).copy(syncMode = io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH, cursorField = listOf(ConnectionHelpers.SECOND_FIELD_NAME))
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertThrows(JsonValidationException::class.java) {
-      val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
       // Only FIELD_NAME is selected.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
       // The destination sync mode is DEDUP and SECOND_FIELD_NAME is a primary key.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-        .primaryKey(listOf(listOf(ConnectionHelpers.SECOND_FIELD_NAME)))
+      val catalog =
+        ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+          it
+            .selectFields(
+              ConnectionHelpers.FIELD_NAME,
+            ).copy(destinationSyncMode = DestinationSyncMode.APPEND_DEDUP, primaryKey = listOf(listOf(ConnectionHelpers.SECOND_FIELD_NAME)))
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
 
     Assertions.assertDoesNotThrow {
-      val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
       // Only FIELD_NAME is selected.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .fieldSelectionEnabled(true)
-        .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
       // The primary key is not selected but that's okay because the destination sync mode is OVERWRITE.
-      catalog
-        .getStreams()
-        .get(0)
-        .getConfig()
-        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-        .primaryKey(listOf(listOf(ConnectionHelpers.SECOND_FIELD_NAME)))
+      val catalog =
+        ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig {
+          it
+            .selectFields(
+              ConnectionHelpers.FIELD_NAME,
+            ).copy(destinationSyncMode = DestinationSyncMode.OVERWRITE, primaryKey = listOf(listOf(ConnectionHelpers.SECOND_FIELD_NAME)))
+        }
       catalogConverter.toConfiguredInternal(catalog)
     }
   }
 
   @Test
   fun testConvertToProtocolFieldSelection() {
-    val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
-    catalog
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .fieldSelectionEnabled(true)
-      .addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(ConnectionHelpers.FIELD_NAME))
+    val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields().withFirstConfig { it.selectFields(ConnectionHelpers.FIELD_NAME) }
     Assertions.assertEquals(ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(), catalogConverter.toConfiguredInternal(catalog))
   }
 
@@ -337,12 +280,11 @@ internal class CatalogConverterTest {
     val actualStreamConfig =
       catalogConverter
         .toApi(persistedCatalog, null)
-        .getStreams()
-        .get(0)
-        .getConfig()
-    val actualSyncMode = actualStreamConfig.getSyncMode()
-    val actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode()
-    Assertions.assertEquals(io.airbyte.api.model.generated.SyncMode.FULL_REFRESH, actualSyncMode)
+        .streams[0]
+        .config!!
+    val actualSyncMode = actualStreamConfig.syncMode
+    val actualDestinationSyncMode = actualStreamConfig.destinationSyncMode
+    Assertions.assertEquals(io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH, actualSyncMode)
     Assertions.assertEquals(DestinationSyncMode.OVERWRITE, actualDestinationSyncMode)
   }
 
@@ -357,12 +299,11 @@ internal class CatalogConverterTest {
     val actualStreamConfig =
       catalogConverter
         .toApi(persistedCatalog, null)
-        .getStreams()
-        .get(0)
-        .getConfig()
-    val actualSyncMode = actualStreamConfig.getSyncMode()
-    val actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode()
-    Assertions.assertEquals(io.airbyte.api.model.generated.SyncMode.INCREMENTAL, actualSyncMode)
+        .streams[0]
+        .config!!
+    val actualSyncMode = actualStreamConfig.syncMode
+    val actualDestinationSyncMode = actualStreamConfig.destinationSyncMode
+    Assertions.assertEquals(io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL, actualSyncMode)
     Assertions.assertEquals(DestinationSyncMode.APPEND_DEDUP, actualDestinationSyncMode)
   }
 
@@ -373,12 +314,11 @@ internal class CatalogConverterTest {
     val actualStreamConfig =
       catalogConverter
         .toApi(persistedCatalog, null)
-        .getStreams()
-        .get(0)
-        .getConfig()
-    val actualSyncMode = actualStreamConfig.getSyncMode()
-    val actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode()
-    Assertions.assertEquals(io.airbyte.api.model.generated.SyncMode.FULL_REFRESH, actualSyncMode)
+        .streams[0]
+        .config!!
+    val actualSyncMode = actualStreamConfig.syncMode
+    val actualDestinationSyncMode = actualStreamConfig.destinationSyncMode
+    Assertions.assertEquals(io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH, actualSyncMode)
     Assertions.assertEquals(DestinationSyncMode.OVERWRITE, actualDestinationSyncMode)
   }
 
@@ -393,12 +333,22 @@ internal class CatalogConverterTest {
     val actualStreamConfig =
       catalogConverter
         .toApi(persistedCatalog, null)
-        .getStreams()
-        .get(0)
-        .getConfig()
-    val actualSyncMode = actualStreamConfig.getSyncMode()
-    val actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode()
-    Assertions.assertEquals(io.airbyte.api.model.generated.SyncMode.INCREMENTAL, actualSyncMode)
+        .streams[0]
+        .config!!
+    val actualSyncMode = actualStreamConfig.syncMode
+    val actualDestinationSyncMode = actualStreamConfig.destinationSyncMode
+    Assertions.assertEquals(io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL, actualSyncMode)
     Assertions.assertEquals(DestinationSyncMode.APPEND, actualDestinationSyncMode)
   }
+
+  private fun AirbyteCatalog.withFirstConfig(config: (AirbyteStreamConfiguration) -> AirbyteStreamConfiguration): AirbyteCatalog {
+    val first = streams[0]
+    return copy(streams = listOf(first.copy(config = config(first.config!!))) + streams.drop(1))
+  }
+
+  private fun AirbyteStreamConfiguration.selectFields(vararg fieldNames: String): AirbyteStreamConfiguration =
+    copy(
+      fieldSelectionEnabled = true,
+      selectedFields = selectedFields.orEmpty() + fieldNames.map { SelectedFieldInfo(fieldPath = listOf(it)) },
+    )
 }

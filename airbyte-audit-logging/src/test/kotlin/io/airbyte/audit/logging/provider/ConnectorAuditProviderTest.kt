@@ -5,11 +5,11 @@
 package io.airbyte.audit.logging.provider
 
 import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceUpdate
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.commons.json.Jsons
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -47,13 +47,18 @@ class ConnectorAuditProviderTest {
   fun `createSource response summary carries the newly assigned sourceId`() {
     val sourceId = UUID.randomUUID()
     val result =
-      SourceRead()
-        .sourceId(sourceId)
-        .name("my postgres")
-        .sourceName("Postgres")
-        .workspaceId(UUID.randomUUID())
-        .sourceDefinitionId(UUID.randomUUID())
-        .connectionConfiguration(Jsons.jsonNode(mapOf("password" to "super-secret-value")))
+      SourceRead(
+        sourceId = sourceId,
+        name = "my postgres",
+        sourceName = "Postgres",
+        workspaceId = UUID.randomUUID(),
+        sourceDefinitionId = UUID.randomUUID(),
+        connectionConfiguration =
+          Jsons.jsonNode(
+            mapOf("password" to "super-secret-value"),
+          ),
+        createdAt = 0L,
+      )
 
     val summary = provider.generateSummaryFromResult(result)
 
@@ -112,7 +117,16 @@ class ConnectorAuditProviderTest {
   @Test
   fun `destination response summary carries the newly assigned destinationId`() {
     val destinationId = UUID.randomUUID()
-    val result = DestinationRead().destinationId(destinationId).name("my snowflake").destinationName("Snowflake")
+    val result =
+      DestinationRead(
+        destinationId = destinationId,
+        name = "my snowflake",
+        destinationName = "Snowflake",
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        connectionConfiguration = Jsons.emptyObject(),
+        createdAt = 0L,
+      )
 
     val node = Jsons.deserialize(provider.generateSummaryFromResult(result))
 

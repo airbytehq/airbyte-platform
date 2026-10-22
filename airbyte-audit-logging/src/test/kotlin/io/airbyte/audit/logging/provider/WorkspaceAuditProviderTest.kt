@@ -7,11 +7,11 @@ package io.airbyte.audit.logging.provider
 import io.airbyte.api.model.generated.WebhookConfigRead
 import io.airbyte.api.model.generated.WebhookConfigWrite
 import io.airbyte.api.model.generated.WorkspaceCreate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.json.Jsons
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -116,7 +116,7 @@ class WorkspaceAuditProviderTest {
   fun `deleteWorkspace request summary identifies which workspace was deleted`() {
     val workspaceId = UUID.randomUUID()
 
-    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceIdRequestBody().workspaceId(workspaceId)))
+    val node = Jsons.deserialize(provider.generateSummaryFromRequest(WorkspaceIdRequestBody(workspaceId = workspaceId)))
 
     assertEquals(workspaceId.toString(), node.get("workspaceId").asText())
   }

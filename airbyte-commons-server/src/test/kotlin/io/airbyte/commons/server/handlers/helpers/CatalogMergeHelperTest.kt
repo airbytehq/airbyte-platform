@@ -4,12 +4,13 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateApiCatalogWithTwoFields
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateBasicApiCatalog
@@ -17,7 +18,6 @@ import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.Field
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,45 +35,49 @@ internal class CatalogMergeHelperTest {
 
   @Test
   fun testUpdateSchemaWithDiscoveryFromEmpty() {
-    val original = AirbyteCatalog().streams(mutableListOf<@Valid AirbyteStreamAndConfiguration?>())
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    discovered
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
+    val original = AirbyteCatalog(streams = emptyList())
+    val discovered =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+          )
+        },
+      )
 
-    val expected = generateBasicApiCatalog()
-    expected
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    expected
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
-      .selected(false)
-      .suggested(false)
-      .selectedFields(mutableListOf<@Valid SelectedFieldInfo?>())
+    val expected =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+            selected = false,
+            suggested = false,
+            selectedFields = emptyList(),
+          )
+        },
+      )
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
@@ -82,70 +86,76 @@ internal class CatalogMergeHelperTest {
 
   @Test
   fun testUpdateSchemaWithDiscoveryResetStream() {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name("random-stream")
-      .defaultCursorField(listOf<String?>(FIELD1))
-      .jsonSchema(
-        CatalogHelpers.fieldsToJsonSchema(
-          Field.of(FIELD1, JsonSchemaType.NUMBER),
-          Field.of(FIELD2, JsonSchemaType.NUMBER),
-          Field.of(FIELD5, JsonSchemaType.STRING),
-        ),
-      ).supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    original
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.INCREMENTAL)
-      .cursorField(listOf<String?>(FIELD1))
-      .destinationSyncMode(DestinationSyncMode.APPEND)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName("random_stream")
+    val original =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = "random-stream",
+            defaultCursorField = listOf(FIELD1),
+            jsonSchema =
+              CatalogHelpers.fieldsToJsonSchema(
+                Field.of(FIELD1, JsonSchemaType.NUMBER),
+                Field.of(FIELD2, JsonSchemaType.NUMBER),
+                Field.of(FIELD5, JsonSchemaType.STRING),
+              ),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.INCREMENTAL,
+            cursorField = listOf(FIELD1),
+            destinationSyncMode = DestinationSyncMode.APPEND,
+            primaryKey = emptyList(),
+            aliasName = "random_stream",
+          )
+        },
+      )
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .defaultCursorField(listOf<String?>(FIELD3))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    discovered
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
+    val discovered =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            defaultCursorField = listOf(FIELD3),
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+          )
+        },
+      )
 
-    val expected = generateBasicApiCatalog()
-    expected
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .defaultCursorField(listOf<String?>(FIELD3))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    expected
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
-      .selected(false)
-      .suggested(false)
-      .selectedFields(mutableListOf<@Valid SelectedFieldInfo?>())
+    val expected =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            defaultCursorField = listOf(FIELD3),
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+            selected = false,
+            suggested = false,
+            selectedFields = emptyList(),
+          )
+        },
+      )
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
@@ -154,103 +164,108 @@ internal class CatalogMergeHelperTest {
 
   @Test
   fun testUpdateSchemaWithDiscoveryMergeNewStream() {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .defaultCursorField(listOf<String?>(FIELD1))
-      .jsonSchema(
-        CatalogHelpers.fieldsToJsonSchema(
-          Field.of(FIELD1, JsonSchemaType.NUMBER),
-          Field.of(FIELD2, JsonSchemaType.NUMBER),
-          Field.of(FIELD5, JsonSchemaType.STRING),
-        ),
-      ).supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    original
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.INCREMENTAL)
-      .cursorField(listOf<String?>(FIELD1))
-      .destinationSyncMode(DestinationSyncMode.APPEND)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName("renamed_stream")
+    val original =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            defaultCursorField = listOf(FIELD1),
+            jsonSchema =
+              CatalogHelpers.fieldsToJsonSchema(
+                Field.of(FIELD1, JsonSchemaType.NUMBER),
+                Field.of(FIELD2, JsonSchemaType.NUMBER),
+                Field.of(FIELD5, JsonSchemaType.STRING),
+              ),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.INCREMENTAL,
+            cursorField = listOf(FIELD1),
+            destinationSyncMode = DestinationSyncMode.APPEND,
+            primaryKey = emptyList(),
+            aliasName = "renamed_stream",
+          )
+        },
+      )
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .defaultCursorField(listOf<String?>(FIELD3))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    discovered
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
-    val newStream = generateBasicApiCatalog().getStreams().get(0)
-    newStream
-      .getStream()
-      .name(STREAM2)
-      .defaultCursorField(listOf<String?>(FIELD5))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD5, JsonSchemaType.BOOLEAN)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    newStream
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM2)
-    discovered.getStreams().add(newStream)
+    val newStream =
+      generateBasicApiCatalog()
+        .withFirstStream(
+          stream = {
+            it.copy(
+              name = STREAM2,
+              defaultCursorField = listOf(FIELD5),
+              jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD5, JsonSchemaType.BOOLEAN)),
+              supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+            )
+          },
+          config = {
+            it.copy(
+              syncMode = SyncMode.FULL_REFRESH,
+              cursorField = emptyList(),
+              destinationSyncMode = DestinationSyncMode.OVERWRITE,
+              primaryKey = emptyList(),
+              aliasName = STREAM2,
+            )
+          },
+        ).streams[0]
+    val discoveredBase =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            defaultCursorField = listOf(FIELD3),
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+          )
+        },
+      )
+    val discovered = discoveredBase.copy(streams = discoveredBase.streams + newStream)
 
-    val expected = generateBasicApiCatalog()
-    expected
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .defaultCursorField(listOf<String?>(FIELD3))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-    expected
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.INCREMENTAL)
-      .cursorField(listOf<String?>(FIELD1))
-      .destinationSyncMode(DestinationSyncMode.APPEND)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName("renamed_stream")
-      .selected(true)
-      .suggested(false)
-      .selectedFields(mutableListOf<@Valid SelectedFieldInfo?>())
-    val expectedNewStream = generateBasicApiCatalog().getStreams().get(0)
-    expectedNewStream
-      .getStream()
-      .name(STREAM2)
-      .defaultCursorField(listOf<String?>(FIELD5))
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD5, JsonSchemaType.BOOLEAN)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    expectedNewStream
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM2)
-      .selected(false)
-      .suggested(false)
-      .selectedFields(mutableListOf<@Valid SelectedFieldInfo?>())
-    expected.getStreams().add(expectedNewStream)
+    val expectedNewStream =
+      newStream.copy(
+        config =
+          newStream.config!!.copy(
+            selected = false,
+            suggested = false,
+            selectedFields = emptyList(),
+          ),
+      )
+    val expectedBase =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            defaultCursorField = listOf(FIELD3),
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD2, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.INCREMENTAL,
+            cursorField = listOf(FIELD1),
+            destinationSyncMode = DestinationSyncMode.APPEND,
+            primaryKey = emptyList(),
+            aliasName = "renamed_stream",
+            selected = true,
+            suggested = false,
+            selectedFields = emptyList(),
+          )
+        },
+      )
+    val expected = expectedBase.copy(streams = expectedBase.streams + expectedNewStream)
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
@@ -259,117 +274,84 @@ internal class CatalogMergeHelperTest {
 
   @Test
   fun testUpdateSchemaWithDiscoveryWithChangedSourceDefinedPK() {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .first()
-      .getStream()
-      .sourceDefinedPrimaryKey(listOf(listOf<String?>(FIELD1)))
-    original
-      .getStreams()
-      .first()
-      .getConfig()
-      .primaryKey(listOf(listOf<String?>(FIELD1)))
+    val original =
+      generateBasicApiCatalog().withFirstStream(
+        stream = { it.copy(sourceDefinedPrimaryKey = listOf(listOf(FIELD1))) },
+        config = { it.copy(primaryKey = listOf(listOf(FIELD1))) },
+      )
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .first()
-      .getStream()
-      .sourceDefinedPrimaryKey(listOf(listOf<String?>(FIELD2)))
-    discovered
-      .getStreams()
-      .first()
-      .getConfig()
-      .primaryKey(listOf(listOf<String?>(FIELD2)))
+    val discovered =
+      generateBasicApiCatalog().withFirstStream(
+        stream = { it.copy(sourceDefinedPrimaryKey = listOf(listOf(FIELD2))) },
+        config = { it.copy(primaryKey = listOf(listOf(FIELD2))) },
+      )
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
     // Use new value for source-defined PK
     Assertions.assertEquals(
-      listOf(listOf<String?>(FIELD2)),
-      actual
-        .getStreams()
+      listOf(listOf(FIELD2)),
+      actual.streams
         .first()
-        .getConfig()
-        .getPrimaryKey(),
+        .config!!
+        .primaryKey,
     )
   }
 
   @Test
   fun testUpdateSchemaWithDiscoveryWithNoSourceDefinedPK() {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .first()
-      .getConfig()
-      .primaryKey(listOf(listOf<String?>(FIELD1)))
+    val original =
+      generateBasicApiCatalog().withFirstStream(
+        config = { it.copy(primaryKey = listOf(listOf(FIELD1))) },
+      )
 
     val discovered = generateBasicApiCatalog()
     Assertions.assertNotEquals(
-      original
-        .getStreams()
+      original.streams
         .first()
-        .getConfig()
-        .getPrimaryKey(),
-      discovered
-        .getStreams()
+        .config!!
+        .primaryKey,
+      discovered.streams
         .first()
-        .getConfig()
-        .getPrimaryKey(),
+        .config!!
+        .primaryKey,
     )
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
     // Keep previously-configured PK
     Assertions.assertEquals(
-      listOf(listOf<String?>(FIELD1)),
-      actual
-        .getStreams()
+      listOf(listOf(FIELD1)),
+      actual.streams
         .first()
-        .getConfig()
-        .getPrimaryKey(),
+        .config!!
+        .primaryKey,
     )
   }
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testUpdateSchemaWithDiscoveryWithIncludeFiles(includeFiles: Boolean) {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .first()
-      .getConfig()
-      .includeFiles(includeFiles)
+    val original = generateBasicApiCatalog().withFirstStream(config = { it.copy(includeFiles = includeFiles) })
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .first()
-      .getConfig()
-      .includeFiles(false)
+    val discovered = generateBasicApiCatalog().withFirstStream(config = { it.copy(includeFiles = false) })
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
     // Use new value for include files
     Assertions.assertEquals(
       includeFiles,
-      actual
-        .getStreams()
+      actual.streams
         .first()
-        .getConfig()
-        .getIncludeFiles(),
+        .config!!
+        .includeFiles,
     )
   }
 
   @Test
   fun testUpdateSchemaWithDestinationObjectName() {
-    val configured = generateBasicApiCatalog()
-    configured
-      .getStreams()
-      .first()
-      .getConfig()
-      .destinationObjectName("configured_object_name")
+    val configured =
+      generateBasicApiCatalog().withFirstStream(config = { it.copy(destinationObjectName = "configured_object_name") })
 
     val discovered = generateBasicApiCatalog()
 
@@ -377,53 +359,36 @@ internal class CatalogMergeHelperTest {
 
     Assertions.assertEquals(
       "configured_object_name",
-      actual
-        .getStreams()
+      actual.streams
         .first()
-        .getConfig()
-        .getDestinationObjectName(),
+        .config!!
+        .destinationObjectName,
     )
   }
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testUpdateSchemaWithDiscoveryWithFileBased(isFileBased: Boolean) {
-    val original = generateBasicApiCatalog()
-    original
-      .getStreams()
-      .first()
-      .getStream()
-      .isFileBased(false)
+    val original = generateBasicApiCatalog().withFirstStream(stream = { it.copy(isFileBased = false) })
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .first()
-      .getStream()
-      .isFileBased(isFileBased)
+    val discovered = generateBasicApiCatalog().withFirstStream(stream = { it.copy(isFileBased = isFileBased) })
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
     Assertions.assertEquals(
       isFileBased,
-      actual
-        .getStreams()
+      actual.streams
         .first()
-        .getStream()
-        .getIsFileBased(),
+        .stream!!
+        .isFileBased,
     )
   }
 
   @Test
   fun testUpdateSchemaWithDiscoveryWithHashedField() {
-    val hashedFields = listOf<SelectedFieldInfo?>(SelectedFieldInfo().fieldPath(listOf<String?>(SECOND_FIELD_NAME)))
+    val hashedFields = listOf(SelectedFieldInfo(fieldPath = listOf(SECOND_FIELD_NAME)))
 
-    val original = generateApiCatalogWithTwoFields()
-    original
-      .getStreams()
-      .first()
-      .getConfig()
-      .setHashedFields(hashedFields)
+    val original = generateApiCatalogWithTwoFields().withFirstStream(config = { it.copy(hashedFields = hashedFields) })
 
     val discovered = generateApiCatalogWithTwoFields()
 
@@ -432,22 +397,19 @@ internal class CatalogMergeHelperTest {
     // Configure hashed fields
     Assertions.assertEquals(
       hashedFields,
-      actual
-        .getStreams()
+      actual.streams
         .first()
-        .getConfig()
-        .getHashedFields(),
+        .config!!
+        .hashedFields,
     )
   }
 
   @Test
   fun testUpdateSchemaWithDiscoveryWithRemovedHashedField() {
-    val original = generateApiCatalogWithTwoFields()
-    original
-      .getStreams()
-      .first()
-      .getConfig()
-      .setHashedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().fieldPath(listOf<String?>(SECOND_FIELD_NAME))))
+    val original =
+      generateApiCatalogWithTwoFields().withFirstStream(
+        config = { it.copy(hashedFields = listOf(SelectedFieldInfo(fieldPath = listOf(SECOND_FIELD_NAME)))) },
+      )
 
     val discovered = generateBasicApiCatalog()
 
@@ -455,77 +417,87 @@ internal class CatalogMergeHelperTest {
 
     // Remove hashed field
     Assertions.assertTrue(
-      actual
-        .getStreams()
+      actual.streams
         .first()
-        .getConfig()
-        .getHashedFields()
+        .config!!
+        .hashedFields!!
         .isEmpty(),
     )
   }
 
   @Test
   fun testUpdateSchemaWithNamespacedStreams() {
-    val original = generateBasicApiCatalog()
-    val stream1Config = original.getStreams().get(0)
-    val stream1 = stream1Config.getStream()
+    val basicCatalog = generateBasicApiCatalog()
+    val stream1Config = basicCatalog.streams[0]
+    val stream1 = stream1Config.stream!!
     val stream2 =
-      AirbyteStream()
-        .name(stream1.getName())
-        .namespace("second_namespace")
-        .jsonSchema(stream1.getJsonSchema())
-        .defaultCursorField(stream1.getDefaultCursorField())
-        .supportedSyncModes(stream1.getSupportedSyncModes())
-        .sourceDefinedCursor(stream1.getSourceDefinedCursor())
-        .sourceDefinedPrimaryKey(stream1.getSourceDefinedPrimaryKey())
+      AirbyteStream(
+        name = stream1.name,
+        namespace = "second_namespace",
+        jsonSchema = stream1.jsonSchema,
+        defaultCursorField = stream1.defaultCursorField,
+        supportedSyncModes = stream1.supportedSyncModes,
+        sourceDefinedCursor = stream1.sourceDefinedCursor,
+        sourceDefinedPrimaryKey = stream1.sourceDefinedPrimaryKey,
+      )
     val stream2Config =
-      AirbyteStreamAndConfiguration()
-        .config(stream1Config.getConfig())
-        .stream(stream2)
-    original.getStreams().add(stream2Config)
+      AirbyteStreamAndConfiguration(config = stream1Config.config, stream = stream2)
+    val original = basicCatalog.copy(streams = basicCatalog.streams + stream2Config)
 
-    val discovered = generateBasicApiCatalog()
-    discovered
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    discovered
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
+    val discovered =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+          )
+        },
+      )
 
-    val expected = generateBasicApiCatalog()
-    expected
-      .getStreams()
-      .get(0)
-      .getStream()
-      .name(STREAM1)
-      .jsonSchema(CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)))
-      .supportedSyncModes(listOf<SyncMode?>(SyncMode.FULL_REFRESH))
-    expected
-      .getStreams()
-      .get(0)
-      .getConfig()
-      .syncMode(SyncMode.FULL_REFRESH)
-      .cursorField(mutableListOf<String?>())
-      .destinationSyncMode(DestinationSyncMode.OVERWRITE)
-      .primaryKey(mutableListOf<MutableList<String?>?>())
-      .aliasName(STREAM1)
-      .selected(false)
-      .suggested(false)
-      .selectedFields(mutableListOf<@Valid SelectedFieldInfo?>())
+    val expected =
+      generateBasicApiCatalog().withFirstStream(
+        stream = {
+          it.copy(
+            name = STREAM1,
+            jsonSchema = CatalogHelpers.fieldsToJsonSchema(Field.of(FIELD1, JsonSchemaType.STRING)),
+            supportedSyncModes = listOf(SyncMode.FULL_REFRESH),
+          )
+        },
+        config = {
+          it.copy(
+            syncMode = SyncMode.FULL_REFRESH,
+            cursorField = emptyList(),
+            destinationSyncMode = DestinationSyncMode.OVERWRITE,
+            primaryKey = emptyList(),
+            aliasName = STREAM1,
+            selected = false,
+            suggested = false,
+            selectedFields = emptyList(),
+          )
+        },
+      )
 
     val actual = catalogMergeHelper.mergeCatalogWithConfiguration(original, original, discovered)
 
     Assertions.assertEquals(expected, actual)
+  }
+
+  private fun AirbyteCatalog.withFirstStream(
+    stream: (AirbyteStream) -> AirbyteStream = { it },
+    config: (AirbyteStreamConfiguration) -> AirbyteStreamConfiguration = { it },
+  ): AirbyteCatalog {
+    val first = streams[0]
+    return copy(streams = listOf(first.copy(stream = stream(first.stream!!), config = config(first.config!!))) + streams.drop(1))
   }
 
   companion object {

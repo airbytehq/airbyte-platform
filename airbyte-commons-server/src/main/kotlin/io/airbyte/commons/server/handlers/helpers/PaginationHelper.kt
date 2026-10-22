@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.Pagination
+import io.airbyte.api.server.generated.models.Pagination
 
 /**
  * Helper to get data out of pagination objects.
@@ -14,8 +14,8 @@ object PaginationHelper {
   private const val DEFAULT_ROW_OFFSET = 0
 
   @JvmStatic
-  fun rowOffset(pagination: Pagination?): Int = if (pagination != null && pagination.rowOffset != null) pagination.rowOffset else DEFAULT_ROW_OFFSET
+  fun rowOffset(pagination: Pagination?): Int = pagination?.rowOffset ?: DEFAULT_ROW_OFFSET
 
   @JvmStatic
-  fun pageSize(pagination: Pagination?): Int = if (pagination != null && pagination.pageSize != null) pagination.pageSize else DEFAULT_PAGE_SIZE
+  fun pageSize(pagination: Pagination?): Int = pagination?.pageSize ?: DEFAULT_PAGE_SIZE
 }

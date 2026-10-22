@@ -8,10 +8,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.common.StreamDescriptorUtils.buildFieldName
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.resources.Resources
 import io.airbyte.config.ActorDefinitionBreakingChange
@@ -673,20 +673,20 @@ class SlackNotificationClient : NotificationClient {
 
       val newStreams =
         diff.transforms
-          .filter { it.transformType == StreamTransform.TransformTypeEnum.ADD_STREAM }
+          .filter { it.transformType == StreamTransform.TransformType.ADD_STREAM }
           .sortedBy { buildFullyQualifiedName(it.streamDescriptor) }
 
       val deletedStreams =
         diff.transforms
-          .filter { it.transformType == StreamTransform.TransformTypeEnum.REMOVE_STREAM }
+          .filter { it.transformType == StreamTransform.TransformType.REMOVE_STREAM }
           .sortedBy { buildFullyQualifiedName(it.streamDescriptor) }
 
       val streamsWithPkChanges =
         diff.transforms
-          .filter { it.transformType == StreamTransform.TransformTypeEnum.UPDATE_STREAM }
+          .filter { it.transformType == StreamTransform.TransformType.UPDATE_STREAM }
           .filter { t ->
-            t.updateStream.streamAttributeTransforms.any { a ->
-              a.transformType == StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY
+            t.updateStream!!.streamAttributeTransforms.any { a ->
+              a.transformType == StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY
             }
           }.sortedBy { buildFullyQualifiedName(it.streamDescriptor) }
 
@@ -706,13 +706,28 @@ class SlackNotificationClient : NotificationClient {
           val descriptor = stream.streamDescriptor
           val fullyQualifiedStreamName = buildFullyQualifiedName(descriptor)
           val primaryKeyChange =
-            stream.updateStream.streamAttributeTransforms
+            stream.updateStream!!
+              .streamAttributeTransforms
               .stream()
-              .filter { t: StreamAttributeTransform -> t.transformType == StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY }
+              .filter { t: StreamAttributeTransform -> t.transformType == StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY }
               .findFirst()
           if (primaryKeyChange.isPresent) {
-            val oldPrimaryKeyString = formatPrimaryKeyString(primaryKeyChange.get().updatePrimaryKey.oldPrimaryKey)
-            val newPrimaryKeyString = formatPrimaryKeyString(primaryKeyChange.get().updatePrimaryKey.newPrimaryKey)
+            val oldPrimaryKeyString =
+              formatPrimaryKeyString(
+                primaryKeyChange
+                  .get()
+                  .updatePrimaryKey!!
+                  .oldPrimaryKey
+                  .orEmpty(),
+              )
+            val newPrimaryKeyString =
+              formatPrimaryKeyString(
+                primaryKeyChange
+                  .get()
+                  .updatePrimaryKey!!
+                  .newPrimaryKey
+                  .orEmpty(),
+              )
 
             summaryBuilder.append(String.format("   ~ %s\n", fullyQualifiedStreamName))
 
@@ -730,27 +745,27 @@ class SlackNotificationClient : NotificationClient {
       val streamsWithFieldChanges =
         diff.transforms
           .filter { t ->
-            t.transformType == StreamTransform.TransformTypeEnum.UPDATE_STREAM &&
-              t.updateStream.streamAttributeTransforms.none { a ->
-                a.transformType == StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY
+            t.transformType == StreamTransform.TransformType.UPDATE_STREAM &&
+              t.updateStream!!.streamAttributeTransforms.none { a ->
+                a.transformType == StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY
               }
           }.sortedBy { buildFullyQualifiedName(it.streamDescriptor) }
 
       if (streamsWithFieldChanges.isNotEmpty()) {
         val newFieldCount =
           streamsWithFieldChanges
-            .flatMap { it.updateStream.fieldTransforms }
-            .count { it.transformType == FieldTransform.TransformTypeEnum.ADD_FIELD }
+            .flatMap { it.updateStream!!.fieldTransforms }
+            .count { it.transformType == FieldTransform.TransformType.ADD_FIELD }
 
         val deletedFieldsCount =
           streamsWithFieldChanges
-            .flatMap { it.updateStream.fieldTransforms }
-            .count { it.transformType == FieldTransform.TransformTypeEnum.REMOVE_FIELD }
+            .flatMap { it.updateStream!!.fieldTransforms }
+            .count { it.transformType == FieldTransform.TransformType.REMOVE_FIELD }
 
         val alteredFieldsCount =
           streamsWithFieldChanges
-            .flatMap { it.updateStream.fieldTransforms }
-            .count { it.transformType == FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA }
+            .flatMap { it.updateStream!!.fieldTransforms }
+            .count { it.transformType == FieldTransform.TransformType.UPDATE_FIELD_SCHEMA }
 
         summaryBuilder.append(String.format(" • Fields (+%d/~%d/-%d)\n", newFieldCount, alteredFieldsCount, deletedFieldsCount))
 
@@ -759,17 +774,18 @@ class SlackNotificationClient : NotificationClient {
           val fullyQualifiedStreamName = buildFullyQualifiedName(descriptor)
           summaryBuilder.append(String.format("   • %s\n", fullyQualifiedStreamName))
 
-          for (fieldChange in stream.updateStream.fieldTransforms
+          for (fieldChange in stream.updateStream!!
+            .fieldTransforms
             .stream()
             .sorted { o1: FieldTransform, o2: FieldTransform ->
               if (o1.transformType == o2.transformType) {
                 return@sorted buildFieldName(o1.fieldName)
                   .compareTo(buildFieldName(o2.fieldName))
               }
-              if (o1.transformType == FieldTransform.TransformTypeEnum.ADD_FIELD ||
+              if (o1.transformType == FieldTransform.TransformType.ADD_FIELD ||
                 (
-                  o1.transformType == FieldTransform.TransformTypeEnum.REMOVE_FIELD &&
-                    o2.transformType != FieldTransform.TransformTypeEnum.ADD_FIELD
+                  o1.transformType == FieldTransform.TransformType.REMOVE_FIELD &&
+                    o2.transformType != FieldTransform.TransformType.ADD_FIELD
                 )
               ) {
                 return@sorted -1
@@ -779,9 +795,9 @@ class SlackNotificationClient : NotificationClient {
             val fieldName = buildFieldName(fieldChange.fieldName)
             val operation =
               when (fieldChange.transformType) {
-                FieldTransform.TransformTypeEnum.ADD_FIELD -> "＋"
-                FieldTransform.TransformTypeEnum.REMOVE_FIELD -> "－"
-                FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA -> "～"
+                FieldTransform.TransformType.ADD_FIELD -> "＋"
+                FieldTransform.TransformType.REMOVE_FIELD -> "－"
+                FieldTransform.TransformType.UPDATE_FIELD_SCHEMA -> "～"
                 else -> "?"
               }
             summaryBuilder.append(String.format("     %s %s\n", operation, fieldName))

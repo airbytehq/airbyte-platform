@@ -5,25 +5,25 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CancelCommandRequest
-import io.airbyte.api.model.generated.CancelCommandResponse
-import io.airbyte.api.model.generated.CheckCommandOutputRequest
-import io.airbyte.api.model.generated.CheckCommandOutputResponse
-import io.airbyte.api.model.generated.CommandStatusRequest
-import io.airbyte.api.model.generated.CommandStatusResponse
-import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
-import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
-import io.airbyte.api.model.generated.FailureOrigin
-import io.airbyte.api.model.generated.FailureType
-import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
-import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
-import io.airbyte.api.model.generated.RunCheckCommandRequest
-import io.airbyte.api.model.generated.RunCheckCommandResponse
-import io.airbyte.api.model.generated.RunSpecCommandRequest
-import io.airbyte.api.model.generated.RunSpecCommandResponse
-import io.airbyte.api.model.generated.SpecCommandOutputRequest
-import io.airbyte.api.model.generated.SpecCommandOutputResponse
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.models.CancelCommandRequest
+import io.airbyte.api.server.generated.models.CancelCommandResponse
+import io.airbyte.api.server.generated.models.CheckCommandOutputRequest
+import io.airbyte.api.server.generated.models.CheckCommandOutputResponse
+import io.airbyte.api.server.generated.models.CommandStatusRequest
+import io.airbyte.api.server.generated.models.CommandStatusResponse
+import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
+import io.airbyte.api.server.generated.models.DiscoverCommandOutputResponse
+import io.airbyte.api.server.generated.models.FailureOrigin
+import io.airbyte.api.server.generated.models.FailureType
+import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
+import io.airbyte.api.server.generated.models.ReplicateCommandOutputResponse
+import io.airbyte.api.server.generated.models.RunCheckCommandRequest
+import io.airbyte.api.server.generated.models.RunCheckCommandResponse
+import io.airbyte.api.server.generated.models.RunSpecCommandRequest
+import io.airbyte.api.server.generated.models.RunSpecCommandResponse
+import io.airbyte.api.server.generated.models.SpecCommandOutputRequest
+import io.airbyte.api.server.generated.models.SpecCommandOutputResponse
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogEvent
@@ -64,15 +64,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
-import io.airbyte.api.model.generated.AirbyteCatalog as ApiAirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream as ApiAirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration as ApiAirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.DestinationCatalog as ApiDestinationCatalog
-import io.airbyte.api.model.generated.DestinationOperation as ApiDestinationOperation
-import io.airbyte.api.model.generated.DestinationSyncMode as ApiDestinationSyncMode
-import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
-import io.airbyte.api.model.generated.LogFormatType as ApiLogFormatType
-import io.airbyte.api.model.generated.StreamDescriptor as ApiStreamDescriptor
+import io.airbyte.api.server.generated.models.AirbyteCatalog as ApiAirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream as ApiAirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration as ApiAirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.DestinationCatalog as ApiDestinationCatalog
+import io.airbyte.api.server.generated.models.DestinationOperation as ApiDestinationOperation
+import io.airbyte.api.server.generated.models.DestinationSyncMode as ApiDestinationSyncMode
+import io.airbyte.api.server.generated.models.FailureReason as ApiFailureReason
+import io.airbyte.api.server.generated.models.LogFormatType as ApiLogFormatType
+import io.airbyte.api.server.generated.models.StreamDescriptor as ApiStreamDescriptor
 
 class CommandApiControllerTest {
   private lateinit var controller: CommandApiController
@@ -127,8 +127,8 @@ class CommandApiControllerTest {
 
   @Test
   fun `cancel should call commandService cancel`() {
-    val output = controller.cancelCommand(CancelCommandRequest().id(TEST_COMMAND_ID))
-    assertEquals(CancelCommandResponse().id(TEST_COMMAND_ID), output)
+    val output = controller.cancelCommand(CancelCommandRequest(id = TEST_COMMAND_ID))
+    assertEquals(CancelCommandResponse(id = TEST_COMMAND_ID), output)
     verify { commandService.cancel(TEST_COMMAND_ID) }
   }
 
@@ -136,9 +136,9 @@ class CommandApiControllerTest {
   fun `status should call commandService status`() {
     every { commandService.getStatus(TEST_COMMAND_ID) } returns CommandStatus.RUNNING
 
-    val output = controller.getCommandStatus(CommandStatusRequest().id(TEST_COMMAND_ID))
+    val output = controller.getCommandStatus(CommandStatusRequest(id = TEST_COMMAND_ID))
 
-    assertEquals(CommandStatusResponse().id(TEST_COMMAND_ID).status(CommandStatusResponse.StatusEnum.RUNNING), output)
+    assertEquals(CommandStatusResponse(id = TEST_COMMAND_ID, status = CommandStatusResponse.Status.RUNNING), output)
     verify { commandService.getStatus(TEST_COMMAND_ID) }
   }
 
@@ -153,10 +153,10 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(false, output.connectorConfigurationUpdated)
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(null, output.logs)
     verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
   }
@@ -173,13 +173,14 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(
-      CheckCommandOutputResponse()
-        .id(TEST_COMMAND_ID)
-        .connectorConfigurationUpdated(false)
-        .status(CheckCommandOutputResponse.StatusEnum.FAILED)
-        .message(message),
+      CheckCommandOutputResponse(
+        id = TEST_COMMAND_ID,
+        connectorConfigurationUpdated = false,
+        status = CheckCommandOutputResponse.Status.FAILED,
+        message = message,
+      ),
       output,
     )
     verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
@@ -204,19 +205,20 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(TEST_COMMAND_ID, output.id)
     assertEquals(true, output.connectorConfigurationUpdated)
-    assertEquals(CheckCommandOutputResponse.StatusEnum.FAILED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.FAILED, output.status)
     assertEquals(
-      ApiFailureReason()
-        .failureOrigin(FailureOrigin.SOURCE)
-        .failureType(FailureType.CONFIG_ERROR)
-        .externalMessage("external facing message")
-        .internalMessage("internal facing message")
-        .stacktrace("my stacktrace")
-        .timestamp(2)
-        .retryable(false),
+      ApiFailureReason(
+        failureOrigin = FailureOrigin.SOURCE,
+        failureType = FailureType.CONFIG_ERROR,
+        externalMessage = "external facing message",
+        internalMessage = "internal facing message",
+        stacktrace = "my stacktrace",
+        timestamp = 2,
+        retryable = false,
+      ),
       output.failureReason,
     )
     assertEquals(null, output.logs)
@@ -238,24 +240,22 @@ class CommandApiControllerTest {
       )
 
     val apiCatalog =
-      ApiAirbyteCatalog().streams(
-        listOf(
-          ApiAirbyteStreamAndConfiguration()
-            .stream(
-              ApiAirbyteStream()
-                .name("streamname"),
-            ),
-        ),
+      ApiAirbyteCatalog(
+        streams =
+          listOf(
+            ApiAirbyteStreamAndConfiguration(stream = ApiAirbyteStream(name = "streamname")),
+          ),
       )
     every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(
-      DiscoverCommandOutputResponse()
-        .id(TEST_COMMAND_ID)
-        .catalogId(catalogId)
-        .catalog(apiCatalog)
-        .status(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED),
+      DiscoverCommandOutputResponse(
+        id = TEST_COMMAND_ID,
+        catalogId = catalogId,
+        catalog = apiCatalog,
+        status = DiscoverCommandOutputResponse.Status.SUCCEEDED,
+      ),
       output,
     )
     verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) }
@@ -280,21 +280,22 @@ class CommandApiControllerTest {
         destinationCatalog = null,
       )
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(
-      DiscoverCommandOutputResponse()
-        .id(TEST_COMMAND_ID)
-        .status(DiscoverCommandOutputResponse.StatusEnum.FAILED)
-        .failureReason(
-          ApiFailureReason()
-            .failureOrigin(FailureOrigin.SOURCE)
-            .failureType(FailureType.CONFIG_ERROR)
-            .externalMessage("external discover facing message")
-            .internalMessage("internal discover facing message")
-            .stacktrace("my discover stacktrace")
-            .timestamp(2)
-            .retryable(false),
-        ),
+      DiscoverCommandOutputResponse(
+        id = TEST_COMMAND_ID,
+        status = DiscoverCommandOutputResponse.Status.FAILED,
+        failureReason =
+          ApiFailureReason(
+            failureOrigin = FailureOrigin.SOURCE,
+            failureType = FailureType.CONFIG_ERROR,
+            externalMessage = "external discover facing message",
+            internalMessage = "internal discover facing message",
+            stacktrace = "my discover stacktrace",
+            timestamp = 2,
+            retryable = false,
+          ),
+      ),
       output,
     )
     verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) }
@@ -309,23 +310,21 @@ class CommandApiControllerTest {
             .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED),
         ).withFailures(
           listOf(
-            FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withExternalMessage("Something to validate"),
+            FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withExternalMessage("Something to validate").withTimestamp(1),
           ),
         )
     every { commandService.getReplicationOutput(TEST_COMMAND_ID) } returns persistedReplicationOutput
 
-    val output = controller.getReplicateCommandOutput(ReplicateCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getReplicateCommandOutput(ReplicateCommandOutputRequest(id = TEST_COMMAND_ID))
     assertEquals(
-      ReplicateCommandOutputResponse()
-        .id(TEST_COMMAND_ID)
-        .attemptSummary(persistedReplicationOutput.replicationAttemptSummary)
-        .failures(
+      ReplicateCommandOutputResponse(
+        id = TEST_COMMAND_ID,
+        attemptSummary = persistedReplicationOutput.replicationAttemptSummary,
+        failures =
           listOf(
-            ApiFailureReason()
-              .failureOrigin(FailureOrigin.SOURCE)
-              .externalMessage("Something to validate"),
+            ApiFailureReason(failureOrigin = FailureOrigin.SOURCE, externalMessage = "Something to validate", timestamp = 1),
           ),
-        ),
+      ),
       output,
     )
     verify { commandService.getReplicationOutput(TEST_COMMAND_ID) }
@@ -348,33 +347,32 @@ class CommandApiControllerTest {
     val output = apiToPojoConverters.failureReasonToApi(input)
 
     assertEquals(
-      ApiFailureReason()
-        .failureOrigin(FailureOrigin.SOURCE)
-        .failureType(FailureType.CONFIG_ERROR)
-        .internalMessage("example internal message")
-        .externalMessage("example external message")
-        .fromTraceMessage(true)
-        .stacktrace("example stacktrace")
-        .retryable(true)
-        .timestamp(42)
-        .streamDescriptor(ApiStreamDescriptor().name("example name").namespace("example namespace")),
+      ApiFailureReason(
+        failureOrigin = FailureOrigin.SOURCE,
+        failureType = FailureType.CONFIG_ERROR,
+        internalMessage = "example internal message",
+        externalMessage = "example external message",
+        fromTraceMessage = true,
+        stacktrace = "example stacktrace",
+        retryable = true,
+        timestamp = 42,
+        streamDescriptor = ApiStreamDescriptor(name = "example name", namespace = "example namespace"),
+      ),
       output,
     )
   }
 
   @Test
   fun `FailureReason toApi handles null fields`() {
-    assertEquals(ApiFailureReason(), apiToPojoConverters.failureReasonToApi(FailureReason()))
+    assertEquals(ApiFailureReason(timestamp = 0), apiToPojoConverters.failureReasonToApi(FailureReason().withTimestamp(0)))
   }
 
   @Test
   fun `run check with an actor id`() {
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
+      RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID)
     val output = controller.runCheckCommand(request)
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -391,11 +389,9 @@ class CommandApiControllerTest {
   @Test
   fun `run check with an actor id returns 200 if the command already existed`() {
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
+      RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID)
     val output = controller.runCheckCommand(request)
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -412,15 +408,16 @@ class CommandApiControllerTest {
   @Test
   fun `run check with an actor id all relevant optional fields`() {
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
-        .jobId(TEST_JOB_ID)
-        .attemptNumber(TEST_ATTEMPT_NUMBER.toInt())
-        .priority("high")
-        .signalInput(TEST_SIGNAL_INPUT)
+      RunCheckCommandRequest(
+        id = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        jobId = TEST_JOB_ID,
+        attemptNumber = TEST_ATTEMPT_NUMBER.toInt(),
+        priority = "high",
+        signalInput = TEST_SIGNAL_INPUT,
+      )
     val output = controller.runCheckCommand(request)
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -456,20 +453,22 @@ class CommandApiControllerTest {
     } returns sanitizedConfig
 
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .config(TEST_CONFIG)
+      RunCheckCommandRequest(
+        id = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        config = TEST_CONFIG,
+      )
     val output = controller.runCheckCommand(request)
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
 
     val expectedCommandInput =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .config(sanitizedConfig)
+      RunCheckCommandRequest(
+        id = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        config = sanitizedConfig,
+      )
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -505,24 +504,26 @@ class CommandApiControllerTest {
     } returns sanitizedConfig
 
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .config(TEST_CONFIG)
-        .priority("HIGH")
-        .signalInput(TEST_SIGNAL_INPUT)
+      RunCheckCommandRequest(
+        id = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        config = TEST_CONFIG,
+        priority = "HIGH",
+        signalInput = TEST_SIGNAL_INPUT,
+      )
     val output = controller.runCheckCommand(request)
 
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
     val expectedCommandInput =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .config(sanitizedConfig)
-        .priority("HIGH")
-        .signalInput(TEST_SIGNAL_INPUT)
+      RunCheckCommandRequest(
+        id = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        config = sanitizedConfig,
+        priority = "HIGH",
+        signalInput = TEST_SIGNAL_INPUT,
+      )
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -558,18 +559,12 @@ class CommandApiControllerTest {
     } returns sanitizedConfig
 
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
-        .config(TEST_CONFIG)
+      RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID, config = TEST_CONFIG)
     val output = controller.runCheckCommand(request)
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
 
     val expectedCommandInput =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
-        .config(sanitizedConfig)
+      RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID, config = sanitizedConfig)
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,
@@ -667,9 +662,9 @@ class CommandApiControllerTest {
         logs = CommandService.JobLogs.createStructuredLogs(logEvents),
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
-    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(ApiLogFormatType.STRUCTURED, output.logs?.logType)
     assertEquals(
       1,
@@ -694,9 +689,9 @@ class CommandApiControllerTest {
         logs = CommandService.JobLogs.createFormattedLogs(logLines),
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
-    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(ApiLogFormatType.FORMATTED, output.logs?.logType)
     assertEquals(3, output.logs?.logLines?.size)
     assertEquals("line 1", output.logs?.logLines?.get(0))
@@ -714,9 +709,9 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = false))
 
-    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(null, output.logs)
     verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = false) }
   }
@@ -749,20 +744,17 @@ class CommandApiControllerTest {
       )
 
     val apiCatalog =
-      ApiAirbyteCatalog().streams(
-        listOf(
-          ApiAirbyteStreamAndConfiguration()
-            .stream(
-              ApiAirbyteStream()
-                .name("streamname"),
-            ),
-        ),
+      ApiAirbyteCatalog(
+        streams =
+          listOf(
+            ApiAirbyteStreamAndConfiguration(stream = ApiAirbyteStream(name = "streamname")),
+          ),
       )
     every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(ApiLogFormatType.STRUCTURED, output.logs?.logType)
     assertEquals(
       1,
@@ -791,20 +783,17 @@ class CommandApiControllerTest {
       )
 
     val apiCatalog =
-      ApiAirbyteCatalog().streams(
-        listOf(
-          ApiAirbyteStreamAndConfiguration()
-            .stream(
-              ApiAirbyteStream()
-                .name("streamname"),
-            ),
-        ),
+      ApiAirbyteCatalog(
+        streams =
+          listOf(
+            ApiAirbyteStreamAndConfiguration(stream = ApiAirbyteStream(name = "streamname")),
+          ),
       )
     every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(ApiLogFormatType.FORMATTED, output.logs?.logType)
     assertEquals(2, output.logs?.logLines?.size)
     assertEquals("discover line 1", output.logs?.logLines?.get(0))
@@ -826,20 +815,17 @@ class CommandApiControllerTest {
       )
 
     val apiCatalog =
-      ApiAirbyteCatalog().streams(
-        listOf(
-          ApiAirbyteStreamAndConfiguration()
-            .stream(
-              ApiAirbyteStream()
-                .name("streamname"),
-            ),
-        ),
+      ApiAirbyteCatalog(
+        streams =
+          listOf(
+            ApiAirbyteStreamAndConfiguration(stream = ApiAirbyteStream(name = "streamname")),
+          ),
       )
     every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = false))
 
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(null, output.logs)
     verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = false) }
   }
@@ -849,15 +835,16 @@ class CommandApiControllerTest {
     val dockerImage = "airbyte/source-test"
     val dockerImageTag = "1.0.0"
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .dockerImage(dockerImage)
-        .dockerImageTag(dockerImageTag)
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+      )
 
     val output = controller.runSpecCommand(request)
 
-    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunSpecCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createSpecCommand(
         commandId = TEST_COMMAND_ID,
@@ -875,16 +862,17 @@ class CommandApiControllerTest {
     val dockerImage = "airbyte/source-postgres"
     val dockerImageTag = "2.0.0"
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .dockerImage(dockerImage)
-        .dockerImageTag(dockerImageTag)
-        .signalInput(TEST_SIGNAL_INPUT)
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        signalInput = TEST_SIGNAL_INPUT,
+      )
 
     val output = controller.runSpecCommand(request)
 
-    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunSpecCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createSpecCommand(
         commandId = TEST_COMMAND_ID,
@@ -901,15 +889,16 @@ class CommandApiControllerTest {
   fun `run spec with actor definition id`() {
     val dockerImageTag = "1.5.0"
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .dockerImageTag(dockerImageTag)
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        dockerImageTag = dockerImageTag,
+      )
 
     val output = controller.runSpecCommand(request)
 
-    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunSpecCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createSpecCommand(
         commandId = TEST_COMMAND_ID,
@@ -926,16 +915,17 @@ class CommandApiControllerTest {
   fun `run spec with actor definition id and signal input`() {
     val dockerImageTag = "3.0.0"
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
-        .dockerImageTag(dockerImageTag)
-        .signalInput(TEST_SIGNAL_INPUT)
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        dockerImageTag = dockerImageTag,
+        signalInput = TEST_SIGNAL_INPUT,
+      )
 
     val output = controller.runSpecCommand(request)
 
-    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunSpecCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createSpecCommand(
         commandId = TEST_COMMAND_ID,
@@ -951,10 +941,11 @@ class CommandApiControllerTest {
   @Test
   fun `run spec throws exception when neither docker image nor actor definition id provided`() {
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .dockerImageTag("1.0.0")
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        dockerImageTag = "1.0.0",
+      )
 
     val exception =
       assertThrows<IllegalArgumentException> {
@@ -970,16 +961,17 @@ class CommandApiControllerTest {
     val dockerImage = "airbyte/source-test"
     val dockerImageTag = "1.0.0"
     val request =
-      RunSpecCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .workspaceId(TEST_WORKSPACE_ID)
-        .dockerImage(dockerImage)
-        .dockerImageTag(dockerImageTag)
-        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
+      RunSpecCommandRequest(
+        id = TEST_COMMAND_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+      )
 
     val output = controller.runSpecCommand(request)
 
-    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunSpecCommandResponse(id = TEST_COMMAND_ID), output)
     // Should use actor definition id path, not docker image path
     verify {
       commandService.createSpecCommand(
@@ -1005,10 +997,10 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest(id = TEST_COMMAND_ID))
 
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(SpecCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
     assertEquals(null, output.failureReason)
     assertEquals(null, output.logs)
@@ -1032,20 +1024,21 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest(id = TEST_COMMAND_ID))
 
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(SpecCommandOutputResponse.StatusEnum.FAILED, output.status)
+    assertEquals(SpecCommandOutputResponse.Status.FAILED, output.status)
     assertEquals(null, output.spec)
     assertEquals(
-      ApiFailureReason()
-        .failureOrigin(FailureOrigin.SOURCE)
-        .failureType(FailureType.SYSTEM_ERROR)
-        .externalMessage("external spec facing message")
-        .internalMessage("internal spec facing message")
-        .stacktrace("my spec stacktrace")
-        .timestamp(3)
-        .retryable(false),
+      ApiFailureReason(
+        failureOrigin = FailureOrigin.SOURCE,
+        failureType = FailureType.SYSTEM_ERROR,
+        externalMessage = "external spec facing message",
+        internalMessage = "internal spec facing message",
+        stacktrace = "my spec stacktrace",
+        timestamp = 3,
+        retryable = false,
+      ),
       output.failureReason,
     )
     verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) }
@@ -1076,10 +1069,10 @@ class CommandApiControllerTest {
         logs = CommandService.JobLogs.createStructuredLogs(logEvents),
       )
 
-    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(SpecCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
     assertEquals(ApiLogFormatType.STRUCTURED, output.logs?.logType)
     assertEquals(
@@ -1106,10 +1099,10 @@ class CommandApiControllerTest {
         logs = CommandService.JobLogs.createFormattedLogs(logLines),
       )
 
-    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = true))
 
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(SpecCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
     assertEquals(ApiLogFormatType.FORMATTED, output.logs?.logType)
     assertEquals(2, output.logs?.logLines?.size)
@@ -1129,10 +1122,10 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest(id = TEST_COMMAND_ID, withLogs = false))
 
     assertEquals(TEST_COMMAND_ID, output.id)
-    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(SpecCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
     assertEquals(null, output.logs)
     verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) }
@@ -1154,23 +1147,20 @@ class CommandApiControllerTest {
         logs = null,
       )
     val apiCatalog =
-      ApiAirbyteCatalog().streams(
-        listOf(
-          ApiAirbyteStreamAndConfiguration()
-            .stream(
-              ApiAirbyteStream()
-                .name("source_stream"),
-            ),
-        ),
+      ApiAirbyteCatalog(
+        streams =
+          listOf(
+            ApiAirbyteStreamAndConfiguration(stream = ApiAirbyteStream(name = "source_stream")),
+          ),
       )
     every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID))
 
     assertEquals(catalogId, output.catalogId)
     assertEquals(apiCatalog, output.catalog)
     assertEquals(null, output.destinationCatalog)
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
     verify { catalogConverter.toApi(protocolCatalog, any()) }
   }
 
@@ -1201,21 +1191,19 @@ class CommandApiControllerTest {
       )
 
     val apiDestinationCatalog =
-      ApiDestinationCatalog().operations(
-        listOf(
-          ApiDestinationOperation()
-            .objectName("destination_table")
-            .syncMode(ApiDestinationSyncMode.APPEND)
-            .schema(jsonSchema),
-        ),
+      ApiDestinationCatalog(
+        operations =
+          listOf(
+            ApiDestinationOperation(objectName = "destination_table", syncMode = ApiDestinationSyncMode.APPEND, schema = jsonSchema),
+          ),
       )
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID))
 
     assertEquals(catalogId, output.catalogId)
     assertEquals(null, output.catalog)
     assertEquals(apiDestinationCatalog, output.destinationCatalog)
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
   }
 
   @Test
@@ -1229,12 +1217,12 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id = TEST_COMMAND_ID))
 
     assertEquals(null, output.catalogId)
     assertEquals(null, output.catalog)
     assertEquals(null, output.destinationCatalog)
-    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(DiscoverCommandOutputResponse.Status.SUCCEEDED, output.status)
   }
 
   @Test
@@ -1255,9 +1243,9 @@ class CommandApiControllerTest {
         logs = null,
       )
 
-    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest(id = TEST_COMMAND_ID))
 
-    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(CheckCommandOutputResponse.Status.SUCCEEDED, output.status)
     assertEquals(TEST_COMMAND_ID, output.id)
     verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
   }
@@ -1272,13 +1260,11 @@ class CommandApiControllerTest {
     every { roleResolver.newRequest() } returns requestMock
 
     val request =
-      RunCheckCommandRequest()
-        .id(TEST_COMMAND_ID)
-        .actorId(TEST_ACTOR_ID)
+      RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID)
 
     val output = controller.runCheckCommand(request)
 
-    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    assertEquals(RunCheckCommandResponse(id = TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
         commandId = TEST_COMMAND_ID,

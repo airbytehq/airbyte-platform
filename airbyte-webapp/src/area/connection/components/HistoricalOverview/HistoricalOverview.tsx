@@ -38,11 +38,8 @@ import { formatDataForChart, UptimeStatusGraph } from "../UptimeStatusGraph";
 const generatePlaceholderHistory = (
   connectionSyncProgress?: ConnectionSyncProgressRead
 ): ConnectionUptimeHistoryRead => {
-  if (
-    !connectionSyncProgress ||
-    connectionSyncProgress.configType === "clear" ||
-    connectionSyncProgress.configType === "reset_connection"
-  ) {
+  const configType = connectionSyncProgress?.configType;
+  if (!connectionSyncProgress || !configType || configType === "clear" || configType === "reset_connection") {
     return [];
   }
 
@@ -50,7 +47,7 @@ const generatePlaceholderHistory = (
     {
       bytesCommitted: connectionSyncProgress.bytesCommitted ?? 0,
       bytesEmitted: connectionSyncProgress.bytesCommitted ?? 0,
-      configType: connectionSyncProgress.configType,
+      configType,
       jobId: connectionSyncProgress.jobId ?? 0,
       jobCreatedAt: connectionSyncProgress.syncStartedAt ?? dayjs().unix(),
       jobUpdatedAt: dayjs().unix(),

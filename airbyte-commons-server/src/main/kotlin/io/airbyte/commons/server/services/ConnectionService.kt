@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.services
 
-import io.airbyte.api.model.generated.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionStatus
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
 import io.airbyte.commons.server.scheduler.EventRunner

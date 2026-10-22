@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionStream
-import io.airbyte.api.model.generated.RefreshMode
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.ConnectionStream
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.RefreshMode
 import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.server.handlers.StreamRefreshesHandler.Companion.connectionStreamsToStreamDescriptors
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
@@ -61,8 +61,8 @@ internal class StreamRefreshesHandlerTest {
   private val destinationId = UUID.randomUUID()
   private val connectionStream =
     listOf(
-      ConnectionStream().streamName("name1").streamNamespace("namespace1"),
-      ConnectionStream().streamName("name2"),
+      ConnectionStream(streamName = "name1", streamNamespace = "namespace1"),
+      ConnectionStream(streamName = "name2"),
     )
   private val streamDescriptors =
     listOf(

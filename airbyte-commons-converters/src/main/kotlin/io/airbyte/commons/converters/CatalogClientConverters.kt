@@ -111,14 +111,14 @@ class CatalogClientConverters(
     )
   }
 
-  private fun toModel(mapper: ClientConfiguredStreamMapper): io.airbyte.api.model.generated.ConfiguredStreamMapper =
-    io.airbyte.api.model.generated
-      .ConfiguredStreamMapper()
-      .id(mapper.id)
-      .type(
-        io.airbyte.api.model.generated.StreamMapperType
-          .fromValue(mapper.type.value),
-      ).mapperConfiguration(mapper.mapperConfiguration)
+  private fun toModel(mapper: ClientConfiguredStreamMapper): io.airbyte.api.server.generated.models.ConfiguredStreamMapper =
+    io.airbyte.api.server.generated.models.ConfiguredStreamMapper(
+      id = mapper.id,
+      type =
+        io.airbyte.api.server.generated.models.StreamMapperType.entries
+          .first { it.value == mapper.type.value },
+      mapperConfiguration = mapper.mapperConfiguration,
+    )
 
   private fun toConfiguredMappers(mapperConfigs: List<ConfiguredStreamMapper>?): List<MapperConfig> =
     mapperConfigs?.map { toModel(it).toInternal() } ?: emptyList()

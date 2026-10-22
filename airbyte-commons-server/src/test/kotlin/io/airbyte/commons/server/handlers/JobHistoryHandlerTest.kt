@@ -4,14 +4,12 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AttemptInfoReadLogs
-import io.airbyte.api.model.generated.ConnectionSyncProgressRead
-import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.server.generated.models.AttemptInfoRead
 import io.airbyte.api.server.generated.models.AttemptRead
 import io.airbyte.api.server.generated.models.AttemptStats
 import io.airbyte.api.server.generated.models.AttemptStreamStats
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionSyncProgressRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.JobAggregatedStats
 import io.airbyte.api.server.generated.models.JobConfigType
@@ -31,6 +29,7 @@ import io.airbyte.api.server.generated.models.ResetConfig
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.StreamDescriptor
 import io.airbyte.api.server.generated.models.StreamStats
+import io.airbyte.api.server.generated.models.StreamSyncProgressReadItem
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
@@ -39,6 +38,7 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.LogUtils
 import io.airbyte.commons.server.converters.ApiPojoConverters
+import io.airbyte.commons.server.converters.AttemptLogs
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.JobConverter.Companion.getJobRead
 import io.airbyte.commons.server.converters.JobConverter.Companion.getJobWithAttemptsRead
@@ -80,7 +80,6 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
@@ -838,7 +837,10 @@ internal class JobHistoryHandlerTest {
       val request = ConnectionIdRequestBody(connectionId = connectionId)
 
       val expectedSyncProgress =
-        ConnectionSyncProgressRead().connectionId(connectionId).streams(mutableListOf<@Valid StreamSyncProgressReadItem?>())
+        ConnectionSyncProgressRead(
+          connectionId = connectionId,
+          streams = emptyList<StreamSyncProgressReadItem>(),
+        )
 
       val actual = jobHistoryHandler.getConnectionSyncProgress(request)
 
@@ -910,40 +912,43 @@ internal class JobHistoryHandlerTest {
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
       val expected =
-        ConnectionSyncProgressRead()
-          .jobId(JOB_ID)
-          .connectionId(connectionId)
-          .bytesCommitted(jobAggregatedStats.bytesCommitted)
-          .recordsCommitted(jobAggregatedStats.recordsCommitted)
-          .recordsRejected(jobAggregatedStats.recordsRejected)
-          .bytesEmitted(jobAggregatedStats.bytesEmitted)
-          .recordsEmitted(jobAggregatedStats.recordsEmitted)
-          .configType(io.airbyte.api.model.generated.JobConfigType.SYNC)
-          .syncStartedAt(CREATED_AT)
-          .streams(
-            listOf<@Valid StreamSyncProgressReadItem?>(
-              StreamSyncProgressReadItem()
-                .streamName("stream1")
-                .streamNamespace("ns1")
-                .recordsEmitted(5L)
-                .bytesEmitted(2L)
-                .recordsCommitted(5L)
-                .bytesCommitted(2L)
-                .recordsRejected(0L)
-                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
-              StreamSyncProgressReadItem()
-                .streamName("stream2")
-                .recordsEmitted(50L)
-                .bytesEmitted(20L)
-                .recordsCommitted(45L)
-                .bytesCommitted(15L)
-                .recordsRejected(2L)
-                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
-              StreamSyncProgressReadItem()
-                .streamName("stream3")
-                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
+        ConnectionSyncProgressRead(
+          jobId = JOB_ID,
+          connectionId = connectionId,
+          bytesCommitted = jobAggregatedStats.bytesCommitted,
+          recordsCommitted = jobAggregatedStats.recordsCommitted,
+          recordsRejected = jobAggregatedStats.recordsRejected,
+          bytesEmitted = jobAggregatedStats.bytesEmitted,
+          recordsEmitted = jobAggregatedStats.recordsEmitted,
+          configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+          syncStartedAt = CREATED_AT,
+          streams =
+            listOf<StreamSyncProgressReadItem>(
+              StreamSyncProgressReadItem(
+                streamName = "stream1",
+                streamNamespace = "ns1",
+                recordsEmitted = 5L,
+                bytesEmitted = 2L,
+                recordsCommitted = 5L,
+                bytesCommitted = 2L,
+                recordsRejected = 0L,
+                configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+              ),
+              StreamSyncProgressReadItem(
+                streamName = "stream2",
+                recordsEmitted = 50L,
+                bytesEmitted = 20L,
+                recordsCommitted = 45L,
+                bytesCommitted = 15L,
+                recordsRejected = 2L,
+                configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+              ),
+              StreamSyncProgressReadItem(
+                streamName = "stream3",
+                configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+              ),
             ),
-          )
+        )
 
       val actual =
         jobHistoryHandler.getConnectionSyncProgressInternal(
@@ -1025,30 +1030,32 @@ internal class JobHistoryHandlerTest {
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
       val expected =
-        ConnectionSyncProgressRead()
-          .jobId(JOB_ID)
-          .connectionId(connectionId)
-          .bytesCommitted(jobAggregatedStats.bytesCommitted)
-          .recordsCommitted(jobAggregatedStats.recordsCommitted)
-          .bytesEmitted(jobAggregatedStats.bytesEmitted)
-          .recordsEmitted(jobAggregatedStats.recordsEmitted)
-          .configType(io.airbyte.api.model.generated.JobConfigType.REFRESH)
-          .syncStartedAt(CREATED_AT)
-          .streams(
-            listOf<@Valid StreamSyncProgressReadItem?>(
-              StreamSyncProgressReadItem()
-                .streamName("stream3")
-                .configType(io.airbyte.api.model.generated.JobConfigType.SYNC),
-              StreamSyncProgressReadItem()
-                .streamName("stream2")
-                .recordsEmitted(50L)
-                .bytesEmitted(20L)
-                .recordsCommitted(45L)
-                .bytesCommitted(15L)
-                .recordsRejected(0L)
-                .configType(io.airbyte.api.model.generated.JobConfigType.REFRESH),
+        ConnectionSyncProgressRead(
+          jobId = JOB_ID,
+          connectionId = connectionId,
+          bytesCommitted = jobAggregatedStats.bytesCommitted,
+          recordsCommitted = jobAggregatedStats.recordsCommitted,
+          bytesEmitted = jobAggregatedStats.bytesEmitted,
+          recordsEmitted = jobAggregatedStats.recordsEmitted,
+          configType = io.airbyte.api.server.generated.models.JobConfigType.REFRESH,
+          syncStartedAt = CREATED_AT,
+          streams =
+            listOf<StreamSyncProgressReadItem>(
+              StreamSyncProgressReadItem(
+                streamName = "stream3",
+                configType = io.airbyte.api.server.generated.models.JobConfigType.SYNC,
+              ),
+              StreamSyncProgressReadItem(
+                streamName = "stream2",
+                recordsEmitted = 50L,
+                bytesEmitted = 20L,
+                recordsCommitted = 45L,
+                bytesCommitted = 15L,
+                recordsRejected = 0L,
+                configType = io.airbyte.api.server.generated.models.JobConfigType.REFRESH,
+              ),
             ),
-          )
+        )
 
       // test an internal version of the method to avoid having to mock JobConverter.
       val actual =
@@ -1058,7 +1065,7 @@ internal class JobHistoryHandlerTest {
           listOf(firstJobWithAttemptRead),
         )
 
-      Assertions.assertEquals(expected.getStreams(), actual.getStreams())
+      Assertions.assertEquals(expected.streams, actual.streams)
     }
 
     // todo (cgardens) - get rid of mockstatic
@@ -1104,19 +1111,20 @@ internal class JobHistoryHandlerTest {
       Mockito.mockStatic(JobConverter::class.java).use { mockedConverter ->
         mockedConverter.`when`<Any?>(MockedStatic.Verification { getJobWithAttemptsRead(firstJob) }).thenReturn(firstJobWithAttemptRead)
         val expected =
-          ConnectionSyncProgressRead()
-            .connectionId(connectionId)
-            .jobId(JOB_ID)
-            .configType(io.airbyte.api.model.generated.JobConfigType.RESET_CONNECTION)
-            .syncStartedAt(CREATED_AT)
-            .streams(
-              listOf<@Valid StreamSyncProgressReadItem?>(
-                StreamSyncProgressReadItem()
-                  .streamName("stream1")
-                  .streamNamespace("ns1")
-                  .configType(io.airbyte.api.model.generated.JobConfigType.RESET_CONNECTION),
+          ConnectionSyncProgressRead(
+            connectionId = connectionId,
+            jobId = JOB_ID,
+            configType = io.airbyte.api.server.generated.models.JobConfigType.RESET_CONNECTION,
+            syncStartedAt = CREATED_AT,
+            streams =
+              listOf<StreamSyncProgressReadItem>(
+                StreamSyncProgressReadItem(
+                  streamName = "stream1",
+                  streamNamespace = "ns1",
+                  configType = io.airbyte.api.server.generated.models.JobConfigType.RESET_CONNECTION,
+                ),
               ),
-            )
+          )
 
         val actual = jobHistoryHandler.getConnectionSyncProgress(request)
         Assertions.assertEquals(expected, actual)
@@ -1293,7 +1301,7 @@ internal class JobHistoryHandlerTest {
       )
 
     private val LOG_PATH: Path = Path.of("log_path")
-    private val EMPTY_LOG_READ: AttemptInfoReadLogs = AttemptInfoReadLogs().logLines(ArrayList<String?>())
+    private val EMPTY_LOG_READ = AttemptLogs()
     private val CREATED_AT = System.currentTimeMillis() / 1000
 
     private val FIRST_ATTEMPT_STATS =

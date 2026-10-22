@@ -5,9 +5,9 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateType
 import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.server.generated.models.SyncInput
 import io.airbyte.commons.constants.WorkerConstants
@@ -224,11 +224,12 @@ internal class JobInputHandlerTest {
         every { allowedHosts } returns null
       }
 
-    every { stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID)) } returns
-      ConnectionState()
-        .stateType(ConnectionStateType.LEGACY)
-        .state(STATE.state)
-        .connectionId(CONNECTION_ID)
+    every { stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID)) } returns
+      ConnectionState(
+        stateType = ConnectionStateType.LEGACY,
+        state = STATE.state,
+        connectionId = CONNECTION_ID,
+      )
 
     val jobSyncConfig: JobSyncConfig =
       JobSyncConfig()
@@ -349,11 +350,12 @@ internal class JobInputHandlerTest {
   fun testGetResetSyncWorkflowInput() {
     val syncInput = SyncInput(jobId = JOB_ID, attemptNumber = ATTEMPT_NUMBER)
 
-    every { stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID)) } returns
-      ConnectionState()
-        .stateType(ConnectionStateType.LEGACY)
-        .state(STATE.state)
-        .connectionId(CONNECTION_ID)
+    every { stateHandler.getState(ConnectionIdRequestBody(connectionId = CONNECTION_ID)) } returns
+      ConnectionState(
+        stateType = ConnectionStateType.LEGACY,
+        state = STATE.state,
+        connectionId = CONNECTION_ID,
+      )
 
     val jobResetConfig =
       JobResetConnectionConfig()

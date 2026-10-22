@@ -4,11 +4,7 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.AttemptInfoReadLogs
-import io.airbyte.api.model.generated.LogLevel
-import io.airbyte.api.model.generated.LogRead
-import io.airbyte.api.model.generated.LogSource
-import io.airbyte.api.model.generated.SynchronousJobRead
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.api.server.generated.models.AttemptFailureSummary
 import io.airbyte.api.server.generated.models.AttemptInfoRead
 import io.airbyte.api.server.generated.models.AttemptRead
@@ -28,8 +24,12 @@ import io.airbyte.api.server.generated.models.JobRefreshConfig
 import io.airbyte.api.server.generated.models.JobStatus
 import io.airbyte.api.server.generated.models.JobWithAttemptsRead
 import io.airbyte.api.server.generated.models.LogFormatType
+import io.airbyte.api.server.generated.models.LogLevel
+import io.airbyte.api.server.generated.models.LogRead
+import io.airbyte.api.server.generated.models.LogSource
 import io.airbyte.api.server.generated.models.ResetConfig
 import io.airbyte.api.server.generated.models.SourceDefinitionRead
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogCaller
@@ -84,14 +84,14 @@ class JobConverter(
     val attemptInfoReadLogs = getAttemptLogs(attempt.logPath, attempt.jobId)
     return AttemptInfoRead(
       attempt = getAttemptRead(attempt),
-      logType = if (CollectionUtils.isNotEmpty(attemptInfoReadLogs.events)) LogFormatType.STRUCTURED else LogFormatType.FORMATTED,
+      logType = logFormatType(attemptInfoReadLogs),
       logs = attemptInfoReadLogs,
     )
   }
 
   fun getLogRead(logPath: Path?): LogRead {
     try {
-      return LogRead().logLines(logClientManager.getJobLogFile(logPath))
+      return LogRead(logLines = logClientManager.getJobLogFile(logPath))
     } catch (e: IOException) {
       throw RuntimeException(e)
     }
@@ -100,46 +100,38 @@ class JobConverter(
   fun getAttemptLogs(
     logPath: Path?,
     jobId: Long?,
-  ): AttemptInfoReadLogs {
+  ): AttemptLogs {
     val logEvents = logClientManager.getLogs(logPath)
     return if (CollectionUtils.isNotEmpty(logEvents.events)) {
-      AttemptInfoReadLogs()
-        .events(toModelLogEvents(logEvents.events, logUtils))
-        .version(logEvents.version)
+      AttemptLogs(events = toModelLogEvents(logEvents.events, logUtils), version = logEvents.version)
     } else {
-      AttemptInfoReadLogs().logLines(getLogRead(logPath).logLines)
+      AttemptLogs(logLines = getLogRead(logPath).logLines)
     }
   }
 
   fun getSynchronousJobRead(response: SynchronousResponse<*>): SynchronousJobRead = getSynchronousJobRead(response.metadata)
 
   fun getSynchronousJobRead(metadata: SynchronousJobMetadata): SynchronousJobRead {
-    // SynchronousJobRead is still the Java model (check/discover results move with the catalog models)
     val configType =
-      metadata.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>()
+      metadata.configType.convertTo<io.airbyte.api.server.generated.models.JobConfigType>()
     val attemptInfoReadLogs = getAttemptLogs(metadata.logPath, null)
 
-    return SynchronousJobRead()
-      .id(metadata.id)
-      .configType(configType)
-      .configId(metadata.getConfigId().toString())
-      .createdAt(metadata.createdAt)
-      .endedAt(metadata.endedAt)
-      .succeeded(metadata.isSucceeded)
-      .connectorConfigurationUpdated(metadata.isConnectorConfigurationUpdated)
-      .logType(
-        if (CollectionUtils.isNotEmpty(attemptInfoReadLogs.events)) {
-          io.airbyte.api.model.generated.LogFormatType.STRUCTURED
-        } else {
-          io.airbyte.api.model.generated.LogFormatType.FORMATTED
-        },
-      ).logs(attemptInfoReadLogs)
-      .failureReason(
+    return SynchronousJobRead(
+      id = metadata.id,
+      configType = configType,
+      configId = metadata.getConfigId().toString(),
+      createdAt = metadata.createdAt,
+      endedAt = metadata.endedAt,
+      succeeded = metadata.isSucceeded,
+      connectorConfigurationUpdated = metadata.isConnectorConfigurationUpdated,
+      logType = logFormatType(attemptInfoReadLogs),
+      logs = attemptInfoReadLogs,
+      failureReason =
         Jsons.convertValue(
           getFailureReason(metadata.failureReason, TimeUnit.SECONDS.toMillis(metadata.endedAt)),
-          io.airbyte.api.model.generated.FailureReason::class.java,
+          io.airbyte.api.server.generated.models.FailureReason::class.java,
         ),
-      )
+    )
   }
 
   companion object {
@@ -404,35 +396,40 @@ class JobConverter(
     fun toModelLogEvents(
       logEvents: List<LogEvent>,
       logUtils: LogUtils,
-    ): List<io.airbyte.api.model.generated.LogEvent> =
-      logEvents
-        .stream()
-        .map { e: LogEvent ->
-          val logEvent =
-            io.airbyte.api.model.generated
-              .LogEvent()
-          logEvent.logSource = LogSource.fromString(e.logSource.displayName.lowercase())
-          logEvent.level = LogLevel.fromString(e.level.lowercase())
-          logEvent.message = e.message
-          logEvent.timestamp = e.timestamp
-          logEvent.stackTrace = logUtils.convertThrowableToStackTrace(e.throwable)
-          logEvent.caller = toModelLogCaller(e.caller)
-          logEvent
-        }.toList()
-
-    private fun toModelLogCaller(logCaller: LogCaller?): io.airbyte.api.model.generated.LogCaller? {
-      if (logCaller != null) {
-        val modelLogCaller =
-          io.airbyte.api.model.generated
-            .LogCaller()
-        modelLogCaller.className = logCaller.className
-        modelLogCaller.methodName = logCaller.methodName
-        modelLogCaller.lineNumber = logCaller.lineNumber
-        modelLogCaller.threadName = logCaller.threadName
-        return modelLogCaller
-      } else {
-        return null
+    ): List<io.airbyte.api.server.generated.models.LogEvent> =
+      logEvents.map { e: LogEvent ->
+        io.airbyte.api.server.generated.models.LogEvent(
+          logSource = LogSource.entries.first { it.value == e.logSource.displayName.lowercase() },
+          level = LogLevel.entries.first { it.value == e.level.lowercase() },
+          message = e.message,
+          timestamp = e.timestamp,
+          stackTrace = logUtils.convertThrowableToStackTrace(e.throwable),
+          caller = toModelLogCaller(e.caller),
+        )
       }
-    }
+
+    private fun toModelLogCaller(logCaller: LogCaller?): io.airbyte.api.server.generated.models.LogCaller? =
+      logCaller?.let {
+        io.airbyte.api.server.generated.models.LogCaller(
+          className = it.className,
+          methodName = it.methodName,
+          lineNumber = it.lineNumber,
+          threadName = it.threadName,
+        )
+      }
+
+    private fun logFormatType(logs: AttemptLogs): LogFormatType = if (logs.events.isNotEmpty()) LogFormatType.STRUCTURED else LogFormatType.FORMATTED
   }
 }
+
+/**
+ * Wire shape of the spec's AttemptInfoReadLogs oneOf, which the Kotlin generator emits as `Any`.
+ * Both lists are always present, as the Java model sent them, because the generated API client
+ * reads the logs as one class that requires both.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class AttemptLogs(
+  val events: List<io.airbyte.api.server.generated.models.LogEvent> = emptyList(),
+  val version: String? = null,
+  val logLines: List<String> = emptyList(),
+)

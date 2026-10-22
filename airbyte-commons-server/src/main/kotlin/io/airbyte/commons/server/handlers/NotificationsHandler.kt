@@ -4,14 +4,14 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.FieldTransform
 import io.airbyte.api.server.generated.models.NotificationRead
 import io.airbyte.api.server.generated.models.NotificationTrigger
 import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.config.FailureReason
 import io.airbyte.notification.SlackNotificationClient
@@ -22,7 +22,6 @@ import io.airbyte.notification.messages.SourceInfo
 import io.airbyte.notification.messages.SyncSummary
 import io.airbyte.notification.messages.WorkspaceInfo
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
@@ -137,34 +136,40 @@ open class NotificationsHandler {
         FailureReason.FailureOrigin.SOURCE,
       )
     val TEST_DIFF: CatalogDiff =
-      CatalogDiff()
-        .addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-            .streamDescriptor(StreamDescriptor().name("some_new_stream").namespace("ns")),
-        ).addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("deprecated_stream")),
-        ).addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("altered_stream"))
-            .updateStream(
-              StreamTransformUpdateStream().fieldTransforms(
-                listOf<@Valid FieldTransform?>(
-                  FieldTransform()
-                    .fieldName(listOf("path", "field"))
-                    .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
-                    .breaking(false),
-                  FieldTransform()
-                    .fieldName(listOf("new_field"))
-                    .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                    .breaking(false),
-                ),
-              ),
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.ADD_STREAM,
+              streamDescriptor = StreamDescriptor(name = "some_new_stream", namespace = "ns"),
             ),
-        )
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "deprecated_stream"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "altered_stream"),
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms =
+                    listOf(
+                      FieldTransform(
+                        fieldName = listOf("path", "field"),
+                        transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        fieldName = listOf("new_field"),
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        breaking = false,
+                      ),
+                    ),
+                  streamAttributeTransforms = emptyList(),
+                ),
+            ),
+          ),
+      )
     val TEST_SCHEMA_UPDATE: SchemaUpdateNotification =
       SchemaUpdateNotification(
         WorkspaceInfo(UUID.randomUUID(), "Test notification workspace", AIRBYTE_URL),

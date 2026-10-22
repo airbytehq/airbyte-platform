@@ -5,7 +5,6 @@
 package io.airbyte.commons.converters
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
 import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
 import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
@@ -17,10 +16,11 @@ import io.airbyte.api.model.generated.RowFilteringMapperConfiguration
 import io.airbyte.api.model.generated.RowFilteringOperation
 import io.airbyte.api.model.generated.RowFilteringOperationEqual
 import io.airbyte.api.model.generated.RowFilteringOperationType
-import io.airbyte.api.model.generated.StreamMapperType
 import io.airbyte.api.problems.model.generated.ProblemMapperIdData
 import io.airbyte.api.problems.throwable.generated.MapperValidationInvalidConfigProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationMissingRequiredParamProblem
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.StreamMapperType
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteSecret
@@ -151,7 +151,7 @@ private fun nestedConditionsToInternal(operation: ObjectNode): List<Operation> =
 
 fun ConfiguredStreamMapper.toInternal(): MapperConfig =
   try {
-    when (this.type!!) {
+    when (this.type) {
       StreamMapperType.HASHING -> {
         HashingMapperConfig(
           id = this.id,
@@ -160,7 +160,7 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
         )
       }
 
-      StreamMapperType.FIELD_FILTERING -> {
+      StreamMapperType.FIELD_MINUS_FILTERING -> {
         FieldFilteringMapperConfig(
           id = this.id,
           name = MapperOperationName.FIELD_FILTERING,
@@ -168,7 +168,7 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
         )
       }
 
-      StreamMapperType.FIELD_RENAMING -> {
+      StreamMapperType.FIELD_MINUS_RENAMING -> {
         FieldRenamingMapperConfig(
           id = this.id,
           name = MapperOperationName.FIELD_RENAMING,
@@ -176,7 +176,7 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
         )
       }
 
-      StreamMapperType.ROW_FILTERING -> {
+      StreamMapperType.ROW_MINUS_FILTERING -> {
         val initialOperation = this.mapperConfiguration.get("conditions") as ObjectNode
         val operationConfig = operationJsonToInternal(initialOperation)
         RowFilteringMapperConfig(
@@ -224,39 +224,39 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
   }
 
 private fun HashingMapperConfig.toApi(): ConfiguredStreamMapper =
-  ConfiguredStreamMapper()
-    .id(this.id)
-    .type(StreamMapperType.HASHING)
-    .mapperConfiguration(
+  ConfiguredStreamMapper(
+    id = this.id,
+    type = StreamMapperType.HASHING,
+    mapperConfiguration =
       Jsons.jsonNode(
         HashingMapperConfiguration()
           .method(this.config.method.toApi())
           .fieldNameSuffix(this.config.fieldNameSuffix)
           .targetField(this.config.targetField),
       ),
-    )
+  )
 
 private fun FieldFilteringMapperConfig.toApi(): ConfiguredStreamMapper =
-  ConfiguredStreamMapper()
-    .id(this.id)
-    .type(StreamMapperType.FIELD_FILTERING)
-    .mapperConfiguration(
+  ConfiguredStreamMapper(
+    id = this.id,
+    type = StreamMapperType.FIELD_MINUS_FILTERING,
+    mapperConfiguration =
       Jsons.jsonNode(
         FieldFilteringMapperConfiguration().targetField(this.config.targetField),
       ),
-    )
+  )
 
 private fun FieldRenamingMapperConfig.toApi(): ConfiguredStreamMapper =
-  ConfiguredStreamMapper()
-    .id(this.id)
-    .type(StreamMapperType.FIELD_RENAMING)
-    .mapperConfiguration(
+  ConfiguredStreamMapper(
+    id = this.id,
+    type = StreamMapperType.FIELD_MINUS_RENAMING,
+    mapperConfiguration =
       Jsons.jsonNode(
         FieldRenamingMapperConfiguration()
           .originalFieldName(this.config.originalFieldName)
           .newFieldName(this.config.newFieldName),
       ),
-    )
+  )
 
 private fun Operation.toApi(): RowFilteringOperation =
   when (this) {
@@ -273,15 +273,15 @@ private fun Operation.toApi(): RowFilteringOperation =
   }
 
 private fun RowFilteringMapperConfig.toApi(): ConfiguredStreamMapper =
-  ConfiguredStreamMapper()
-    .id(this.id)
-    .type(StreamMapperType.ROW_FILTERING)
-    .mapperConfiguration(
+  ConfiguredStreamMapper(
+    id = this.id,
+    type = StreamMapperType.ROW_MINUS_FILTERING,
+    mapperConfiguration =
       Jsons.jsonNode(
         RowFilteringMapperConfiguration()
           .conditions(this.config.conditions.toApi()),
       ),
-    )
+  )
 
 private fun AesMode.toApi(): EncryptionMapperAESConfiguration.ModeEnum =
   when (this) {
@@ -327,10 +327,11 @@ private fun EncryptionMapperConfig.toApi(): ConfiguredStreamMapper {
       is AesEncryptionConfig -> Jsons.jsonNode((this.config as AesEncryptionConfig).toApi())
       is RsaEncryptionConfig -> Jsons.jsonNode((this.config as RsaEncryptionConfig).toApi())
     }
-  return ConfiguredStreamMapper()
-    .id(this.id)
-    .type(StreamMapperType.ENCRYPTION)
-    .mapperConfiguration(config)
+  return ConfiguredStreamMapper(
+    id = this.id,
+    type = StreamMapperType.ENCRYPTION,
+    mapperConfiguration = config,
+  )
 }
 
 fun MapperConfig.toApi(): ConfiguredStreamMapper =

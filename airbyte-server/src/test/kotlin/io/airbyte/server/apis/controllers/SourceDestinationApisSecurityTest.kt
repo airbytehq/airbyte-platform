@@ -6,13 +6,17 @@ package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
+import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.DiscoverCatalogResult
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.api.server.generated.models.SourceMetadata
 import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.api.server.generated.models.SourceReadWithMetadata
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -48,10 +52,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import java.util.UUID
-import io.airbyte.api.model.generated.CheckConnectionRead as JavaCheckConnectionRead
-import io.airbyte.api.model.generated.JobConfigType as JavaJobConfigType
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead as JavaSourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SynchronousJobRead as JavaSynchronousJobRead
 
 private const val SPEC = "SourceDestinationApisSecurityTest"
 private const val TEST_ROLES_HEADER = "X-Test-Roles"
@@ -99,7 +99,7 @@ internal class SourceDestinationApisSecurityTest {
         every { partialDestinationUpdate(any()) } returns destinationRead()
       }
 
-    // SchedulerHandler still returns the Java models; the controllers convert them through JSON, so these must be real objects
+    // the controllers serialize these through JSON, so they must be real objects
     @Singleton
     @Primary
     fun schedulerHandler(): SchedulerHandler =
@@ -108,7 +108,7 @@ internal class SourceDestinationApisSecurityTest {
         every { checkSourceConnectionFromSourceIdForUpdate(any()) } returns checkConnectionRead()
         every { checkDestinationConnectionFromDestinationId(any()) } returns checkConnectionRead()
         every { checkDestinationConnectionFromDestinationIdForUpdate(any()) } returns checkConnectionRead()
-        every { discoverSchemaForSourceFromSourceId(any()) } returns JavaSourceDiscoverSchemaRead().jobInfo(jobInfo())
+        every { discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead(jobInfo = jobInfo())
       }
   }
 
@@ -290,14 +290,15 @@ private fun destinationRead() =
   )
 
 private fun jobInfo() =
-  JavaSynchronousJobRead()
-    .id(UUID.randomUUID())
-    .configType(JavaJobConfigType.CHECK_CONNECTION_SOURCE)
-    .createdAt(0)
-    .endedAt(0)
-    .succeeded(true)
+  SynchronousJobRead(
+    id = UUID.randomUUID(),
+    configType = JobConfigType.CHECK_CONNECTION_SOURCE,
+    createdAt = 0,
+    endedAt = 0,
+    succeeded = true,
+  )
 
-private fun checkConnectionRead() = JavaCheckConnectionRead().status(JavaCheckConnectionRead.StatusEnum.SUCCEEDED).jobInfo(jobInfo())
+private fun checkConnectionRead() = CheckConnectionRead(status = CheckConnectionRead.Status.SUCCEEDED, jobInfo = jobInfo())
 
 private fun destinationCatalog() = DestinationCatalogWithId(DestinationCatalogId(UUID.randomUUID()), DestinationCatalog(operations = emptyList()))
 

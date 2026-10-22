@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.CatalogApi
-import io.airbyte.api.model.generated.DiffCatalogsRequest
-import io.airbyte.api.model.generated.DiffCatalogsResponse
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.apis.CatalogApi
+import io.airbyte.api.server.generated.models.DiffCatalogsRequest
+import io.airbyte.api.server.generated.models.DiffCatalogsResponse
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
@@ -23,16 +23,16 @@ import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.SourceService
 import io.airbyte.metrics.lib.TracingHelper
+import io.airbyte.server.apis.requireBody
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 
-@Controller("/api/v1/catalogs/diff")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class CatalogApiController(
@@ -42,15 +42,15 @@ class CatalogApiController(
   private val connectionService: ConnectionService,
   private val sourceService: SourceService,
 ) : CatalogApi {
-  @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun diffCatalogs(
-    @Body diffCatalogsRequest: DiffCatalogsRequest,
+    @Body diffCatalogsRequestBody: DiffCatalogsRequest?,
   ): DiffCatalogsResponse {
+    val diffCatalogsRequest = diffCatalogsRequestBody.requireBody()
     // Validate that connection_id is provided when persist_changes is true
     if (diffCatalogsRequest.persistChanges == true && diffCatalogsRequest.connectionId == null) {
       throw BadRequestProblem(

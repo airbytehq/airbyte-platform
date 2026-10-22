@@ -6,10 +6,10 @@ package io.airbyte.data.services.shared
 
 import io.airbyte.api.model.generated.ActorListFilters
 import io.airbyte.api.model.generated.ActorListSortKey
-import io.airbyte.api.model.generated.ActorStatus
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.WebBackendConnectionListFilters
-import io.airbyte.api.model.generated.WebBackendConnectionListSortKey
+import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.ActorType
+import io.airbyte.api.server.generated.models.WebBackendConnectionListFilters
+import io.airbyte.api.server.generated.models.WebBackendConnectionListSortKey
 import io.airbyte.commons.annotation.InternalForTesting
 import java.util.UUID
 import java.util.stream.Collectors
@@ -248,22 +248,9 @@ fun buildFilters(filters: WebBackendConnectionListFilters?): Filters? {
     filters.searchTerm,
     filters.sourceDefinitionIds,
     filters.destinationDefinitionIds, // Convert API enum values to config object
-    if (filters.statuses == null) {
-      null
-    } else {
-      filters.statuses
-        .stream()
-        .map { apiStatus: WebBackendConnectionListFilters.StatusesEnum -> ConnectionJobStatus.valueOf(apiStatus.name) }
-        .collect(Collectors.toList())
-    },
-    if (filters.states == null) {
-      null
-    } else {
-      filters.states
-        .stream()
-        .map { apiState: ActorStatus -> ActorStatus.valueOf(apiState.name) }
-        .collect(Collectors.toList())
-    },
+    // the Kotlin model carries the status wire values; ConnectionJobStatus constants are their uppercase names
+    filters.statuses?.map { apiStatus -> ConnectionJobStatus.valueOf(apiStatus.uppercase()) },
+    filters.states,
     filters.tagIds,
     filters.onDemandEnabled,
   )
@@ -288,7 +275,7 @@ fun buildFilters(filters: ActorListFilters?): Filters? {
     } else {
       filters.states
         .stream()
-        .map { apiState: ActorStatus -> ActorStatus.valueOf(apiState.name) }
+        .map { apiState: io.airbyte.api.model.generated.ActorStatus -> ActorStatus.valueOf(apiState.name) }
         .collect(Collectors.toList())
     },
     null,

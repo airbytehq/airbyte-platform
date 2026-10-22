@@ -6,21 +6,21 @@ package io.airbyte.api.client
 
 import io.airbyte.api.common.StreamDescriptorUtils.buildFieldName
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
-import io.airbyte.api.model.generated.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamDescriptor
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 internal class StreamDescriptorUtilsTest {
   @Test
   fun testBuildFullyQualifiedNameWithNamespace() {
-    val descriptor = StreamDescriptor().name("main_name").namespace("namespace")
+    val descriptor = StreamDescriptor(name = "main_name", namespace = "namespace")
     val fqn = buildFullyQualifiedName(descriptor)
     Assertions.assertEquals("namespace.main_name", fqn)
   }
 
   @Test
   fun testBuildFullyQualifiedNameNoNamespace() {
-    val descriptor = StreamDescriptor().name("foobar")
+    val descriptor = StreamDescriptor(name = "foobar")
     val fqn = buildFullyQualifiedName(descriptor)
     Assertions.assertEquals("foobar", fqn)
   }

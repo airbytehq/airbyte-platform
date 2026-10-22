@@ -7,9 +7,9 @@ package io.airbyte.server.apis.publicapi.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -105,13 +105,13 @@ class StreamsController(
     val streamList =
       httpResponse.catalog!!
         .streams
-        .map { it.stream }
+        .map { it.stream!! }
     val listOfStreamProperties =
       streamList.map { airbyteStream ->
         StreamProperties(
           streamName = airbyteStream.name,
           streamnamespace = airbyteStream.namespace,
-          syncModes = getValidSyncModes(sourceSyncModes = airbyteStream!!.supportedSyncModes!!, destinationSyncModes = destinationSyncModes),
+          syncModes = getValidSyncModes(sourceSyncModes = airbyteStream.supportedSyncModes!!, destinationSyncModes = destinationSyncModes),
           defaultCursorField = airbyteStream.defaultCursorField,
           sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey,
           sourceDefinedCursorField = airbyteStream.sourceDefinedCursor != null && airbyteStream.sourceDefinedCursor!!,

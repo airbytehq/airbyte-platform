@@ -7,7 +7,9 @@ package io.airbyte.server.apis.controllers
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Ticker
-import io.airbyte.api.model.generated.ConnectionRead
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionStatus
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
@@ -143,7 +145,7 @@ internal class StrictJsonDeserializationTest {
     clearMocks(connectionsHandler, organizationsHandler, dataplaneGroupService, dataplaneService, entitlementService, featureFlagClient)
     wrappedOrganizationUpdateTracker.reset()
     instanceConfigurationSetupTracker.reset()
-    every { connectionsHandler.getConnection(any()) } returns ConnectionRead()
+    every { connectionsHandler.getConnection(any()) } returns connectionRead()
     every { organizationsHandler.updateOrganization(any()) } returns
       OrganizationRead(organizationId = UUID.randomUUID(), organizationName = "name", email = "test@example.com")
     every { featureFlagClient.boolVariation(any(), Empty) } returns true
@@ -300,7 +302,7 @@ internal class StrictJsonDeserializationTest {
   fun `connections get continues to accept its declared property`() {
     enableStrictDeserialization()
     val connectionId = UUID.randomUUID()
-    every { connectionsHandler.getConnection(connectionId) } returns ConnectionRead()
+    every { connectionsHandler.getConnection(connectionId) } returns connectionRead()
 
     assertStatus(
       HttpStatus.OK,
@@ -391,6 +393,17 @@ internal class StrictJsonDeserializationTest {
     assertEquals(true, strictJsonDeserializationFlag.isEnabled())
   }
 }
+
+private fun connectionRead() =
+  ConnectionRead(
+    connectionId = UUID.randomUUID(),
+    name = "connection",
+    sourceId = UUID.randomUUID(),
+    destinationId = UUID.randomUUID(),
+    syncCatalog = AirbyteCatalog(streams = emptyList()),
+    status = ConnectionStatus.ACTIVE,
+    breakingChange = false,
+  )
 
 internal class StrictJsonDeserializationTicker : Ticker {
   private val nanos = AtomicLong()

@@ -40,7 +40,6 @@ import org.mockito.Mockito
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges as JavaActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorType as KotlinActorType
 import io.airbyte.api.server.generated.models.SupportLevel as KotlinSupportLevel
 
@@ -249,11 +248,6 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @Test
   fun testCreateActorDefinitionVersionReadWithBreakingChange() {
-    // The helper still returns the Java model; the handler converts it to the Kotlin one.
-    val javaBreakingChanges =
-      JavaActorDefinitionVersionBreakingChanges()
-        .upcomingBreakingChanges(emptyList())
-        .minUpgradeDeadline(LocalDate.of(2026, 1, 1))
     val breakingChanges = ActorDefinitionVersionBreakingChanges(upcomingBreakingChanges = emptyList(), minUpgradeDeadline = LocalDate.of(2026, 1, 1))
 
     val actorDefinitionVersion = createActorDefinitionVersion().withSupportState(ActorDefinitionVersion.SupportState.DEPRECATED)
@@ -263,7 +257,7 @@ internal class ActorDefinitionVersionHandlerTest {
           actorDefinitionVersion,
         ),
       ).thenReturn(
-        Optional.of(javaBreakingChanges),
+        Optional.of(breakingChanges),
       )
 
     val versionWithOverrideStatus =

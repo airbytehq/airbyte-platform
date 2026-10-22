@@ -4,14 +4,15 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeWithBasicEnum
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,18 +25,22 @@ import java.util.UUID
 internal class ConnectionReadMapperTest {
   @Test
   internal fun `test mapping for Airbyte Cloud`() {
-    val connectionRead = ConnectionRead()
-    connectionRead.connectionId = UUID.randomUUID()
-    connectionRead.name = "testconnection"
-    connectionRead.status = ConnectionStatus.ACTIVE
-    connectionRead.dataplaneGroupId = UUID.randomUUID()
-    connectionRead.scheduleType = ConnectionScheduleType.MANUAL
-    connectionRead.sourceId = UUID.randomUUID()
-    connectionRead.destinationId = UUID.randomUUID()
-    connectionRead.namespaceDefinition = NamespaceDefinitionType.DESTINATION
-    connectionRead.namespaceFormat = "namespaceFormat"
-    connectionRead.prefix = "prefix"
-    connectionRead.createdAt = 1L
+    val connectionRead =
+      ConnectionRead(
+        connectionId = UUID.randomUUID(),
+        name = "testconnection",
+        status = ConnectionStatus.ACTIVE,
+        dataplaneGroupId = UUID.randomUUID(),
+        scheduleType = ConnectionScheduleType.MANUAL,
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        namespaceDefinition = NamespaceDefinitionType.DESTINATION,
+        namespaceFormat = "namespaceFormat",
+        prefix = "prefix",
+        createdAt = 1L,
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        breakingChange = false,
+      )
 
     val workspaceId = UUID.randomUUID()
     val result = ConnectionReadMapper.from(connectionRead, workspaceId)
@@ -52,23 +57,21 @@ internal class ConnectionReadMapperTest {
   @Test
   internal fun `maps cron timezone in the read response suffix`() {
     val connectionRead =
-      ConnectionRead().apply {
-        connectionId = UUID.randomUUID()
-        name = "testconnection"
-        status = ConnectionStatus.ACTIVE
-        scheduleType = ConnectionScheduleType.CRON
+      ConnectionRead(
+        connectionId = UUID.randomUUID(),
+        name = "testconnection",
+        status = ConnectionStatus.ACTIVE,
+        scheduleType = ConnectionScheduleType.CRON,
         scheduleData =
-          ConnectionScheduleData().apply {
-            cron =
-              ConnectionScheduleDataCron().apply {
-                cronExpression = "0 0 0 0 0 0"
-                cronTimeZone = "America/New_York"
-              }
-          }
-        sourceId = UUID.randomUUID()
-        destinationId = UUID.randomUUID()
-        createdAt = 1L
-      }
+          ConnectionScheduleData(
+            cron = ConnectionScheduleDataCron(cronExpression = "0 0 0 0 0 0", cronTimeZone = "America/New_York"),
+          ),
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        createdAt = 1L,
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        breakingChange = false,
+      )
 
     val result = ConnectionReadMapper.from(connectionRead, UUID.randomUUID())
 

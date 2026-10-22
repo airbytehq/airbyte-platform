@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ActorType
+import io.airbyte.api.server.generated.models.ActorType
 import io.airbyte.commons.csp.CspChecker
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
 import io.airbyte.commons.server.helpers.PermissionDeniedException

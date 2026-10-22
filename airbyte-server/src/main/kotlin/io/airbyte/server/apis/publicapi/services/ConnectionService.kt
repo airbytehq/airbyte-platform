@@ -4,13 +4,13 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.ConnectionCreate
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.ListConnectionsForWorkspacesRequestBody
-import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionCreate
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionUpdate
+import io.airbyte.api.server.generated.models.ListConnectionsForWorkspacesRequestBody
+import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.micronaut.runtime.AirbyteApiConfig
@@ -199,15 +199,18 @@ class ConnectionServiceImpl(
     offset: Int,
     includeDeleted: Boolean,
   ): ConnectionsResponse {
-    val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
+    val pagination: Pagination = Pagination(pageSize = limit, rowOffset = offset)
+    val currentUserId = currentUserService.getCurrentUser().userId
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserId) }
 
     val listConnectionsForWorkspacesRequestBody =
-      ListConnectionsForWorkspacesRequestBody()
-        .workspaceIds(workspaceIdsToQuery)
-        .tagIds(tagIds)
-        .includeDeleted(includeDeleted)
-        .pagination(pagination)
+      ListConnectionsForWorkspacesRequestBody(
+        workspaceIds = workspaceIdsToQuery,
+        userId = currentUserId,
+        tagIds = tagIds,
+        includeDeleted = includeDeleted,
+        pagination = pagination,
+      )
 
     val result =
       kotlin

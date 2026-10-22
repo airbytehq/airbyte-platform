@@ -89,7 +89,8 @@ export const pollCommandUntilResolved = async (
       await sleep(COMMAND_POLLING_INTERVAL_MS, signal);
     } else {
       commandResolved = true;
-      return status;
+      // a command whose workload can't be found has no status; its output says how it ended
+      return status ?? "completed";
     }
   }
 

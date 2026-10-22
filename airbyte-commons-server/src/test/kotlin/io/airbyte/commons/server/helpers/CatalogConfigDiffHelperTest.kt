@@ -5,16 +5,18 @@
 package io.airbyte.commons.server.helpers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.CatalogConfigDiff
-import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.StreamCursorFieldDiff
 import io.airbyte.api.model.generated.StreamFieldStatusChanged
 import io.airbyte.api.model.generated.StreamPrimaryKeyDiff
 import io.airbyte.api.model.generated.StreamSyncModeDiff
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -24,7 +26,7 @@ class CatalogConfigDiffHelperTest {
 
   @Test
   fun testEmptyAirbyteCatalogDiff() {
-    val catalogDiff = CatalogDiff().apply { transforms = listOf() }
+    val catalogDiff = CatalogDiff(transforms = listOf())
     val catalogConfigDiff =
       CatalogConfigDiff().apply {
         this.streamsEnabled = mutableListOf<StreamFieldStatusChanged>()
@@ -55,73 +57,46 @@ class CatalogConfigDiffHelperTest {
     """
     private val streamSchema = ObjectMapper().readTree(jsonString)
     private val stream1 =
-      AirbyteStream().apply {
-        name = "stream1"
-        jsonSchema = streamSchema
-        supportedSyncModes = listOf()
-      }
+      AirbyteStream(name = "stream1", jsonSchema = streamSchema, supportedSyncModes = listOf())
     private val stream2 =
-      AirbyteStream().apply {
-        name = "stream2"
-        jsonSchema = streamSchema
-        supportedSyncModes = listOf()
-      }
+      AirbyteStream(name = "stream2", jsonSchema = streamSchema, supportedSyncModes = listOf())
 
     private val sourceCatalog =
-      AirbyteCatalog().apply {
+      AirbyteCatalog(
         streams =
           listOf(
-            AirbyteStreamAndConfiguration().apply { stream = stream1 },
-            AirbyteStreamAndConfiguration().apply { stream = stream2 },
-          )
-      }
+            AirbyteStreamAndConfiguration(stream = stream1),
+            AirbyteStreamAndConfiguration(stream = stream2),
+          ),
+      )
 
     private val stream1ConfigOld =
-      AirbyteStreamAndConfiguration().apply {
-        stream = stream1
-        config =
-          AirbyteStreamConfiguration().apply {
-            selected = true
-            selectedFields = listOf()
-            suggested = false
-          }
-      }
+      AirbyteStreamAndConfiguration(
+        stream = stream1,
+        config = streamConfig(selected = true),
+      )
 
     private val oldConfig =
-      AirbyteCatalog().apply {
-        streams = listOf(stream1ConfigOld)
-      }
+      AirbyteCatalog(streams = listOf(stream1ConfigOld))
 
     @Test
     fun testEnabledStreams() {
       val stream1ConfigNew =
-        AirbyteStreamAndConfiguration().apply {
-          stream = stream1
-          config =
-            AirbyteStreamConfiguration().apply {
-              fieldSelectionEnabled = false
-              selected = true // stream enabled
-              selectedFields = listOf() // all fields are enabled
-              suggested = false
-            }
-        }
+        AirbyteStreamAndConfiguration(
+          stream = stream1,
+          // stream enabled, all fields are enabled
+          config = streamConfig(selected = true, fieldSelectionEnabled = false),
+        )
 
       val stream2ConfigNew =
-        AirbyteStreamAndConfiguration().apply {
-          stream = stream2
-          config =
-            AirbyteStreamConfiguration().apply {
-              fieldSelectionEnabled = false
-              selected = true // stream2 is enabled
-              selectedFields = listOf() // all fields are enabled
-              suggested = false
-            }
-        }
+        AirbyteStreamAndConfiguration(
+          stream = stream2,
+          // stream2 is enabled, all fields are enabled
+          config = streamConfig(selected = true, fieldSelectionEnabled = false),
+        )
 
       val newConfig =
-        AirbyteCatalog().apply {
-          streams = listOf(stream1ConfigNew, stream2ConfigNew)
-        }
+        AirbyteCatalog(streams = listOf(stream1ConfigNew, stream2ConfigNew))
 
       val catalogConfigDiff = catalogConfigDiffHelper.getCatalogConfigDiff(sourceCatalog, oldConfig, newConfig)
       assertEquals(1, catalogConfigDiff.streamsEnabled.size)
@@ -130,23 +105,30 @@ class CatalogConfigDiffHelperTest {
     @Test
     fun testDisabledStreams() {
       val stream1ConfigNew =
-        AirbyteStreamAndConfiguration().apply {
-          stream = stream1
-          config =
-            AirbyteStreamConfiguration().apply {
-              selected = false // stream disabled
-              selectedFields = listOf() // all fields are enabled
-              suggested = false
-            }
-        }
+        AirbyteStreamAndConfiguration(
+          stream = stream1,
+          // stream disabled, all fields are enabled
+          config = streamConfig(selected = false),
+        )
 
       val newConfig =
-        AirbyteCatalog().apply {
-          streams = listOf(stream1ConfigNew)
-        }
+        AirbyteCatalog(streams = listOf(stream1ConfigNew))
 
       val catalogConfigDiff = catalogConfigDiffHelper.getCatalogConfigDiff(sourceCatalog, oldConfig, newConfig)
       assertEquals(1, catalogConfigDiff.streamsDisabled.size)
     }
+
+    private fun streamConfig(
+      selected: Boolean,
+      fieldSelectionEnabled: Boolean? = null,
+    ): AirbyteStreamConfiguration =
+      AirbyteStreamConfiguration(
+        syncMode = SyncMode.FULL_REFRESH,
+        destinationSyncMode = DestinationSyncMode.OVERWRITE,
+        fieldSelectionEnabled = fieldSelectionEnabled,
+        selected = selected,
+        selectedFields = listOf(),
+        suggested = false,
+      )
   }
 }

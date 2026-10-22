@@ -4,8 +4,8 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateType
 import io.airbyte.commons.server.authorization.AuthenticationFactory
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -68,7 +68,7 @@ internal class ServiceAccountTokenHttpTest {
       clearMocks(permissionHandler, workspaceHelper, stateHandler)
       every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
       every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
-      every { stateHandler.getState(any()) } returns ConnectionState().connectionId(connectionId).stateType(ConnectionStateType.NOT_SET)
+      every { stateHandler.getState(any()) } returns ConnectionState(connectionId = connectionId, stateType = ConnectionStateType.NOT_SET)
     }
   }
 

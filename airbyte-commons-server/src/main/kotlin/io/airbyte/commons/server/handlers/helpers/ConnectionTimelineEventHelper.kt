@@ -5,11 +5,11 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.AirbyteCatalogDiff
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.UserReadInConnectionEvent
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
+import io.airbyte.api.server.generated.models.UserReadInConnectionEvent
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.JobStatus
 import io.airbyte.commons.server.converters.JobConverter.Companion.getStreamsAssociatedWithJob
@@ -90,21 +90,16 @@ class ConnectionTimelineEventHelper
       try {
         val userOpt = userPersistence.getUser(userId)
         if (userOpt.isEmpty) {
-          return UserReadInConnectionEvent().isDeleted(true)
+          return UserReadInConnectionEvent(isDeleted = true)
         }
 
         val user = userOpt.get()
         val shouldObfuscate = shouldObfuscateAirbyteUser(user, connectionId)
 
         return if (shouldObfuscate) {
-          UserReadInConnectionEvent()
-            .id(user.userId)
-            .name(AIRBYTE_SUPPORT_USER_NAME)
+          UserReadInConnectionEvent(id = user.userId, name = AIRBYTE_SUPPORT_USER_NAME)
         } else {
-          UserReadInConnectionEvent()
-            .id(user.userId)
-            .name(user.name)
-            .email(user.email)
+          UserReadInConnectionEvent(id = user.userId, name = user.name, email = user.email)
         }
       } catch (e: Exception) {
         log.error(e) { "Error while retrieving user information." }
@@ -292,7 +287,7 @@ class ConnectionTimelineEventHelper
       diff: CatalogDiff,
     ) {
       try {
-        if (diff.transforms == null || diff.transforms.isEmpty()) {
+        if (diff.transforms.isEmpty()) {
           log.info { "Diff is empty. Bypassing logging an event." }
           return
         }

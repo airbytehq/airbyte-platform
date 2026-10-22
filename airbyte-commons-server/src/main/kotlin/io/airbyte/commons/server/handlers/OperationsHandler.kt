@@ -4,15 +4,15 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.CheckOperationRead
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.OperationCreate
-import io.airbyte.api.model.generated.OperationIdRequestBody
-import io.airbyte.api.model.generated.OperationRead
-import io.airbyte.api.model.generated.OperationReadList
-import io.airbyte.api.model.generated.OperationUpdate
-import io.airbyte.api.model.generated.OperatorConfiguration
-import io.airbyte.api.model.generated.OperatorType
+import io.airbyte.api.server.generated.models.CheckOperationRead
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.OperationCreate
+import io.airbyte.api.server.generated.models.OperationIdRequestBody
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperationReadList
+import io.airbyte.api.server.generated.models.OperationUpdate
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.OperationsConverter.operationReadFromPersistedOperation
@@ -53,11 +53,9 @@ open class OperationsHandler
       try {
         validateOperation(operationCheck)
       } catch (e: IllegalArgumentException) {
-        return CheckOperationRead()
-          .status(CheckOperationRead.StatusEnum.FAILED)
-          .message(e.message)
+        return CheckOperationRead(status = CheckOperationRead.Status.FAILED, message = e.message)
       }
-      return CheckOperationRead().status(CheckOperationRead.StatusEnum.SUCCEEDED)
+      return CheckOperationRead(status = CheckOperationRead.Status.SUCCEEDED)
     }
 
     fun createOperation(operationCreate: OperationCreate): OperationRead {
@@ -82,7 +80,7 @@ open class OperationsHandler
         StandardSyncOperation()
           .withWorkspaceId(operationCreate.workspaceId)
           .withName(operationCreate.name)
-          .withOperatorType(operationCreate.operatorConfiguration.operatorType?.convertTo<StandardSyncOperation.OperatorType>())
+          .withOperatorType(operationCreate.operatorConfiguration.operatorType.convertTo<StandardSyncOperation.OperatorType>())
           .withTombstone(false)
       populateOperatorConfigFromApi(operationCreate.operatorConfiguration, standardSyncOperation, workspace)
       return standardSyncOperation
@@ -120,7 +118,7 @@ open class OperationsHandler
         }
         operationReads.add(buildOperationRead(standardSyncOperation))
       }
-      return OperationReadList().operations(operationReads)
+      return OperationReadList(operations = operationReads)
     }
 
     fun getOperation(operationIdRequestBody: OperationIdRequestBody): OperationRead = buildOperationRead(operationIdRequestBody.operationId)

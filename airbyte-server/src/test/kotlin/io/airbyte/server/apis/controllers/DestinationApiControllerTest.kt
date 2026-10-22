@@ -5,11 +5,9 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
+import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationDiscoverSchemaRequestBody
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
@@ -17,6 +15,8 @@ import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.DestinationSearch
 import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -265,14 +265,15 @@ internal class DestinationApiControllerTest {
     )
 
   private fun checkConnectionRead() =
-    CheckConnectionRead()
-      .status(CheckConnectionRead.StatusEnum.SUCCEEDED)
-      .jobInfo(
-        SynchronousJobRead()
-          .id(UUID.randomUUID())
-          .configType(JobConfigType.CHECK_CONNECTION_DESTINATION)
-          .createdAt(0L)
-          .endedAt(0L)
-          .succeeded(true),
-      )
+    CheckConnectionRead(
+      status = CheckConnectionRead.Status.SUCCEEDED,
+      jobInfo =
+        SynchronousJobRead(
+          id = UUID.randomUUID(),
+          configType = JobConfigType.CHECK_CONNECTION_DESTINATION,
+          createdAt = 0L,
+          endedAt = 0L,
+          succeeded = true,
+        ),
+    )
 }

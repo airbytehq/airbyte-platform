@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
-import io.airbyte.api.model.generated.DeadlineAction
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
+import io.airbyte.api.server.generated.models.DeadlineAction
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException
@@ -532,27 +532,27 @@ internal class ActorDefinitionHandlerHelperTest {
         ).thenReturn(breakingChangeList as MutableList<ActorDefinitionBreakingChange>)
 
       val expected =
-        ActorDefinitionVersionBreakingChanges()
-          .minUpgradeDeadline(LocalDate.parse("2023-01-01"))
-          .deadlineAction(DeadlineAction.AUTO_UPGRADE)
-          .upcomingBreakingChanges(
+        ActorDefinitionVersionBreakingChanges(
+          minUpgradeDeadline = LocalDate.parse("2023-01-01"),
+          deadlineAction = DeadlineAction.AUTO_UPGRADE,
+          upcomingBreakingChanges =
             listOf(
-              io.airbyte.api.model.generated
-                .ActorDefinitionBreakingChange()
-                .migrationDocumentationUrl("https://docs.airbyte.io/2")
-                .version("2.0.0")
-                .upgradeDeadline(LocalDate.parse(("2023-01-01")))
-                .message("This is a breaking change")
-                .deadlineAction(DeadlineAction.AUTO_UPGRADE),
-              io.airbyte.api.model.generated
-                .ActorDefinitionBreakingChange()
-                .migrationDocumentationUrl("https://docs.airbyte.io/3")
-                .version("3.0.0")
-                .upgradeDeadline(LocalDate.parse("2023-05-01"))
-                .message("This is another breaking change")
-                .deadlineAction(DeadlineAction.DISABLE),
+              io.airbyte.api.server.generated.models.ActorDefinitionBreakingChange(
+                migrationDocumentationUrl = "https://docs.airbyte.io/2",
+                version = "2.0.0",
+                upgradeDeadline = LocalDate.parse(("2023-01-01")),
+                message = "This is a breaking change",
+                deadlineAction = DeadlineAction.AUTO_UPGRADE,
+              ),
+              io.airbyte.api.server.generated.models.ActorDefinitionBreakingChange(
+                migrationDocumentationUrl = "https://docs.airbyte.io/3",
+                version = "3.0.0",
+                upgradeDeadline = LocalDate.parse("2023-05-01"),
+                message = "This is another breaking change",
+                deadlineAction = DeadlineAction.DISABLE,
+              ),
             ),
-          )
+        )
 
       val actual: Optional<ActorDefinitionVersionBreakingChanges> =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(

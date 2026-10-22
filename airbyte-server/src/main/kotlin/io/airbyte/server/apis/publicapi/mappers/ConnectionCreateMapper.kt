@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.ConnectionCreate
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionCreate
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.server.apis.publicapi.helpers.ConnectionHelper
 import java.util.UUID
@@ -32,55 +32,42 @@ object ConnectionCreateMapper {
     destinationCatalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
   ): ConnectionCreate {
-    val connectionCreateOss = ConnectionCreate()
-    connectionCreateOss.sourceId = connectionCreateRequest.sourceId
-    connectionCreateOss.destinationId = connectionCreateRequest.destinationId
-    connectionCreateOss.name = connectionCreateRequest.name
-    connectionCreateOss.nonBreakingChangesPreference =
-      ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
-        connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
-      )
-    connectionCreateOss.namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition)
-    if (connectionCreateRequest.namespaceFormat != null) {
-      connectionCreateOss.namespaceFormat = connectionCreateRequest.namespaceFormat
-    }
-    if (connectionCreateRequest.prefix != null) {
-      connectionCreateOss.prefix = connectionCreateRequest.prefix
-    }
+    val schedule = connectionCreateRequest.schedule
+    // a schedule without a cron expression carries no schedule data; the schedule helper rejects it for cron schedules
+    val scheduleData =
+      schedule?.cronExpression?.let { cronExpression ->
+        ConnectionScheduleData(cron = ConnectionScheduleDataCron(cronExpression = cronExpression, cronTimeZone = schedule.cronTimeZone ?: "UTC"))
+      }
+    val scheduleType =
+      if (schedule != null) {
+        ConnectionScheduleType.decode(schedule.scheduleType.toString())
+          ?: throw IllegalArgumentException("Unexpected schedule type: ${schedule.scheduleType}")
+      } else {
+        ConnectionScheduleType.MANUAL
+      }
+    val status =
+      connectionCreateRequest.status?.let {
+        ConnectionStatus.decode(it.toString()) ?: throw IllegalArgumentException("Unexpected connection status: $it")
+      } ?: ConnectionStatus.ACTIVE
 
-    // set schedule
-    if (connectionCreateRequest.schedule != null) {
-      connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule!!.scheduleType.toString())
-      val connectionScheduleDataCron = ConnectionScheduleDataCron()
-      connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule!!.cronExpression
-      connectionScheduleDataCron.cronTimeZone = connectionCreateRequest.schedule!!.cronTimeZone ?: "UTC"
-      val connectionScheduleData = ConnectionScheduleData()
-      connectionScheduleData.cron = connectionScheduleDataCron
-      connectionCreateOss.scheduleData = connectionScheduleData
-    } else {
-      connectionCreateOss.scheduleType = ConnectionScheduleType.MANUAL
-    }
-
-    // set streams
-    if (catalogId != null) {
-      connectionCreateOss.sourceCatalogId = catalogId
-    }
-    if (configuredCatalog != null) {
-      connectionCreateOss.syncCatalog = configuredCatalog
-    }
-    if (destinationCatalogId != null) {
-      connectionCreateOss.destinationCatalogId = destinationCatalogId
-    }
-    if (connectionCreateRequest.status != null) {
-      connectionCreateOss.status = ConnectionStatus.fromValue(connectionCreateRequest.status.toString())
-    } else {
-      connectionCreateOss.status = ConnectionStatus.ACTIVE
-    }
-
-    if (connectionCreateRequest.tags != null) {
-      connectionCreateOss.tags = ConnectionHelper.convertTags(connectionCreateRequest.tags ?: emptyList())
-    }
-
-    return connectionCreateOss
+    return ConnectionCreate(
+      sourceId = connectionCreateRequest.sourceId,
+      destinationId = connectionCreateRequest.destinationId,
+      name = connectionCreateRequest.name,
+      nonBreakingChangesPreference =
+        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
+          connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
+        ),
+      namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition),
+      namespaceFormat = connectionCreateRequest.namespaceFormat,
+      prefix = connectionCreateRequest.prefix,
+      scheduleType = scheduleType,
+      scheduleData = scheduleData,
+      sourceCatalogId = catalogId,
+      syncCatalog = configuredCatalog,
+      destinationCatalogId = destinationCatalogId,
+      status = status,
+      tags = connectionCreateRequest.tags?.let { ConnectionHelper.convertTags(it) } ?: emptyList(),
+    )
   }
 }

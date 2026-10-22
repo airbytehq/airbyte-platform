@@ -14,10 +14,10 @@ internal class CatalogDiffConvertersTest {
   @Test
   fun testEnumCompatibility() {
     Assertions.assertTrue(
-      isCompatible<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum, StreamTransformType>(),
+      isCompatible<io.airbyte.api.server.generated.models.StreamTransform.TransformType, StreamTransformType>(),
     )
     Assertions.assertTrue(
-      isCompatible<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum, FieldTransformType>(),
+      isCompatible<io.airbyte.api.server.generated.models.FieldTransform.TransformType, FieldTransformType>(),
     )
   }
 }

@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.errors
 
-import io.airbyte.api.model.generated.NotFoundKnownExceptionInfo
+import io.airbyte.api.server.generated.models.NotFoundKnownExceptionInfo
 
 /**
  * Thrown when an api input requests an id that does not exist.
@@ -31,11 +31,12 @@ class IdNotFoundKnownException : KnownException {
    */
   fun getNotFoundKnownExceptionInfo(): NotFoundKnownExceptionInfo {
     val exceptionInfo =
-      NotFoundKnownExceptionInfo()
-        .exceptionClassName(javaClass.name)
-        .message(this.message)
-        .id(this.id)
-        .errorId(this.errorId)
+      NotFoundKnownExceptionInfo(
+        exceptionClassName = javaClass.name,
+        message = this.message,
+        id = this.id,
+        errorId = this.errorId,
+      )
     return exceptionInfo
   }
 
@@ -45,19 +46,15 @@ class IdNotFoundKnownException : KnownException {
    * @return info
    */
   fun getNotFoundKnownExceptionInfoWithStackTrace(): NotFoundKnownExceptionInfo {
-    val exceptionInfo =
-      NotFoundKnownExceptionInfo()
-        .exceptionClassName(javaClass.name)
-        .message(this.message)
-        .exceptionStack(getStackTraceAsList(this))
-        .id(this.id)
-        .errorId(this.errorId)
-    if (this.cause != null) {
-      exceptionInfo.rootCauseExceptionClassName(this.cause!!.javaClass.name)
-      exceptionInfo.rootCauseExceptionStack(
-        getStackTraceAsList(cause!!),
-      )
-    }
-    return exceptionInfo
+    val cause = this.cause
+    return NotFoundKnownExceptionInfo(
+      exceptionClassName = javaClass.name,
+      message = this.message,
+      exceptionStack = getStackTraceAsList(this),
+      id = this.id,
+      errorId = this.errorId,
+      rootCauseExceptionClassName = cause?.javaClass?.name,
+      rootCauseExceptionStack = cause?.let { getStackTraceAsList(it) },
+    )
   }
 }

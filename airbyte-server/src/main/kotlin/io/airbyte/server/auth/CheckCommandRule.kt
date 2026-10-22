@@ -4,9 +4,9 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.models.RunCheckCommandRequest
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
@@ -40,8 +40,10 @@ class CheckCommandRule(
     val id: String? = body.id
     if (id.isNullOrBlank()) throw BadRequestProblem()
     if (body.config != null && !Jsons.jsonNode(body.config).isObject) throw BadRequestProblem()
-    if (body.attemptNumber != null && body.attemptNumber < 0) throw BadRequestProblem()
-    if (body.jobId != null && body.jobId.isBlank()) throw BadRequestProblem()
+    val attemptNumber = body.attemptNumber
+    if (attemptNumber != null && attemptNumber < 0) throw BadRequestProblem()
+    val jobId = body.jobId
+    if (jobId != null && jobId.isBlank()) throw BadRequestProblem()
 
     val actorId: UUID? = body.actorId
     if (actorId != null) return CheckCommandInput.Saved(actorId, Optional.ofNullable(body.workspaceId), Optional.ofNullable(body.actorDefinitionId))

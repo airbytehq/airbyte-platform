@@ -4,15 +4,14 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.problems.throwable.generated.BasicScheduleValidationUnderOneHourNotAllowedProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem
-import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataBasicSchedule
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
@@ -78,20 +77,21 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.HOURS)
-            .units(1L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.HOURS,
+            units = 1L,
+          ),
+      ),
     )
     Assertions.assertFalse(actual.getManual())
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual.getScheduleType())
-    Assertions.assertEquals(BasicSchedule.TimeUnit.HOURS, actual.getScheduleData().getBasicSchedule().getTimeUnit())
-    Assertions.assertEquals(1L, actual.getScheduleData().getBasicSchedule().getUnits())
+    Assertions.assertEquals(BasicSchedule.TimeUnit.HOURS, actual.getScheduleData().basicSchedule.timeUnit)
+    Assertions.assertEquals(1L, actual.getScheduleData().basicSchedule.units)
     // We expect the old format to be dual-written.
-    Assertions.assertEquals(Schedule.TimeUnit.HOURS, actual.getSchedule().getTimeUnit())
-    Assertions.assertEquals(1L, actual.getSchedule().getUnits())
+    Assertions.assertEquals(Schedule.TimeUnit.HOURS, actual.getSchedule().timeUnit)
+    Assertions.assertEquals(1L, actual.getSchedule().units)
   }
 
   @Test
@@ -104,16 +104,17 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual,
       ConnectionScheduleType.CRON,
-      ConnectionScheduleData()
-        .cron(
-          ConnectionScheduleDataCron()
-            .cronTimeZone(EXPECTED_CRON_TIMEZONE)
-            .cronExpression(EXPECTED_CRON_EXPRESSION),
-        ),
+      ConnectionScheduleData(
+        cron =
+          ConnectionScheduleDataCron(
+            cronTimeZone = EXPECTED_CRON_TIMEZONE,
+            cronExpression = EXPECTED_CRON_EXPRESSION,
+          ),
+      ),
     )
     Assertions.assertEquals(StandardSync.ScheduleType.CRON, actual.getScheduleType())
-    Assertions.assertEquals(EXPECTED_CRON_TIMEZONE, actual.getScheduleData().getCron().getCronTimeZone())
-    Assertions.assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().getCron().getCronExpression())
+    Assertions.assertEquals(EXPECTED_CRON_TIMEZONE, actual.getScheduleData().cron.cronTimeZone)
+    Assertions.assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().cron.cronExpression)
     Assertions.assertNull(actual.getSchedule())
   }
 
@@ -151,23 +152,14 @@ internal class ConnectionSchedulerHelperTest {
       )
     }
     Assertions.assertThrows(
-      CronValidationMissingComponentProblem::class.java,
-    ) {
-      connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
-        actual,
-        ConnectionScheduleType.CRON,
-        ConnectionScheduleData()
-          .cron(ConnectionScheduleDataCron()),
-      )
-    }
-    Assertions.assertThrows(
       CronValidationInvalidTimezoneProblem::class.java,
     ) {
       connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
         actual,
         ConnectionScheduleType.CRON,
-        ConnectionScheduleData()
-          .cron(ConnectionScheduleDataCron().cronExpression(EXPECTED_CRON_EXPRESSION).cronTimeZone("Etc/foo")),
+        ConnectionScheduleData(
+          cron = ConnectionScheduleDataCron(cronExpression = EXPECTED_CRON_EXPRESSION, cronTimeZone = "Etc/foo"),
+        ),
       )
     }
     Assertions.assertThrows(
@@ -176,8 +168,9 @@ internal class ConnectionSchedulerHelperTest {
       connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
         actual,
         ConnectionScheduleType.CRON,
-        ConnectionScheduleData()
-          .cron(ConnectionScheduleDataCron().cronExpression("bad cron").cronTimeZone(EXPECTED_CRON_TIMEZONE)),
+        ConnectionScheduleData(
+          cron = ConnectionScheduleDataCron(cronExpression = "bad cron", cronTimeZone = EXPECTED_CRON_TIMEZONE),
+        ),
       )
     }
   }
@@ -191,7 +184,7 @@ internal class ConnectionSchedulerHelperTest {
          * file must be updated with the new timezones.
          */
     val timezoneStrings =
-      arrayOf<String?>(
+      arrayOf<String>(
         "Africa/Abidjan",
         "Africa/Accra",
         "Africa/Addis_Ababa",
@@ -768,16 +761,17 @@ internal class ConnectionSchedulerHelperTest {
         connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
           actual,
           ConnectionScheduleType.CRON,
-          ConnectionScheduleData()
-            .cron(
-              ConnectionScheduleDataCron()
-                .cronTimeZone(expectedTimezone)
-                .cronExpression(EXPECTED_CRON_EXPRESSION),
-            ),
+          ConnectionScheduleData(
+            cron =
+              ConnectionScheduleDataCron(
+                cronTimeZone = expectedTimezone,
+                cronExpression = EXPECTED_CRON_EXPRESSION,
+              ),
+          ),
         )
         Assertions.assertEquals(StandardSync.ScheduleType.CRON, actual.getScheduleType())
-        Assertions.assertEquals(expectedTimezone, actual.getScheduleData().getCron().getCronTimeZone())
-        Assertions.assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().getCron().getCronExpression())
+        Assertions.assertEquals(expectedTimezone, actual.getScheduleData().cron.cronTimeZone)
+        Assertions.assertEquals(EXPECTED_CRON_EXPRESSION, actual.getScheduleData().cron.cronExpression)
       } catch (e: IllegalArgumentException) {
         throw RuntimeException(
           "One of the timezones is not supported - update oss/airbyte-webapp/src/components/connection/ConnectionForm/availableCronTimeZones.json!",
@@ -800,17 +794,18 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
-            .units(30L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES,
+            units = 30L,
+          ),
+      ),
     )
     Assertions.assertFalse(actual.getManual())
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual.getScheduleType())
-    Assertions.assertEquals(BasicSchedule.TimeUnit.MINUTES, actual.getScheduleData().getBasicSchedule().getTimeUnit())
-    Assertions.assertEquals(30L, actual.getScheduleData().getBasicSchedule().getUnits())
+    Assertions.assertEquals(BasicSchedule.TimeUnit.MINUTES, actual.getScheduleData().basicSchedule.timeUnit)
+    Assertions.assertEquals(30L, actual.getScheduleData().basicSchedule.units)
   }
 
   @Test
@@ -824,12 +819,13 @@ internal class ConnectionSchedulerHelperTest {
       connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
         actual,
         ConnectionScheduleType.BASIC,
-        ConnectionScheduleData()
-          .basicSchedule(
-            ConnectionScheduleDataBasicSchedule()
-              .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
-              .units(30L),
-          ),
+        ConnectionScheduleData(
+          basicSchedule =
+            ConnectionScheduleDataBasicSchedule(
+              timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES,
+              units = 30L,
+            ),
+        ),
       )
     }
   }
@@ -845,12 +841,13 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual1,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
-            .units(60L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES,
+            units = 60L,
+          ),
+      ),
     )
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual1.getScheduleType())
 
@@ -859,12 +856,13 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual2,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.HOURS)
-            .units(1L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.HOURS,
+            units = 1L,
+          ),
+      ),
     )
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual2.getScheduleType())
 
@@ -873,12 +871,13 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual3,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.HOURS)
-            .units(24L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.HOURS,
+            units = 24L,
+          ),
+      ),
     )
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual3.getScheduleType())
   }
@@ -893,12 +892,13 @@ internal class ConnectionSchedulerHelperTest {
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
       actual,
       ConnectionScheduleType.BASIC,
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
-            .units(15L),
-        ),
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES,
+            units = 15L,
+          ),
+      ),
     )
 
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual.getScheduleType())
@@ -915,12 +915,13 @@ internal class ConnectionSchedulerHelperTest {
       connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
         actual,
         ConnectionScheduleType.BASIC,
-        ConnectionScheduleData()
-          .basicSchedule(
-            ConnectionScheduleDataBasicSchedule()
-              .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
-              .units(10L),
-          ),
+        ConnectionScheduleData(
+          basicSchedule =
+            ConnectionScheduleDataBasicSchedule(
+              timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES,
+              units = 10L,
+            ),
+        ),
       )
     }
   }
@@ -936,12 +937,9 @@ internal class ConnectionSchedulerHelperTest {
       connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
         actual,
         ConnectionScheduleType.CRON,
-        ConnectionScheduleData()
-          .cron(
-            ConnectionScheduleDataCron()
-              .cronTimeZone(EXPECTED_CRON_TIMEZONE)
-              .cronExpression("0 */10 * * * ?"),
-          ),
+        ConnectionScheduleData(
+          cron = ConnectionScheduleDataCron(cronTimeZone = EXPECTED_CRON_TIMEZONE, cronExpression = "0 */10 * * * ?"),
+        ),
       )
     }
   }

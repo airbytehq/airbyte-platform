@@ -5,26 +5,26 @@
 package io.airbyte.commons.server.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorDefinitionVersionRead
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionSchedule
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationSnippetRead
-import io.airbyte.api.model.generated.JobStatus
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.SchemaChange
-import io.airbyte.api.model.generated.SchemaChangeBackfillPreference
-import io.airbyte.api.model.generated.SourceRead
-import io.airbyte.api.model.generated.SourceSnippetRead
-import io.airbyte.api.model.generated.Tag
-import io.airbyte.api.model.generated.WebBackendConnectionListItem
+import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionSchedule
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataBasicSchedule
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationSnippetRead
+import io.airbyte.api.server.generated.models.JobStatus
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.SchemaChange
+import io.airbyte.api.server.generated.models.SchemaChangeBackfillPreference
+import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceSnippetRead
+import io.airbyte.api.server.generated.models.Tag
+import io.airbyte.api.server.generated.models.WebBackendConnectionListItem
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -147,9 +147,10 @@ object ConnectionHelpers {
 
   @JvmStatic
   fun generateBasicConnectionSchedule(): ConnectionSchedule? =
-    ConnectionSchedule()
-      .timeUnit(ConnectionSchedule.TimeUnitEnum.fromValue(BASIC_SCHEDULE_TIME_UNIT))
-      .units(BASIC_SCHEDULE_UNITS)
+    ConnectionSchedule(
+      timeUnit = ConnectionSchedule.TimeUnit.entries.first { it.value == BASIC_SCHEDULE_TIME_UNIT },
+      units = BASIC_SCHEDULE_UNITS,
+    )
 
   @JvmStatic
   fun generateBasicSchedule(): Schedule? =
@@ -159,8 +160,12 @@ object ConnectionHelpers {
 
   @JvmStatic
   fun generateBasicConnectionScheduleData(): ConnectionScheduleData? =
-    ConnectionScheduleData().basicSchedule(
-      ConnectionScheduleDataBasicSchedule().timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.DAYS).units(BASIC_SCHEDULE_UNITS),
+    ConnectionScheduleData(
+      basicSchedule =
+        ConnectionScheduleDataBasicSchedule(
+          timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.DAYS,
+          units = BASIC_SCHEDULE_UNITS,
+        ),
     )
 
   @JvmStatic
@@ -172,134 +177,115 @@ object ConnectionHelpers {
     )
 
   fun generateExpectedConnectionRead(
-    connectionId: UUID?,
-    sourceId: UUID?,
-    destinationId: UUID?,
-    operationIds: MutableList<UUID?>?,
+    connectionId: UUID,
+    sourceId: UUID,
+    destinationId: UUID,
+    operationIds: List<UUID>?,
     sourceCatalogId: UUID?,
     breaking: Boolean,
     notifySchemaChange: Boolean?,
     notifySchemaChangeByEmail: Boolean?,
     backfillPreference: SchemaChangeBackfillPreference?,
-    tags: MutableList<Tag?>?,
+    tags: List<Tag>?,
     onDemandEnabled: Boolean = false,
     enableIndexing: Boolean = false,
+    status: ConnectionStatus = ConnectionStatus.ACTIVE,
   ): ConnectionRead =
-    ConnectionRead()
-      .connectionId(connectionId)
-      .sourceId(sourceId)
-      .destinationId(destinationId)
-      .operationIds(operationIds)
-      .name("presto to hudi")
-      .namespaceDefinition(NamespaceDefinitionType.SOURCE)
-      .namespaceFormat(null)
-      .prefix("presto_to_hudi")
-      .schedule(generateBasicConnectionSchedule())
-      .scheduleType(ConnectionScheduleType.BASIC)
-      .scheduleData(generateBasicConnectionScheduleData())
-      .syncCatalog(generateBasicApiCatalog())
-      .resourceRequirements(
-        io.airbyte.api.model.generated
-          .ResourceRequirements()
-          .cpuRequest(TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
-          .cpuLimit(TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
-          .memoryRequest(TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
-          .memoryLimit(TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()),
-      ).sourceCatalogId(sourceCatalogId)
-      .breakingChange(breaking)
-      .notifySchemaChanges(notifySchemaChange)
-      .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
-      .backfillPreference(backfillPreference)
-      .tags(tags)
-      .onDemandEnabled(onDemandEnabled)
-      .enableIndexing(enableIndexing)
+    ConnectionRead(
+      connectionId = connectionId,
+      status = status,
+      sourceId = sourceId,
+      destinationId = destinationId,
+      operationIds = operationIds,
+      name = "presto to hudi",
+      namespaceDefinition = NamespaceDefinitionType.SOURCE,
+      namespaceFormat = null,
+      prefix = "presto_to_hudi",
+      schedule = generateBasicConnectionSchedule(),
+      scheduleType = ConnectionScheduleType.BASIC,
+      scheduleData = generateBasicConnectionScheduleData(),
+      syncCatalog = generateBasicApiCatalog(),
+      resourceRequirements =
+        io.airbyte.api.server.generated.models.ResourceRequirements(
+          cpuRequest = TESTING_RESOURCE_REQUIREMENTS.cpuRequest,
+          cpuLimit = TESTING_RESOURCE_REQUIREMENTS.cpuLimit,
+          memoryRequest = TESTING_RESOURCE_REQUIREMENTS.memoryRequest,
+          memoryLimit = TESTING_RESOURCE_REQUIREMENTS.memoryLimit,
+        ),
+      sourceCatalogId = sourceCatalogId,
+      breakingChange = breaking,
+      notifySchemaChanges = notifySchemaChange,
+      notifySchemaChangesByEmail = notifySchemaChangeByEmail,
+      backfillPreference = backfillPreference,
+      tags = tags,
+      onDemandEnabled = onDemandEnabled,
+      enableIndexing = enableIndexing,
+    )
 
   @JvmStatic
   fun generateExpectedConnectionRead(standardSync: StandardSync): ConnectionRead {
     val connectionRead =
       generateExpectedConnectionRead(
-        standardSync.getConnectionId(),
-        standardSync.getSourceId(),
-        standardSync.getDestinationId(),
-        standardSync.getOperationIds(),
-        standardSync.getSourceCatalogId(),
-        standardSync.getBreakingChange(),
-        standardSync.getNotifySchemaChanges(),
-        standardSync.getNotifySchemaChangesByEmail(),
-        standardSync.getBackfillPreference()?.convertTo<SchemaChangeBackfillPreference>(),
-        standardSync
-          .getTags()
-          .stream()
-          .map<Tag?> { tag: io.airbyte.config.Tag? -> apiPojoConverters.toApiTag(tag!!) }
-          .toList(),
-        standardSync.getOnDemandEnabled(),
-        standardSync.getEnableIndexing(),
+        standardSync.connectionId,
+        standardSync.sourceId,
+        standardSync.destinationId,
+        standardSync.operationIds,
+        standardSync.sourceCatalogId,
+        standardSync.breakingChange,
+        standardSync.notifySchemaChanges,
+        standardSync.notifySchemaChangesByEmail,
+        standardSync.backfillPreference?.convertTo<SchemaChangeBackfillPreference>(),
+        standardSync.tags.map { tag -> apiPojoConverters.toApiTag(tag) },
+        standardSync.onDemandEnabled,
+        standardSync.enableIndexing,
+        standardSync.status.convertTo<ConnectionStatus>(),
       )
 
-    if (standardSync.getSchedule() == null) {
-      connectionRead.schedule(null)
-    } else {
-      connectionRead.schedule(
-        ConnectionSchedule()
-          .timeUnit(ConnectionSchedule.TimeUnitEnum.fromValue(standardSync.getSchedule().getTimeUnit().value()))
-          .units(standardSync.getSchedule().getUnits()),
-      )
-    }
-
-    if (standardSync.getStatus() == StandardSync.Status.INACTIVE) {
-      connectionRead.setStatus(ConnectionStatus.INACTIVE)
-    } else if (standardSync.getStatus() == StandardSync.Status.ACTIVE) {
-      connectionRead.setStatus(ConnectionStatus.ACTIVE)
-    } else if (standardSync.getStatus() == StandardSync.Status.DEPRECATED) {
-      connectionRead.setStatus(ConnectionStatus.DEPRECATED)
-    } else if (standardSync.getStatus() == StandardSync.Status.LOCKED) {
-      connectionRead.setStatus(ConnectionStatus.LOCKED)
-    }
-
-    return connectionRead
+    val schedule: Schedule? = standardSync.schedule
+    return connectionRead.copy(
+      schedule =
+        schedule?.let {
+          ConnectionSchedule(
+            timeUnit = ConnectionSchedule.TimeUnit.entries.first { unit -> unit.value == it.timeUnit.value() },
+            units = it.units,
+          )
+        },
+    )
   }
 
   @JvmStatic
   fun connectionReadFromStandardSync(standardSync: StandardSync): ConnectionRead {
-    val connectionRead = ConnectionRead()
-    connectionRead
-      .connectionId(standardSync.getConnectionId())
-      .sourceId(standardSync.getSourceId())
-      .destinationId(standardSync.getDestinationId())
-      .operationIds(standardSync.getOperationIds())
-      .name(standardSync.getName())
-      .namespaceFormat(standardSync.getNamespaceFormat())
-      .prefix(standardSync.getPrefix())
-      .sourceCatalogId(standardSync.getSourceCatalogId())
-      .breakingChange(standardSync.getBreakingChange())
-      .notifySchemaChanges(standardSync.getNotifySchemaChanges())
-      .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
-      .onDemandEnabled(standardSync.getOnDemandEnabled())
-      .enableIndexing(standardSync.getEnableIndexing())
-
-    if (standardSync.getNamespaceDefinition() != null) {
-      connectionRead
-        .namespaceDefinition(NamespaceDefinitionType.fromValue(standardSync.getNamespaceDefinition().value()))
-    }
-    if (standardSync.getStatus() != null) {
-      connectionRead.status(ConnectionStatus.fromValue(standardSync.getStatus().value()))
-    }
-    apiPojoConverters.populateConnectionReadSchedule(standardSync, connectionRead)
-
-    if (standardSync.getCatalog() != null) {
-      connectionRead.syncCatalog(catalogConverters.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()))
-    }
-    if (standardSync.getResourceRequirements() != null) {
-      connectionRead.resourceRequirements(
-        io.airbyte.api.model.generated
-          .ResourceRequirements()
-          .cpuLimit(standardSync.getResourceRequirements().getCpuLimit())
-          .cpuRequest(standardSync.getResourceRequirements().getCpuRequest())
-          .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit())
-          .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest()),
-      )
-    }
-    return connectionRead
+    val resourceRequirements: ResourceRequirements? = standardSync.resourceRequirements
+    return ConnectionRead(
+      connectionId = standardSync.connectionId,
+      sourceId = standardSync.sourceId,
+      destinationId = standardSync.destinationId,
+      operationIds = standardSync.operationIds,
+      name = standardSync.name,
+      namespaceFormat = standardSync.namespaceFormat,
+      prefix = standardSync.prefix,
+      sourceCatalogId = standardSync.sourceCatalogId,
+      breakingChange = standardSync.breakingChange,
+      notifySchemaChanges = standardSync.notifySchemaChanges,
+      notifySchemaChangesByEmail = standardSync.notifySchemaChangesByEmail,
+      onDemandEnabled = standardSync.onDemandEnabled,
+      enableIndexing = standardSync.enableIndexing,
+      namespaceDefinition = standardSync.namespaceDefinition?.convertTo<NamespaceDefinitionType>(),
+      status = standardSync.status.convertTo<ConnectionStatus>(),
+      scheduleType = apiPojoConverters.toApiConnectionScheduleType(standardSync),
+      scheduleData = apiPojoConverters.toApiConnectionScheduleData(standardSync),
+      schedule = apiPojoConverters.toLegacyConnectionSchedule(standardSync),
+      syncCatalog = catalogConverters.toApi(standardSync.catalog, standardSync.fieldSelectionData),
+      resourceRequirements =
+        resourceRequirements?.let {
+          io.airbyte.api.server.generated.models.ResourceRequirements(
+            cpuLimit = it.cpuLimit,
+            cpuRequest = it.cpuRequest,
+            memoryLimit = it.memoryLimit,
+            memoryRequest = it.memoryRequest,
+          )
+        },
+    )
   }
 
   fun generateExpectedWebBackendConnectionListItem(
@@ -309,37 +295,42 @@ object ConnectionHelpers {
     isSyncing: Boolean,
     latestSyncJobCreatedAt: Long?,
     latestSynJobStatus: JobStatus?,
-    schemaChange: SchemaChange?,
+    schemaChange: SchemaChange,
+    sourceActorDefinitionVersion: ActorDefinitionVersionRead,
+    destinationActorDefinitionVersion: ActorDefinitionVersionRead,
   ): WebBackendConnectionListItem {
     val connectionListItem =
-      WebBackendConnectionListItem()
-        .connectionId(standardSync.getConnectionId())
-        .name(standardSync.getName())
-        .source(
-          SourceSnippetRead()
-            .icon(source.getIcon())
-            .name(source.getName())
-            .sourceName(source.getSourceName())
-            .sourceDefinitionId(source.getSourceDefinitionId())
-            .sourceId(source.getSourceId()),
-        ).destination(
-          DestinationSnippetRead()
-            .icon(destination.getIcon())
-            .name(destination.getName())
-            .destinationName(destination.getDestinationName())
-            .destinationDefinitionId(destination.getDestinationDefinitionId())
-            .destinationId(destination.getDestinationId()),
-        ).status(apiPojoConverters.toApiStatus(standardSync.getStatus()))
-        .isSyncing(isSyncing)
-        .latestSyncJobCreatedAt(latestSyncJobCreatedAt)
-        .latestSyncJobStatus(latestSynJobStatus)
-        .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
-        .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
-        .schemaChange(schemaChange)
-        .onDemandEnabled(standardSync.getOnDemandEnabled() ?: false)
-        .tags(mutableListOf())
-        .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
-        .destinationActorDefinitionVersion(ActorDefinitionVersionRead())
+      WebBackendConnectionListItem(
+        connectionId = standardSync.connectionId,
+        name = standardSync.name,
+        source =
+          SourceSnippetRead(
+            icon = source.icon,
+            name = source.name,
+            sourceName = source.sourceName,
+            sourceDefinitionId = source.sourceDefinitionId,
+            sourceId = source.sourceId,
+          ),
+        destination =
+          DestinationSnippetRead(
+            icon = destination.icon,
+            name = destination.name,
+            destinationName = destination.destinationName,
+            destinationDefinitionId = destination.destinationDefinitionId,
+            destinationId = destination.destinationId,
+          ),
+        status = apiPojoConverters.toApiStatus(standardSync.status)!!,
+        isSyncing = isSyncing,
+        latestSyncJobCreatedAt = latestSyncJobCreatedAt,
+        latestSyncJobStatus = latestSynJobStatus,
+        scheduleType = apiPojoConverters.toApiConnectionScheduleType(standardSync),
+        scheduleData = apiPojoConverters.toApiConnectionScheduleData(standardSync),
+        schemaChange = schemaChange,
+        onDemandEnabled = standardSync.onDemandEnabled ?: false,
+        tags = mutableListOf(),
+        sourceActorDefinitionVersion = sourceActorDefinitionVersion,
+        destinationActorDefinitionVersion = destinationActorDefinitionVersion,
+      )
 
     return connectionListItem
   }
@@ -408,13 +399,14 @@ object ConnectionHelpers {
 
   @JvmStatic
   fun generateBasicApiCatalog(): AirbyteCatalog {
-    val streams: MutableList<AirbyteStreamAndConfiguration?> = mutableListOf()
+    val streams: MutableList<AirbyteStreamAndConfiguration> = mutableListOf()
     streams.add(
-      AirbyteStreamAndConfiguration()
-        .stream(generateBasicApiStream(null))
-        .config(generateBasicApiStreamConfig(null)),
+      AirbyteStreamAndConfiguration(
+        stream = generateBasicApiStream(null),
+        config = generateBasicApiStreamConfig(null),
+      ),
     )
-    return AirbyteCatalog().streams(streams)
+    return AirbyteCatalog(streams = streams)
   }
 
   /**
@@ -424,12 +416,14 @@ object ConnectionHelpers {
    */
   @JvmStatic
   fun generateApiCatalogWithTwoFields(): AirbyteCatalog =
-    AirbyteCatalog().streams(
-      listOf(
-        AirbyteStreamAndConfiguration()
-          .stream(generateApiStreamWithTwoFields())
-          .config(generateBasicApiStreamConfig(null)),
-      ),
+    AirbyteCatalog(
+      streams =
+        listOf(
+          AirbyteStreamAndConfiguration(
+            stream = generateApiStreamWithTwoFields(),
+            config = generateBasicApiStreamConfig(null),
+          ),
+        ),
     )
 
   @JvmStatic
@@ -438,93 +432,100 @@ object ConnectionHelpers {
     uniqueStreamName: Boolean,
     streamsCount: Int,
   ): AirbyteCatalog {
-    val streamAndConfigurations: MutableList<AirbyteStreamAndConfiguration?> = mutableListOf()
+    val streamAndConfigurations: MutableList<AirbyteStreamAndConfiguration> = mutableListOf()
     for (i in 0..<streamsCount) {
       streamAndConfigurations.add(
-        AirbyteStreamAndConfiguration()
-          .stream(
+        AirbyteStreamAndConfiguration(
+          stream =
             ConnectionHelpers.generateApiStreamWithNamespace(
               if (uniqueNamespace) Optional.of("namespace-" + i) else Optional.empty(),
               if (uniqueStreamName) Optional.of("stream-" + i) else Optional.empty(),
             ),
-          ).config(generateBasicApiStreamConfig(i.toString())),
+          config = generateBasicApiStreamConfig(i.toString()),
+        ),
       )
     }
-    return AirbyteCatalog().streams(streamAndConfigurations)
+    return AirbyteCatalog(streams = streamAndConfigurations)
   }
 
   @JvmStatic
   fun generateMultipleStreamsApiCatalog(streamsCount: Int): AirbyteCatalog {
-    val streamAndConfigurations: MutableList<AirbyteStreamAndConfiguration?> = mutableListOf()
+    val streamAndConfigurations: MutableList<AirbyteStreamAndConfiguration> = mutableListOf()
     for (i in 0..<streamsCount) {
       streamAndConfigurations.add(
-        AirbyteStreamAndConfiguration()
-          .stream(generateBasicApiStream(i.toString()))
-          .config(generateBasicApiStreamConfig(i.toString())),
+        AirbyteStreamAndConfiguration(
+          stream = generateBasicApiStream(i.toString()),
+          config = generateBasicApiStreamConfig(i.toString()),
+        ),
       )
     }
-    return AirbyteCatalog().streams(streamAndConfigurations)
+    return AirbyteCatalog(streams = streamAndConfigurations)
   }
 
-  private fun generateBasicApiStreamConfig(nameSuffix: String?): AirbyteStreamConfiguration? =
-    AirbyteStreamConfiguration()
-      .syncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL)
-      .cursorField(listOf(FIELD_NAME))
-      .destinationSyncMode(io.airbyte.api.model.generated.DestinationSyncMode.APPEND)
-      .primaryKey(mutableListOf())
-      .aliasName(toAlphanumericAndUnderscore(if (nameSuffix == null) STREAM_NAME else STREAM_NAME_BASE + nameSuffix))
-      .selected(true)
-      .suggested(false)
-      .includeFiles(false)
-      .fieldSelectionEnabled(false)
-      .selectedFields(mutableListOf())
+  private fun generateBasicApiStreamConfig(nameSuffix: String?): AirbyteStreamConfiguration =
+    AirbyteStreamConfiguration(
+      syncMode = io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL,
+      cursorField = listOf(FIELD_NAME),
+      destinationSyncMode = io.airbyte.api.server.generated.models.DestinationSyncMode.APPEND,
+      primaryKey = mutableListOf(),
+      aliasName = toAlphanumericAndUnderscore(if (nameSuffix == null) STREAM_NAME else STREAM_NAME_BASE + nameSuffix),
+      selected = true,
+      suggested = false,
+      includeFiles = false,
+      fieldSelectionEnabled = false,
+      selectedFields = mutableListOf(),
+    )
 
-  private fun generateBasicApiStream(nameSuffix: String?): io.airbyte.api.model.generated.AirbyteStream? =
-    io.airbyte.api.model.generated
-      .AirbyteStream()
-      .name(if (nameSuffix == null) STREAM_NAME else STREAM_NAME_BASE + nameSuffix)
-      .jsonSchema(generateBasicJsonSchema())
-      .defaultCursorField(listOf(FIELD_NAME))
-      .sourceDefinedCursor(false)
-      .sourceDefinedPrimaryKey(mutableListOf())
-      .supportedSyncModes(
+  private fun generateBasicApiStream(nameSuffix: String?): io.airbyte.api.server.generated.models.AirbyteStream =
+    io.airbyte.api.server.generated.models.AirbyteStream(
+      name =
+        if (nameSuffix ==
+          null
+        ) {
+          STREAM_NAME
+        } else {
+          STREAM_NAME_BASE + nameSuffix
+        },
+      jsonSchema = generateBasicJsonSchema(),
+      defaultCursorField = listOf(FIELD_NAME),
+      sourceDefinedCursor = false,
+      sourceDefinedPrimaryKey = mutableListOf(),
+      supportedSyncModes =
         listOf(
-          io.airbyte.api.model.generated.SyncMode.FULL_REFRESH,
-          io.airbyte.api.model.generated.SyncMode.INCREMENTAL,
+          io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH,
+          io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL,
         ),
-      )
+    )
 
-  private fun generateApiStreamWithTwoFields(): io.airbyte.api.model.generated.AirbyteStream? =
-    io.airbyte.api.model.generated
-      .AirbyteStream()
-      .name(STREAM_NAME)
-      .jsonSchema(generateJsonSchemaWithTwoFields())
-      .defaultCursorField(listOf(FIELD_NAME))
-      .sourceDefinedCursor(false)
-      .sourceDefinedPrimaryKey(mutableListOf())
-      .supportedSyncModes(
+  private fun generateApiStreamWithTwoFields(): io.airbyte.api.server.generated.models.AirbyteStream =
+    io.airbyte.api.server.generated.models.AirbyteStream(
+      name = STREAM_NAME,
+      jsonSchema = generateJsonSchemaWithTwoFields(),
+      defaultCursorField = listOf(FIELD_NAME),
+      sourceDefinedCursor = false,
+      sourceDefinedPrimaryKey = mutableListOf(),
+      supportedSyncModes =
         listOf(
-          io.airbyte.api.model.generated.SyncMode.FULL_REFRESH,
-          io.airbyte.api.model.generated.SyncMode.INCREMENTAL,
+          io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH,
+          io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL,
         ),
-      )
+    )
 
   private fun generateApiStreamWithNamespace(
     namespace: Optional<String>,
     name: Optional<String>,
-  ): io.airbyte.api.model.generated.AirbyteStream? =
-    io.airbyte.api.model.generated
-      .AirbyteStream()
-      .namespace(namespace.orElse(STREAM_NAMESPACE))
-      .name(name.orElse(STREAM_NAME))
-      .jsonSchema(generateJsonSchemaWithTwoFields())
-      .defaultCursorField(listOf(FIELD_NAME))
-      .sourceDefinedCursor(false)
-      .sourceDefinedPrimaryKey(mutableListOf())
-      .supportedSyncModes(
+  ): io.airbyte.api.server.generated.models.AirbyteStream =
+    io.airbyte.api.server.generated.models.AirbyteStream(
+      namespace = namespace.orElse(STREAM_NAMESPACE),
+      name = name.orElse(STREAM_NAME),
+      jsonSchema = generateJsonSchemaWithTwoFields(),
+      defaultCursorField = listOf(FIELD_NAME),
+      sourceDefinedCursor = false,
+      sourceDefinedPrimaryKey = mutableListOf(),
+      supportedSyncModes =
         listOf(
-          io.airbyte.api.model.generated.SyncMode.FULL_REFRESH,
-          io.airbyte.api.model.generated.SyncMode.INCREMENTAL,
+          io.airbyte.api.server.generated.models.SyncMode.FULL_REFRESH,
+          io.airbyte.api.server.generated.models.SyncMode.INCREMENTAL,
         ),
-      )
+    )
 }

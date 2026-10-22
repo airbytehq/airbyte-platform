@@ -11,9 +11,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.airbyte.api.common.StreamDescriptorUtils.buildFieldName
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
@@ -596,7 +596,7 @@ class CustomerioNotificationClient(
       val newStreams =
         diff.transforms
           .stream()
-          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformTypeEnum.ADD_STREAM }
+          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformType.ADD_STREAM }
           .toList()
       log.info { "Notify schema changes on new streams: $newStreams" }
       val newStreamsNodes = MAPPER.createArrayNode()
@@ -608,7 +608,7 @@ class CustomerioNotificationClient(
       val deletedStreams =
         diff.transforms
           .stream()
-          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformTypeEnum.REMOVE_STREAM }
+          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformType.REMOVE_STREAM }
           .toList()
       log.info { "Notify schema changes on deleted streams: $deletedStreams" }
       val deletedStreamsNodes = MAPPER.createArrayNode()
@@ -620,7 +620,7 @@ class CustomerioNotificationClient(
       val alteredStreams =
         diff.transforms
           .stream()
-          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformTypeEnum.UPDATE_STREAM }
+          .filter { t: StreamTransform -> t.transformType == StreamTransform.TransformType.UPDATE_STREAM }
           .toList()
       log.info { "Notify schema changes on altered streams: $alteredStreams" }
       val modifiedStreamsNodes = MAPPER.createObjectNode()
@@ -640,17 +640,18 @@ class CustomerioNotificationClient(
         streamNode.set<JsonNode>("updated_primary_key", updatedPrimaryKeyInfo)
 
         val primaryKeyChangeOptional =
-          stream.updateStream.streamAttributeTransforms
+          stream.updateStream!!
+            .streamAttributeTransforms
             .stream()
-            .filter { t: StreamAttributeTransform -> t.transformType == StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY }
+            .filter { t: StreamAttributeTransform -> t.transformType == StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY }
             .findFirst()
 
         if (primaryKeyChangeOptional.isPresent) {
           val primaryKeyChange = primaryKeyChangeOptional.get()
-          val oldPrimaryKey = primaryKeyChange.updatePrimaryKey.oldPrimaryKey
+          val oldPrimaryKey = primaryKeyChange.updatePrimaryKey!!.oldPrimaryKey.orEmpty()
           val oldPrimaryKeyString = formatPrimaryKeyString(oldPrimaryKey)
 
-          val newPrimaryKey = primaryKeyChange.updatePrimaryKey.newPrimaryKey
+          val newPrimaryKey = primaryKeyChange.updatePrimaryKey!!.newPrimaryKey.orEmpty()
           val newPrimaryKeyString = formatPrimaryKeyString(newPrimaryKey)
 
           if (!oldPrimaryKeyString.isEmpty() && newPrimaryKeyString.isEmpty()) {
@@ -662,12 +663,12 @@ class CustomerioNotificationClient(
           }
         }
 
-        for (fieldChange in stream.updateStream.fieldTransforms) {
+        for (fieldChange in stream.updateStream!!.fieldTransforms) {
           val fieldName = buildFieldName(fieldChange.fieldName)
           when (fieldChange.transformType) {
-            FieldTransform.TransformTypeEnum.ADD_FIELD -> newFields.add(fieldName)
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD -> deletedFields.add(fieldName)
-            FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA -> modifiedFields.add(fieldName)
+            FieldTransform.TransformType.ADD_FIELD -> newFields.add(fieldName)
+            FieldTransform.TransformType.REMOVE_FIELD -> deletedFields.add(fieldName)
+            FieldTransform.TransformType.UPDATE_FIELD_SCHEMA -> modifiedFields.add(fieldName)
             else -> log.warn { "Unknown TransformType: 'fieldChange.transformType}'" }
           }
         }

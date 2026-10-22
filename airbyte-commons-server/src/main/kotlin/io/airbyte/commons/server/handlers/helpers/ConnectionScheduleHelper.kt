@@ -5,18 +5,16 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import com.cronutils.model.Cron
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.problems.model.generated.ProblemBasicScheduleData
-import io.airbyte.api.problems.model.generated.ProblemCronData
 import io.airbyte.api.problems.model.generated.ProblemCronExpressionData
 import io.airbyte.api.problems.model.generated.ProblemCronTimezoneData
 import io.airbyte.api.problems.throwable.generated.BasicScheduleValidationUnderOneHourNotAllowedProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem
-import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
@@ -82,18 +80,18 @@ class ConnectionScheduleHelper(
       }
 
       ConnectionScheduleType.BASIC -> {
-        if (scheduleData?.basicSchedule == null) {
-          throw JsonValidationException("if schedule type is basic, then scheduleData.basic must be populated")
-        }
+        val basicSchedule =
+          scheduleData?.basicSchedule
+            ?: throw JsonValidationException("if schedule type is basic, then scheduleData.basic must be populated")
 
         val isSubHourSchedule =
-          scheduleData.basicSchedule.timeUnit == io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES &&
-            scheduleData.basicSchedule.units < 60
+          basicSchedule.timeUnit == io.airbyte.api.server.generated.models.ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES &&
+            basicSchedule.units < 60
 
         if (isSubHourSchedule) {
           val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)
           val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
-          validateBasicSubHourSchedule(scheduleData.basicSchedule, workspaceId, organizationId)
+          validateBasicSubHourSchedule(basicSchedule, workspaceId, organizationId)
         }
 
         standardSync
@@ -101,16 +99,16 @@ class ConnectionScheduleHelper(
           .withScheduleData(
             ScheduleData().withBasicSchedule(
               BasicSchedule()
-                .withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(scheduleData.basicSchedule.timeUnit))
-                .withUnits(scheduleData.basicSchedule.units),
+                .withTimeUnit(apiPojoConverters.toBasicScheduleTimeUnit(basicSchedule.timeUnit))
+                .withUnits(basicSchedule.units),
             ),
           ).withManual(false)
         // Populate the legacy format for now as well, since some places still expect it to exist.
         // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove.
         val schedule =
           Schedule()
-            .withTimeUnit(apiPojoConverters.toLegacyScheduleTimeUnit(scheduleData.basicSchedule.timeUnit))
-            .withUnits(scheduleData.basicSchedule.units)
+            .withTimeUnit(apiPojoConverters.toLegacyScheduleTimeUnit(basicSchedule.timeUnit))
+            .withUnits(basicSchedule.units)
         standardSync
           .withManual(false)
           .withSchedule(schedule)
@@ -118,19 +116,9 @@ class ConnectionScheduleHelper(
 
       ConnectionScheduleType.CRON -> {
         val connectionId = if (standardSync.connectionId == null) null else standardSync.connectionId.toString()
-        if (scheduleData?.cron == null) {
-          throw CronValidationMissingCronProblem()
-        }
-        val cronExpression = scheduleData.cron.cronExpression
-        val cronTimeZone = scheduleData.cron.cronTimeZone
-        if (cronExpression == null || cronTimeZone == null) {
-          throw CronValidationMissingComponentProblem(
-            ProblemCronData()
-              .connectionId(connectionId)
-              .cronExpression(cronExpression)
-              .cronTimezone(cronTimeZone),
-          )
-        }
+        val cron = scheduleData?.cron ?: throw CronValidationMissingCronProblem()
+        val cronExpression = cron.cronExpression
+        val cronTimeZone = cron.cronTimeZone
 
         val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)
         val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
@@ -224,7 +212,7 @@ class ConnectionScheduleHelper(
   }
 
   private fun validateBasicSubHourSchedule(
-    basicSchedule: io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule,
+    basicSchedule: io.airbyte.api.server.generated.models.ConnectionScheduleDataBasicSchedule,
     workspaceId: UUID,
     organizationId: UUID,
   ) {

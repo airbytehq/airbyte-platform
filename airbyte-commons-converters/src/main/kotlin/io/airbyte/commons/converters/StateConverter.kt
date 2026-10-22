@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.converters
 
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.GlobalState
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamState
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.GlobalState
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamState
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
@@ -40,12 +40,13 @@ object StateConverter {
     connectionId: UUID,
     stateWrapper: StateWrapper?,
   ): ConnectionState =
-    ConnectionState()
-      .connectionId(connectionId)
-      .stateType(convertStateTypeToApi(stateWrapper))
-      .state(stateWrapper?.legacyState)
-      .globalState(globalStateToApi(stateWrapper))
-      .streamState(streamStateToApi(stateWrapper))
+    ConnectionState(
+      connectionId = connectionId,
+      stateType = convertStateTypeToApi(stateWrapper),
+      state = stateWrapper?.legacyState,
+      globalState = globalStateToApi(stateWrapper),
+      streamState = streamStateToApi(stateWrapper),
+    )
 
   /**
    * Convert the client model to the API model.
@@ -55,16 +56,16 @@ object StateConverter {
    */
   @JvmStatic
   fun fromClientToApi(clientState: ClientConnectionState): ConnectionState =
-    ConnectionState()
-      .connectionId(clientState.connectionId)
-      .stateType(clientState.stateType.convertTo<ConnectionStateType>())
-      .state(clientState.state)
-      .globalState(clientState.globalState?.let { globalStateFromClientToApi(it) })
-      .streamState(
+    ConnectionState(
+      connectionId = clientState.connectionId,
+      stateType = clientState.stateType.convertTo<ConnectionStateType>(),
+      state = clientState.state,
+      globalState = clientState.globalState?.let { globalStateFromClientToApi(it) },
+      streamState =
         clientState.streamState
           ?.map { streamStateFromClientToApi(it) }
           ?.toList(),
-      )
+    )
 
   /**
    * Converts internal representation of state to client representation.
@@ -135,7 +136,7 @@ private fun convertClientStateTypeToInternal(connectionStateType: ClientConnecti
  * @param stateWrapper state to convert
  * @return api representation of state type
  */
-private fun convertStateTypeToApi(stateWrapper: StateWrapper?): ConnectionStateType? =
+private fun convertStateTypeToApi(stateWrapper: StateWrapper?): ConnectionStateType =
   if (stateWrapper?.stateType == null) {
     ConnectionStateType.NOT_SET
   } else {
@@ -166,17 +167,20 @@ private fun convertStateTypeToInternal(connectionState: ConnectionState?): State
   }
 
 private fun globalStateFromClientToApi(clientGlobalState: ClientGlobalState): GlobalState =
-  GlobalState()
-    .sharedState(clientGlobalState.sharedState)
-    .streamStates(clientGlobalState.streamStates.map { streamStateFromClientToApi(it) })
+  GlobalState(
+    sharedState = clientGlobalState.sharedState,
+    streamStates = clientGlobalState.streamStates.map { streamStateFromClientToApi(it) },
+  )
 
 private fun streamStateFromClientToApi(clientStreamState: ClientStreamState): StreamState =
-  StreamState()
-    .streamDescriptor(
-      StreamDescriptor()
-        .name(clientStreamState.streamDescriptor.name)
-        .namespace(clientStreamState.streamDescriptor.namespace),
-    ).streamState(clientStreamState.streamState)
+  StreamState(
+    streamDescriptor =
+      StreamDescriptor(
+        name = clientStreamState.streamDescriptor.name,
+        namespace = clientStreamState.streamDescriptor.namespace,
+      ),
+    streamState = clientStreamState.streamState,
+  )
 
 /**
  * If wrapper is of type global state, returns API representation of global state. Otherwise, empty
@@ -192,12 +196,12 @@ private fun globalStateToApi(stateWrapper: StateWrapper?): GlobalState? =
     stateWrapper.global != null &&
     stateWrapper.global.global != null
   ) {
-    GlobalState()
-      .sharedState(stateWrapper.global.global.sharedState)
-      .streamStates(
+    GlobalState(
+      sharedState = stateWrapper.global.global.sharedState,
+      streamStates =
         stateWrapper.global.global.streamStates
           .map { streamStateStructToApi(it) },
-      )
+    )
   } else {
     null
   }
@@ -241,9 +245,9 @@ private fun globalStateToInternal(connectionState: ConnectionState?): AirbyteSta
       .withType(AirbyteStateType.GLOBAL)
       .withGlobal(
         AirbyteGlobalState()
-          .withSharedState(connectionState.globalState.sharedState)
+          .withSharedState(connectionState.globalState!!.sharedState)
           .withStreamStates(
-            connectionState.globalState.streamStates.map {
+            connectionState.globalState!!.streamStates.map {
               streamStateStructToInternal(it)
             },
           ),
@@ -315,7 +319,7 @@ private fun streamStateToInternal(connectionState: ConnectionState?): List<Airby
     connectionState.stateType == ConnectionStateType.STREAM &&
     connectionState.streamState != null
   ) {
-    connectionState.streamState.map {
+    connectionState.streamState!!.map {
       AirbyteStateMessage()
         .withType(AirbyteStateType.STREAM)
         .withStream(streamStateStructToInternal(it))
@@ -336,9 +340,10 @@ private fun clientStreamStateToInternal(connectionState: ClientConnectionState?)
   }
 
 private fun streamStateStructToApi(streamState: AirbyteStreamState): StreamState =
-  StreamState()
-    .streamDescriptor(streamDescriptorToApi(streamState.streamDescriptor))
-    .streamState(streamState.streamState)
+  StreamState(
+    streamDescriptor = streamDescriptorToApi(streamState.streamDescriptor),
+    streamState = streamState.streamState,
+  )
 
 private fun streamStateStructToClient(streamState: AirbyteStreamState): ClientStreamState =
   io.airbyte.api.client.model.generated.StreamState(
@@ -360,7 +365,10 @@ private fun clientStreamStateStructToInternal(streamState: ClientStreamState): A
 // Eventually, we should be using config.StreamDescriptor internally and using ApiClientConverters instead.
 // Keeping those private until this is fixed.
 private fun streamDescriptorToApi(protocolStreamDescriptor: ProtocolStreamDescriptor): StreamDescriptor =
-  StreamDescriptor().name(protocolStreamDescriptor.name).namespace(protocolStreamDescriptor.namespace)
+  StreamDescriptor(
+    name = protocolStreamDescriptor.name,
+    namespace = protocolStreamDescriptor.namespace,
+  )
 
 private fun streamDescriptorToClient(
   protocolStreamDescriptor: io.airbyte.protocol.models.v0.StreamDescriptor,

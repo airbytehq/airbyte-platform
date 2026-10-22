@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
 import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
@@ -30,9 +30,7 @@ class ConnectionUpdateMapperTest {
     val catalogId = UUID.randomUUID()
 
     val catalog =
-      AirbyteCatalog().apply {
-        this.streams = emptyList()
-      }
+      AirbyteCatalog(streams = emptyList())
 
     val connectionPatchRequest =
       ConnectionPatchRequest(
@@ -52,28 +50,26 @@ class ConnectionUpdateMapperTest {
       )
 
     val expectedOssConnectionUpdateRequest =
-      ConnectionUpdate().apply {
-        this.name = connectionPatchRequest.name
-        this.nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE
-        this.namespaceDefinition = NamespaceDefinitionType.DESTINATION
-        this.namespaceFormat = "test"
-        this.prefix = "test"
-        this.scheduleType = ConnectionScheduleType.CRON
-        this.sourceCatalogId = catalogId
-        this.syncCatalog = catalog
-        this.status = ConnectionStatus.INACTIVE
-        val connectionScheduleDataCron =
-          io.airbyte.api.model.generated.ConnectionScheduleDataCron().apply {
-            this.cronExpression = "0 0 0 0 0 0"
-            this.cronTimeZone = "America/New_York"
-          }
-        val connectionScheduleData =
-          io.airbyte.api.model.generated.ConnectionScheduleData().apply {
-            this.cron = connectionScheduleDataCron
-          }
-        this.scheduleData = connectionScheduleData
-        this.connectionId = connectionId
-      }
+      ConnectionUpdate(
+        name = connectionPatchRequest.name,
+        nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        namespaceDefinition = NamespaceDefinitionType.DESTINATION,
+        namespaceFormat = "test",
+        prefix = "test",
+        scheduleType = ConnectionScheduleType.CRON,
+        sourceCatalogId = catalogId,
+        syncCatalog = catalog,
+        status = ConnectionStatus.INACTIVE,
+        scheduleData =
+          io.airbyte.api.server.generated.models.ConnectionScheduleData(
+            cron =
+              io.airbyte.api.server.generated.models.ConnectionScheduleDataCron(
+                cronExpression = "0 0 0 0 0 0",
+                cronTimeZone = "America/New_York",
+              ),
+          ),
+        connectionId = connectionId,
+      )
     Assertions.assertEquals(
       expectedOssConnectionUpdateRequest,
       ConnectionUpdateMapper.from(connectionId, connectionPatchRequest, catalogId, catalog),
@@ -105,11 +101,11 @@ class ConnectionUpdateMapperTest {
         UUID.randomUUID(),
         request,
         UUID.randomUUID(),
-        AirbyteCatalog().apply { streams = emptyList() },
+        AirbyteCatalog(streams = emptyList()),
       )
 
-    assertEquals("0 0 0 * * ?", result.scheduleData.cron.cronExpression)
-    assertEquals("Europe/Paris", result.scheduleData.cron.cronTimeZone)
+    assertEquals("0 0 0 * * ?", result.scheduleData!!.cron!!.cronExpression)
+    assertEquals("Europe/Paris", result.scheduleData!!.cron!!.cronTimeZone)
   }
 
   @Test
@@ -128,9 +124,9 @@ class ConnectionUpdateMapperTest {
         UUID.randomUUID(),
         request,
         UUID.randomUUID(),
-        AirbyteCatalog().apply { streams = emptyList() },
+        AirbyteCatalog(streams = emptyList()),
       )
 
-    assertEquals("UTC", result.scheduleData.cron.cronTimeZone)
+    assertEquals("UTC", result.scheduleData!!.cron!!.cronTimeZone)
   }
 }

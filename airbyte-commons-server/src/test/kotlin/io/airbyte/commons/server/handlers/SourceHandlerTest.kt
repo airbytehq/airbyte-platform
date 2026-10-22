@@ -6,23 +6,21 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorListFilters
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.ConnectionReadList
 import io.airbyte.api.server.generated.models.PartialSourceUpdate
+import io.airbyte.api.server.generated.models.ResourceRequirements
 import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceSearch
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -92,7 +90,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -102,7 +99,7 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.function.Supplier
-import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as JavaScopedResourceRequirements
 import io.airbyte.api.server.generated.models.ScopedResourceRequirements as KotlinScopedResourceRequirements
 
 internal class SourceHandlerTest {
@@ -1442,8 +1439,8 @@ internal class SourceHandlerTest {
     val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceConnection.sourceId)
     val standardSync = ConnectionHelpers.generateSyncWithSourceId(sourceConnection.sourceId)
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
-    val connectionReadList = ConnectionReadList().connections(mutableListOf<@Valid ConnectionRead?>(connectionRead))
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(sourceConnection.workspaceId)
+    val connectionReadList = ConnectionReadList(connections = listOf(connectionRead))
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = sourceConnection.workspaceId)
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen expectedSourceConnection
     every {
@@ -1508,11 +1505,12 @@ internal class SourceHandlerTest {
     expectedCatalog.streams.forEach(Consumer { s: AirbyteStream? -> s!!.withSourceDefinedCursor(false) })
 
     val request =
-      SourceDiscoverSchemaWriteRequestBody()
-        .catalog(catalogConverter.toApi(expectedCatalog, ActorDefinitionVersion()))
-        .sourceId(actorId)
-        .connectorVersion(connectorVersion)
-        .configurationHash(hashValue)
+      SourceDiscoverSchemaWriteRequestBody(
+        catalog = catalogConverter.toApi(expectedCatalog, ActorDefinitionVersion()),
+        sourceId = actorId,
+        connectorVersion = connectorVersion,
+        configurationHash = hashValue,
+      )
 
     every { catalogService.writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue) } returns catalogId
     val result = sourceHandler.writeDiscoverCatalogResult(request)
@@ -1553,60 +1551,60 @@ internal class SourceHandlerTest {
       )
 
     val requestOne =
-      SourceDiscoverSchemaWriteRequestBody()
-        .catalog(
-          catalogConverter.toApi(airbyteCatalogWithOneStream, advNoSuggestedStreams),
-        ).sourceId(actorId)
-        .connectorVersion(connectorVersion)
-        .configurationHash(hashValue)
+      SourceDiscoverSchemaWriteRequestBody(
+        catalog = catalogConverter.toApi(airbyteCatalogWithOneStream, advNoSuggestedStreams),
+        sourceId = actorId,
+        connectorVersion = connectorVersion,
+        configurationHash = hashValue,
+      )
     val requestTwo =
-      SourceDiscoverSchemaWriteRequestBody()
-        .catalog(
-          catalogConverter.toApi(airbyteCatalogWithTwoUnsuggestedStreams, advNoSuggestedStreams),
-        ).sourceId(actorId)
-        .connectorVersion(connectorVersion)
-        .configurationHash(hashValue)
+      SourceDiscoverSchemaWriteRequestBody(
+        catalog = catalogConverter.toApi(airbyteCatalogWithTwoUnsuggestedStreams, advNoSuggestedStreams),
+        sourceId = actorId,
+        connectorVersion = connectorVersion,
+        configurationHash = hashValue,
+      )
     val requestThree =
-      SourceDiscoverSchemaWriteRequestBody()
-        .catalog(
-          catalogConverter.toApi(airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream, advOneSuggestedStream),
-        ).sourceId(actorId)
-        .connectorVersion(connectorVersion)
-        .configurationHash(hashValue)
+      SourceDiscoverSchemaWriteRequestBody(
+        catalog = catalogConverter.toApi(airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream, advOneSuggestedStream),
+        sourceId = actorId,
+        connectorVersion = connectorVersion,
+        configurationHash = hashValue,
+      )
 
     Assertions.assertEquals(1, requestOne.catalog.streams.size)
     requestOne
       .catalog
       .streams
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.config.selected) })
+      .forEach { s -> Assertions.assertEquals(true, s.config!!.selected) }
     requestOne
       .catalog
       .streams
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.config.suggested) })
+      .forEach { s -> Assertions.assertEquals(true, s.config!!.suggested) }
 
     Assertions.assertEquals(2, requestTwo.catalog.streams.size)
     requestTwo
       .catalog
       .streams
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.config.selected) })
+      .forEach { s -> Assertions.assertEquals(false, s.config!!.selected) }
     requestTwo
       .catalog
       .streams
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.config.suggested) })
+      .forEach { s -> Assertions.assertEquals(false, s.config!!.suggested) }
 
     Assertions.assertEquals(2, requestThree.catalog.streams.size)
     val firstStreamConfig =
       requestThree
         .catalog
         .streams[0]
-        .config
+        .config!!
     Assertions.assertEquals(true, firstStreamConfig.suggested)
     Assertions.assertEquals(true, firstStreamConfig.selected)
     val secondStreamConfig =
       requestThree
         .catalog
         .streams[1]
-        .config
+        .config!!
     Assertions.assertEquals(false, secondStreamConfig.suggested)
     Assertions.assertEquals(false, secondStreamConfig.selected)
   }
@@ -1885,7 +1883,7 @@ internal class SourceHandlerTest {
       defaultCpuRequest: String?,
       defaultMemoryRequest: String?,
     ): JavaScopedResourceRequirements =
-      JavaScopedResourceRequirements()._default(ResourceRequirements().cpuRequest(defaultCpuRequest).memoryRequest(defaultMemoryRequest))
+      JavaScopedResourceRequirements(default = ResourceRequirements(cpuRequest = defaultCpuRequest, memoryRequest = defaultMemoryRequest))
 
     // the handler converts the Java model it gets from ApiPojoConverters the same way
     fun toKotlinResourceAllocation(resourceAllocation: JavaScopedResourceRequirements): KotlinScopedResourceRequirements =

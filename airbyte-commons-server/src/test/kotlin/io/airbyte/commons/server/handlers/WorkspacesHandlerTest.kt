@@ -5,14 +5,14 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionReadList
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionReadList
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
@@ -75,7 +75,6 @@ import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -918,7 +917,18 @@ internal class WorkspacesHandlerTest {
   fun testDeleteWorkspace() {
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
-    val connection = ConnectionRead().connectionId(UUID.randomUUID())
+    val connection =
+      ConnectionRead(
+        connectionId = UUID.randomUUID(),
+        name = "connection",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog =
+          io.airbyte.api.server.generated.models
+            .AirbyteCatalog(streams = emptyList()),
+        status = io.airbyte.api.server.generated.models.ConnectionStatus.ACTIVE,
+        breakingChange = false,
+      )
     val destination =
       DestinationRead(
         destinationDefinitionId = UUID.randomUUID(),
@@ -953,11 +963,10 @@ internal class WorkspacesHandlerTest {
     Mockito
       .`when`(
         connectionsHandler.listConnectionsForWorkspace(
-          io.airbyte.api.model.generated
-            .WorkspaceIdRequestBody()
-            .workspaceId(workspaceIdRequestBody.workspaceId),
+          io.airbyte.api.server.generated.models
+            .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
         ),
-      ).thenReturn(ConnectionReadList().connections(mutableListOf<@Valid ConnectionRead?>(connection)))
+      ).thenReturn(ConnectionReadList(connections = listOf(connection)))
 
     Mockito
       .`when`(
@@ -1054,11 +1063,10 @@ internal class WorkspacesHandlerTest {
     Mockito
       .`when`(
         connectionsHandler.listConnectionsForWorkspace(
-          io.airbyte.api.model.generated
-            .WorkspaceIdRequestBody()
-            .workspaceId(workspaceIdRequestBody.workspaceId),
+          io.airbyte.api.server.generated.models
+            .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
         ),
-      ).thenReturn(ConnectionReadList().connections(mutableListOf()))
+      ).thenReturn(ConnectionReadList(connections = mutableListOf()))
     Mockito
       .`when`(destinationHandler.listDestinationsForWorkspace(any()))
       .thenReturn(DestinationReadList(destinations = emptyList()))

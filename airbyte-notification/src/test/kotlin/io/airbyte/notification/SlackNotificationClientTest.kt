@@ -8,13 +8,13 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.StreamAttributePrimaryKeyUpdate
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.SlackNotificationConfiguration
@@ -362,7 +362,7 @@ internal class SlackNotificationClientTest {
   fun testNotifySchemaPropagated() {
     val connectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val diff = CatalogDiff()
+    val diff = CatalogDiff(transforms = emptyList())
     val workspaceName = ""
     val workspaceUrl = "http://airbyte.io/workspaces/123"
     val connectionName = "PSQL ->> BigQuery"
@@ -395,7 +395,7 @@ internal class SlackNotificationClientTest {
   fun testNotifySchemaDiffToApply() {
     val connectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val diff = CatalogDiff()
+    val diff = CatalogDiff(transforms = emptyList())
     val workspaceName = ""
     val workspaceUrl = "http://airbyte.io/workspaces/123"
     val connectionName = "PSQL ->> BigQuery"
@@ -427,7 +427,7 @@ internal class SlackNotificationClientTest {
   fun testNotifySchemaDiffToApplyWhenPropagationDisabled() {
     val connectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val diff = CatalogDiff()
+    val diff = CatalogDiff(transforms = emptyList())
     val workspaceName = ""
     val workspaceUrl = "http://airbyte.io/workspaces/123"
     val connectionName = "PSQL ->> BigQuery"
@@ -457,17 +457,20 @@ internal class SlackNotificationClientTest {
 
   @Test
   fun buildSummaryNewStreamTest() {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("ns")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(StreamDescriptor().name("invoices")),
-    )
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.ADD_STREAM,
+              streamDescriptor = StreamDescriptor(name = "foo", namespace = "ns"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.ADD_STREAM,
+              streamDescriptor = StreamDescriptor(name = "invoices"),
+            ),
+          ),
+      )
 
     val expected =
       """
@@ -480,17 +483,20 @@ internal class SlackNotificationClientTest {
 
   @Test
   fun buildSummaryDeletedStreamTest() {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("deprecated")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("also_removed").namespace("schema1")),
-    )
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "deprecated"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "also_removed", namespace = "schema1"),
+            ),
+          ),
+      )
 
     val expected =
       """
@@ -503,65 +509,74 @@ internal class SlackNotificationClientTest {
 
   @Test
   fun buildSummaryUpdatedPkTest() {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .updateStream(
-          StreamTransformUpdateStream()
-            .streamAttributeTransforms(
-              listOf(
-                StreamAttributeTransform()
-                  .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
-                  .updatePrimaryKey(
-                    StreamAttributePrimaryKeyUpdate()
-                      .newPrimaryKey(listOf(listOf("new_pk"))),
-                  ),
-              ),
-            ),
-        ).streamDescriptor(StreamDescriptor().name("stream_with_added_pk")),
-    )
-
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .updateStream(
-          StreamTransformUpdateStream()
-            .streamAttributeTransforms(
-              listOf(
-                StreamAttributeTransform()
-                  .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
-                  .updatePrimaryKey(
-                    StreamAttributePrimaryKeyUpdate()
-                      .oldPrimaryKey(listOf(listOf("also_old_pk")))
-                      .newPrimaryKey(
-                        listOf(
-                          listOf("new_pk"),
-                          listOf("this_one_is_compound"),
-                        ),
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              updateStream =
+                StreamTransformUpdateStream(
+                  streamAttributeTransforms =
+                    listOf(
+                      StreamAttributeTransform(
+                        transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY,
+                        updatePrimaryKey =
+                          StreamAttributePrimaryKeyUpdate(
+                            newPrimaryKey = listOf(listOf("new_pk")),
+                          ),
+                        breaking = false,
                       ),
-                  ),
-              ),
+                    ),
+                  fieldTransforms = emptyList(),
+                ),
+              streamDescriptor = StreamDescriptor(name = "stream_with_added_pk"),
             ),
-        ).streamDescriptor(StreamDescriptor().name("another_stream_with_new_pk")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .updateStream(
-          StreamTransformUpdateStream()
-            .streamAttributeTransforms(
-              listOf(
-                StreamAttributeTransform()
-                  .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
-                  .updatePrimaryKey(
-                    StreamAttributePrimaryKeyUpdate()
-                      .oldPrimaryKey(listOf(listOf("this_pk_is_removed"))),
-                  ),
-              ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              updateStream =
+                StreamTransformUpdateStream(
+                  streamAttributeTransforms =
+                    listOf(
+                      StreamAttributeTransform(
+                        transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY,
+                        updatePrimaryKey =
+                          StreamAttributePrimaryKeyUpdate(
+                            oldPrimaryKey = listOf(listOf("also_old_pk")),
+                            newPrimaryKey =
+                              listOf(
+                                listOf("new_pk"),
+                                listOf("this_one_is_compound"),
+                              ),
+                          ),
+                        breaking = false,
+                      ),
+                    ),
+                  fieldTransforms = emptyList(),
+                ),
+              streamDescriptor = StreamDescriptor(name = "another_stream_with_new_pk"),
             ),
-        ).streamDescriptor(StreamDescriptor().name("stream_with_pk_removed")),
-    )
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              updateStream =
+                StreamTransformUpdateStream(
+                  streamAttributeTransforms =
+                    listOf(
+                      StreamAttributeTransform(
+                        transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY,
+                        updatePrimaryKey =
+                          StreamAttributePrimaryKeyUpdate(
+                            oldPrimaryKey = listOf(listOf("this_pk_is_removed")),
+                          ),
+                        breaking = false,
+                      ),
+                    ),
+                  fieldTransforms = emptyList(),
+                ),
+              streamDescriptor = StreamDescriptor(name = "stream_with_pk_removed"),
+            ),
+          ),
+      )
 
     val expected =
       """
@@ -579,33 +594,48 @@ internal class SlackNotificationClientTest {
 
   @Test
   fun buildSummaryAlteredStreamTest() {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("users").namespace("main"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
-                .fieldName(listOf("alpha", "beta", "delta")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
-                .fieldName(listOf("another_removal")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(listOf("new", "field")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(listOf("added_too")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
-                .fieldName(listOf("cow")),
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "users", namespace = "main"),
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms =
+                    listOf(
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                        fieldName = listOf("alpha", "beta", "delta"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                        fieldName = listOf("another_removal"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        fieldName = listOf("new", "field"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        fieldName = listOf("added_too"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.UPDATE_FIELD_SCHEMA,
+                        fieldName = listOf("cow"),
+                        breaking = false,
+                      ),
+                    ),
+                  streamAttributeTransforms = emptyList(),
+                ),
             ),
           ),
-        ),
-    )
+      )
 
     val expected =
       """
@@ -622,59 +652,69 @@ internal class SlackNotificationClientTest {
 
   @Test
   fun buildSummaryComplexChangeTest() {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
-        .streamDescriptor(StreamDescriptor().name("foo").namespace("ns")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("deprecated")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("also_removed").namespace("schema1")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .updateStream(
-          StreamTransformUpdateStream()
-            .streamAttributeTransforms(
-              listOf(
-                StreamAttributeTransform()
-                  .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
-                  .updatePrimaryKey(
-                    StreamAttributePrimaryKeyUpdate()
-                      .newPrimaryKey(listOf(listOf("new_pk"))),
-                  ),
-              ),
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.ADD_STREAM,
+              streamDescriptor = StreamDescriptor(name = "foo", namespace = "ns"),
             ),
-        ).streamDescriptor(StreamDescriptor().name("stream_with_added_pk")),
-    )
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("users").namespace("main"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            listOf(
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(listOf("new", "field")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(listOf("added_too")),
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA)
-                .fieldName(listOf("cow")),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "deprecated"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "also_removed", namespace = "schema1"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              updateStream =
+                StreamTransformUpdateStream(
+                  streamAttributeTransforms =
+                    listOf(
+                      StreamAttributeTransform(
+                        transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY,
+                        updatePrimaryKey =
+                          StreamAttributePrimaryKeyUpdate(
+                            newPrimaryKey = listOf(listOf("new_pk")),
+                          ),
+                        breaking = false,
+                      ),
+                    ),
+                  fieldTransforms = emptyList(),
+                ),
+              streamDescriptor = StreamDescriptor(name = "stream_with_added_pk"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "users", namespace = "main"),
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms =
+                    listOf(
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        fieldName = listOf("new", "field"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        fieldName = listOf("added_too"),
+                        breaking = false,
+                      ),
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.UPDATE_FIELD_SCHEMA,
+                        fieldName = listOf("cow"),
+                        breaking = false,
+                      ),
+                    ),
+                  streamAttributeTransforms = emptyList(),
+                ),
             ),
           ),
-        ),
-    )
+      )
 
     val expected =
       """
@@ -755,21 +795,28 @@ internal class SlackNotificationClientTest {
   }
 
   private fun buildDiffWithManyFields(): CatalogDiff {
-    val diff = CatalogDiff()
-    diff.addTransformsItem(
-      StreamTransform()
-        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-        .streamDescriptor(StreamDescriptor().name("big_stream").namespace("main"))
-        .updateStream(
-          StreamTransformUpdateStream().fieldTransforms(
-            (0 until 400).map { i ->
-              FieldTransform()
-                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
-                .fieldName(listOf("field_$i"))
-            },
+    val diff =
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "big_stream", namespace = "main"),
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms =
+                    (0 until 400).map { i ->
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.ADD_FIELD,
+                        fieldName = listOf("field_$i"),
+                        breaking = false,
+                      )
+                    },
+                  streamAttributeTransforms = emptyList(),
+                ),
+            ),
           ),
-        ),
-    )
+      )
     return diff
   }
 

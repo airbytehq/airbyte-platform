@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import io.airbyte.api.client.model.generated.ConnectionContextRead as ConnectionContextReadClientApiModel
-import io.airbyte.api.model.generated.ConnectionContextRead as ConnectionContextReadServerApiModel
+import io.airbyte.api.server.generated.models.ConnectionContextRead as ConnectionContextReadServerApiModel
 
 class CommonConvertersTest {
   @Test
@@ -50,14 +50,16 @@ class CommonConvertersTest {
     configModel.organizationId = UUID.randomUUID()
 
     val result = configModel.toServerApi()
-    val expected = ConnectionContextReadServerApiModel()
-    expected.connectionId = configModel.connectionId
-    expected.sourceId = configModel.sourceId
-    expected.destinationId = configModel.destinationId
-    expected.sourceDefinitionId = configModel.sourceDefinitionId
-    expected.destinationDefinitionId = configModel.destinationDefinitionId
-    expected.workspaceId = configModel.workspaceId
-    expected.organizationId = configModel.organizationId
+    val expected =
+      ConnectionContextReadServerApiModel(
+        connectionId = configModel.connectionId,
+        sourceId = configModel.sourceId,
+        destinationId = configModel.destinationId,
+        sourceDefinitionId = configModel.sourceDefinitionId,
+        destinationDefinitionId = configModel.destinationDefinitionId,
+        workspaceId = configModel.workspaceId,
+        organizationId = configModel.organizationId,
+      )
 
     assertEquals(expected, result)
   }

@@ -4,7 +4,6 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.server.generated.models.ActorDefinitionCreateRequest
 import io.airbyte.api.server.generated.models.ActorDefinitionCreateResponse
 import io.airbyte.api.server.generated.models.ActorDefinitionMetadata
@@ -12,6 +11,7 @@ import io.airbyte.api.server.generated.models.ActorDefinitionResultResponse
 import io.airbyte.api.server.generated.models.ActorDefinitionUpdateRequest
 import io.airbyte.api.server.generated.models.ActorDefinitionUpdateResponse
 import io.airbyte.api.server.generated.models.ActorUpdateRequest
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException

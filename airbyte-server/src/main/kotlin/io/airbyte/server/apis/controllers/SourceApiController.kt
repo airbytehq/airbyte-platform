@@ -29,7 +29,6 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -41,11 +40,6 @@ import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import io.airbyte.api.model.generated.SourceAutoPropagateChange as JavaSourceAutoPropagateChange
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody as JavaSourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody as JavaSourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody as JavaSourceIdRequestBody
-import io.airbyte.api.model.generated.SourceUpdate as JavaSourceUpdate
 
 @Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -63,7 +57,7 @@ open class SourceApiController(
     @Body sourceAutoPropagateChange: SourceAutoPropagateChange,
   ) {
     execute<Any?> {
-      schedulerHandler.applySchemaChangeForSource(Jsons.convertValue(sourceAutoPropagateChange, JavaSourceAutoPropagateChange::class.java))
+      schedulerHandler.applySchemaChangeForSource(sourceAutoPropagateChange)
       null
     }
   }
@@ -76,12 +70,7 @@ open class SourceApiController(
   )
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
-  ): CheckConnectionRead =
-    execute {
-      val checkConnectionRead =
-        schedulerHandler.checkSourceConnectionFromSourceId(Jsons.convertValue(sourceIdRequestBody, JavaSourceIdRequestBody::class.java))
-      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
-    }
+  ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
 
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -91,12 +80,7 @@ open class SourceApiController(
   )
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
-  ): CheckConnectionRead =
-    execute {
-      val checkConnectionRead =
-        schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(Jsons.convertValue(sourceUpdate, JavaSourceUpdate::class.java))
-      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
-    }
+  ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
 
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -136,14 +120,7 @@ open class SourceApiController(
   )
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
-  ): SourceDiscoverSchemaRead =
-    execute {
-      val discoverSchemaRead =
-        schedulerHandler.discoverSchemaForSourceFromSourceId(
-          Jsons.convertValue(sourceDiscoverSchemaRequestBody, JavaSourceDiscoverSchemaRequestBody::class.java),
-        )
-      Jsons.convertValue(discoverSchemaRead, SourceDiscoverSchemaRead::class.java)
-    }
+  ): SourceDiscoverSchemaRead = execute { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
 
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -271,8 +248,6 @@ open class SourceApiController(
     @Body sourceDiscoverSchemaWriteRequestBody: SourceDiscoverSchemaWriteRequestBody,
   ): DiscoverCatalogResult =
     execute {
-      sourceHandler.writeDiscoverCatalogResult(
-        Jsons.convertValue(sourceDiscoverSchemaWriteRequestBody, JavaSourceDiscoverSchemaWriteRequestBody::class.java),
-      )
+      sourceHandler.writeDiscoverCatalogResult(sourceDiscoverSchemaWriteRequestBody)
     }
 }

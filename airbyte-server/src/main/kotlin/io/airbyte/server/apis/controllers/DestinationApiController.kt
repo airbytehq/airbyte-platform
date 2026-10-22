@@ -28,7 +28,6 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.converters.toModel
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -45,8 +44,6 @@ import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import io.airbyte.api.model.generated.DestinationIdRequestBody as JavaDestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationUpdate as JavaDestinationUpdate
 
 @Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -63,15 +60,7 @@ open class DestinationApiController(
   )
   override fun checkConnectionToDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
-  ): CheckConnectionRead =
-    execute {
-      // SchedulerHandler still uses the Java models
-      val checkConnectionRead =
-        schedulerHandler.checkDestinationConnectionFromDestinationId(
-          Jsons.convertValue(destinationIdRequestBody, JavaDestinationIdRequestBody::class.java),
-        )
-      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
-    }
+  ): CheckConnectionRead = execute { schedulerHandler.checkDestinationConnectionFromDestinationId(destinationIdRequestBody) }
 
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -81,14 +70,7 @@ open class DestinationApiController(
   )
   override fun checkConnectionToDestinationForUpdate(
     @Body destinationUpdate: DestinationUpdate,
-  ): CheckConnectionRead =
-    execute {
-      val checkConnectionRead =
-        schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(
-          Jsons.convertValue(destinationUpdate, JavaDestinationUpdate::class.java),
-        )
-      Jsons.convertValue(checkConnectionRead, CheckConnectionRead::class.java)
-    }
+  ): CheckConnectionRead = execute { schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(destinationUpdate) }
 
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)

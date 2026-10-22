@@ -6,7 +6,7 @@ package io.airbyte.commons.converters
 
 import io.airbyte.config.ConnectionContext
 import io.airbyte.api.client.model.generated.ConnectionContextRead as ConnectionContextReadClientApiModel
-import io.airbyte.api.model.generated.ConnectionContextRead as ConnectionContextReadServerApiModel
+import io.airbyte.api.server.generated.models.ConnectionContextRead as ConnectionContextReadServerApiModel
 
 /*
  * Api <-> Domain model converters for common shared objects.
@@ -22,14 +22,13 @@ fun ConnectionContextReadClientApiModel.toInternal(): ConnectionContext =
     .withWorkspaceId(this.workspaceId)
     .withOrganizationId(this.organizationId)
 
-fun ConnectionContext.toServerApi(): ConnectionContextReadServerApiModel {
-  val apiModel = ConnectionContextReadServerApiModel()
-  apiModel.connectionId = this.connectionId
-  apiModel.sourceId = this.sourceId
-  apiModel.destinationId = this.destinationId
-  apiModel.sourceDefinitionId = this.sourceDefinitionId
-  apiModel.destinationDefinitionId = this.destinationDefinitionId
-  apiModel.workspaceId = this.workspaceId
-  apiModel.organizationId = this.organizationId
-  return apiModel
-}
+fun ConnectionContext.toServerApi(): ConnectionContextReadServerApiModel =
+  ConnectionContextReadServerApiModel(
+    connectionId = this.connectionId,
+    sourceId = this.sourceId,
+    destinationId = this.destinationId,
+    sourceDefinitionId = this.sourceDefinitionId,
+    destinationDefinitionId = this.destinationDefinitionId,
+    workspaceId = this.workspaceId,
+    organizationId = this.organizationId,
+  )

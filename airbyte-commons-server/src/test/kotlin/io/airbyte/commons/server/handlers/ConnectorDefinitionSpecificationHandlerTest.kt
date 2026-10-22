@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata
@@ -66,12 +66,13 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
     jobConverter = mockk(relaxed = true)
     // the handler converts this to the Kotlin model through JSON, so it must be a real object, not a relaxed mock
     every { jobConverter.getSynchronousJobRead(any<SynchronousJobMetadata>()) } returns
-      SynchronousJobRead()
-        .id(UUID.randomUUID())
-        .configType(JobConfigType.GET_SPEC)
-        .createdAt(0)
-        .endedAt(0)
-        .succeeded(true)
+      SynchronousJobRead(
+        id = UUID.randomUUID(),
+        configType = JobConfigType.GET_SPEC,
+        createdAt = 0,
+        endedAt = 0,
+        succeeded = true,
+      )
     sourceService = mockk()
     destinationService = mockk()
     oAuthService = mockk()

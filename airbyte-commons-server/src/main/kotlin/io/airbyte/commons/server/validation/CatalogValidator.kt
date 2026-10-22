@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.validation
 
-import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteCatalog
 import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
 import io.airbyte.commons.server.validation.CatalogValidator.Constants.FIELD_COUNT_LIMIT_KEY
 import io.airbyte.commons.server.validation.CatalogValidator.Constants.FIELD_COUNT_PROVIDED_KEY
@@ -33,14 +33,18 @@ class CatalogValidator(
     val fieldLimit = resolveLimit(ctx)
     val fieldCount =
       catalog.streams
-        .filter { s -> s.config.selected }
+        .filter { s -> s.config!!.selected == true }
         .sumOf { s ->
-          if (s.config.fieldSelectionEnabled == true) {
-            s.config.selectedFields.size
+          if (s.config!!.fieldSelectionEnabled == true) {
+            s.config!!
+              .selectedFields
+              .orEmpty()
+              .size
           } else {
             val fieldNames: Iterator<String> =
-              if (s.stream.jsonSchema.get(PROPERTIES_KEY) != null) {
-                s.stream.jsonSchema
+              if (s.stream!!.jsonSchema!!.get(PROPERTIES_KEY) != null) {
+                s.stream!!
+                  .jsonSchema!!
                   .get(PROPERTIES_KEY)
                   .fieldNames()
               } else {

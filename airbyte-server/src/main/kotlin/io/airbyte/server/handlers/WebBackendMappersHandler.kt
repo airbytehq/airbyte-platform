@@ -4,13 +4,13 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.FieldSpec
-import io.airbyte.api.model.generated.MapperValidationError
-import io.airbyte.api.model.generated.MapperValidationErrorType
-import io.airbyte.api.model.generated.MapperValidationResult
-import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
-import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.FieldSpec
+import io.airbyte.api.server.generated.models.MapperValidationError
+import io.airbyte.api.server.generated.models.MapperValidationErrorType
+import io.airbyte.api.server.generated.models.MapperValidationResult
+import io.airbyte.api.server.generated.models.WebBackendValidateMappersRequestBody
+import io.airbyte.api.server.generated.models.WebBackendValidateMappersResponse
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -35,7 +35,7 @@ class WebBackendMappersHandler(
    * Mappers are applied one by one to the stream to get the list of fields available for the next mapper.
    */
   fun validateMappers(validateMappersRequest: WebBackendValidateMappersRequestBody): WebBackendValidateMappersResponse {
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(validateMappersRequest.connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = validateMappersRequest.connectionId)
     val connection = connectionsHandler.getConnection(connectionIdRequestBody.connectionId)
     val configuredCatalog = catalogConverter.toConfiguredInternal(connection.syncCatalog)
 
@@ -51,11 +51,12 @@ class WebBackendMappersHandler(
     val initialFields =
       stream.fields!!
         .map {
-          FieldSpec()
-            .name(it.name)
-            .type(convertFieldType(it.type))
-            .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
-            .isSelectedCursor(cursorFields == it.name)
+          FieldSpec(
+            name = it.name,
+            type = convertFieldType(it.type),
+            isSelectedPrimaryKey = primaryKeyFields?.contains(it.name) ?: false,
+            isSelectedCursor = cursorFields == it.name,
+          )
         }.toList()
 
     val partialMappers = mutableListOf<MapperConfig>()
@@ -74,40 +75,46 @@ class WebBackendMappersHandler(
       val generationResult = destinationCatalogGenerator.generateDestinationCatalog(slimCatalog)
       val newStream = generationResult.catalog.streams.first()
 
-      val validateRes = MapperValidationResult()
-      validateRes.id = mapper.id()
-      validateRes.inputFields = lastFieldSet
-      validateRes.outputFields =
+      val outputFields =
         newStream.fields!!
           .map {
-            FieldSpec()
-              .name(it.name)
-              .type(convertFieldType(it.type))
-              .isSelectedPrimaryKey(primaryKeyFields?.contains(it.name) ?: false)
-              .isSelectedCursor(cursorFields == it.name)
+            FieldSpec(
+              name = it.name,
+              type = convertFieldType(it.type),
+              isSelectedPrimaryKey = primaryKeyFields?.contains(it.name) ?: false,
+              isSelectedCursor = cursorFields == it.name,
+            )
           }.toList()
-
-      lastFieldSet = validateRes.outputFields
 
       val streamErrors =
         generationResult.errors.entries
           .firstOrNull()
           ?.value
       val mapperError = streamErrors?.get(mapper)
-      if (mapperError != null) {
-        validateRes.validationError =
-          MapperValidationError()
-            .type(convertMapperErrorType(mapperError.type))
-            .message(mapperError.message)
-      }
+      val validateRes =
+        MapperValidationResult(
+          id = mapper.id(),
+          inputFields = lastFieldSet,
+          outputFields = outputFields,
+          validationError =
+            mapperError?.let {
+              MapperValidationError(
+                type = convertMapperErrorType(it.type),
+                message = it.message,
+              )
+            },
+        )
+
+      lastFieldSet = outputFields
 
       mapperValidationResults.add(validateRes)
     }
 
-    return WebBackendValidateMappersResponse()
-      .initialFields(initialFields)
-      .outputFields(lastFieldSet)
-      .mappers(mapperValidationResults)
+    return WebBackendValidateMappersResponse(
+      initialFields = initialFields,
+      outputFields = lastFieldSet,
+      mappers = mapperValidationResults,
+    )
   }
 
   private fun convertMapperErrorType(mapperErrorType: DestinationCatalogGenerator.MapperErrorType): MapperValidationErrorType =
@@ -118,20 +125,20 @@ class WebBackendMappersHandler(
       DestinationCatalogGenerator.MapperErrorType.FIELD_ALREADY_EXISTS -> MapperValidationErrorType.FIELD_ALREADY_EXISTS
     }
 
-  private fun convertFieldType(fieldType: FieldType): FieldSpec.TypeEnum =
+  private fun convertFieldType(fieldType: FieldType): FieldSpec.Type =
     when (fieldType) {
-      FieldType.STRING -> FieldSpec.TypeEnum.STRING
-      FieldType.BOOLEAN -> FieldSpec.TypeEnum.BOOLEAN
-      FieldType.DATE -> FieldSpec.TypeEnum.DATE
-      FieldType.TIMESTAMP_WITHOUT_TIMEZONE -> FieldSpec.TypeEnum.TIMESTAMP_WITHOUT_TIMEZONE
-      FieldType.TIMESTAMP_WITH_TIMEZONE -> FieldSpec.TypeEnum.TIMESTAMP_WITH_TIMEZONE
-      FieldType.TIME_WITHOUT_TIMEZONE -> FieldSpec.TypeEnum.TIME_WITHOUT_TIMEZONE
-      FieldType.TIME_WITH_TIMEZONE -> FieldSpec.TypeEnum.TIME_WITH_TIMEZONE
-      FieldType.INTEGER -> FieldSpec.TypeEnum.INTEGER
-      FieldType.NUMBER -> FieldSpec.TypeEnum.NUMBER
-      FieldType.ARRAY -> FieldSpec.TypeEnum.ARRAY
-      FieldType.OBJECT -> FieldSpec.TypeEnum.OBJECT
-      FieldType.MULTI -> FieldSpec.TypeEnum.MULTI
-      FieldType.UNKNOWN -> FieldSpec.TypeEnum.UNKNOWN
+      FieldType.STRING -> FieldSpec.Type.STRING
+      FieldType.BOOLEAN -> FieldSpec.Type.BOOLEAN
+      FieldType.DATE -> FieldSpec.Type.DATE
+      FieldType.TIMESTAMP_WITHOUT_TIMEZONE -> FieldSpec.Type.TIMESTAMP_WITHOUT_TIMEZONE
+      FieldType.TIMESTAMP_WITH_TIMEZONE -> FieldSpec.Type.TIMESTAMP_WITH_TIMEZONE
+      FieldType.TIME_WITHOUT_TIMEZONE -> FieldSpec.Type.TIME_WITHOUT_TIMEZONE
+      FieldType.TIME_WITH_TIMEZONE -> FieldSpec.Type.TIME_WITH_TIMEZONE
+      FieldType.INTEGER -> FieldSpec.Type.INTEGER
+      FieldType.NUMBER -> FieldSpec.Type.NUMBER
+      FieldType.ARRAY -> FieldSpec.Type.ARRAY
+      FieldType.OBJECT -> FieldSpec.Type.OBJECT
+      FieldType.MULTI -> FieldSpec.Type.MULTI
+      FieldType.UNKNOWN -> FieldSpec.Type.UNKNOWN
     }
 }

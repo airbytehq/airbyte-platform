@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionReadList
-import io.airbyte.api.model.generated.ConnectionSearch
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionReadList
+import io.airbyte.api.server.generated.models.ConnectionSearch
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationSearch
 import io.airbyte.api.server.generated.models.SourceRead
@@ -71,7 +71,7 @@ open class MatchSearchHandler
         }
       }
 
-      return ConnectionReadList().connections(reads)
+      return ConnectionReadList(connections = reads)
     }
 
     companion object {

@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionState
+import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
 import io.airbyte.commons.converters.StateConverter.toApi
 import io.airbyte.commons.converters.StateConverter.toInternal
 import io.airbyte.commons.server.errors.SyncIsRunningException

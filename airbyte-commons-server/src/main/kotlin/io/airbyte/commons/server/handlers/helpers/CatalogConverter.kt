@@ -5,19 +5,18 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.converters.toApi
 import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -38,7 +37,6 @@ import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
 import java.util.Optional
-import java.util.function.Consumer
 import java.util.stream.Collectors
 
 private val log = KotlinLogging.logger {}
@@ -53,19 +51,18 @@ class CatalogConverter(
 ) {
   private val mappers: Map<String, Mapper<out MapperConfig>> = mappersList.associateBy { o -> o.name }
 
-  private fun toApi(stream: AirbyteStream): io.airbyte.api.model.generated.AirbyteStream =
-    io.airbyte.api.model.generated
-      .AirbyteStream()
-      .name(stream.name)
-      .jsonSchema(stream.jsonSchema)
-      .supportedSyncModes(
-        stream.supportedSyncModes.convertTo<SyncMode>(),
-      ).sourceDefinedCursor(if (stream.sourceDefinedCursor != null) stream.sourceDefinedCursor else false)
-      .defaultCursorField(stream.defaultCursorField)
-      .sourceDefinedPrimaryKey(stream.sourceDefinedPrimaryKey)
-      .namespace(stream.namespace)
-      .isFileBased(stream.isFileBased)
-      .isResumable(stream.isResumable)
+  private fun toApi(stream: AirbyteStream): io.airbyte.api.server.generated.models.AirbyteStream =
+    io.airbyte.api.server.generated.models.AirbyteStream(
+      name = stream.name,
+      jsonSchema = stream.jsonSchema,
+      supportedSyncModes = stream.supportedSyncModes.convertTo<SyncMode>(),
+      sourceDefinedCursor = if (stream.sourceDefinedCursor != null) stream.sourceDefinedCursor else false,
+      defaultCursorField = stream.defaultCursorField,
+      sourceDefinedPrimaryKey = stream.sourceDefinedPrimaryKey,
+      namespace = stream.namespace,
+      isFileBased = stream.isFileBased,
+      isResumable = stream.isResumable,
+    )
 
   /**
    * Convert an internal catalog and field selection mask to an api catalog model.
@@ -83,57 +80,52 @@ class CatalogConverter(
         .stream()
         .map { configuredStream: ConfiguredAirbyteStream ->
           val streamDescriptor =
-            StreamDescriptor()
-              .name(configuredStream.stream.name)
-              .namespace(configuredStream.stream.namespace)
+            StreamDescriptor(name = configuredStream.stream.name, namespace = configuredStream.stream.namespace)
+          val fieldSelectionEnabled = getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor)
+          val selectedFields =
+            if (fieldSelectionEnabled == true) {
+              // TODO(mfsiega-airbyte): support nested fields here.
+              configuredStream.stream
+                .jsonSchema
+                .findValue("properties")
+                .fieldNames()
+                .asSequence()
+                .map { fieldName: String -> SelectedFieldInfo(fieldPath = listOf(fieldName)) }
+                .toList()
+            } else {
+              listOf()
+            }
           val configuration =
-            AirbyteStreamConfiguration()
-              .syncMode(
-                configuredStream.syncMode.convertTo<SyncMode>(),
-              ).cursorField(configuredStream.cursorField)
-              .destinationSyncMode(
-                configuredStream.destinationSyncMode.convertTo<DestinationSyncMode>(),
-              ).primaryKey(configuredStream.primaryKey)
-              .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.stream.name))
-              .selected(true)
-              .suggested(false)
-              .includeFiles(configuredStream.includeFiles)
-              .destinationObjectName(configuredStream.destinationObjectName)
-              .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
-              // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.
-              .selectedFields(listOf<@Valid SelectedFieldInfo?>())
-              .hashedFields(
+            AirbyteStreamConfiguration(
+              syncMode = configuredStream.syncMode.convertTo<SyncMode>(),
+              cursorField = configuredStream.cursorField,
+              destinationSyncMode = configuredStream.destinationSyncMode.convertTo<DestinationSyncMode>(),
+              primaryKey = configuredStream.primaryKey,
+              aliasName = Names.toAlphanumericAndUnderscore(configuredStream.stream.name),
+              selected = true,
+              suggested = false,
+              includeFiles = configuredStream.includeFiles,
+              destinationObjectName = configuredStream.destinationObjectName,
+              fieldSelectionEnabled = fieldSelectionEnabled,
+              selectedFields = selectedFields,
+              hashedFields =
                 configuredStream.mappers
                   .stream()
                   .filter { mapper: MapperConfig -> MapperOperationName.HASHING == mapper.name() }
                   .map { configuredHashingMapper: MapperConfig -> this.toApiFieldInfo(configuredHashingMapper) }
                   .collect(Collectors.toList<@Valid SelectedFieldInfo?>()),
-              ).mappers(
+              mappers =
                 configuredStream.mappers
                   .stream()
                   .map<ConfiguredStreamMapper> { obj -> obj.toApi() }
                   .collect(Collectors.toList<@Valid ConfiguredStreamMapper?>()),
-              ).generationId(configuredStream.generationId)
-              .minimumGenerationId(configuredStream.minimumGenerationId)
-              .syncId(configuredStream.syncId)
-          if (configuration.fieldSelectionEnabled) {
-            val selectedColumns: MutableList<String> = ArrayList()
-            // TODO(mfsiega-airbyte): support nested fields here.
-            configuredStream.stream
-              .jsonSchema
-              .findValue("properties")
-              .fieldNames()
-              .forEachRemaining { e: String -> selectedColumns.add(e) }
-            configuration.selectedFields =
-              selectedColumns.stream().map { fieldName: String? -> SelectedFieldInfo().addFieldPathItem(fieldName) }.collect(
-                Collectors.toList<@Valid SelectedFieldInfo?>(),
-              )
-          }
-          AirbyteStreamAndConfiguration()
-            .stream(configuredStream.stream.toApi())
-            .config(configuration)
+              generationId = configuredStream.generationId,
+              minimumGenerationId = configuredStream.minimumGenerationId,
+              syncId = configuredStream.syncId,
+            )
+          AirbyteStreamAndConfiguration(stream = configuredStream.stream.toApi(), config = configuration)
         }.collect(Collectors.toList())
-    return AirbyteCatalog().streams(streams)
+    return AirbyteCatalog(streams = streams)
   }
 
   /**
@@ -161,37 +153,38 @@ class CatalogConverter(
       suggestingStreams = false
     }
 
-    return AirbyteCatalog()
-      .streams(
+    return AirbyteCatalog(
+      streams =
         catalog.streams
           .stream()
           .map { stream: AirbyteStream -> this.toApi(stream) }
-          .map { s: io.airbyte.api.model.generated.AirbyteStream ->
-            AirbyteStreamAndConfiguration()
-              .stream(s)
-              .config(generateDefaultConfiguration(s, suggestingStreams, suggestedStreams, catalog.streams.stream().count()))
+          .map { s: io.airbyte.api.server.generated.models.AirbyteStream ->
+            AirbyteStreamAndConfiguration(
+              stream = s,
+              config = generateDefaultConfiguration(s, suggestingStreams, suggestedStreams, catalog.streams.stream().count()),
+            )
           }.collect(Collectors.toList<@Valid AirbyteStreamAndConfiguration?>()),
-      )
+    )
   }
 
   private fun toConfiguredProtocol(
-    stream: io.airbyte.api.model.generated.AirbyteStream,
+    stream: io.airbyte.api.server.generated.models.AirbyteStream,
     config: AirbyteStreamConfiguration,
   ): AirbyteStream {
-    if (config.fieldSelectionEnabled != null && config.fieldSelectionEnabled) {
+    if (config.fieldSelectionEnabled == true) {
       // Validate the selected field paths.
-      if (config.selectedFields == null) {
-        throw JsonValidationException("Requested field selection but no selected fields provided")
-      }
-      val properties = stream.jsonSchema.findValue("properties")
+      val configSelectedFields =
+        config.selectedFields ?: throw JsonValidationException("Requested field selection but no selected fields provided")
+      val properties = stream.jsonSchema!!.findValue("properties")
       if (properties == null || !properties.isObject) {
         throw JsonValidationException("Requested field selection but no properties node found")
       }
-      for (selectedFieldInfo in config.selectedFields) {
-        if (selectedFieldInfo.fieldPath == null || selectedFieldInfo.fieldPath.isEmpty()) {
+      for (selectedFieldInfo in configSelectedFields) {
+        val fieldPath = selectedFieldInfo.fieldPath
+        if (fieldPath.isNullOrEmpty()) {
           throw JsonValidationException("Selected field path cannot be empty")
         }
-        if (selectedFieldInfo.fieldPath.size > 1) {
+        if (fieldPath.size > 1) {
           // TODO(mfsiega-airbyte): support nested fields.
           throw UnsupportedOperationException("Nested field selection not supported")
         }
@@ -199,24 +192,23 @@ class CatalogConverter(
       // Only include the selected fields.
       // NOTE: we verified above that each selected field has at least one element in the field path.
       val selectedFieldNames =
-        config.selectedFields
-          .stream()
-          .map { field: SelectedFieldInfo -> field.fieldPath[0] }
-          .collect(Collectors.toSet())
+        configSelectedFields
+          .map { field: SelectedFieldInfo -> field.fieldPath!![0] }
+          .toSet()
       // TODO(mfsiega-airbyte): we only check the top level of the cursor/primary key fields because we
       // don't support filtering nested fields yet.
       if (config.syncMode == SyncMode.INCREMENTAL &&
         // INCREMENTAL sync mode, AND
-        !config.cursorField.isEmpty() &&
+        !config.cursorField.isNullOrEmpty() &&
         // There is a cursor configured, AND
-        !selectedFieldNames.contains(config.cursorField[0])
+        !selectedFieldNames.contains(config.cursorField!![0])
       ) { // The cursor isn't in the selected fields.
         throw JsonValidationException("Cursor field cannot be de-selected in INCREMENTAL syncs")
       }
       if (config.destinationSyncMode == DestinationSyncMode.APPEND_DEDUP ||
         config.destinationSyncMode == DestinationSyncMode.OVERWRITE_DEDUP
       ) {
-        for (primaryKeyComponent in config.primaryKey) {
+        for (primaryKeyComponent in config.primaryKey.orEmpty()) {
           if (!selectedFieldNames.contains(primaryKeyComponent[0])) {
             throw JsonValidationException("Primary key field cannot be de-selected in DEDUP mode")
           }
@@ -233,7 +225,7 @@ class CatalogConverter(
       .withName(stream.name)
       .withJsonSchema(stream.jsonSchema)
       .withSupportedSyncModes(
-        stream.supportedSyncModes.convertTo<io.airbyte.protocol.models.v0.SyncMode>(),
+        stream.supportedSyncModes.orEmpty().convertTo<io.airbyte.protocol.models.v0.SyncMode>(),
       ).withSourceDefinedCursor(stream.sourceDefinedCursor)
       .withDefaultCursorField(stream.defaultCursorField)
       .withIsFileBased(stream.isFileBased)
@@ -248,7 +240,7 @@ class CatalogConverter(
     if (hashedFields == null) {
       return emptyList()
     }
-    return hashedFields.stream().map<HashingMapperConfig> { f: SelectedFieldInfo -> createHashingMapper(f.fieldPath.first()) }.toList()
+    return hashedFields.map<SelectedFieldInfo, HashingMapperConfig> { f: SelectedFieldInfo -> createHashingMapper(f.fieldPath!!.first()) }
   }
 
   fun toConfiguredMappers(
@@ -266,8 +258,9 @@ class CatalogConverter(
 
   private fun toApiFieldInfo(configuredHashingMapper: MapperConfig): SelectedFieldInfo {
     require(MapperOperationName.HASHING == configuredHashingMapper.name()) { "Expected hashing mapper" }
-    return SelectedFieldInfo()
-      .fieldPath(listOf(getHashedFieldName(configuredHashingMapper as HashingMapperConfig)))
+    return SelectedFieldInfo(
+      fieldPath = listOf(getHashedFieldName(configuredHashingMapper as HashingMapperConfig)),
+    )
   }
 
   /**
@@ -285,35 +278,34 @@ class CatalogConverter(
     val streams =
       catalog.streams
         .stream()
-        .filter { s: AirbyteStreamAndConfiguration -> s.config.selected }
+        .filter { s: AirbyteStreamAndConfiguration -> s.config!!.selected == true }
         .map<ConfiguredAirbyteStream?> { s: AirbyteStreamAndConfiguration ->
+          val config = s.config!!
           try {
-            val convertedStream: io.airbyte.config.AirbyteStream = toConfiguredProtocol(s.getStream(), s.getConfig()).toInternal()
+            val convertedStream: io.airbyte.config.AirbyteStream = toConfiguredProtocol(s.stream!!, config).toInternal()
             val builder =
               ConfiguredAirbyteStream
                 .Builder()
                 .stream(convertedStream)
                 .syncMode(
-                  s.config.syncMode.convertTo<io.airbyte.config.SyncMode>(),
+                  config.syncMode.convertTo<io.airbyte.config.SyncMode>(),
                 ).destinationSyncMode(
-                  s.config.destinationSyncMode.convertTo<io.airbyte.config.DestinationSyncMode>(),
-                ).cursorField(s.config.cursorField)
-                .primaryKey(Optional.ofNullable(s.config.primaryKey).orElse(emptyList()))
-                .destinationObjectName(s.config.destinationObjectName)
+                  config.destinationSyncMode.convertTo<io.airbyte.config.DestinationSyncMode>(),
+                ).cursorField(config.cursorField)
+                .primaryKey(Optional.ofNullable(config.primaryKey).orElse(emptyList()))
+                .destinationObjectName(config.destinationObjectName)
                 .fields(fieldGenerator.getFieldsFromSchema(convertedStream.jsonSchema))
 
-            if (s.config.mappers != null && !s.config.mappers.isEmpty()) {
+            if (!config.mappers.isNullOrEmpty()) {
               builder
-                .mappers(toConfiguredMappers(s.config.mappers))
+                .mappers(toConfiguredMappers(config.mappers))
             } else {
               // TODO(pedro): `hashedFields` support should be removed once the UI is updated to use `mappers`.
               builder
-                .mappers(toConfiguredHashingMappers(s.config.hashedFields))
+                .mappers(toConfiguredHashingMappers(config.hashedFields))
             }
 
-            if (s.config.includeFiles != null) {
-              builder.includeFiles(s.config.includeFiles)
-            }
+            config.includeFiles?.let { builder.includeFiles(it) }
 
             return@map builder.build()
           } catch (e: JsonValidationException) {
@@ -338,63 +330,57 @@ class CatalogConverter(
    * source-defined cursor and full refresh not available as a sync method -> INCREMENTAL, APPEND
    *
    * @param streamToConfigure the stream for which we're picking a sync mode
-   * @param config the config to which we'll write the sync mode
+   * @param config the config to copy with the chosen sync modes
    */
-  fun configureDefaultSyncModesForNewStream(
-    streamToConfigure: io.airbyte.api.model.generated.AirbyteStream,
+  fun withDefaultSyncModesForNewStream(
+    streamToConfigure: io.airbyte.api.server.generated.models.AirbyteStream,
     config: AirbyteStreamConfiguration,
-  ) {
-    val hasSourceDefinedCursor = streamToConfigure.sourceDefinedCursor != null && streamToConfigure.sourceDefinedCursor
-    val hasSourceDefinedPrimaryKey =
-      streamToConfigure.sourceDefinedPrimaryKey != null && !streamToConfigure.sourceDefinedPrimaryKey.isEmpty()
-    val supportsFullRefresh = streamToConfigure.supportedSyncModes.contains(SyncMode.FULL_REFRESH)
-    if (hasSourceDefinedCursor && hasSourceDefinedPrimaryKey) { // Source-defined cursor and primary key
-      config
-        .syncMode(SyncMode.INCREMENTAL)
-        .destinationSyncMode(DestinationSyncMode.APPEND_DEDUP)
-        .primaryKey(streamToConfigure.sourceDefinedPrimaryKey)
+  ): AirbyteStreamConfiguration {
+    val hasSourceDefinedCursor = streamToConfigure.sourceDefinedCursor == true
+    val hasSourceDefinedPrimaryKey = !streamToConfigure.sourceDefinedPrimaryKey.isNullOrEmpty()
+    val supportsFullRefresh = streamToConfigure.supportedSyncModes.orEmpty().contains(SyncMode.FULL_REFRESH)
+    return if (hasSourceDefinedCursor && hasSourceDefinedPrimaryKey) { // Source-defined cursor and primary key
+      config.copy(
+        syncMode = SyncMode.INCREMENTAL,
+        destinationSyncMode = DestinationSyncMode.APPEND_DEDUP,
+        primaryKey = streamToConfigure.sourceDefinedPrimaryKey,
+      )
     } else if (hasSourceDefinedCursor && supportsFullRefresh) { // Source-defined cursor but no primary key.
       // NOTE: we prefer Full Refresh | Overwrite to avoid the risk of an Incremental | Append sync
       // blowing up their destination.
-      config
-        .syncMode(SyncMode.FULL_REFRESH)
-        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+      config.copy(syncMode = SyncMode.FULL_REFRESH, destinationSyncMode = DestinationSyncMode.OVERWRITE)
     } else if (hasSourceDefinedCursor) { // Source-defined cursor but no primary key *and* no full-refresh supported.
       // If *only* incremental is supported, we go with it.
-      config
-        .syncMode(SyncMode.INCREMENTAL)
-        .destinationSyncMode(DestinationSyncMode.APPEND)
+      config.copy(syncMode = SyncMode.INCREMENTAL, destinationSyncMode = DestinationSyncMode.APPEND)
     } else { // No source-defined cursor at all.
-      config
-        .syncMode(SyncMode.FULL_REFRESH)
-        .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+      config.copy(syncMode = SyncMode.FULL_REFRESH, destinationSyncMode = DestinationSyncMode.OVERWRITE)
     }
   }
 
   private fun generateDefaultConfiguration(
-    stream: io.airbyte.api.model.generated.AirbyteStream,
+    stream: io.airbyte.api.server.generated.models.AirbyteStream,
     suggestingStreams: Boolean,
     suggestedStreams: List<String>,
     totalStreams: Long,
   ): AirbyteStreamConfiguration {
-    val result =
-      AirbyteStreamConfiguration()
-        .aliasName(Names.toAlphanumericAndUnderscore(stream.name))
-        .cursorField(stream.defaultCursorField)
-        .destinationSyncMode(DestinationSyncMode.APPEND)
-        .primaryKey(stream.sourceDefinedPrimaryKey)
-
     val onlyOneStream = totalStreams == 1L
     val isSelected = onlyOneStream || (suggestingStreams && suggestedStreams.contains(stream.name))
 
+    // The sync modes are placeholders until withDefaultSyncModesForNewStream picks them.
     // In the case where this connection hasn't yet been configured, the suggested streams are also
     // (pre)-selected
-    result.suggested = isSelected
-    result.selected = isSelected
+    val result =
+      AirbyteStreamConfiguration(
+        aliasName = Names.toAlphanumericAndUnderscore(stream.name),
+        cursorField = stream.defaultCursorField,
+        syncMode = SyncMode.FULL_REFRESH,
+        destinationSyncMode = DestinationSyncMode.APPEND,
+        primaryKey = stream.sourceDefinedPrimaryKey,
+        suggested = isSelected,
+        selected = isSelected,
+      )
 
-    configureDefaultSyncModesForNewStream(stream, result)
-
-    return result
+    return withDefaultSyncModesForNewStream(stream, result)
   }
 
   private fun getStreamHasFieldSelectionEnabled(
@@ -420,14 +406,8 @@ class CatalogConverter(
    * @return protocol catalog
    */
   fun toProtocolKeepAllStreams(catalog: AirbyteCatalog): ConfiguredAirbyteCatalog {
-    val clone = Jsons.clone(catalog)
-    clone.streams.forEach(
-      Consumer { stream: AirbyteStreamAndConfiguration ->
-        stream.config.selected =
-          true
-      },
-    )
-    return toConfiguredInternal(clone)
+    val allSelected = catalog.copy(streams = catalog.streams.map { it.copy(config = it.config!!.copy(selected = true)) })
+    return toConfiguredInternal(allSelected)
   }
 
   /**
@@ -445,7 +425,7 @@ class CatalogConverter(
         .stream()
         .map<AirbyteStream?> { stream: AirbyteStreamAndConfiguration ->
           try {
-            return@map toConfiguredProtocol(stream.stream, stream.config)
+            return@map toConfiguredProtocol(stream.stream!!, stream.config!!)
           } catch (e: JsonValidationException) {
             log.error(e) { "Error parsing catalog: $e" }
             errors.add(e)
@@ -474,11 +454,8 @@ class CatalogConverter(
     val fieldSelectionData = FieldSelectionData()
     for (streamAndConfig in syncCatalog.streams) {
       val streamDescriptor =
-        StreamDescriptor()
-          .name(streamAndConfig.stream.name)
-          .namespace(streamAndConfig.stream.namespace)
-      val fieldSelectionEnabled =
-        if (streamAndConfig.config.fieldSelectionEnabled == null) false else streamAndConfig.config.fieldSelectionEnabled
+        StreamDescriptor(name = streamAndConfig.stream!!.name, namespace = streamAndConfig.stream!!.namespace)
+      val fieldSelectionEnabled = streamAndConfig.config!!.fieldSelectionEnabled ?: false
       fieldSelectionData.setAdditionalProperty(streamDescriptorToStringForFieldSelection(streamDescriptor), fieldSelectionEnabled)
     }
     return fieldSelectionData
@@ -505,27 +482,33 @@ class CatalogConverter(
    *
    * @param streamAndConfiguration the stream and configuration to check
    * @param supportedDestinationSyncModes the sync modes supported by the destination
+   * @return the stream with compatible sync modes
    */
-  fun ensureCompatibleDestinationSyncMode(
+  fun withCompatibleDestinationSyncMode(
     streamAndConfiguration: AirbyteStreamAndConfiguration,
-    supportedDestinationSyncModes: List<DestinationSyncMode?>,
-  ) {
-    if (supportedDestinationSyncModes.contains(streamAndConfiguration.config.destinationSyncMode)) {
-      return
+    supportedDestinationSyncModes: List<DestinationSyncMode>,
+  ): AirbyteStreamAndConfiguration {
+    val config = streamAndConfiguration.config!!
+    if (supportedDestinationSyncModes.contains(config.destinationSyncMode)) {
+      return streamAndConfiguration
     }
-    val sourceSupportsFullRefresh = streamAndConfiguration.stream.supportedSyncModes.contains(SyncMode.FULL_REFRESH)
+    val sourceSyncModes = streamAndConfiguration.stream!!.supportedSyncModes.orEmpty()
+    val sourceSupportsFullRefresh = sourceSyncModes.contains(SyncMode.FULL_REFRESH)
     val destinationSupportsOverwrite = supportedDestinationSyncModes.contains(DestinationSyncMode.OVERWRITE)
     if (sourceSupportsFullRefresh && destinationSupportsOverwrite) {
       // We prefer to fall back to Full Refresh | Overwrite if possible.
-      streamAndConfiguration.config.syncMode(SyncMode.FULL_REFRESH).destinationSyncMode(DestinationSyncMode.OVERWRITE)
-    } else {
-      // If *that* isn't possible, we pick something that *is* supported. This isn't ideal, but we don't
-      // have a clean way
-      // to fail in this case today.
-      val supportedSyncMode = streamAndConfiguration.stream.supportedSyncModes[0]
-      val supportedDestinationSyncMode = supportedDestinationSyncModes[0]
-      log.warn { "Default sync modes are incompatible, so falling back to $supportedSyncMode | $supportedDestinationSyncMode" }
-      streamAndConfiguration.config.syncMode(supportedSyncMode).destinationSyncMode(supportedDestinationSyncMode)
+      return streamAndConfiguration.copy(
+        config = config.copy(syncMode = SyncMode.FULL_REFRESH, destinationSyncMode = DestinationSyncMode.OVERWRITE),
+      )
     }
+    // If *that* isn't possible, we pick something that *is* supported. This isn't ideal, but we don't
+    // have a clean way
+    // to fail in this case today.
+    val supportedSyncMode = sourceSyncModes[0]
+    val supportedDestinationSyncMode = supportedDestinationSyncModes[0]
+    log.warn { "Default sync modes are incompatible, so falling back to $supportedSyncMode | $supportedDestinationSyncMode" }
+    return streamAndConfiguration.copy(
+      config = config.copy(syncMode = supportedSyncMode, destinationSyncMode = supportedDestinationSyncMode),
+    )
   }
 }

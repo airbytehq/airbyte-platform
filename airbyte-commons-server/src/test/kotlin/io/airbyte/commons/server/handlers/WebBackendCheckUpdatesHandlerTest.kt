@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionRead
 import io.airbyte.api.server.generated.models.DestinationDefinitionReadList
 import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceDefinitionReadList
+import io.airbyte.api.server.generated.models.WebBackendCheckUpdatesRead
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
@@ -64,7 +64,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
-    Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(0).sourceDefinitions(0), actual)
+    Assertions.assertEquals(WebBackendCheckUpdatesRead(destinationDefinitions = 0, sourceDefinitions = 0), actual)
   }
 
   @Test
@@ -99,7 +99,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
-    Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(2).sourceDefinitions(1), actual)
+    Assertions.assertEquals(WebBackendCheckUpdatesRead(destinationDefinitions = 2, sourceDefinitions = 1), actual)
   }
 
   @Test
@@ -127,7 +127,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
-    Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(0).sourceDefinitions(0), actual)
+    Assertions.assertEquals(WebBackendCheckUpdatesRead(destinationDefinitions = 0, sourceDefinitions = 0), actual)
   }
 
   @Test
@@ -139,7 +139,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
-    Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(0).sourceDefinitions(1), actual)
+    Assertions.assertEquals(WebBackendCheckUpdatesRead(destinationDefinitions = 0, sourceDefinitions = 1), actual)
   }
 
   @Test
@@ -151,7 +151,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
-    Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(1).sourceDefinitions(0), actual)
+    Assertions.assertEquals(WebBackendCheckUpdatesRead(destinationDefinitions = 1, sourceDefinitions = 0), actual)
   }
 
   private fun setMocksForExceptionCases() {

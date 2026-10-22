@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.shared
 
-import io.airbyte.api.model.generated.ActorStatus
+import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.JobSyncConfig

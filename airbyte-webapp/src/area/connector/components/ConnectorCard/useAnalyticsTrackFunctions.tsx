@@ -47,7 +47,7 @@ export const useAnalyticsTrackFunctions = (connectorType: "source" | "destinatio
   );
 
   const trackTestConnectorFailure = useCallback(
-    (connector: ConnectorDefinition | undefined, jobInfo: CommandErrorParams | null, message: string) => {
+    (connector: ConnectorDefinition | undefined, jobInfo: CommandErrorParams | null, message?: string) => {
       trackAction(connector, Action.FAILURE, "Tested connector - failure", jobInfo, message);
     },
     [trackAction]

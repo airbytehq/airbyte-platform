@@ -13,11 +13,11 @@ import io.airbyte.config.StreamAttributeTransform
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamTransform
 import io.airbyte.config.UpdateStream
-import io.airbyte.api.model.generated.CatalogDiff as ApiCatalogDiff
-import io.airbyte.api.model.generated.FieldTransform as ApiFieldTransform
-import io.airbyte.api.model.generated.StreamAttributeTransform as ApiStreamAttributeTransform
-import io.airbyte.api.model.generated.StreamTransform as ApiStreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream as ApiStreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.CatalogDiff as ApiCatalogDiff
+import io.airbyte.api.server.generated.models.FieldTransform as ApiFieldTransform
+import io.airbyte.api.server.generated.models.StreamAttributeTransform as ApiStreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamTransform as ApiStreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream as ApiStreamTransformUpdateStream
 
 object CatalogDiffConverter {
   fun ApiCatalogDiff.toDomain(): CatalogDiff {

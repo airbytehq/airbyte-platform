@@ -4,25 +4,22 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import jakarta.ws.rs.NotSupportedException
 import java.util.function.Consumer
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 /**
  * Helper that allows to generate the catalogs to be auto propagated.
@@ -55,33 +52,31 @@ class ApplySchemaChangeHelper(
     val nsPrefix = if (namespace != null) String.format("%s.", namespace) else ""
     val streamName = transform.streamDescriptor.name
     when (transform.transformType) {
-      StreamTransform.TransformTypeEnum.ADD_STREAM -> {
+      StreamTransform.TransformType.ADD_STREAM -> {
         return String.format("Added new stream '%s%s'", nsPrefix, streamName)
       }
 
-      StreamTransform.TransformTypeEnum.REMOVE_STREAM -> {
+      StreamTransform.TransformType.REMOVE_STREAM -> {
         return String.format("Removed stream '%s%s'", nsPrefix, streamName)
       }
 
-      StreamTransform.TransformTypeEnum.UPDATE_STREAM -> {
+      StreamTransform.TransformType.UPDATE_STREAM -> {
         val returnValue = StringBuilder(String.format("Modified stream '%s%s': ", nsPrefix, streamName))
-        if (transform.updateStream == null) {
-          return returnValue.toString()
-        }
+        val updateStream = transform.updateStream ?: return returnValue.toString()
         val addedFields: MutableList<String> = ArrayList()
         val removedFields: MutableList<String> = ArrayList()
         val updatedFields: MutableList<String> = ArrayList()
 
-        for (fieldTransform in transform.updateStream.fieldTransforms) {
+        for (fieldTransform in updateStream.fieldTransforms) {
           val fieldName = java.lang.String.join(".", fieldTransform.fieldName)
           when (fieldTransform.transformType) {
-            FieldTransform.TransformTypeEnum.ADD_FIELD ->
+            FieldTransform.TransformType.ADD_FIELD ->
               addedFields.add(
                 String.format("'%s'", fieldName),
               )
 
-            FieldTransform.TransformTypeEnum.REMOVE_FIELD -> removedFields.add(String.format("'%s'", fieldName))
-            FieldTransform.TransformTypeEnum.UPDATE_FIELD_SCHEMA -> updatedFields.add(String.format("'%s'", fieldName))
+            FieldTransform.TransformType.REMOVE_FIELD -> removedFields.add(String.format("'%s'", fieldName))
+            FieldTransform.TransformType.UPDATE_FIELD_SCHEMA -> updatedFields.add(String.format("'%s'", fieldName))
             else -> throw NotSupportedException("Not supported transformation.")
           }
         }
@@ -121,78 +116,79 @@ class ApplySchemaChangeHelper(
     newCatalog: AirbyteCatalog,
     transformations: List<StreamTransform>,
     nonBreakingChangesPreference: NonBreakingChangesPreference,
-    supportedDestinationSyncModes: List<DestinationSyncMode?>,
+    supportedDestinationSyncModes: List<DestinationSyncMode>,
   ): UpdateSchemaResult {
     val copiedOldCatalog = Jsons.clone(oldCatalog)
     val oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog).toMutableMap()
     val newCatalogPerStream: Map<StreamDescriptor, AirbyteStreamAndConfiguration?> = extractStreamAndConfigPerStreamDescriptor(newCatalog)
 
     val changes: MutableList<String> = ArrayList()
-    val appliedDiff = CatalogDiff()
+    val appliedTransforms: MutableList<StreamTransform> = ArrayList()
 
     transformations.forEach(
       Consumer<StreamTransform> { transformation: StreamTransform ->
         val streamDescriptor = transformation.streamDescriptor
         when (transformation.transformType) {
-          StreamTransform.TransformTypeEnum.UPDATE_STREAM -> {
-            if (oldCatalogPerStream.containsKey(streamDescriptor)) {
-              oldCatalogPerStream[streamDescriptor]
-                ?.stream(newCatalogPerStream[streamDescriptor]!!.stream)
-              val streamConfig = oldCatalogPerStream[streamDescriptor]!!.config
-              if (java.lang.Boolean.TRUE === streamConfig.fieldSelectionEnabled) {
-                val selectedFields =
-                  streamConfig.selectedFields
-                    .stream()
-                    .map { i: SelectedFieldInfo -> i.fieldPath[0] }
-                    .collect(Collectors.toSet())
-                val newlySelectedFields: MutableSet<String> = HashSet()
-                for (fieldTransform in transformation.updateStream.fieldTransforms) {
-                  if (fieldTransform.transformType == FieldTransform.TransformTypeEnum.ADD_FIELD &&
-                    fieldTransform.fieldName.size == 1
-                  ) {
-                    val newTopLevelField = fieldTransform.fieldName[0]
-                    if (!selectedFields.contains(newTopLevelField)) {
-                      newlySelectedFields.add(fieldTransform.fieldName[0])
+          StreamTransform.TransformType.UPDATE_STREAM -> {
+            val oldStreamAndConfig = oldCatalogPerStream[streamDescriptor]
+            if (oldStreamAndConfig != null) {
+              val streamConfig = oldStreamAndConfig.config!!
+              val updatedConfig =
+                if (java.lang.Boolean.TRUE === streamConfig.fieldSelectionEnabled) {
+                  val currentSelectedFields = streamConfig.selectedFields.orEmpty()
+                  val selectedFields = currentSelectedFields.map { i: SelectedFieldInfo -> i.fieldPath!![0] }.toSet()
+                  val newlySelectedFields: MutableSet<String> = HashSet()
+                  for (fieldTransform in transformation.updateStream!!.fieldTransforms) {
+                    if (fieldTransform.transformType == FieldTransform.TransformType.ADD_FIELD &&
+                      fieldTransform.fieldName.size == 1
+                    ) {
+                      val newTopLevelField = fieldTransform.fieldName[0]
+                      if (!selectedFields.contains(newTopLevelField)) {
+                        newlySelectedFields.add(fieldTransform.fieldName[0])
+                      }
                     }
                   }
+                  streamConfig.copy(
+                    selectedFields =
+                      currentSelectedFields +
+                        newlySelectedFields.map { field: String ->
+                          SelectedFieldInfo(fieldPath = listOf(field))
+                        },
+                  )
+                } else {
+                  streamConfig
                 }
-                val allSelectedFields =
-                  Stream
-                    .concat<@Valid SelectedFieldInfo?>(
-                      streamConfig.selectedFields.stream(),
-                      newlySelectedFields.stream().map { field: String -> SelectedFieldInfo().fieldPath(listOf(field)) },
-                    ).toList()
-                streamConfig.selectedFields = allSelectedFields
-              }
+              oldCatalogPerStream[streamDescriptor] =
+                oldStreamAndConfig.copy(stream = newCatalogPerStream[streamDescriptor]!!.stream, config = updatedConfig)
               changes.add(formatDiff(transformation))
-              appliedDiff.addTransformsItem(transformation)
+              appliedTransforms.add(transformation)
             }
           }
 
-          StreamTransform.TransformTypeEnum.ADD_STREAM -> {
+          StreamTransform.TransformType.ADD_STREAM -> {
             if (nonBreakingChangesPreference == NonBreakingChangesPreference.PROPAGATE_FULLY) {
-              val streamAndConfigurationToAdd = newCatalogPerStream[streamDescriptor]
+              val newStreamAndConfig = newCatalogPerStream[streamDescriptor]!!
+              val newStream = newStreamAndConfig.stream!!
               // Enable the stream if we're propagating it; otherwise, it'll get dropped when we update the
               // catalog.
-              streamAndConfigurationToAdd!!.config.selected(true)
-              catalogConverter.configureDefaultSyncModesForNewStream(
-                streamAndConfigurationToAdd.stream,
-                streamAndConfigurationToAdd.config,
-              )
-              catalogConverter.ensureCompatibleDestinationSyncMode(streamAndConfigurationToAdd, supportedDestinationSyncModes)
+              val configuredStream =
+                newStreamAndConfig.copy(
+                  config = catalogConverter.withDefaultSyncModesForNewStream(newStream, newStreamAndConfig.config!!.copy(selected = true)),
+                )
               // TODO(mfsiega-airbyte): handle the case where the chosen sync mode isn't actually one of the
               // supported sync modes.
-              oldCatalogPerStream[streamDescriptor] = streamAndConfigurationToAdd
+              oldCatalogPerStream[streamDescriptor] =
+                catalogConverter.withCompatibleDestinationSyncMode(configuredStream, supportedDestinationSyncModes)
               changes.add(formatDiff(transformation))
-              appliedDiff.addTransformsItem(transformation)
+              appliedTransforms.add(transformation)
             }
           }
 
-          StreamTransform.TransformTypeEnum.REMOVE_STREAM -> {
+          StreamTransform.TransformType.REMOVE_STREAM -> {
             // Removed regardless of preference, so the sync stops asking for a table that is gone.
             oldCatalogPerStream.remove(streamDescriptor)
             changes.add(formatDiff(transformation))
-            appliedDiff.addTransformsItem(transformation)
+            appliedTransforms.add(transformation)
           }
 
           else -> throw NotSupportedException("Not supported transformation.")
@@ -201,8 +197,8 @@ class ApplySchemaChangeHelper(
     )
 
     return UpdateSchemaResult(
-      AirbyteCatalog().streams(java.util.List.copyOf<@Valid AirbyteStreamAndConfiguration?>(oldCatalogPerStream.values)),
-      appliedDiff,
+      AirbyteCatalog(streams = oldCatalogPerStream.values.toList()),
+      CatalogDiff(transforms = appliedTransforms),
       changes,
     )
   }
@@ -210,9 +206,7 @@ class ApplySchemaChangeHelper(
   @InternalForTesting
   fun extractStreamAndConfigPerStreamDescriptor(catalog: AirbyteCatalog): Map<StreamDescriptor, AirbyteStreamAndConfiguration> =
     catalog.streams.associateBy { streamAndConfig ->
-      StreamDescriptor()
-        .name(streamAndConfig.stream.name)
-        .namespace(streamAndConfig.stream.namespace)
+      StreamDescriptor(name = streamAndConfig.stream!!.name, namespace = streamAndConfig.stream!!.namespace)
     }
 
   /**
@@ -271,17 +265,19 @@ class ApplySchemaChangeHelper(
    */
   fun containsBreakingChange(diff: CatalogDiff): Boolean {
     for (streamTransform in diff.transforms) {
-      if (streamTransform.transformType != StreamTransform.TransformTypeEnum.UPDATE_STREAM) {
+      if (streamTransform.transformType != StreamTransform.TransformType.UPDATE_STREAM) {
         continue
       }
 
       val anyBreakingFieldTransforms =
-        streamTransform.updateStream.fieldTransforms
+        streamTransform.updateStream!!
+          .fieldTransforms
           .stream()
           .anyMatch { obj: FieldTransform -> obj.breaking }
 
       val anyBreakingStreamAttributeTransforms =
-        streamTransform.updateStream.streamAttributeTransforms
+        streamTransform.updateStream!!
+          .streamAttributeTransforms
           .stream()
           .anyMatch { obj: StreamAttributeTransform -> obj.breaking }
 

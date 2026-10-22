@@ -4,14 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.api.server.generated.models.PartialSourceUpdate
 import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.server.handlers.SchedulerHandler
@@ -208,8 +208,7 @@ open class SourceServiceImpl(
     sourceId: UUID,
     disableCache: Boolean,
   ): SourceDiscoverSchemaRead {
-    // SchedulerHandler still uses the Java models
-    val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
+    val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody(sourceId = sourceId, disableCache = disableCache)
 
     val result =
       kotlin

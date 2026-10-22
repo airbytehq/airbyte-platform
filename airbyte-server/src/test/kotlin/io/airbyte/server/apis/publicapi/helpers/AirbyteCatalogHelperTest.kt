@@ -5,14 +5,14 @@
 package io.airbyte.server.apis.publicapi.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SelectedFieldInfo
-import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStream
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SelectedFieldInfo
+import io.airbyte.api.server.generated.models.SyncMode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper
@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -105,7 +104,7 @@ internal class AirbyteCatalogHelperTest {
         "name1" to "namespace",
         "name2" to "namespace",
       ),
-      actual.map { it.stream.name to it.stream.namespace },
+      actual.map { it.stream!!.name to it.stream!!.namespace },
     )
   }
 
@@ -452,9 +451,9 @@ internal class AirbyteCatalogHelperTest {
         ),
       )
 
-    assertEquals(true, configuredStreams.first().config.selected)
-    assertEquals(getSyncMode(connectionSyncMode), configuredStreams.first().config.syncMode)
-    assertEquals(getDestinationSyncMode(connectionSyncMode), configuredStreams.first().config.destinationSyncMode)
+    assertEquals(true, configuredStreams.first().config!!.selected)
+    assertEquals(getSyncMode(connectionSyncMode), configuredStreams.first().config!!.syncMode)
+    assertEquals(getDestinationSyncMode(connectionSyncMode), configuredStreams.first().config!!.destinationSyncMode)
   }
 
   @Test
@@ -476,15 +475,14 @@ internal class AirbyteCatalogHelperTest {
         listOf(DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE_DEDUP, DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE),
       )
 
-    assertEquals(true, configuredStreams.first().config.selected)
-    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.OVERWRITE, configuredStreams.first().config.destinationSyncMode)
+    assertEquals(true, configuredStreams.first().config!!.selected)
+    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.OVERWRITE, configuredStreams.first().config!!.destinationSyncMode)
   }
 
   @Test
   internal fun `test that if the stream configuration contains an invalid sync mode, the stream is considered invalid`() {
-    val airbyteStream = AirbyteStream()
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
+    val airbyteStream = AirbyteStream(supportedSyncModes = listOf(SyncMode.INCREMENTAL), name = "name")
     val streamConfiguration =
       StreamConfiguration(
         name = "stream-name",
@@ -504,13 +502,12 @@ internal class AirbyteCatalogHelperTest {
 
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_APPEND is always considered to be valid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream = AirbyteStream(supportedSyncModes = listOf(SyncMode.FULL_REFRESH), name = "name")
     val streamConfiguration =
       StreamConfiguration(
         name = "name1",
         syncMode = ConnectionSyncModeEnum.FULL_REFRESH_APPEND,
       )
-    airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
 
     val configuredStreams =
       AirbyteCatalogHelper.getValidConfiguredStreams(
@@ -526,19 +523,18 @@ internal class AirbyteCatalogHelperTest {
         airbyteStream = airbyteStream,
       ),
     )
-    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.APPEND, configuredStreams.first().config.destinationSyncMode)
+    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.APPEND, configuredStreams.first().config!!.destinationSyncMode)
   }
 
   @Test
   internal fun `test that a stream configuration with FULL_REFRESH_OVERWRITE is always considered to be valid`() {
-    val airbyteStream = AirbyteStream()
+    val airbyteStream = AirbyteStream(supportedSyncModes = listOf(SyncMode.FULL_REFRESH), name = "name")
     val streamConfiguration =
       StreamConfiguration(
         name = "name1",
         syncMode = ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE,
       )
-    airbyteStream.supportedSyncModes = listOf(SyncMode.FULL_REFRESH)
 
     val configuredStreams =
       AirbyteCatalogHelper.getValidConfiguredStreams(
@@ -554,14 +550,20 @@ internal class AirbyteCatalogHelperTest {
         airbyteStream = airbyteStream,
       ),
     )
-    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.OVERWRITE, configuredStreams.first().config.destinationSyncMode)
+    assertEquals(SyncMode.FULL_REFRESH, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.OVERWRITE, configuredStreams.first().config!!.destinationSyncMode)
   }
 
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is only valid if the source defined cursor field is also valid`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(cursorField),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+        name = "name",
+      )
     val airbyteStreamConfiguration = createAirbyteStreamConfiguration()
     val streamConfiguration =
       StreamConfiguration(
@@ -569,9 +571,6 @@ internal class AirbyteCatalogHelperTest {
         syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
         cursorField = listOf(cursorField),
       )
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     assertTrue(
       AirbyteCatalogHelper.validateStreamConfig(
@@ -589,17 +588,19 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test setting a cursor when a source defined cursor already exists`() {
     val cursorField = "cursor"
     val streamName = "name1"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(cursorField),
+        name = streamName,
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = streamName,
         syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
         cursorField = listOf("other"),
       )
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.name = streamName
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -616,17 +617,20 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is only valid if the source cursor field is also valid`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}"),
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+        name = "name",
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = "name1",
         syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
         cursorField = listOf(cursorField),
       )
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val configuredStreams =
       AirbyteCatalogHelper.getValidConfiguredStreams(
@@ -642,27 +646,29 @@ internal class AirbyteCatalogHelperTest {
         airbyteStream = airbyteStream,
       ),
     )
-    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.APPEND, configuredStreams.first().config.destinationSyncMode)
-    assertEquals(listOf(cursorField), configuredStreams.first().config.cursorField)
+    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.APPEND, configuredStreams.first().config!!.destinationSyncMode)
+    assertEquals(listOf(cursorField), configuredStreams.first().config!!.cursorField)
   }
 
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if the source cursor field is invalid`() {
     val cursorField = "cursor"
     val otherCursorField = "other"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(otherCursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$otherCursorField\": {}}}"),
+        name = "name",
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = "name",
         syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
         cursorField = listOf(cursorField),
       )
-    airbyteStream.defaultCursorField = listOf(otherCursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$otherCursorField\": {}}}")
-    airbyteStream.name = "name"
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -684,18 +690,20 @@ internal class AirbyteCatalogHelperTest {
   @Test
   internal fun `test that a stream configuration with INCREMENTAL_APPEND is invalid if there is no cursor field`() {
     val cursorField = "cursor"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}"),
+        name = "name",
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = "name",
         syncMode = ConnectionSyncModeEnum.INCREMENTAL_APPEND,
         cursorField = listOf(),
       )
-    airbyteStream.defaultCursorField = listOf()
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}}}")
-    airbyteStream.name = "name"
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val throwable =
       assertThrows(BadRequestProblem::class.java) {
@@ -718,7 +726,14 @@ internal class AirbyteCatalogHelperTest {
   internal fun `test that an INCREMENTAL_DEDUPED_HISTORY stream is only valid if the source defined cursor and primary key field are also valid`() {
     val cursorField = "cursor"
     val primaryKey = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}"),
+        sourceDefinedCursor = true,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+        name = "name",
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = "name1",
@@ -726,10 +741,6 @@ internal class AirbyteCatalogHelperTest {
         cursorField = listOf(cursorField),
         primaryKey = listOf(listOf(primaryKey)),
       )
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
-    airbyteStream.sourceDefinedCursor = true
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val configuredStreams =
       AirbyteCatalogHelper.getValidConfiguredStreams(
@@ -745,17 +756,24 @@ internal class AirbyteCatalogHelperTest {
         airbyteStream = airbyteStream,
       ),
     )
-    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.APPEND_DEDUP, configuredStreams.first().config.destinationSyncMode)
-    assertEquals(listOf(cursorField), configuredStreams.first().config.cursorField)
-    assertEquals(listOf(listOf(primaryKey)), configuredStreams.first().config.primaryKey)
+    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.APPEND_DEDUP, configuredStreams.first().config!!.destinationSyncMode)
+    assertEquals(listOf(cursorField), configuredStreams.first().config!!.cursorField)
+    assertEquals(listOf(listOf(primaryKey)), configuredStreams.first().config!!.primaryKey)
   }
 
   @Test
   internal fun `test that an INCREMENTAL_DEDUPED_HISTORY stream is only valid if the source cursor field and primary key field are also valid`() {
     val cursorField = "cursor"
     val primaryKey = "primary"
-    val airbyteStream = AirbyteStream()
+    val airbyteStream =
+      AirbyteStream(
+        defaultCursorField = listOf(cursorField),
+        jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}"),
+        sourceDefinedCursor = false,
+        supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+        name = "name",
+      )
     val streamConfiguration =
       StreamConfiguration(
         name = "name1",
@@ -763,10 +781,6 @@ internal class AirbyteCatalogHelperTest {
         cursorField = listOf(cursorField),
         primaryKey = listOf(listOf(primaryKey)),
       )
-    airbyteStream.defaultCursorField = listOf(cursorField)
-    airbyteStream.jsonSchema = Jsons.deserialize("{\"properties\": {\"$cursorField\": {}, \"$primaryKey\": {}}}")
-    airbyteStream.sourceDefinedCursor = false
-    airbyteStream.supportedSyncModes = listOf(SyncMode.INCREMENTAL)
 
     val configuredStreams =
       AirbyteCatalogHelper.getValidConfiguredStreams(
@@ -782,10 +796,10 @@ internal class AirbyteCatalogHelperTest {
         airbyteStream = airbyteStream,
       ),
     )
-    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config.syncMode)
-    assertEquals(DestinationSyncMode.APPEND_DEDUP, configuredStreams.first().config.destinationSyncMode)
-    assertEquals(listOf(cursorField), configuredStreams.first().config.cursorField)
-    assertEquals(listOf(listOf(primaryKey)), configuredStreams.first().config.primaryKey)
+    assertEquals(SyncMode.INCREMENTAL, configuredStreams.first().config!!.syncMode)
+    assertEquals(DestinationSyncMode.APPEND_DEDUP, configuredStreams.first().config!!.destinationSyncMode)
+    assertEquals(listOf(cursorField), configuredStreams.first().config!!.cursorField)
+    assertEquals(listOf(listOf(primaryKey)), configuredStreams.first().config!!.primaryKey)
   }
 
   @Test
@@ -817,7 +831,7 @@ internal class AirbyteCatalogHelperTest {
         listOf(DestinationSyncMode.APPEND_DEDUP),
       )
 
-    assertEquals("destination_object_name", configuredStreams.first().config.destinationObjectName)
+    assertEquals("destination_object_name", configuredStreams.first().config!!.destinationObjectName)
   }
 
   @Test
@@ -835,7 +849,7 @@ internal class AirbyteCatalogHelperTest {
         listOf(DestinationSyncMode.APPEND_DEDUP),
       )
 
-    assertTrue(configuredStreams.first().config.includeFiles)
+    assertTrue(configuredStreams.first().config!!.includeFiles!!)
   }
 
   @Test
@@ -861,20 +875,24 @@ internal class AirbyteCatalogHelperTest {
       2,
       configuredStreams
         .first()
-        .config.mappers.size,
+        .config!!
+        .mappers!!
+        .size,
     )
     assertEquals(
-      io.airbyte.api.model.generated.StreamMapperType.HASHING,
+      io.airbyte.api.server.generated.models.StreamMapperType.HASHING,
       configuredStreams
         .first()
-        .config.mappers[0]
+        .config!!
+        .mappers!![0]
         .type,
     )
     assertEquals(
-      io.airbyte.api.model.generated.StreamMapperType.FIELD_RENAMING,
+      io.airbyte.api.server.generated.models.StreamMapperType.FIELD_MINUS_RENAMING,
       configuredStreams
         .first()
-        .config.mappers[1]
+        .config!!
+        .mappers!![1]
         .type,
     )
   }
@@ -887,21 +905,23 @@ internal class AirbyteCatalogHelperTest {
         mappers = null,
       )
 
-    val discoverStream = createAirbyteStreamConfiguration()
-    discoverStream.mappers =
-      listOf(
-        io.airbyte.api.model.generated
-          .ConfiguredStreamMapper()
-          .type(io.airbyte.api.model.generated.StreamMapperType.HASHING),
+    val discoverStream =
+      createAirbyteStreamConfiguration().copy(
+        mappers =
+          listOf(
+            io.airbyte.api.server.generated.models.ConfiguredStreamMapper(
+              type = io.airbyte.api.server.generated.models.StreamMapperType.HASHING,
+              mapperConfiguration = Jsons.emptyObject(),
+            ),
+          ),
       )
 
-    val discoverCatalog = createAirbyteCatalog()
-    discoverCatalog.streams =
-      listOf(
-        AirbyteStreamAndConfiguration().apply {
-          stream = createAirbyteStream()
-          config = discoverStream
-        },
+    val discoverCatalog =
+      createAirbyteCatalog().copy(
+        streams =
+          listOf(
+            AirbyteStreamAndConfiguration(stream = createAirbyteStream(), config = discoverStream),
+          ),
       )
 
     val configuredStreams =
@@ -915,13 +935,16 @@ internal class AirbyteCatalogHelperTest {
       1,
       configuredStreams
         .first()
-        .config.mappers.size,
+        .config!!
+        .mappers!!
+        .size,
     )
     assertEquals(
-      io.airbyte.api.model.generated.StreamMapperType.HASHING,
+      io.airbyte.api.server.generated.models.StreamMapperType.HASHING,
       configuredStreams
         .first()
-        .config.mappers[0]
+        .config!!
+        .mappers!![0]
         .type,
     )
   }
@@ -966,18 +989,13 @@ internal class AirbyteCatalogHelperTest {
         }
       """.trimIndent()
 
-    private val schemaConfiguration = AirbyteStreamConfiguration()
-    private val sourceStream = AirbyteStream()
-
-    @BeforeEach
-    fun setUp() {
-      schemaConfiguration.destinationSyncMode = DestinationSyncMode.OVERWRITE
-      schemaConfiguration.fieldSelectionEnabled = null
-      schemaConfiguration.selectedFields = null
-      sourceStream.jsonSchema = Jsons.deserialize(fieldTestingJsonSchemaString)
-      sourceStream.defaultCursorField = listOf("b1")
-      sourceStream.sourceDefinedPrimaryKey = listOf(listOf("f1"))
-    }
+    private val sourceStream =
+      AirbyteStream(
+        name = "testStream",
+        jsonSchema = Jsons.deserialize(fieldTestingJsonSchemaString),
+        defaultCursorField = listOf("b1"),
+        sourceDefinedPrimaryKey = listOf(listOf("f1")),
+      )
 
     @Test
     fun `Selected fields data is provided in the request, should be included in the updated config`() {
@@ -999,12 +1017,14 @@ internal class AirbyteCatalogHelperTest {
           listOf(),
         )
 
-      assertEquals(true, configuredStreams.first().config.selected)
+      assertEquals(true, configuredStreams.first().config!!.selected)
       assertEquals(
         2,
         configuredStreams
           .first()
-          .config.selectedFields.size,
+          .config!!
+          .selectedFields!!
+          .size,
       )
     }
 
@@ -1023,8 +1043,8 @@ internal class AirbyteCatalogHelperTest {
         )
 
       // Defaults from the createAirbyteCatalog stream
-      assertEquals(listOf(SelectedFieldInfo()), configuredStreams.first().config.selectedFields)
-      assertEquals(true, configuredStreams.first().config.fieldSelectionEnabled)
+      assertEquals(listOf(SelectedFieldInfo()), configuredStreams.first().config!!.selectedFields)
+      assertEquals(true, configuredStreams.first().config!!.fieldSelectionEnabled)
     }
 
     @Test
@@ -1249,19 +1269,16 @@ internal class AirbyteCatalogHelperTest {
   private fun createAirbyteCatalog(
     sourceDefinedCursor: Boolean = false,
     jsonSchema: JsonNode? = null,
-  ): AirbyteCatalog {
-    val airbyteCatalog = AirbyteCatalog()
-    val streams = mutableListOf<AirbyteStreamAndConfiguration>()
-    for (i in 1..5) {
-      val streamAndConfiguration = AirbyteStreamAndConfiguration()
-      val stream = createAirbyteStream(i.toString(), sourceDefinedCursor, jsonSchema)
-      streamAndConfiguration.stream = stream
-      streamAndConfiguration.config = createAirbyteStreamConfiguration()
-      streams += streamAndConfiguration
-    }
-    airbyteCatalog.streams(streams)
-    return airbyteCatalog
-  }
+  ): AirbyteCatalog =
+    AirbyteCatalog(
+      streams =
+        (1..5).map { i ->
+          AirbyteStreamAndConfiguration(
+            stream = createAirbyteStream(i.toString(), sourceDefinedCursor, jsonSchema),
+            config = createAirbyteStreamConfiguration(),
+          )
+        },
+    )
 
   private fun cursorPrimaryKeyJsonSchema(): JsonNode =
     Jsons.deserialize("{\"properties\": {\"cursor\": {\"type\": \"object\"}, \"primary\": {\"type\": \"string\"}}}")
@@ -1271,34 +1288,35 @@ internal class AirbyteCatalogHelperTest {
     sourceDefinedCursor: Boolean = false,
     jsonSchema: JsonNode? = null,
   ): AirbyteStream =
-    AirbyteStream().apply {
-      this.name = "name$suffix"
-      this.namespace = "namespace"
-      this.supportedSyncModes(listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL))
-      this.jsonSchema = jsonSchema
-      this.sourceDefinedCursor = sourceDefinedCursor
-      this.defaultCursorField = if (sourceDefinedCursor) listOf("cursor") else null
-    }
+    AirbyteStream(
+      name = "name$suffix",
+      namespace = "namespace",
+      supportedSyncModes = listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+      jsonSchema = jsonSchema,
+      sourceDefinedCursor = sourceDefinedCursor,
+      defaultCursorField = if (sourceDefinedCursor) listOf("cursor") else null,
+    )
 
-  private fun createAirbyteStreamConfiguration(): AirbyteStreamConfiguration {
-    val airbyteStreamConfiguration = AirbyteStreamConfiguration()
-    airbyteStreamConfiguration.aliasName = "alias"
-    airbyteStreamConfiguration.cursorField = listOf("cursor")
-    airbyteStreamConfiguration.destinationSyncMode = DestinationSyncMode.APPEND
-    airbyteStreamConfiguration.fieldSelectionEnabled = true
-    airbyteStreamConfiguration.primaryKey = listOf(listOf("primary"))
-    airbyteStreamConfiguration.selected = false
-    airbyteStreamConfiguration.selectedFields = listOf(SelectedFieldInfo())
-    airbyteStreamConfiguration.mappers =
-      listOf(
-        io.airbyte.api.model.generated
-          .ConfiguredStreamMapper(),
-      )
-    airbyteStreamConfiguration.suggested = false
-    airbyteStreamConfiguration.syncMode = SyncMode.INCREMENTAL
-    airbyteStreamConfiguration.namespace = "namespace"
-    return airbyteStreamConfiguration
-  }
+  private fun createAirbyteStreamConfiguration(): AirbyteStreamConfiguration =
+    AirbyteStreamConfiguration(
+      aliasName = "alias",
+      cursorField = listOf("cursor"),
+      destinationSyncMode = DestinationSyncMode.APPEND,
+      fieldSelectionEnabled = true,
+      primaryKey = listOf(listOf("primary")),
+      selected = false,
+      selectedFields = listOf(SelectedFieldInfo()),
+      mappers =
+        listOf(
+          io.airbyte.api.server.generated.models.ConfiguredStreamMapper(
+            type = io.airbyte.api.server.generated.models.StreamMapperType.HASHING,
+            mapperConfiguration = Jsons.emptyObject(),
+          ),
+        ),
+      suggested = false,
+      syncMode = SyncMode.INCREMENTAL,
+      namespace = "namespace",
+    )
 
   private fun getSyncMode(connectionSyncMode: ConnectionSyncModeEnum): SyncMode =
     when (connectionSyncMode) {

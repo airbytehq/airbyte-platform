@@ -4,32 +4,32 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.AttemptInfoReadLogs
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.ConnectionStream
-import io.airbyte.api.model.generated.ConnectionStreamRequestBody
-import io.airbyte.api.model.generated.DestinationCoreConfig
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.DestinationUpdate
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.LogFormatType
-import io.airbyte.api.model.generated.SourceAutoPropagateChange
-import io.airbyte.api.model.generated.SourceCoreConfig
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.api.model.generated.SynchronousJobRead
-import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.server.generated.models.CheckConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionStream
+import io.airbyte.api.server.generated.models.ConnectionStreamRequestBody
+import io.airbyte.api.server.generated.models.DestinationCoreConfig
+import io.airbyte.api.server.generated.models.DestinationIdRequestBody
+import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.JobCreate
 import io.airbyte.api.server.generated.models.JobIdRequestBody
 import io.airbyte.api.server.generated.models.JobInfoRead
+import io.airbyte.api.server.generated.models.LogFormatType
+import io.airbyte.api.server.generated.models.SourceAutoPropagateChange
+import io.airbyte.api.server.generated.models.SourceCoreConfig
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRequestBody
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
+import io.airbyte.api.server.generated.models.SourceUpdate
+import io.airbyte.api.server.generated.models.SynchronousJobRead
+import io.airbyte.api.server.generated.models.WorkloadPriority
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.security.md5
+import io.airbyte.commons.server.converters.AttemptLogs
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.NotFoundException
@@ -67,10 +67,8 @@ import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
-import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobCreator
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
@@ -206,11 +204,12 @@ open class SchedulerHandler
       )
 
       val sourceCoreConfig =
-        SourceCoreConfig()
-          .sourceId(updatedSource.sourceId)
-          .connectionConfiguration(updatedSource.configuration)
-          .sourceDefinitionId(updatedSource.sourceDefinitionId)
-          .workspaceId(updatedSource.workspaceId)
+        SourceCoreConfig(
+          sourceId = updatedSource.sourceId,
+          connectionConfiguration = updatedSource.configuration,
+          sourceDefinitionId = updatedSource.sourceDefinitionId,
+          workspaceId = updatedSource.workspaceId,
+        )
 
       return checkSourceConnectionFromSourceCreate(sourceCoreConfig)
     }
@@ -293,11 +292,12 @@ open class SchedulerHandler
       )
 
       val destinationCoreConfig =
-        DestinationCoreConfig()
-          .destinationId(updatedDestination.destinationId)
-          .connectionConfiguration(updatedDestination.configuration)
-          .destinationDefinitionId(updatedDestination.destinationDefinitionId)
-          .workspaceId(updatedDestination.workspaceId)
+        DestinationCoreConfig(
+          destinationId = updatedDestination.destinationId,
+          connectionConfiguration = updatedDestination.configuration,
+          destinationDefinitionId = updatedDestination.destinationDefinitionId,
+          workspaceId = updatedDestination.workspaceId,
+        )
 
       return checkDestinationConnectionFromDestinationCreate(destinationCoreConfig)
     }
@@ -327,7 +327,7 @@ open class SchedulerHandler
       val sourceDef = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
       val sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.workspaceId, sourceId)
 
-      val skipCacheCheck = req.disableCache != null && req.disableCache
+      val skipCacheCheck = req.disableCache == true
       // Skip cache check and run discover.
       if (skipCacheCheck) {
         return runDiscoverJobDiffAndConditionallyDisable(source, sourceDef, sourceVersion, req.priority, req.connectionId)
@@ -352,19 +352,21 @@ open class SchedulerHandler
           AirbyteCatalog::class.java,
         )
       val emptyJob =
-        SynchronousJobRead()
-          .configId("NoConfiguration")
-          .configType(JobConfigType.DISCOVER_SCHEMA)
-          .id(UUID.randomUUID())
-          .createdAt(0L)
-          .endedAt(0L)
-          .logType(LogFormatType.FORMATTED)
-          .logs(AttemptInfoReadLogs().logLines(listOf()))
-          .succeeded(true)
-      return SourceDiscoverSchemaRead()
-        .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
-        .jobInfo(emptyJob)
-        .catalogId(existingCatalog.get().id)
+        SynchronousJobRead(
+          configId = "NoConfiguration",
+          configType = JobConfigType.DISCOVER_SCHEMA,
+          id = UUID.randomUUID(),
+          createdAt = 0L,
+          endedAt = 0L,
+          logType = LogFormatType.FORMATTED,
+          logs = AttemptLogs(),
+          succeeded = true,
+        )
+      return SourceDiscoverSchemaRead(
+        catalog = catalogConverter.toApi(airbyteCatalog, sourceVersion),
+        jobInfo = emptyJob,
+        catalogId = existingCatalog.get().id,
+      )
     }
 
     private fun runDiscoverJobDiffAndConditionallyDisable(
@@ -392,46 +394,32 @@ open class SchedulerHandler
 
       val schemaRead = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion)
       // no connection to diff
-      if (connectionId == null || schemaRead.catalogId == null) {
+      val catalogId = schemaRead.catalogId
+      if (connectionId == null || catalogId == null) {
         return schemaRead
       }
 
-      return connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, schemaRead.catalogId)
+      return connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, catalogId)
     }
 
     fun applySchemaChangeForSource(sourceAutoPropagateChange: SourceAutoPropagateChange) {
       log.info {
         "Applying schema changes for source '${sourceAutoPropagateChange.sourceId}' in workspace '${sourceAutoPropagateChange.workspaceId}'"
       }
-      if (sourceAutoPropagateChange.sourceId == null) {
-        log.warn { "Missing required field sourceId for applying schema change." }
-        return
-      }
+      val sourceId = sourceAutoPropagateChange.sourceId
+      val workspaceId = sourceAutoPropagateChange.workspaceId
+      val catalogId = sourceAutoPropagateChange.catalogId
+      val catalog = sourceAutoPropagateChange.catalog
 
-      if (sourceAutoPropagateChange.workspaceId == null ||
-        sourceAutoPropagateChange.catalogId == null ||
-        sourceAutoPropagateChange.catalog == null
-      ) {
-        metricClient.count(
-          OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT,
-          1L,
-          MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.sourceId.toString()),
-        )
-        log.warn {
-          "Missing required fields for applying schema change. sourceId: ${sourceAutoPropagateChange.sourceId}, workspaceId: ${sourceAutoPropagateChange.workspaceId}, catalogId: ${sourceAutoPropagateChange.catalogId}, catalog: ${sourceAutoPropagateChange.catalog}"
-        }
-        return
-      }
-
-      val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceAutoPropagateChange.workspaceId, true)
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)
       val connectionsForSource =
-        connectionsHandler.listConnectionsForSource(sourceAutoPropagateChange.sourceId, false)
+        connectionsHandler.listConnectionsForSource(sourceId, false)
       for (connectionRead in connectionsForSource.connections) {
         connectionsHandler.applySchemaChange(
           connectionRead.connectionId,
           workspace.workspaceId,
-          sourceAutoPropagateChange.catalogId,
-          sourceAutoPropagateChange.catalog,
+          catalogId,
+          catalog,
           true,
         )
       }
@@ -481,22 +469,22 @@ open class SchedulerHandler
       response: SynchronousResponse<UUID>,
       sourceVersion: ActorDefinitionVersion,
     ): SourceDiscoverSchemaRead {
-      val sourceDiscoverSchemaRead =
-        SourceDiscoverSchemaRead()
-          .jobInfo(jobConverter.getSynchronousJobRead(response))
-
-      if (response.isSuccess) {
-        val catalog = catalogService.getActorCatalogById(response.output)
-        val persistenceCatalog =
-          Jsons.`object`(
-            catalog.catalog,
-            AirbyteCatalog::class.java,
-          )
-        sourceDiscoverSchemaRead.catalog(catalogConverter.toApi(persistenceCatalog, sourceVersion))
-        sourceDiscoverSchemaRead.catalogId(response.output)
+      val jobInfo = jobConverter.getSynchronousJobRead(response)
+      if (!response.isSuccess) {
+        return SourceDiscoverSchemaRead(jobInfo = jobInfo)
       }
 
-      return sourceDiscoverSchemaRead
+      val catalog = catalogService.getActorCatalogById(response.output)
+      val persistenceCatalog =
+        Jsons.`object`(
+          catalog.catalog,
+          AirbyteCatalog::class.java,
+        )
+      return SourceDiscoverSchemaRead(
+        jobInfo = jobInfo,
+        catalog = catalogConverter.toApi(persistenceCatalog, sourceVersion),
+        catalogId = response.output,
+      )
     }
 
     fun syncConnection(
@@ -609,18 +597,16 @@ open class SchedulerHandler
     }
 
     private fun reportConnectionStatus(response: SynchronousResponse<StandardCheckConnectionOutput>): CheckConnectionRead {
-      val checkConnectionRead =
-        CheckConnectionRead()
-          .jobInfo(jobConverter.getSynchronousJobRead(response))
-
-      if (response.isSuccess) {
-        checkConnectionRead
-          .status(
-            response.output.status.convertTo<CheckConnectionRead.StatusEnum>(),
-          ).message(response.output.message)
+      val jobInfo = jobConverter.getSynchronousJobRead(response)
+      if (!response.isSuccess) {
+        return CheckConnectionRead(jobInfo = jobInfo)
       }
 
-      return checkConnectionRead
+      return CheckConnectionRead(
+        jobInfo = jobInfo,
+        status = response.output.status.convertTo<CheckConnectionRead.Status>(),
+        message = response.output.message,
+      )
     }
 
     private fun submitCancellationToWorker(jobId: Long): JobInfoRead {

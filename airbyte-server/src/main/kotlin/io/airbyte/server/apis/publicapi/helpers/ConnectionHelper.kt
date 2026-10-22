@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.Tag
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.Tag
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnumNoDefault
 import io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum
@@ -23,7 +23,8 @@ object ConnectionHelper {
     if (namespaceDefinitionEnum === NamespaceDefinitionEnum.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
-      NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
+      NamespaceDefinitionType.decode(namespaceDefinitionEnum.toString())
+        ?: throw IllegalArgumentException("Unexpected namespace definition: $namespaceDefinitionEnum")
     }
 
   /**
@@ -33,7 +34,8 @@ object ConnectionHelper {
     if (namespaceDefinitionEnum === NamespaceDefinitionEnumNoDefault.CUSTOM_FORMAT) {
       NamespaceDefinitionType.CUSTOMFORMAT
     } else {
-      NamespaceDefinitionType.fromValue(namespaceDefinitionEnum.toString())
+      NamespaceDefinitionType.decode(namespaceDefinitionEnum.toString())
+        ?: throw IllegalArgumentException("Unexpected namespace definition: $namespaceDefinitionEnum")
     }
 
   /**
@@ -45,7 +47,8 @@ object ConnectionHelper {
     if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
-      NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+      NonBreakingChangesPreference.decode(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+        ?: throw IllegalArgumentException("Unexpected non-breaking schema updates behavior: $nonBreakingSchemaUpdatesBehaviorEnum")
     }
 
   /**
@@ -57,15 +60,12 @@ object ConnectionHelper {
     if (nonBreakingSchemaUpdatesBehaviorEnum === NonBreakingSchemaUpdatesBehaviorEnumNoDefault.DISABLE_CONNECTION) {
       NonBreakingChangesPreference.DISABLE
     } else {
-      NonBreakingChangesPreference.fromValue(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+      NonBreakingChangesPreference.decode(nonBreakingSchemaUpdatesBehaviorEnum.toString())
+        ?: throw IllegalArgumentException("Unexpected non-breaking schema updates behavior: $nonBreakingSchemaUpdatesBehaviorEnum")
     }
 
   fun convertTags(tags: List<io.airbyte.publicApi.server.generated.models.Tag>): List<Tag> =
     tags.map {
-      Tag()
-        .tagId(it.tagId)
-        .name(it.name)
-        .color(it.color)
-        .workspaceId(it.workspaceId)
+      Tag(tagId = it.tagId, name = it.name, color = it.color, workspaceId = it.workspaceId)
     }
 }

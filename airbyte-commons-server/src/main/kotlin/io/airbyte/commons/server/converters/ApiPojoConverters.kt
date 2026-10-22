@@ -4,30 +4,28 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionSchedule
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionState
-import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.DeadlineAction
-import io.airbyte.api.model.generated.JobType
-import io.airbyte.api.model.generated.JobTypeResourceLimit
-import io.airbyte.api.model.generated.NamespaceDefinitionType
-import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.model.generated.ResourceRequirements
-import io.airbyte.api.model.generated.SchemaChangeBackfillPreference
-import io.airbyte.api.model.generated.ScopedResourceRequirements
-import io.airbyte.api.model.generated.SupportState
+import io.airbyte.api.server.generated.models.ActorType
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionSchedule
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataBasicSchedule
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStateType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.DeadlineAction
+import io.airbyte.api.server.generated.models.JobType
+import io.airbyte.api.server.generated.models.JobTypeResourceLimit
+import io.airbyte.api.server.generated.models.NamespaceDefinitionType
+import io.airbyte.api.server.generated.models.NonBreakingChangesPreference
+import io.airbyte.api.server.generated.models.ResourceRequirements
+import io.airbyte.api.server.generated.models.SchemaChangeBackfillPreference
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements
+import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.converters.StateConverter.toApi
 import io.airbyte.commons.converters.StateConverter.toInternal
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -49,7 +47,7 @@ import java.util.Date
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
-import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
+import io.airbyte.api.server.generated.models.FailureReason as ApiFailureReason
 
 /**
  * Convert between API and internal versions of airbyte models.
@@ -70,7 +68,7 @@ class ApiPojoConverters(
         if (scopedResourceReqs.jobSpecific == null) {
           null
         } else {
-          scopedResourceReqs.jobSpecific
+          scopedResourceReqs.jobSpecific!!
             .stream()
             .map { jobSpecific: JobTypeResourceLimit ->
               io.airbyte.config
@@ -95,8 +93,7 @@ class ApiPojoConverters(
         .withSourceConfiguration(attemptSyncConfig.sourceConfiguration)
         .withDestinationConfiguration(attemptSyncConfig.destinationConfiguration)
 
-    // TODO: StateConverter still works on the Java ConnectionState; drop this conversion when the state models move to Kotlin
-    val connectionState = attemptSyncConfig.state?.let { Jsons.convertValue(it, ConnectionState::class.java) }
+    val connectionState = attemptSyncConfig.state
     if (connectionState != null && connectionState.stateType != ConnectionStateType.NOT_SET) {
       val stateWrapper = toInternal(connectionState)
       val state = getState(stateWrapper)
@@ -120,12 +117,7 @@ class ApiPojoConverters(
     return io.airbyte.api.server.generated.models.AttemptSyncConfig(
       sourceConfiguration = attemptSyncConfig.sourceConfiguration,
       destinationConfiguration = attemptSyncConfig.destinationConfiguration,
-      // TODO: StateConverter still builds the Java ConnectionState; drop this conversion when the state models move to Kotlin
-      state =
-        Jsons.convertValue(
-          toApi(connectionId, optStateWrapper.orElse(null)),
-          io.airbyte.api.server.generated.models.ConnectionState::class.java,
-        ),
+      state = toApi(connectionId, optStateWrapper.orElse(null)),
     )
   }
 
@@ -134,21 +126,22 @@ class ApiPojoConverters(
       return null
     }
 
-    return ScopedResourceRequirements()
-      ._default(if (scopedResourceReqs.default == null) null else this.resourceRequirementsToApi(scopedResourceReqs.default))
-      .jobSpecific(
+    return ScopedResourceRequirements(
+      default = if (scopedResourceReqs.default == null) null else this.resourceRequirementsToApi(scopedResourceReqs.default),
+      jobSpecific =
         if (scopedResourceReqs.jobSpecific == null) {
           null
         } else {
           scopedResourceReqs.jobSpecific
             .stream()
             .map { jobSpecific: io.airbyte.config.JobTypeResourceLimit ->
-              JobTypeResourceLimit()
-                .jobType(this.toApiJobType(jobSpecific.jobType))
-                .resourceRequirements(this.resourceRequirementsToApi(jobSpecific.resourceRequirements))
+              JobTypeResourceLimit(
+                jobType = this.toApiJobType(jobSpecific.jobType),
+                resourceRequirements = this.resourceRequirementsToApi(jobSpecific.resourceRequirements)!!,
+              )
             }.collect(Collectors.toList<@Valid JobTypeResourceLimit?>())
         },
-      )
+    )
   }
 
   fun resourceRequirementsToInternal(resourceReqs: ResourceRequirements?): io.airbyte.config.ResourceRequirements? {
@@ -169,66 +162,63 @@ class ApiPojoConverters(
       return null
     }
 
-    return ResourceRequirements()
-      .cpuRequest(resourceReqs.cpuRequest)
-      .cpuLimit(resourceReqs.cpuLimit)
-      .memoryRequest(resourceReqs.memoryRequest)
-      .memoryLimit(resourceReqs.memoryLimit)
+    return ResourceRequirements(
+      cpuRequest = resourceReqs.cpuRequest,
+      cpuLimit = resourceReqs.cpuLimit,
+      memoryRequest = resourceReqs.memoryRequest,
+      memoryLimit = resourceReqs.memoryLimit,
+    )
   }
 
-  fun internalToConnectionRead(standardSync: StandardSync): ConnectionRead {
-    val connectionRead =
-      ConnectionRead()
-        .connectionId(standardSync.connectionId)
-        .sourceId(standardSync.sourceId)
-        .destinationId(standardSync.destinationId)
-        .operationIds(standardSync.operationIds)
-        .status(this.toApiStatus(standardSync.status))
-        .name(standardSync.name)
-        .namespaceDefinition(standardSync.namespaceDefinition?.convertTo<NamespaceDefinitionType>())
-        .namespaceFormat(standardSync.namespaceFormat)
-        .prefix(standardSync.prefix)
-        .syncCatalog(catalogConverter.toApi(standardSync.catalog, standardSync.fieldSelectionData))
-        .sourceCatalogId(standardSync.sourceCatalogId)
-        .destinationCatalogId(standardSync.destinationCatalogId)
-        .breakingChange(standardSync.breakingChange)
-        .nonBreakingChangesPreference(standardSync.nonBreakingChangesPreference?.convertTo<NonBreakingChangesPreference>())
-        .backfillPreference(standardSync.backfillPreference?.convertTo<SchemaChangeBackfillPreference>())
-        .notifySchemaChanges(standardSync.notifySchemaChanges)
-        .createdAt(standardSync.createdAt)
-        .notifySchemaChangesByEmail(standardSync.notifySchemaChangesByEmail)
-        .onDemandEnabled(standardSync.onDemandEnabled)
-        .enableIndexing(standardSync.enableIndexing)
-        .tags(
-          standardSync.tags
-            .stream()
-            .map { tag: Tag -> this.toApiTag(tag) }
-            .toList(),
-        )
-
-    if (standardSync.resourceRequirements != null) {
-      connectionRead.resourceRequirements(this.resourceRequirementsToApi(standardSync.resourceRequirements))
-    }
-
-    this.populateConnectionReadSchedule(standardSync, connectionRead)
-
-    return connectionRead
-  }
+  fun internalToConnectionRead(standardSync: StandardSync): ConnectionRead =
+    ConnectionRead(
+      connectionId = standardSync.connectionId,
+      sourceId = standardSync.sourceId,
+      destinationId = standardSync.destinationId,
+      operationIds = standardSync.operationIds,
+      status = this.toApiStatus(standardSync.status)!!,
+      name = standardSync.name,
+      namespaceDefinition = standardSync.namespaceDefinition?.convertTo<NamespaceDefinitionType>(),
+      namespaceFormat = standardSync.namespaceFormat,
+      prefix = standardSync.prefix,
+      syncCatalog = catalogConverter.toApi(standardSync.catalog, standardSync.fieldSelectionData),
+      sourceCatalogId = standardSync.sourceCatalogId,
+      destinationCatalogId = standardSync.destinationCatalogId,
+      breakingChange = standardSync.breakingChange,
+      nonBreakingChangesPreference = standardSync.nonBreakingChangesPreference?.convertTo<NonBreakingChangesPreference>(),
+      backfillPreference = standardSync.backfillPreference?.convertTo<SchemaChangeBackfillPreference>(),
+      notifySchemaChanges = standardSync.notifySchemaChanges,
+      createdAt = standardSync.createdAt,
+      notifySchemaChangesByEmail = standardSync.notifySchemaChangesByEmail,
+      onDemandEnabled = standardSync.onDemandEnabled,
+      enableIndexing = standardSync.enableIndexing,
+      tags =
+        standardSync.tags
+          .stream()
+          .map { tag: Tag -> this.toApiTag(tag) }
+          .toList(),
+      resourceRequirements = this.resourceRequirementsToApi(standardSync.resourceRequirements),
+      scheduleType = this.toApiConnectionScheduleType(standardSync),
+      scheduleData = this.toApiConnectionScheduleData(standardSync),
+      // TODO(https://github.com/airbytehq/airbyte/issues/11432): only return new schema once frontend is
+      // ready.
+      schedule = this.toLegacyConnectionSchedule(standardSync),
+    )
 
   fun toApiJobType(jobType: io.airbyte.config.JobTypeResourceLimit.JobType): JobType = jobType.convertTo<JobType>()
 
   fun toInternalJobType(jobType: JobType): io.airbyte.config.JobTypeResourceLimit.JobType =
     jobType.convertTo<io.airbyte.config.JobTypeResourceLimit.JobType>()
 
-  fun toApiTag(tag: Tag): io.airbyte.api.model.generated.Tag =
-    io.airbyte.api.model.generated
-      .Tag()
-      .name(tag.name)
-      .tagId(tag.tagId)
-      .workspaceId(tag.workspaceId)
-      .color(tag.color)
+  fun toApiTag(tag: Tag): io.airbyte.api.server.generated.models.Tag =
+    io.airbyte.api.server.generated.models.Tag(
+      name = tag.name,
+      tagId = tag.tagId,
+      workspaceId = tag.workspaceId,
+      color = tag.color,
+    )
 
-  fun toInternalTag(tag: io.airbyte.api.model.generated.Tag): Tag =
+  fun toInternalTag(tag: io.airbyte.api.server.generated.models.Tag): Tag =
     Tag()
       .withName(tag.name)
       .withTagId(tag.tagId)
@@ -238,9 +228,9 @@ class ApiPojoConverters(
   fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType = actorType.convertTo<io.airbyte.config.ActorType>()
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
-  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? = apiTimeUnit?.convertTo<ConnectionSchedule.TimeUnitEnum>()
+  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnit? = apiTimeUnit?.convertTo<ConnectionSchedule.TimeUnit>()
 
-  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? = timeUnit?.convertTo<ConnectionSchedule.TimeUnitEnum>()
+  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionSchedule.TimeUnit? = timeUnit?.convertTo<ConnectionSchedule.TimeUnit>()
 
   fun toApiStatus(status: StandardSync.Status?): ConnectionStatus? = status?.convertTo<ConnectionStatus>()
 
@@ -252,16 +242,14 @@ class ApiPojoConverters(
   fun toPersistenceBackfillPreference(preference: SchemaChangeBackfillPreference?): StandardSync.BackfillPreference? =
     preference?.convertTo<StandardSync.BackfillPreference>()
 
-  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): Schedule.TimeUnit? = apiTimeUnit?.convertTo<Schedule.TimeUnit>()
+  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnit?): Schedule.TimeUnit? = apiTimeUnit?.convertTo<Schedule.TimeUnit>()
 
-  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
+  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnit?): BasicSchedule.TimeUnit? = apiTimeUnit?.convertTo<BasicSchedule.TimeUnit>()
+
+  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionScheduleDataBasicSchedule.TimeUnit?): BasicSchedule.TimeUnit? =
     apiTimeUnit?.convertTo<BasicSchedule.TimeUnit>()
 
-  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
-    apiTimeUnit?.convertTo<BasicSchedule.TimeUnit>()
-
-  fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): Schedule.TimeUnit? =
-    timeUnit?.convertTo<Schedule.TimeUnit>()
+  fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnit?): Schedule.TimeUnit? = timeUnit?.convertTo<Schedule.TimeUnit>()
 
   fun toApiReleaseStage(releaseStage: ReleaseStage?): io.airbyte.api.model.generated.ReleaseStage? {
     if (releaseStage == null) {
@@ -271,22 +259,22 @@ class ApiPojoConverters(
       .fromValue(releaseStage.value())
   }
 
-  fun toApiSupportLevel(supportLevel: SupportLevel?): io.airbyte.api.model.generated.SupportLevel {
+  fun toApiSupportLevel(supportLevel: SupportLevel?): io.airbyte.api.server.generated.models.SupportLevel {
     if (supportLevel == null) {
-      return io.airbyte.api.model.generated.SupportLevel.NONE
+      return io.airbyte.api.server.generated.models.SupportLevel.NONE
     }
-    return io.airbyte.api.model.generated.SupportLevel
-      .fromValue(supportLevel.value())
+    return io.airbyte.api.server.generated.models.SupportLevel.entries
+      .first { it.value == supportLevel.value() }
   }
 
   fun toApiSupportState(supportState: ActorDefinitionVersion.SupportState?): SupportState? {
     if (supportState == null) {
       return null
     }
-    return SupportState.fromValue(supportState.value())
+    return SupportState.decode(supportState.value())
   }
 
-  fun toApiBreakingChange(breakingChange: ActorDefinitionBreakingChange?): io.airbyte.api.model.generated.ActorDefinitionBreakingChange? {
+  fun toApiBreakingChange(breakingChange: ActorDefinitionBreakingChange?): io.airbyte.api.server.generated.models.ActorDefinitionBreakingChange? {
     if (breakingChange == null) {
       return null
     }
@@ -296,13 +284,13 @@ class ApiPojoConverters(
       } else {
         DeadlineAction.DISABLE
       }
-    return io.airbyte.api.model.generated
-      .ActorDefinitionBreakingChange()
-      .version(breakingChange.version.serialize())
-      .message(breakingChange.message)
-      .migrationDocumentationUrl(breakingChange.migrationDocumentationUrl)
-      .upgradeDeadline(this.toLocalDate(breakingChange.upgradeDeadline))
-      .deadlineAction(deadlineAction)
+    return io.airbyte.api.server.generated.models.ActorDefinitionBreakingChange(
+      version = breakingChange.version.serialize(),
+      message = breakingChange.message,
+      migrationDocumentationUrl = breakingChange.migrationDocumentationUrl,
+      upgradeDeadline = this.toLocalDate(breakingChange.upgradeDeadline)!!,
+      deadlineAction = deadlineAction,
+    )
   }
 
   fun toLocalDate(date: String?): LocalDate? {
@@ -319,11 +307,11 @@ class ApiPojoConverters(
     return date.toInstant().atOffset(ZoneOffset.UTC)
   }
 
-  fun toApiBasicScheduleTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
-    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnitEnum>()
+  fun toApiBasicScheduleTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnit? =
+    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnit>()
 
-  fun toApiBasicScheduleTimeUnit(timeUnit: Schedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
-    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnitEnum>()
+  fun toApiBasicScheduleTimeUnit(timeUnit: Schedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnit? =
+    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnit>()
 
   fun toApiConnectionScheduleType(standardSync: StandardSync): ConnectionScheduleType =
     if (standardSync.scheduleType != null) {
@@ -360,21 +348,23 @@ class ApiPojoConverters(
         }
 
         StandardSync.ScheduleType.BASIC_SCHEDULE -> {
-          ConnectionScheduleData()
-            .basicSchedule(
-              ConnectionScheduleDataBasicSchedule()
-                .timeUnit(this.toApiBasicScheduleTimeUnit(standardSync.scheduleData.basicSchedule.timeUnit))
-                .units(standardSync.scheduleData.basicSchedule.units),
-            )
+          ConnectionScheduleData(
+            basicSchedule =
+              ConnectionScheduleDataBasicSchedule(
+                timeUnit = this.toApiBasicScheduleTimeUnit(standardSync.scheduleData.basicSchedule.timeUnit)!!,
+                units = standardSync.scheduleData.basicSchedule.units,
+              ),
+          )
         }
 
         StandardSync.ScheduleType.CRON -> {
-          ConnectionScheduleData()
-            .cron(
-              ConnectionScheduleDataCron()
-                .cronExpression(standardSync.scheduleData.cron.cronExpression)
-                .cronTimeZone(standardSync.scheduleData.cron.cronTimeZone),
-            )
+          ConnectionScheduleData(
+            cron =
+              ConnectionScheduleDataCron(
+                cronExpression = standardSync.scheduleData.cron.cronExpression,
+                cronTimeZone = standardSync.scheduleData.cron.cronTimeZone,
+              ),
+          )
         }
 
         else -> {
@@ -386,12 +376,13 @@ class ApiPojoConverters(
       null
     } else {
       // Legacy schema, basic schedule.
-      ConnectionScheduleData()
-        .basicSchedule(
-          ConnectionScheduleDataBasicSchedule()
-            .timeUnit(this.toApiBasicScheduleTimeUnit(standardSync.schedule.timeUnit))
-            .units(standardSync.schedule.units),
-        )
+      ConnectionScheduleData(
+        basicSchedule =
+          ConnectionScheduleDataBasicSchedule(
+            timeUnit = this.toApiBasicScheduleTimeUnit(standardSync.schedule.timeUnit)!!,
+            units = standardSync.schedule.units,
+          ),
+      )
     }
 
   fun toLegacyConnectionSchedule(standardSync: StandardSync): ConnectionSchedule? =
@@ -404,9 +395,10 @@ class ApiPojoConverters(
         }
 
         StandardSync.ScheduleType.BASIC_SCHEDULE -> {
-          ConnectionSchedule()
-            .timeUnit(this.toApiTimeUnit(standardSync.scheduleData.basicSchedule.timeUnit))
-            .units(standardSync.scheduleData.basicSchedule.units)
+          ConnectionSchedule(
+            timeUnit = this.toApiTimeUnit(standardSync.scheduleData.basicSchedule.timeUnit)!!,
+            units = standardSync.scheduleData.basicSchedule.units,
+          )
         }
 
         else -> {
@@ -418,22 +410,11 @@ class ApiPojoConverters(
       null
     } else {
       // Legacy schema, basic schedule.
-      ConnectionSchedule()
-        .timeUnit(this.toApiTimeUnit(standardSync.schedule.timeUnit))
-        .units(standardSync.schedule.units)
+      ConnectionSchedule(
+        timeUnit = this.toApiTimeUnit(standardSync.schedule.timeUnit)!!,
+        units = standardSync.schedule.units,
+      )
     }
-
-  fun populateConnectionReadSchedule(
-    standardSync: StandardSync,
-    connectionRead: ConnectionRead,
-  ) {
-    connectionRead.scheduleType(this.toApiConnectionScheduleType(standardSync))
-    connectionRead.scheduleData(this.toApiConnectionScheduleData(standardSync))
-
-    // TODO(https://github.com/airbytehq/airbyte/issues/11432): only return new schema once frontend is
-    // ready.
-    connectionRead.schedule(this.toLegacyConnectionSchedule(standardSync))
-  }
 
   fun failureReasonToApi(failureReason: io.airbyte.config.FailureReason?): ApiFailureReason? =
     when (failureReason) {
@@ -442,23 +423,20 @@ class ApiPojoConverters(
       }
 
       else -> {
-        ApiFailureReason()
-          .failureOrigin(failureReason.failureOrigin?.convertTo())
-          .failureType(failureReason.failureType?.convertTo())
-          .externalMessage(failureReason.externalMessage)
-          .internalMessage(failureReason.internalMessage)
-          .stacktrace(failureReason.stacktrace)
-          .timestamp(failureReason.timestamp)
-          .retryable(failureReason.retryable)
-          .apply {
+        ApiFailureReason(
+          failureOrigin = failureReason.failureOrigin?.convertTo<io.airbyte.api.server.generated.models.FailureOrigin>(),
+          failureType = failureReason.failureType?.convertTo<io.airbyte.api.server.generated.models.FailureType>(),
+          externalMessage = failureReason.externalMessage,
+          internalMessage = failureReason.internalMessage,
+          stacktrace = failureReason.stacktrace,
+          timestamp = failureReason.timestamp,
+          retryable = failureReason.retryable,
+          fromTraceMessage =
             failureReason.metadata?.let {
-              fromTraceMessage =
-                failureReason.metadata.additionalProperties[io.airbyte.persistence.job.errorreporter.JobErrorReporter.FROM_TRACE_MESSAGE] as Boolean?
-            }
-            failureReason.streamDescriptor?.let { internalStreamDescriptor ->
-              streamDescriptor = internalStreamDescriptor.toApi()
-            }
-          }
+              it.additionalProperties[io.airbyte.persistence.job.errorreporter.JobErrorReporter.FROM_TRACE_MESSAGE] as Boolean?
+            },
+          streamDescriptor = failureReason.streamDescriptor?.toApi(),
+        )
       }
     }
 }

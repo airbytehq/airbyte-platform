@@ -5,29 +5,29 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
-import io.airbyte.api.model.generated.SourceSnippetRead
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.ActorType
 import io.airbyte.api.server.generated.models.CompleteOAuthResponse
+import io.airbyte.api.server.generated.models.ConnectionRead
 import io.airbyte.api.server.generated.models.DiscoverCatalogResult
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.PartialSourceUpdate
 import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceMetadata
 import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.api.server.generated.models.SourceReadWithMetadata
 import io.airbyte.api.server.generated.models.SourceSearch
+import io.airbyte.api.server.generated.models.SourceSnippetRead
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -92,7 +92,6 @@ import java.util.UUID
 import java.util.function.Supplier
 import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
 import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
-import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -486,8 +485,7 @@ class SourceHandler
       // "delete" all connections associated with source as well.
       // Delete connections first in case it fails in the middle, source will still be visible
       val workspaceIdRequestBody =
-        WorkspaceIdRequestBody()
-          .workspaceId(source.workspaceId)
+        WorkspaceIdRequestBody(workspaceId = source.workspaceId)
 
       val uuidsToDelete =
         connectionsHandler
@@ -557,9 +555,9 @@ class SourceHandler
     ): UUID =
       catalogService.writeActorCatalogWithFetchEvent(
         persistenceCatalog,
-        request.sourceId,
-        request.connectorVersion,
-        request.configurationHash,
+        request.sourceId!!,
+        request.connectorVersion!!,
+        request.configurationHash!!,
       )
 
     private fun buildSourceReadWithStatus(sourceConnection: SourceConnection): SourceRead {
@@ -718,7 +716,7 @@ class SourceHandler
           .withTombstone(tombstone)
           .withIsDraft(isDraft)
           .withResourceRequirements(
-            apiPojoConverters.scopedResourceReqsToInternal(Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java)),
+            apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements),
           )
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
@@ -875,12 +873,13 @@ class SourceHandler
       source: SourceConnection,
       sourceDefinition: StandardSourceDefinition,
     ): SourceSnippetRead =
-      SourceSnippetRead()
-        .sourceId(source.sourceId)
-        .name(source.name)
-        .sourceDefinitionId(sourceDefinition.sourceDefinitionId)
-        .sourceName(sourceDefinition.name)
-        .icon(sourceDefinition.iconUrl)
+      SourceSnippetRead(
+        sourceId = source.sourceId,
+        name = source.name,
+        sourceDefinitionId = sourceDefinition.sourceDefinitionId,
+        sourceName = sourceDefinition.name,
+        icon = sourceDefinition.iconUrl,
+      )
 
     @InternalForTesting
     fun hydrateOAuthResponseSecret(

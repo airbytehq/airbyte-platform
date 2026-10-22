@@ -5,13 +5,12 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.ConnectionReadList
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorListFilters
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.ConnectionReadList
 import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationRead
@@ -20,6 +19,7 @@ import io.airbyte.api.server.generated.models.DestinationUpdate
 import io.airbyte.api.server.generated.models.ResourceRequirements
 import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -80,7 +80,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
-import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
+import io.airbyte.api.server.generated.models.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 internal class DestinationHandlerTest {
   private lateinit var standardDestinationDefinition: StandardDestinationDefinition
@@ -1085,7 +1085,7 @@ internal class DestinationHandlerTest {
         createdAt = destinationConnectionWithCount.destination.createdAt,
       )
     val workspaceIdRequestBody =
-      WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.workspaceId)
+      WorkspaceIdRequestBody(workspaceId = destinationConnectionWithCount.destination.workspaceId)
 
     every {
       destinationService.getDestinationConnection(destinationConnectionWithCount.destination.destinationId)
@@ -1464,8 +1464,8 @@ internal class DestinationHandlerTest {
     val standardSync = ConnectionHelpers.generateSyncWithDestinationId(destinationConnection.destinationId)
     standardSync.breakingChange = false
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
-    val connectionReadList = ConnectionReadList().connections(mutableListOf(connectionRead))
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(destinationConnection.workspaceId)
+    val connectionReadList = ConnectionReadList(connections = mutableListOf(connectionRead))
+    val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = destinationConnection.workspaceId)
 
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)

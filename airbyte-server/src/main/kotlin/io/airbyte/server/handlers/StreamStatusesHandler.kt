@@ -4,11 +4,11 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionSyncResultRead
-import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody
-import io.airbyte.api.model.generated.JobStatus
-import io.airbyte.api.model.generated.JobSyncResultRead
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionSyncResultRead
+import io.airbyte.api.server.generated.models.ConnectionUptimeHistoryRequestBody
+import io.airbyte.api.server.generated.models.JobStatus
+import io.airbyte.api.server.generated.models.JobSyncResultRead
 import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
 import io.airbyte.api.server.generated.models.StreamStatusIncompleteRunCause
 import io.airbyte.api.server.generated.models.StreamStatusListRequestBody
@@ -125,11 +125,11 @@ open class StreamStatusesHandler(
         }
       }
 
-    val result = ConnectionSyncResultRead()
-    result.status = jobStatus
-    result.streamName = streamStatus.streamName
-    result.streamNamespace = streamStatus.streamNamespace
-    return result
+    return ConnectionSyncResultRead(
+      status = jobStatus,
+      streamName = streamStatus.streamName,
+      streamNamespace = streamStatus.streamNamespace,
+    )
   }
 
   /**
@@ -144,12 +144,12 @@ open class StreamStatusesHandler(
     val streamStatuses: List<StreamStatusRead> =
       if (useReplica) {
         replicaRepo
-          .findLastAttemptsOfLastXJobsForConnection(req.connectionId, req.numberOfJobs)
+          .findLastAttemptsOfLastXJobsForConnection(req.connectionId, req.numberOfJobs!!)
           ?.map { domain -> mapper.map(domain!!) }
           ?: emptyList()
       } else {
         repo
-          .findLastAttemptsOfLastXJobsForConnection(req.connectionId, req.numberOfJobs)
+          .findLastAttemptsOfLastXJobsForConnection(req.connectionId, req.numberOfJobs!!)
           ?.map { domain -> mapper.map(domain!!) }
           ?: emptyList()
       }
@@ -167,21 +167,22 @@ open class StreamStatusesHandler(
 
     val jobIdToJobRead = StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(jobs, jobPersistence)
 
-    jobIdToStreamStatuses.forEach { (jobId: Long?, statuses: List<StreamStatusRead>) ->
+    jobIdToStreamStatuses.forEach { (jobId: Long, statuses: List<StreamStatusRead>) ->
       val job = jobIdToJobRead[jobId]!!.job!!
       val aggregatedStats = job.aggregatedStats!!
       val jobResult =
-        JobSyncResultRead()
-          .jobId(jobId)
-          .configType(job.configType.convertTo<io.airbyte.api.model.generated.JobConfigType>())
-          .jobCreatedAt(job.createdAt)
-          .jobUpdatedAt(job.updatedAt)
-          .streamStatuses(statuses.map { streamStatus -> mapStreamStatusToSyncReadResult(streamStatus) })
-          .bytesEmitted(aggregatedStats.bytesEmitted)!!
-          .bytesCommitted(aggregatedStats.bytesCommitted)
-          .recordsEmitted(aggregatedStats.recordsEmitted)
-          .recordsCommitted(aggregatedStats.recordsCommitted)
-          .recordsRejected(aggregatedStats.recordsRejected)
+        JobSyncResultRead(
+          jobId = jobId,
+          configType = job.configType.convertTo<io.airbyte.api.server.generated.models.JobConfigType>(),
+          jobCreatedAt = job.createdAt,
+          jobUpdatedAt = job.updatedAt,
+          streamStatuses = statuses.map { streamStatus -> mapStreamStatusToSyncReadResult(streamStatus) },
+          bytesEmitted = aggregatedStats.bytesEmitted,
+          bytesCommitted = aggregatedStats.bytesCommitted,
+          recordsEmitted = aggregatedStats.recordsEmitted,
+          recordsCommitted = aggregatedStats.recordsCommitted,
+          recordsRejected = aggregatedStats.recordsRejected,
+        )
       result.add(jobResult)
     }
 

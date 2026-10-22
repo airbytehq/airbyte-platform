@@ -8364,7 +8364,7 @@ paths:
               schema:
                 type: object
                 title: CheckCommandOutputResponse
-                required: [id, status]
+                required: [id]
                 properties:
                   id:
                     type: string
@@ -8406,7 +8406,7 @@ paths:
               schema:
                 type: object
                 title: DiscoverCommandOutputResponse
-                required: [id, status]
+                required: [id]
                 properties:
                   id:
                     type: string
@@ -8489,7 +8489,7 @@ paths:
               schema:
                 type: object
                 title: SpecCommandOutputResponse
-                required: [id, status]
+                required: [id]
                 properties:
                   id:
                     type: string
@@ -8526,7 +8526,7 @@ paths:
               schema:
                 type: object
                 title: CommandStatusResponse
-                required: [id, status]
+                required: [id]
                 properties:
                   id:
                     type: string
@@ -15974,10 +15974,8 @@ components:
         configurationHash:
           type: string
     SourceDiscoverSchemaRead:
-      description: Returns the results of a discover catalog job. If the job was not successful, the catalog field will not be present. jobInfo will aways be present and its status be used to determine if the job was successful or not.
+      description: Returns the results of a discover catalog job. If the job was not successful, the catalog field will not be present. jobInfo is present when a discover job ran, and its status can be used to determine if the job was successful or not. It is absent when the catalog was diffed against a connection.
       type: object
-      required:
-        - jobInfo
       properties:
         catalog:
           $ref: "#/components/schemas/AirbyteCatalog"
@@ -17122,7 +17120,6 @@ components:
       required:
         - connectionId
         - streams
-        - configType
       properties:
         connectionId:
           type: string
@@ -17265,7 +17262,6 @@ components:
       required:
         - status
         - streamName
-        - streamNamespace
       properties:
         status:
           $ref: "#/components/schemas/JobStatus"
@@ -17273,6 +17269,7 @@ components:
           type: string
         streamNamespace:
           type: string
+          description: Absent for streams without a namespace.
     ConnectionDataHistoryRead:
       type: array
       items:
@@ -17319,7 +17316,7 @@ components:
           format: int64
     ConnectionEventId:
       type: string
-      format: UUID
+      format: uuid
     ConnectionEventIdRequestBody:
       type: object
       required:
@@ -17423,7 +17420,6 @@ components:
         - connectionId
         - eventType
         - summary
-        - details
         - created_at
       properties:
         id:
@@ -17436,7 +17432,7 @@ components:
           description: JSON object without event details
           type: object
         details:
-          description: JSON object with event details
+          description: JSON object with event details. Not populated yet.
           type: object
         createdAt:
           type: integer
@@ -17532,12 +17528,9 @@ components:
       type: object
       required:
         - streamName
-        - streamNamespace
         - jobId
         - configType
         - jobStatus
-        - recordsCommitted
-        - bytesCommitted
         - startedAt
         - endedAt
       properties:
@@ -17545,6 +17538,7 @@ components:
           type: string
         streamNamespace:
           type: string
+          description: Absent for streams without a namespace.
         jobId:
           $ref: "#/components/schemas/JobId"
         configType:
@@ -17554,9 +17548,11 @@ components:
         recordsCommitted:
           type: integer
           format: int64
+          description: Absent when the job has no stats for the stream.
         bytesCommitted:
           type: integer
           format: int64
+          description: Absent when the job has no stats for the stream.
         startedAt:
           type: integer
           format: int64
@@ -22112,11 +22108,10 @@ components:
           format: uuid
     KnownExceptionInfo:
       type: object
-      required:
-        - message
       properties:
         message:
           type: string
+          description: Absent when the underlying exception has no message.
         exceptionClassName:
           type: string
         exceptionStack:

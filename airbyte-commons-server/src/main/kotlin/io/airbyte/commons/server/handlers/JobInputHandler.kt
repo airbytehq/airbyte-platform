@@ -317,15 +317,13 @@ open class JobInputHandler(
   }
 
   private fun getCurrentConnectionState(connectionId: UUID): Optional<State> {
-    // StateHandler still takes and returns the Java models
     val state =
       stateHandler.getState(
-        io.airbyte.api.model.generated
-          .ConnectionIdRequestBody()
-          .connectionId(connectionId),
+        io.airbyte.api.server.generated.models
+          .ConnectionIdRequestBody(connectionId = connectionId),
       )
 
-    if (state.stateType == io.airbyte.api.model.generated.ConnectionStateType.NOT_SET) {
+    if (state.stateType == io.airbyte.api.server.generated.models.ConnectionStateType.NOT_SET) {
       return Optional.empty()
     }
 

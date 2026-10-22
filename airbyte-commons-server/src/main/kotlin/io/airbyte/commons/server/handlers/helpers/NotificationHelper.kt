@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.client.WebUrlHelper
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.ConnectionRead
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.ConnectionRead
 import io.airbyte.config.Notification
 import io.airbyte.config.NotificationItem
 import io.airbyte.config.NotificationSettings

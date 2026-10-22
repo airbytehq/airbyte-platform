@@ -4,7 +4,7 @@
 
 package io.airbyte.api.common
 
-import io.airbyte.api.model.generated.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamDescriptor
 
 object StreamDescriptorUtils {
   @JvmStatic

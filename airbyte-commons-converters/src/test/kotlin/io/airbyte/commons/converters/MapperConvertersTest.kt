@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.converters
 
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
 import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
 import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
@@ -15,10 +14,11 @@ import io.airbyte.api.model.generated.HashingMapperConfiguration.MethodEnum
 import io.airbyte.api.model.generated.RowFilteringMapperConfiguration
 import io.airbyte.api.model.generated.RowFilteringOperation
 import io.airbyte.api.model.generated.RowFilteringOperationType
-import io.airbyte.api.model.generated.StreamMapperType
 import io.airbyte.api.problems.model.generated.ProblemMapperIdData
 import io.airbyte.api.problems.throwable.generated.MapperValidationInvalidConfigProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationMissingRequiredParamProblem
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.StreamMapperType
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.MapperOperationName
@@ -58,10 +58,11 @@ class MapperConvertersTest {
         .targetField("target_field")
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.HASHING)
-        .mapperConfiguration(Jsons.jsonNode(hashingConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.HASHING,
+        mapperConfiguration = Jsons.jsonNode(hashingConfig),
+      )
 
     val expectedConfig =
       HashingMapperConfig(
@@ -89,10 +90,11 @@ class MapperConvertersTest {
         .targetField("target_field")
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.FIELD_FILTERING)
-        .mapperConfiguration(Jsons.jsonNode(filteringConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.FIELD_MINUS_FILTERING,
+        mapperConfiguration = Jsons.jsonNode(filteringConfig),
+      )
 
     val expectedConfig =
       FieldFilteringMapperConfig(
@@ -119,10 +121,11 @@ class MapperConvertersTest {
         .newFieldName("new_field")
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.FIELD_RENAMING)
-        .mapperConfiguration(Jsons.jsonNode(renamingConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.FIELD_MINUS_RENAMING,
+        mapperConfiguration = Jsons.jsonNode(renamingConfig),
+      )
 
     val expectedConfig =
       FieldRenamingMapperConfig(
@@ -154,10 +157,11 @@ class MapperConvertersTest {
         .padding(EncryptionMapperAESConfiguration.PaddingEnum.PKCS5_PADDING)
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.ENCRYPTION)
-        .mapperConfiguration(Jsons.jsonNode(encryptionConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.ENCRYPTION,
+        mapperConfiguration = Jsons.jsonNode(encryptionConfig),
+      )
 
     val expectedConfig =
       EncryptionMapperConfig(
@@ -191,10 +195,11 @@ class MapperConvertersTest {
         .publicKey("my_public_key")
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.ENCRYPTION)
-        .mapperConfiguration(Jsons.jsonNode(encryptionConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.ENCRYPTION,
+        mapperConfiguration = Jsons.jsonNode(encryptionConfig),
+      )
 
     val expectedConfig =
       EncryptionMapperConfig(
@@ -234,10 +239,11 @@ class MapperConvertersTest {
         )
 
     val configuredMapper =
-      ConfiguredStreamMapper()
-        .id(MAPPER_ID)
-        .type(StreamMapperType.ROW_FILTERING)
-        .mapperConfiguration(Jsons.jsonNode(rowFilteringConfig))
+      ConfiguredStreamMapper(
+        id = MAPPER_ID,
+        type = StreamMapperType.ROW_MINUS_FILTERING,
+        mapperConfiguration = Jsons.jsonNode(rowFilteringConfig),
+      )
 
     val expectedConfig =
       RowFilteringMapperConfig(
@@ -272,11 +278,11 @@ class MapperConvertersTest {
     val invalidJson = Jsons.jsonNode(mapOf("config_key" to "config_value"))
     val problem =
       assertThrows<MapperValidationMissingRequiredParamProblem> {
-        ConfiguredStreamMapper()
-          .id(MAPPER_ID)
-          .type(StreamMapperType.HASHING)
-          .mapperConfiguration(invalidJson)
-          .toInternal()
+        ConfiguredStreamMapper(
+          id = MAPPER_ID,
+          type = StreamMapperType.HASHING,
+          mapperConfiguration = invalidJson,
+        ).toInternal()
       }
     assertNull((problem.problem.getData() as ProblemMapperIdData).message)
   }
@@ -286,11 +292,11 @@ class MapperConvertersTest {
     val invalidJson = Jsons.jsonNode(mapOf("method" to "some_invalid_method"))
     val problem =
       assertThrows<MapperValidationInvalidConfigProblem> {
-        ConfiguredStreamMapper()
-          .id(MAPPER_ID)
-          .type(StreamMapperType.HASHING)
-          .mapperConfiguration(invalidJson)
-          .toInternal()
+        ConfiguredStreamMapper(
+          id = MAPPER_ID,
+          type = StreamMapperType.HASHING,
+          mapperConfiguration = invalidJson,
+        ).toInternal()
       }
     val data = problem.problem.getData() as ProblemMapperIdData
     assertNull(data.message)

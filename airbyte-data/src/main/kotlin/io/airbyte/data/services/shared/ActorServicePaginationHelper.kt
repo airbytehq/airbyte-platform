@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.shared
 
-import io.airbyte.api.model.generated.ActorStatus
+import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.JobStatus
 import io.airbyte.data.ConfigNotFoundException

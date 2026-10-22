@@ -4,16 +4,16 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
-import io.airbyte.api.model.generated.OperationCreate
-import io.airbyte.api.model.generated.OperationIdRequestBody
-import io.airbyte.api.model.generated.OperationRead
-import io.airbyte.api.model.generated.OperationUpdate
-import io.airbyte.api.model.generated.OperatorConfiguration
-import io.airbyte.api.model.generated.OperatorType
-import io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum
-import io.airbyte.api.model.generated.OperatorWebhookDbtCloud
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.OperationCreate
+import io.airbyte.api.server.generated.models.OperationIdRequestBody
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperationUpdate
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
+import io.airbyte.api.server.generated.models.OperatorWebhookDbtCloud
 import io.airbyte.commons.enums.isCompatible
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.config.OperatorWebhook
@@ -54,9 +54,7 @@ internal class OperationsHandlerTest {
         .withWebhookConfigId(WEBHOOK_CONFIG_ID)
         .withExecutionBody(
           serialize<OperatorWebhookDbtCloud?>(
-            OperatorWebhookDbtCloud().accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID).jobId(
-              DBT_CLOUD_WEBHOOK_JOB_ID,
-            ),
+            OperatorWebhookDbtCloud(accountId = DBT_CLOUD_WEBHOOK_ACCOUNT_ID, jobId = DBT_CLOUD_WEBHOOK_JOB_ID),
           ),
         ).withExecutionUrl(String.format(EXECUTION_URL_TEMPLATE, DBT_CLOUD_WEBHOOK_ACCOUNT_ID, DBT_CLOUD_WEBHOOK_JOB_ID))
     standardSyncOperation =
@@ -73,24 +71,17 @@ internal class OperationsHandlerTest {
   fun testCreateWebhookOperation() {
     Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
     val webhookConfig =
-      io.airbyte.api.model.generated
-        .OperatorWebhook()
-        .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBT_CLOUD)
-        .dbtCloud(
-          OperatorWebhookDbtCloud()
-            .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
-            .jobId(DBT_CLOUD_WEBHOOK_JOB_ID),
-        )
+      io.airbyte.api.server.generated.models.OperatorWebhook(
+        webhookConfigId = WEBHOOK_CONFIG_ID,
+        webhookType = io.airbyte.api.server.generated.models.OperatorWebhook.WebhookType.DBT_CLOUD,
+        dbtCloud = OperatorWebhookDbtCloud(accountId = DBT_CLOUD_WEBHOOK_ACCOUNT_ID, jobId = DBT_CLOUD_WEBHOOK_JOB_ID),
+      )
     val operationCreate =
-      OperationCreate()
-        .workspaceId(standardSyncOperation.workspaceId)
-        .name(WEBHOOK_OPERATION_NAME)
-        .operatorConfiguration(
-          OperatorConfiguration()
-            .operatorType(OperatorType.WEBHOOK)
-            .webhook(webhookConfig),
-        )
+      OperationCreate(
+        workspaceId = standardSyncOperation.workspaceId,
+        name = WEBHOOK_OPERATION_NAME,
+        operatorConfiguration = OperatorConfiguration(operatorType = OperatorType.WEBHOOK, webhook = webhookConfig),
+      )
 
     val webhookOperationConfig =
       jsonNode<WebhookOperationConfigs?>(
@@ -136,14 +127,15 @@ internal class OperationsHandlerTest {
 
     // NOTE: we expect the server to dual-write on read until the frontend moves to the new format.
     val expectedWebhookConfigRead =
-      webhookConfig
-        .executionUrl(
+      webhookConfig.copy(
+        executionUrl =
           String.format(
             EXECUTION_URL_TEMPLATE,
             DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
             DBT_CLOUD_WEBHOOK_JOB_ID,
           ),
-        ).executionBody(EXECUTION_BODY)
+        executionBody = EXECUTION_BODY,
+      )
     Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
     Mockito
@@ -155,24 +147,21 @@ internal class OperationsHandlerTest {
   fun testUpdateWebhookOperation() {
     Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
     val webhookConfig =
-      io.airbyte.api.model.generated
-        .OperatorWebhook()
-        .webhookConfigId(WEBHOOK_CONFIG_ID)
-        .webhookType(WebhookTypeEnum.DBT_CLOUD)
-        .dbtCloud(
-          OperatorWebhookDbtCloud()
-            .accountId(NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
-            .jobId(DBT_CLOUD_WEBHOOK_JOB_ID),
-        )
+      io.airbyte.api.server.generated.models.OperatorWebhook(
+        webhookConfigId = WEBHOOK_CONFIG_ID,
+        webhookType = io.airbyte.api.server.generated.models.OperatorWebhook.WebhookType.DBT_CLOUD,
+        dbtCloud =
+          OperatorWebhookDbtCloud(
+            accountId = NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
+            jobId = DBT_CLOUD_WEBHOOK_JOB_ID,
+          ),
+      )
     val operationUpdate =
-      OperationUpdate()
-        .name(WEBHOOK_OPERATION_NAME)
-        .operationId(WEBHOOK_OPERATION_ID)
-        .operatorConfiguration(
-          OperatorConfiguration()
-            .operatorType(OperatorType.WEBHOOK)
-            .webhook(webhookConfig),
-        )
+      OperationUpdate(
+        name = WEBHOOK_OPERATION_NAME,
+        operationId = WEBHOOK_OPERATION_ID,
+        operatorConfiguration = OperatorConfiguration(operatorType = OperatorType.WEBHOOK, webhook = webhookConfig),
+      )
 
     val persistedWebhook =
       OperatorWebhook()
@@ -227,14 +216,15 @@ internal class OperationsHandlerTest {
     Assertions.assertEquals(WEBHOOK_OPERATION_NAME, actualOperationRead.name)
     Assertions.assertEquals(OperatorType.WEBHOOK, actualOperationRead.operatorConfiguration.operatorType)
     val expectedWebhookConfigRead =
-      webhookConfig
-        .executionUrl(
+      webhookConfig.copy(
+        executionUrl =
           String.format(
             EXECUTION_URL_TEMPLATE,
             NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
             DBT_CLOUD_WEBHOOK_JOB_ID,
           ),
-        ).executionBody(EXECUTION_BODY)
+        executionBody = EXECUTION_BODY,
+      )
     Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
     Mockito
@@ -258,7 +248,7 @@ internal class OperationsHandlerTest {
       .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
       .thenReturn(standardSyncOperation)
 
-    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.operationId)
+    val operationIdRequestBody = OperationIdRequestBody(operationId = standardSyncOperation.operationId)
     val actualOperationRead = operationsHandler.getOperation(operationIdRequestBody)
 
     val expectedOperationRead = generateOperationRead()
@@ -266,28 +256,24 @@ internal class OperationsHandlerTest {
     Assertions.assertEquals(expectedOperationRead, actualOperationRead)
   }
 
-  private fun generateOperationRead(): OperationRead? =
-    OperationRead()
-      .workspaceId(standardSyncOperation.workspaceId)
-      .operationId(standardSyncOperation.operationId)
-      .name(standardSyncOperation.name)
-      .operatorConfiguration(
-        OperatorConfiguration()
-          .operatorType(OperatorType.WEBHOOK)
-          .webhook(
-            io.airbyte.api.model.generated
-              .OperatorWebhook()
-              .webhookConfigId(WEBHOOK_CONFIG_ID)
-              .webhookType(WebhookTypeEnum.DBT_CLOUD)
-              .executionUrl(operatorWebhook.executionUrl)
-              .executionBody(operatorWebhook.executionBody)
-              .dbtCloud(
-                OperatorWebhookDbtCloud()
-                  .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
-                  .jobId(DBT_CLOUD_WEBHOOK_JOB_ID),
-              ),
-          ),
-      )
+  private fun generateOperationRead(): OperationRead =
+    OperationRead(
+      workspaceId = standardSyncOperation.workspaceId,
+      operationId = standardSyncOperation.operationId,
+      name = standardSyncOperation.name,
+      operatorConfiguration =
+        OperatorConfiguration(
+          operatorType = OperatorType.WEBHOOK,
+          webhook =
+            io.airbyte.api.server.generated.models.OperatorWebhook(
+              webhookConfigId = WEBHOOK_CONFIG_ID,
+              webhookType = io.airbyte.api.server.generated.models.OperatorWebhook.WebhookType.DBT_CLOUD,
+              executionUrl = operatorWebhook.executionUrl,
+              executionBody = operatorWebhook.executionBody,
+              dbtCloud = OperatorWebhookDbtCloud(accountId = DBT_CLOUD_WEBHOOK_ACCOUNT_ID, jobId = DBT_CLOUD_WEBHOOK_JOB_ID),
+            ),
+        ),
+    )
 
   @Test
   fun testListOperationsForConnection() {
@@ -308,7 +294,7 @@ internal class OperationsHandlerTest {
       .`when`(operationService.listStandardSyncOperations())
       .thenReturn(listOf(standardSyncOperation))
 
-    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
+    val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val actualOperationReadList = operationsHandler.listOperationsForConnection(connectionIdRequestBody)
 
     Assertions.assertEquals(generateOperationRead(), actualOperationReadList.operations[0])
@@ -316,7 +302,7 @@ internal class OperationsHandlerTest {
 
   @Test
   fun testDeleteOperation() {
-    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.operationId)
+    val operationIdRequestBody = OperationIdRequestBody(operationId = standardSyncOperation.operationId)
 
     val spiedOperationsHandler = Mockito.spy(operationsHandler)
 
@@ -344,8 +330,9 @@ internal class OperationsHandlerTest {
           .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId)),
       ),
     )
-    val operation = StandardSyncOperation().withOperationId(operationId)
-    val remainingOperation = StandardSyncOperation().withOperationId(remainingOperationId)
+    // removing an operation builds its read, which needs the schema-required fields (operatorType, name, ...)
+    val operation = Jsons.clone(standardSyncOperation).withOperationId(operationId)
+    val remainingOperation = Jsons.clone(standardSyncOperation).withOperationId(remainingOperationId)
     Mockito.`when`(operationService.getStandardSyncOperation(operationId)).thenReturn(operation)
     Mockito.`when`(operationService.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation)
     Mockito
@@ -422,7 +409,7 @@ internal class OperationsHandlerTest {
         ).withTombstone(false)
     Mockito.`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation)
 
-    val operationIdRequestBody = OperationIdRequestBody().operationId(WEBHOOK_OPERATION_ID)
+    val operationIdRequestBody = OperationIdRequestBody(operationId = WEBHOOK_OPERATION_ID)
     operationsHandler.getOperation(operationIdRequestBody)
   }
 

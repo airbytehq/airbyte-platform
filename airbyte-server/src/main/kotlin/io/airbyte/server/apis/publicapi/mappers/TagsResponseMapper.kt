@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.Tag
+import io.airbyte.api.server.generated.models.Tag
 import io.airbyte.publicApi.server.generated.models.TagResponse
 import io.airbyte.publicApi.server.generated.models.TagsResponse
 

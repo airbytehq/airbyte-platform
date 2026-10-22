@@ -4,33 +4,33 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.CommandApi
-import io.airbyte.api.model.generated.CancelCommandRequest
-import io.airbyte.api.model.generated.CancelCommandResponse
-import io.airbyte.api.model.generated.CheckCommandOutputRequest
-import io.airbyte.api.model.generated.CheckCommandOutputResponse
-import io.airbyte.api.model.generated.CommandGetRequest
-import io.airbyte.api.model.generated.CommandGetResponse
-import io.airbyte.api.model.generated.CommandStatusRequest
-import io.airbyte.api.model.generated.CommandStatusResponse
-import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
-import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
-import io.airbyte.api.model.generated.LogEvents
-import io.airbyte.api.model.generated.LogFormatType
-import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
-import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
-import io.airbyte.api.model.generated.RunCheckCommandRequest
-import io.airbyte.api.model.generated.RunCheckCommandResponse
-import io.airbyte.api.model.generated.RunDiscoverCommandRequest
-import io.airbyte.api.model.generated.RunDiscoverCommandResponse
-import io.airbyte.api.model.generated.RunReplicateCommandRequest
-import io.airbyte.api.model.generated.RunReplicateCommandResponse
-import io.airbyte.api.model.generated.RunSpecCommandRequest
-import io.airbyte.api.model.generated.RunSpecCommandResponse
-import io.airbyte.api.model.generated.SpecCommandOutputRequest
-import io.airbyte.api.model.generated.SpecCommandOutputResponse
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.server.generated.apis.CommandApi
+import io.airbyte.api.server.generated.models.CancelCommandRequest
+import io.airbyte.api.server.generated.models.CancelCommandResponse
+import io.airbyte.api.server.generated.models.CheckCommandOutputRequest
+import io.airbyte.api.server.generated.models.CheckCommandOutputResponse
+import io.airbyte.api.server.generated.models.CommandGetRequest
+import io.airbyte.api.server.generated.models.CommandGetResponse
+import io.airbyte.api.server.generated.models.CommandStatusRequest
+import io.airbyte.api.server.generated.models.CommandStatusResponse
+import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
+import io.airbyte.api.server.generated.models.DiscoverCommandOutputResponse
+import io.airbyte.api.server.generated.models.LogEvents
+import io.airbyte.api.server.generated.models.LogFormatType
+import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
+import io.airbyte.api.server.generated.models.ReplicateCommandOutputResponse
+import io.airbyte.api.server.generated.models.RunCheckCommandRequest
+import io.airbyte.api.server.generated.models.RunCheckCommandResponse
+import io.airbyte.api.server.generated.models.RunDiscoverCommandRequest
+import io.airbyte.api.server.generated.models.RunDiscoverCommandResponse
+import io.airbyte.api.server.generated.models.RunReplicateCommandRequest
+import io.airbyte.api.server.generated.models.RunReplicateCommandResponse
+import io.airbyte.api.server.generated.models.RunSpecCommandRequest
+import io.airbyte.api.server.generated.models.RunSpecCommandResponse
+import io.airbyte.api.server.generated.models.SpecCommandOutputRequest
+import io.airbyte.api.server.generated.models.SpecCommandOutputResponse
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
@@ -58,21 +58,21 @@ import io.airbyte.domain.models.CommandId
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.protocol.models.Jsons
+import io.airbyte.server.apis.requireBody
 import io.airbyte.server.auth.CheckCommandRule
 import io.airbyte.server.helpers.CatalogDiffConverter.toDomain
 import io.airbyte.server.services.CommandService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
-import io.airbyte.api.model.generated.JobLogs as ApiJobLogs
+import io.airbyte.api.server.generated.models.JobLogs as ApiJobLogs
 import io.airbyte.commons.json.Jsons as CommonsJsons
 
-@Controller("/api/v1/commands")
+@Controller
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class CommandApiController(
@@ -84,95 +84,96 @@ class CommandApiController(
   private val workspaceService: WorkspaceService,
   private val logUtils: LogUtils,
 ) : CommandApi {
-  @Post("/cancel")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun cancelCommand(
-    @Body cancelCommandRequest: CancelCommandRequest,
-  ): CancelCommandResponse =
-    withRoleValidation(
+    @Body cancelCommandRequestBody: CancelCommandRequest?,
+  ): CancelCommandResponse {
+    val cancelCommandRequest = cancelCommandRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(cancelCommandRequest.id),
       role = AuthRoleConstants.WORKSPACE_RUNNER,
     ) {
       commandService.cancel(cancelCommandRequest.id)
-      return CancelCommandResponse().id(cancelCommandRequest.id)
+      return CancelCommandResponse(id = cancelCommandRequest.id)
     }
+  }
 
-  @Post("/output/check")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getCheckCommandOutput(
-    @Body checkCommandOutputRequest: CheckCommandOutputRequest,
-  ): CheckCommandOutputResponse =
-    withRoleValidation(
+    @Body checkCommandOutputRequestBody: CheckCommandOutputRequest?,
+  ): CheckCommandOutputResponse {
+    val checkCommandOutputRequest = checkCommandOutputRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(checkCommandOutputRequest.id),
       roles = setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER),
     ) {
       val output =
         commandService.getCheckJobOutput(
           commandId = checkCommandOutputRequest.id,
-          withLogs = checkCommandOutputRequest.withLogs,
+          withLogs = checkCommandOutputRequest.withLogs ?: false,
         )
-      return CheckCommandOutputResponse().apply {
-        id(checkCommandOutputRequest.id)
-        output?.let {
-          status(it.status.toApi())
-          connectorConfigurationUpdated(it.connectorConfigUpdated)
-          message(it.message)
-          failureReason(apiPojoConverters.failureReasonToApi(it.failureReason))
-          logs(output.logs?.toApi())
-        }
-      }
+      // the output is absent while the command is still running
+      return CheckCommandOutputResponse(
+        id = checkCommandOutputRequest.id,
+        status = output?.status?.toApi(),
+        connectorConfigurationUpdated = output?.connectorConfigUpdated,
+        message = output?.message,
+        failureReason = output?.let { apiPojoConverters.failureReasonToApi(it.failureReason) },
+        logs = output?.logs?.toApi(),
+      )
     }
+  }
 
-  @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getCommand(
-    @Body commandGetRequest: CommandGetRequest,
-  ): CommandGetResponse =
-    withRoleValidation(
+    @Body commandGetRequestBody: CommandGetRequest?,
+  ): CommandGetResponse {
+    val commandGetRequest = commandGetRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(commandGetRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
-      val command = commandService.get(commandGetRequest.id)
-      return CommandGetResponse().apply {
-        id(commandGetRequest.id)
-        command?.let {
-          commandType(it.commandType)
-          commandInput(it.commandInput.toString())
-          workspaceId(it.workspaceId)
-          workloadId(it.workloadId)
-          organizationId(it.organizationId)
-          createdAt(it.createdAt)
-          updatedAt(it.updatedAt)
-        }
-      }
+      // withRoleValidation already rejected a missing command
+      val command = requireNotNull(commandService.get(commandGetRequest.id)) { "Command ${commandGetRequest.id} not found" }
+      return CommandGetResponse(
+        id = commandGetRequest.id,
+        commandType = command.commandType,
+        commandInput = command.commandInput.toString(),
+        workspaceId = command.workspaceId,
+        workloadId = command.workloadId,
+        organizationId = command.organizationId,
+        createdAt = command.createdAt,
+        updatedAt = command.updatedAt,
+      )
     }
+  }
 
-  @Post("/output/discover")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getDiscoverCommandOutput(
-    @Body discoverCommandOutputRequest: DiscoverCommandOutputRequest,
-  ): DiscoverCommandOutputResponse =
-    withRoleValidation(
+    @Body discoverCommandOutputRequestBody: DiscoverCommandOutputRequest?,
+  ): DiscoverCommandOutputResponse {
+    val discoverCommandOutputRequest = discoverCommandOutputRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(discoverCommandOutputRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
-      val output = commandService.getDiscoverJobOutput(discoverCommandOutputRequest.id, withLogs = discoverCommandOutputRequest.withLogs)
+      val output = commandService.getDiscoverJobOutput(discoverCommandOutputRequest.id, withLogs = discoverCommandOutputRequest.withLogs ?: false)
       // TODO the domain catalog to api catalog should be simpler however, the existing converter does all this...
       val apiCatalog =
         output?.catalog?.let {
@@ -182,118 +183,115 @@ class CommandApiController(
       val apiDestinationCatalog =
         output?.destinationCatalog?.let {
           val protocolDestinationCatalog = Jsons.`object`(it.catalog, io.airbyte.protocol.models.v0.DestinationCatalog::class.java)
-          // the command response is still a Java model
-          CommonsJsons.convertValue(protocolDestinationCatalog.toModel().toApi(), io.airbyte.api.model.generated.DestinationCatalog::class.java)
+          protocolDestinationCatalog.toModel().toApi()
         }
-      return DiscoverCommandOutputResponse().apply {
-        id(discoverCommandOutputRequest.id)
-        output?.let {
-          status(
-            if (it.failureReason ==
-              null
-            ) {
-              DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED
-            } else {
-              DiscoverCommandOutputResponse.StatusEnum.FAILED
-            },
-          )
-          catalogId(output.catalogId)
-          catalog(apiCatalog)
-          destinationCatalog(apiDestinationCatalog)
-          failureReason(apiPojoConverters.failureReasonToApi(it.failureReason))
-          logs(it.logs?.toApi())
-        }
-      }
+      // the output is absent while the command is still running
+      return DiscoverCommandOutputResponse(
+        id = discoverCommandOutputRequest.id,
+        status =
+          output?.let {
+            if (it.failureReason == null) DiscoverCommandOutputResponse.Status.SUCCEEDED else DiscoverCommandOutputResponse.Status.FAILED
+          },
+        catalogId = output?.catalogId,
+        catalog = apiCatalog,
+        destinationCatalog = apiDestinationCatalog,
+        failureReason = output?.let { apiPojoConverters.failureReasonToApi(it.failureReason) },
+        logs = output?.logs?.toApi(),
+      )
     }
+  }
 
-  @Post("/output/spec")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getSpecCommandOutput(
-    @Body specCommandOutputRequest: SpecCommandOutputRequest,
-  ): SpecCommandOutputResponse =
-    withRoleValidation(
+    @Body specCommandOutputRequestBody: SpecCommandOutputRequest?,
+  ): SpecCommandOutputResponse {
+    val specCommandOutputRequest = specCommandOutputRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(specCommandOutputRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
-      val output = commandService.getSpecJobOutput(specCommandOutputRequest.id, withLogs = specCommandOutputRequest.withLogs)
-      return SpecCommandOutputResponse().apply {
-        id(specCommandOutputRequest.id)
-        output?.let {
-          status(if (it.failureReason == null) SpecCommandOutputResponse.StatusEnum.SUCCEEDED else SpecCommandOutputResponse.StatusEnum.FAILED)
-          spec(it.spec?.let { spec -> Jsons.jsonNode(spec) })
-          failureReason(apiPojoConverters.failureReasonToApi(it.failureReason))
-          logs(it.logs?.toApi())
-        }
-      }
+      val output = commandService.getSpecJobOutput(specCommandOutputRequest.id, withLogs = specCommandOutputRequest.withLogs ?: false)
+      // the output is absent while the command is still running
+      return SpecCommandOutputResponse(
+        id = specCommandOutputRequest.id,
+        status =
+          output?.let {
+            if (it.failureReason == null) SpecCommandOutputResponse.Status.SUCCEEDED else SpecCommandOutputResponse.Status.FAILED
+          },
+        spec = output?.spec?.let { spec -> Jsons.jsonNode(spec) },
+        failureReason = output?.let { apiPojoConverters.failureReasonToApi(it.failureReason) },
+        logs = output?.logs?.toApi(),
+      )
     }
+  }
 
-  @Post("/output/replicate")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getReplicateCommandOutput(
-    @Body replicateCommandOutputRequest: ReplicateCommandOutputRequest,
-  ): ReplicateCommandOutputResponse =
-    withRoleValidation(
+    @Body replicateCommandOutputRequestBody: ReplicateCommandOutputRequest?,
+  ): ReplicateCommandOutputResponse {
+    val replicateCommandOutputRequest = replicateCommandOutputRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(replicateCommandOutputRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
       val output: ReplicationOutput? = commandService.getReplicationOutput(replicateCommandOutputRequest.id)
-      return ReplicateCommandOutputResponse().apply {
-        id(replicateCommandOutputRequest.id)
-        attemptSummary(output?.replicationAttemptSummary)
-        failures(output?.failures?.map { apiPojoConverters.failureReasonToApi(it) })
-      }
+      return ReplicateCommandOutputResponse(
+        id = replicateCommandOutputRequest.id,
+        attemptSummary = output?.replicationAttemptSummary,
+        failures = output?.failures?.mapNotNull { apiPojoConverters.failureReasonToApi(it) },
+      )
     }
+  }
 
-  private fun StandardCheckConnectionOutput.Status.toApi(): CheckCommandOutputResponse.StatusEnum =
+  private fun StandardCheckConnectionOutput.Status.toApi(): CheckCommandOutputResponse.Status =
     when (this) {
-      StandardCheckConnectionOutput.Status.SUCCEEDED -> CheckCommandOutputResponse.StatusEnum.SUCCEEDED
-      StandardCheckConnectionOutput.Status.FAILED -> CheckCommandOutputResponse.StatusEnum.FAILED
+      StandardCheckConnectionOutput.Status.SUCCEEDED -> CheckCommandOutputResponse.Status.SUCCEEDED
+      StandardCheckConnectionOutput.Status.FAILED -> CheckCommandOutputResponse.Status.FAILED
     }
 
   private fun CommandService.JobLogs.toApi(): ApiJobLogs =
     if (isStructured()) {
-      ApiJobLogs()
-        .logType(LogFormatType.STRUCTURED)
-        .logEvents(
-          LogEvents()
-            .events(logEvents?.events?.let { JobConverter.toModelLogEvents(it, logUtils) })
-            .version(logEvents?.version),
-        )
+      ApiJobLogs(
+        logType = LogFormatType.STRUCTURED,
+        logEvents =
+          LogEvents(
+            events = logEvents?.events?.let { JobConverter.toModelLogEvents(it, logUtils) }.orEmpty(),
+            version = logEvents?.version,
+          ),
+      )
     } else {
-      ApiJobLogs()
-        .logType(LogFormatType.FORMATTED)
-        .logLines(logLines)
+      ApiJobLogs(logType = LogFormatType.FORMATTED, logLines = logLines)
     }
 
-  @Post("/status")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun getCommandStatus(
-    @Body commandStatusRequest: CommandStatusRequest,
-  ): CommandStatusResponse =
-    withRoleValidation(
+    @Body commandStatusRequestBody: CommandStatusRequest?,
+  ): CommandStatusResponse {
+    val commandStatusRequest = commandStatusRequestBody.requireBody()
+    return withRoleValidation(
       id = CommandId(commandStatusRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
       val commandStatus = commandService.getStatus(commandStatusRequest.id)
-      return CommandStatusResponse().apply {
-        id(commandStatusRequest.id)
-        commandStatus?.let { status(it.convertTo()) }
-      }
+      return CommandStatusResponse(
+        id = commandStatusRequest.id,
+        status = commandStatus?.convertTo<CommandStatusResponse.Status>(),
+      )
     }
+  }
 
-  @Post("/run/check")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -301,8 +299,9 @@ class CommandApiController(
     rule = CheckCommandRule::class,
   )
   override fun runCheckCommand(
-    @Body runCheckCommandRequest: RunCheckCommandRequest,
+    @Body runCheckCommandRequestBody: RunCheckCommandRequest?,
   ): RunCheckCommandResponse {
+    val runCheckCommandRequest = runCheckCommandRequestBody.requireBody()
     val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
 
     // Process and sanitize config if present
@@ -326,10 +325,8 @@ class CommandApiController(
         null
       }
 
-    // Update request with sanitized config for commandInput (logging/auditing)
-    if (sanitizedConfig != null) {
-      runCheckCommandRequest.config = sanitizedConfig
-    }
+    // Record the request with the sanitized config as commandInput (logging/auditing)
+    val commandInputRequest = if (sanitizedConfig != null) runCheckCommandRequest.copy(config = sanitizedConfig) else runCheckCommandRequest
 
     commandService.createCheckCommand(
       commandId = runCheckCommandRequest.id,
@@ -341,20 +338,22 @@ class CommandApiController(
       attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
       workloadPriority = priority,
       signalInput = runCheckCommandRequest.signalInput,
-      commandInput = Jsons.jsonNode(runCheckCommandRequest),
+      commandInput = CommonsJsons.jsonNode(commandInputRequest),
     )
 
-    return RunCheckCommandResponse().id(runCheckCommandRequest.id)
+    return RunCheckCommandResponse(id = runCheckCommandRequest.id)
   }
 
-  @Post("/run/discover")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  override fun runDiscoverCommand(runDiscoverCommandRequest: RunDiscoverCommandRequest): RunDiscoverCommandResponse =
-    withRoleValidation(
+  override fun runDiscoverCommand(
+    @Body runDiscoverCommandRequestBody: RunDiscoverCommandRequest?,
+  ): RunDiscoverCommandResponse {
+    val runDiscoverCommandRequest = runDiscoverCommandRequestBody.requireBody()
+    return withRoleValidation(
       id = ActorId(runDiscoverCommandRequest.actorId),
       role = AuthRoleConstants.WORKSPACE_RUNNER,
     ) {
@@ -366,20 +365,23 @@ class CommandApiController(
         attemptNumber = runDiscoverCommandRequest.attemptNumber?.toLong(),
         workloadPriority = priority,
         signalInput = runDiscoverCommandRequest.signalInput,
-        commandInput = Jsons.jsonNode(runDiscoverCommandRequest),
+        commandInput = CommonsJsons.jsonNode(runDiscoverCommandRequest),
       )
-      return RunDiscoverCommandResponse().id(runDiscoverCommandRequest.id)
+      return RunDiscoverCommandResponse(id = runDiscoverCommandRequest.id)
     }
+  }
 
-  @Post("/run/replicate")
   @Secured(AuthRoleConstants.WORKSPACE_RUNNER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  override fun runReplicateCommand(runReplicateCommandRequest: RunReplicateCommandRequest): RunReplicateCommandResponse =
-    withRoleValidation(
+  override fun runReplicateCommand(
+    @Body runReplicateCommandRequestBody: RunReplicateCommandRequest?,
+  ): RunReplicateCommandResponse {
+    val runReplicateCommandRequest = runReplicateCommandRequestBody.requireBody()
+    return withRoleValidation(
       id = ConnectionId(runReplicateCommandRequest.connectionId),
       role = AuthRoleConstants.WORKSPACE_RUNNER,
     ) {
@@ -400,30 +402,32 @@ class CommandApiController(
             ),
           ),
       )
-      return RunReplicateCommandResponse().id(runReplicateCommandRequest.id)
+      return RunReplicateCommandResponse(id = runReplicateCommandRequest.id)
     }
+  }
 
-  @Post("/run/spec")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun runSpecCommand(
-    @Body runSpecCommandRequest: RunSpecCommandRequest,
-  ): RunSpecCommandResponse =
-    withRoleValidation(
+    @Body runSpecCommandRequestBody: RunSpecCommandRequest?,
+  ): RunSpecCommandResponse {
+    val runSpecCommandRequest = runSpecCommandRequestBody.requireBody()
+    return withRoleValidation(
       id = WorkspaceId(runSpecCommandRequest.workspaceId),
       role = AuthRoleConstants.WORKSPACE_RUNNER,
     ) {
-      if (runSpecCommandRequest.actorDefinitionId != null) {
+      val actorDefinitionId = runSpecCommandRequest.actorDefinitionId
+      if (actorDefinitionId != null) {
         commandService.createSpecCommand(
           commandId = runSpecCommandRequest.id,
-          actorDefinitionId = runSpecCommandRequest.actorDefinitionId,
+          actorDefinitionId = actorDefinitionId,
           dockerImageTag = runSpecCommandRequest.dockerImageTag,
           workspaceId = runSpecCommandRequest.workspaceId,
           signalInput = runSpecCommandRequest.signalInput,
-          commandInput = Jsons.jsonNode(runSpecCommandRequest),
+          commandInput = CommonsJsons.jsonNode(runSpecCommandRequest),
         )
       } else {
         commandService.createSpecCommand(
@@ -433,11 +437,12 @@ class CommandApiController(
           dockerImageTag = runSpecCommandRequest.dockerImageTag,
           workspaceId = runSpecCommandRequest.workspaceId,
           signalInput = runSpecCommandRequest.signalInput,
-          commandInput = Jsons.jsonNode(runSpecCommandRequest),
+          commandInput = CommonsJsons.jsonNode(runSpecCommandRequest),
         )
       }
-      return RunSpecCommandResponse().id(runSpecCommandRequest.id)
+      return RunSpecCommandResponse(id = runSpecCommandRequest.id)
     }
+  }
 
   @InternalForTesting
   internal final inline fun <reified IdType> resolveWorkspaceId(id: IdType): UUID =

@@ -4,11 +4,11 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.ConnectionSyncResultRead
-import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody
-import io.airbyte.api.model.generated.JobConfigType
-import io.airbyte.api.model.generated.JobSyncResultRead
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionSyncResultRead
+import io.airbyte.api.server.generated.models.ConnectionUptimeHistoryRequestBody
+import io.airbyte.api.server.generated.models.JobConfigType
+import io.airbyte.api.server.generated.models.JobSyncResultRead
 import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.api.server.generated.models.StreamStatusCreateRequestBody
 import io.airbyte.api.server.generated.models.StreamStatusJobType
@@ -46,7 +46,6 @@ import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder
 import io.micronaut.data.model.Page
 import io.mockk.every
 import io.mockk.mockk
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -217,7 +216,7 @@ internal class StreamStatusesHandlerTest {
   fun testUptimeHistory() {
     val connectionId = UUID.randomUUID()
     val numJobs = 10
-    val apiReq = ConnectionUptimeHistoryRequestBody().numberOfJobs(numJobs).connectionId(connectionId)
+    val apiReq = ConnectionUptimeHistoryRequestBody(numberOfJobs = numJobs, connectionId = connectionId)
     val jobOneId = 1L
     val ssOne =
       StreamStatusBuilder()
@@ -381,46 +380,49 @@ internal class StreamStatusesHandlerTest {
 
     val expected =
       listOf(
-        JobSyncResultRead()
-          .configType(JobConfigType.SYNC)
-          .jobId(jobOneId)
-          .bytesCommitted(jobOneBytesCommitted)
-          .bytesEmitted(jobOneBytesEmitted)
-          .recordsCommitted(jobOneRecordsCommitted)
-          .recordsEmitted(jobOneRecordsEmitted)
-          .recordsRejected(0)
-          .jobCreatedAt(jobOneCreatedAt)
-          .jobUpdatedAt(jobOneUpdatedAt)
-          .streamStatuses(
-            listOf<@Valid ConnectionSyncResultRead?>(
-              ConnectionSyncResultRead()
-                .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-                .streamName("streamOne")
-                .streamNamespace("streamOneNamespace"),
-              ConnectionSyncResultRead()
-                .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-                .streamName("streamTwo")
-                .streamNamespace("streamTwoNamespace"),
+        JobSyncResultRead(
+          configType = JobConfigType.SYNC,
+          jobId = jobOneId,
+          bytesCommitted = jobOneBytesCommitted,
+          bytesEmitted = jobOneBytesEmitted,
+          recordsCommitted = jobOneRecordsCommitted,
+          recordsEmitted = jobOneRecordsEmitted,
+          recordsRejected = 0,
+          jobCreatedAt = jobOneCreatedAt,
+          jobUpdatedAt = jobOneUpdatedAt,
+          streamStatuses =
+            listOf(
+              ConnectionSyncResultRead(
+                status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+                streamName = "streamOne",
+                streamNamespace = "streamOneNamespace",
+              ),
+              ConnectionSyncResultRead(
+                status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+                streamName = "streamTwo",
+                streamNamespace = "streamTwoNamespace",
+              ),
             ),
-          ),
-        JobSyncResultRead()
-          .configType(JobConfigType.SYNC)
-          .jobId(jobTwoId)
-          .bytesCommitted(jobTwoBytesCommitted)
-          .bytesEmitted(jobTwoBytesEmitted)
-          .recordsCommitted(jobTwoRecordsCommitted)
-          .recordsEmitted(jobTwoRecordsEmittted)
-          .recordsRejected(jobTwoRecordsRejected)
-          .jobCreatedAt(jobTwoCreatedAt)
-          .jobUpdatedAt(jobTwoUpdatedAt)
-          .streamStatuses(
-            listOf<@Valid ConnectionSyncResultRead?>(
-              ConnectionSyncResultRead()
-                .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
-                .streamName("streamThree")
-                .streamNamespace("streamThreeNamespace"),
+        ),
+        JobSyncResultRead(
+          configType = JobConfigType.SYNC,
+          jobId = jobTwoId,
+          bytesCommitted = jobTwoBytesCommitted,
+          bytesEmitted = jobTwoBytesEmitted,
+          recordsCommitted = jobTwoRecordsCommitted,
+          recordsEmitted = jobTwoRecordsEmittted,
+          recordsRejected = jobTwoRecordsRejected,
+          jobCreatedAt = jobTwoCreatedAt,
+          jobUpdatedAt = jobTwoUpdatedAt,
+          streamStatuses =
+            listOf(
+              ConnectionSyncResultRead(
+                status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+                streamName = "streamThree",
+                streamNamespace = "streamThreeNamespace",
+              ),
             ),
-          ),
+        ),
       )
 
     // Replica feature flag disabled - use primary repo

@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.FieldAdd
-import io.airbyte.api.model.generated.FieldRemove
-import io.airbyte.api.model.generated.FieldSchemaUpdate
-import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.FieldAdd
+import io.airbyte.api.server.generated.models.FieldRemove
+import io.airbyte.api.server.generated.models.FieldSchemaUpdate
+import io.airbyte.api.server.generated.models.StreamAttributePrimaryKeyUpdate
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.protocol.transformmodels.FieldTransform
@@ -24,61 +24,59 @@ import java.util.Optional
  */
 object CatalogDiffConverters {
   @JvmStatic
-  fun streamTransformToApi(transform: StreamTransform): io.airbyte.api.model.generated.StreamTransform =
-    io.airbyte.api.model.generated
-      .StreamTransform()
-      .transformType(
-        transform.transformType.convertTo<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum>(),
-      ).streamDescriptor(transform.streamDescriptor.toApi())
-      .updateStream(updateStreamToApi(transform).orElse(null))
+  fun streamTransformToApi(transform: StreamTransform): io.airbyte.api.server.generated.models.StreamTransform =
+    io.airbyte.api.server.generated.models.StreamTransform(
+      transformType = transform.transformType.convertTo<io.airbyte.api.server.generated.models.StreamTransform.TransformType>(),
+      streamDescriptor = transform.streamDescriptor.toApi(),
+      updateStream = updateStreamToApi(transform).orElse(null),
+    )
 
   fun updateStreamToApi(transform: StreamTransform): Optional<StreamTransformUpdateStream> =
     if (transform.transformType == StreamTransformType.UPDATE_STREAM) {
       Optional.of(
-        StreamTransformUpdateStream()
-          .streamAttributeTransforms(
+        StreamTransformUpdateStream(
+          streamAttributeTransforms =
             transform.updateStreamTransform
               ?.attributeTransforms
               ?.stream()
               ?.map { obj: StreamAttributeTransform -> streamAttributeTransformToApi(obj) }
               ?.toList() ?: emptyList(),
-          ).fieldTransforms(
+          fieldTransforms =
             transform.updateStreamTransform
               ?.fieldTransforms
               ?.stream()
               ?.map { obj: FieldTransform -> fieldTransformToApi(obj) }
               ?.toList() ?: emptyList(),
-          ),
+        ),
       )
     } else {
       Optional.empty()
     }
 
-  fun streamAttributeTransformToApi(transform: StreamAttributeTransform): io.airbyte.api.model.generated.StreamAttributeTransform =
-    io.airbyte.api.model.generated
-      .StreamAttributeTransform()
-      .transformType(
-        transform.transformType.convertTo<io.airbyte.api.model.generated.StreamAttributeTransform.TransformTypeEnum>(),
-      ).breaking(transform.breaking)
-      .updatePrimaryKey(updatePrimaryKeyToApi(transform).orElse(null))
+  fun streamAttributeTransformToApi(transform: StreamAttributeTransform): io.airbyte.api.server.generated.models.StreamAttributeTransform =
+    io.airbyte.api.server.generated.models.StreamAttributeTransform(
+      transformType = transform.transformType.convertTo<io.airbyte.api.server.generated.models.StreamAttributeTransform.TransformType>(),
+      breaking = transform.breaking,
+      updatePrimaryKey = updatePrimaryKeyToApi(transform).orElse(null),
+    )
 
-  fun fieldTransformToApi(transform: FieldTransform): io.airbyte.api.model.generated.FieldTransform =
-    io.airbyte.api.model.generated
-      .FieldTransform()
-      .transformType(
-        transform.transformType.convertTo<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum>(),
-      ).fieldName(transform.fieldName)
-      .breaking(transform.breaking())
-      .addField(addFieldToApi(transform).orElse(null))
-      .removeField(removeFieldToApi(transform).orElse(null))
-      .updateFieldSchema(updateFieldToApi(transform).orElse(null))
+  fun fieldTransformToApi(transform: FieldTransform): io.airbyte.api.server.generated.models.FieldTransform =
+    io.airbyte.api.server.generated.models.FieldTransform(
+      transformType = transform.transformType.convertTo<io.airbyte.api.server.generated.models.FieldTransform.TransformType>(),
+      fieldName = transform.fieldName,
+      breaking = transform.breaking(),
+      addField = addFieldToApi(transform).orElse(null),
+      removeField = removeFieldToApi(transform).orElse(null),
+      updateFieldSchema = updateFieldToApi(transform).orElse(null),
+    )
 
   private fun updatePrimaryKeyToApi(transform: StreamAttributeTransform): Optional<StreamAttributePrimaryKeyUpdate> =
     if (transform.transformType == StreamAttributeTransformType.UPDATE_PRIMARY_KEY) {
       Optional.of(
-        StreamAttributePrimaryKeyUpdate()
-          .newPrimaryKey(transform.updatePrimaryKeyTransform!!.newPrimaryKey)
-          .oldPrimaryKey(transform.updatePrimaryKeyTransform!!.oldPrimaryKey),
+        StreamAttributePrimaryKeyUpdate(
+          newPrimaryKey = transform.updatePrimaryKeyTransform!!.newPrimaryKey,
+          oldPrimaryKey = transform.updatePrimaryKeyTransform!!.oldPrimaryKey,
+        ),
       )
     } else {
       Optional.empty()
@@ -87,8 +85,7 @@ object CatalogDiffConverters {
   private fun addFieldToApi(transform: FieldTransform): Optional<FieldAdd> =
     if (transform.transformType == FieldTransformType.ADD_FIELD) {
       Optional.of(
-        FieldAdd()
-          .schema(transform.addFieldTransform!!.schema),
+        FieldAdd(schema = transform.addFieldTransform!!.schema),
       )
     } else {
       Optional.empty()
@@ -97,8 +94,7 @@ object CatalogDiffConverters {
   private fun removeFieldToApi(transform: FieldTransform): Optional<FieldRemove> =
     if (transform.transformType == FieldTransformType.REMOVE_FIELD) {
       Optional.of(
-        FieldRemove()
-          .schema(transform.removeFieldTransform!!.schema),
+        FieldRemove(schema = transform.removeFieldTransform!!.schema),
       )
     } else {
       Optional.empty()
@@ -107,9 +103,10 @@ object CatalogDiffConverters {
   private fun updateFieldToApi(transform: FieldTransform): Optional<FieldSchemaUpdate> =
     if (transform.transformType == FieldTransformType.UPDATE_FIELD_SCHEMA) {
       Optional.of(
-        FieldSchemaUpdate()
-          .oldSchema(transform.updateFieldTransform!!.oldSchema)
-          .newSchema(transform.updateFieldTransform!!.newSchema),
+        FieldSchemaUpdate(
+          oldSchema = transform.updateFieldTransform!!.oldSchema,
+          newSchema = transform.updateFieldTransform!!.newSchema,
+        ),
       )
     } else {
       Optional.empty()

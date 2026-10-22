@@ -4,16 +4,16 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
 import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.CurrentUserService
@@ -208,7 +208,7 @@ class ConnectionsControllerTest {
       )
     } returns mockedConfiguredStreams
 
-    val expectedConfiguredCatalog = AirbyteCatalog().streams(mockedConfiguredStreams)
+    val expectedConfiguredCatalog = AirbyteCatalog(streams = mockedConfiguredStreams)
 
     every {
       connectionService.updateConnection(
@@ -298,23 +298,21 @@ class ConnectionsControllerTest {
     val destinationId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
     val connectionRead =
-      ConnectionRead().apply {
-        this.connectionId = UUID.randomUUID()
-        name = "testconnection"
-        status = ConnectionStatus.ACTIVE
-        scheduleType = ConnectionScheduleType.CRON
+      ConnectionRead(
+        connectionId = UUID.randomUUID(),
+        name = "testconnection",
+        status = ConnectionStatus.ACTIVE,
+        scheduleType = ConnectionScheduleType.CRON,
         scheduleData =
-          ConnectionScheduleData().apply {
-            cron =
-              ConnectionScheduleDataCron().apply {
-                cronExpression = "0 0 */3 * * ?"
-                cronTimeZone = "US/Pacific"
-              }
-          }
-        sourceId = UUID.randomUUID()
-        this.destinationId = destinationId
-        createdAt = 1L
-      }
+          ConnectionScheduleData(
+            cron = ConnectionScheduleDataCron(cronExpression = "0 0 */3 * * ?", cronTimeZone = "US/Pacific"),
+          ),
+        sourceId = UUID.randomUUID(),
+        destinationId = destinationId,
+        createdAt = 1L,
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        breakingChange = false,
+      )
     val publicSchedule = ConnectionReadMapper.from(connectionRead, workspaceId).schedule
     val capturedRequest = slot<ConnectionPatchRequest>()
 
@@ -372,7 +370,7 @@ class ConnectionsControllerTest {
       mockk<DestinationRead> {
         every { this@mockk.workspaceId } returns workspaceId
       }
-    val airbyteCatalog = AirbyteCatalog().apply { streams = emptyList() }
+    val airbyteCatalog = AirbyteCatalog(streams = emptyList())
     val schemaResponse =
       mockk<SourceDiscoverSchemaRead> {
         every { this@mockk.catalogId } returns catalogId
@@ -426,7 +424,7 @@ class ConnectionsControllerTest {
       mockk<DestinationRead> {
         every { this@mockk.workspaceId } returns workspaceId
       }
-    val airbyteCatalog = AirbyteCatalog().apply { streams = emptyList() }
+    val airbyteCatalog = AirbyteCatalog(streams = emptyList())
     val schemaResponse =
       mockk<SourceDiscoverSchemaRead> {
         every { this@mockk.catalogId } returns catalogId
@@ -477,7 +475,7 @@ class ConnectionsControllerTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val catalogId = UUID.randomUUID()
-    val catalog = AirbyteCatalog().apply { streams = emptyList() }
+    val catalog = AirbyteCatalog(streams = emptyList())
     val createdConnection =
       ConnectionCreateMapper.from(
         ConnectionCreateRequest(
@@ -495,16 +493,18 @@ class ConnectionsControllerTest {
         catalog,
       )
     val connectionRead =
-      ConnectionRead().apply {
-        this.connectionId = connectionId
-        name = "testconnection"
-        status = ConnectionStatus.ACTIVE
-        scheduleType = ConnectionScheduleType.CRON
-        scheduleData = createdConnection.scheduleData
-        this.sourceId = sourceId
-        this.destinationId = destinationId
-        createdAt = 1L
-      }
+      ConnectionRead(
+        connectionId = connectionId,
+        name = "testconnection",
+        status = ConnectionStatus.ACTIVE,
+        scheduleType = ConnectionScheduleType.CRON,
+        scheduleData = createdConnection.scheduleData,
+        sourceId = sourceId,
+        destinationId = destinationId,
+        createdAt = 1L,
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        breakingChange = false,
+      )
     val publicSchedule = ConnectionReadMapper.from(connectionRead, workspaceId).schedule
     val capturedRequest = slot<ConnectionPatchRequest>()
 

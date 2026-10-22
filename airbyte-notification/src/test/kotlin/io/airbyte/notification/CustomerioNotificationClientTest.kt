@@ -7,13 +7,13 @@ package io.airbyte.notification
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate
-import io.airbyte.api.model.generated.StreamAttributeTransform
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.api.model.generated.StreamTransformUpdateStream
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.FieldTransform
+import io.airbyte.api.server.generated.models.StreamAttributePrimaryKeyUpdate
+import io.airbyte.api.server.generated.models.StreamAttributeTransform
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.StreamTransform
+import io.airbyte.api.server.generated.models.StreamTransformUpdateStream
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.Version
@@ -258,42 +258,51 @@ internal class CustomerioNotificationClientTest {
     val sourceId = UUID.randomUUID()
     val sourceName = "facebook marketing"
     val diff =
-      CatalogDiff()
-        .addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("updatedStream"))
-            .updateStream(
-              StreamTransformUpdateStream().addFieldTransformsItem(
-                FieldTransform()
-                  .transformType(
-                    FieldTransform.TransformTypeEnum.REMOVE_FIELD,
-                  ).breaking(true),
-              ),
-            ),
-        ).addTransformsItem(
-          StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM).streamDescriptor(StreamDescriptor().name("foo")),
-        ).addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.REMOVE_STREAM)
-            .streamDescriptor(StreamDescriptor().name("removed")),
-        ).addTransformsItem(
-          StreamTransform()
-            .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
-            .updateStream(
-              StreamTransformUpdateStream()
-                .streamAttributeTransforms(
-                  listOf(
-                    StreamAttributeTransform()
-                      .transformType(StreamAttributeTransform.TransformTypeEnum.UPDATE_PRIMARY_KEY)
-                      .updatePrimaryKey(
-                        StreamAttributePrimaryKeyUpdate()
-                          .newPrimaryKey(listOf(listOf("new_pk"))),
+      CatalogDiff(
+        transforms =
+          listOf(
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "updatedStream"),
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms =
+                    listOf(
+                      FieldTransform(
+                        transformType = FieldTransform.TransformType.REMOVE_FIELD,
+                        fieldName = emptyList(),
+                        breaking = true,
                       ),
-                  ),
+                    ),
+                  streamAttributeTransforms = emptyList(),
                 ),
-            ).streamDescriptor(StreamDescriptor().name("stream_with_added_pk")),
-        )
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.ADD_STREAM,
+              streamDescriptor = StreamDescriptor(name = "foo"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.REMOVE_STREAM,
+              streamDescriptor = StreamDescriptor(name = "removed"),
+            ),
+            StreamTransform(
+              transformType = StreamTransform.TransformType.UPDATE_STREAM,
+              updateStream =
+                StreamTransformUpdateStream(
+                  fieldTransforms = emptyList(),
+                  streamAttributeTransforms =
+                    listOf(
+                      StreamAttributeTransform(
+                        transformType = StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY,
+                        breaking = false,
+                        updatePrimaryKey = StreamAttributePrimaryKeyUpdate(newPrimaryKey = listOf(listOf("new_pk"))),
+                      ),
+                    ),
+                ),
+              streamDescriptor = StreamDescriptor(name = "stream_with_added_pk"),
+            ),
+          ),
+      )
     val recipient = "airbyte@airbyte.io"
     val transactionMessageId = "455"
     val notification =

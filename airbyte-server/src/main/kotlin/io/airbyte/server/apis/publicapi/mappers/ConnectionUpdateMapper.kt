@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.ConnectionScheduleData
-import io.airbyte.api.model.generated.ConnectionScheduleDataCron
-import io.airbyte.api.model.generated.ConnectionScheduleType
-import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.ConnectionUpdate
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConnectionScheduleData
+import io.airbyte.api.server.generated.models.ConnectionScheduleDataCron
+import io.airbyte.api.server.generated.models.ConnectionScheduleType
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.ConnectionUpdate
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import io.airbyte.server.apis.publicapi.helpers.ConnectionHelper
@@ -35,54 +35,40 @@ object ConnectionUpdateMapper {
     catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
   ): ConnectionUpdate {
-    val connectionUpdateOss = ConnectionUpdate()
-    connectionUpdateOss.connectionId(connectionId)
-    connectionUpdateOss.name = connectionPatchRequest.name
-    if (connectionPatchRequest.nonBreakingSchemaUpdatesBehavior != null) {
-      connectionUpdateOss.nonBreakingChangesPreference =
-        ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
-          connectionPatchRequest.nonBreakingSchemaUpdatesBehavior,
-        )
-    }
-    if (connectionPatchRequest.namespaceDefinition != null) {
-      connectionUpdateOss.namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionPatchRequest.namespaceDefinition)
-    }
-    if (connectionPatchRequest.namespaceFormat != null) {
-      connectionUpdateOss.namespaceFormat = connectionPatchRequest.namespaceFormat
-    }
-    if (connectionPatchRequest.prefix != null) {
-      connectionUpdateOss.prefix = connectionPatchRequest.prefix
-    }
-
-    // set schedule
-    if (connectionPatchRequest.schedule != null) {
-      connectionUpdateOss.scheduleType = ConnectionScheduleType.fromValue(connectionPatchRequest.schedule!!.scheduleType.toString())
-      if (connectionPatchRequest.schedule!!.scheduleType !== ScheduleTypeEnum.MANUAL) {
-        // This should only be set if we're not manual
-        val connectionScheduleDataCron = ConnectionScheduleDataCron()
-        connectionScheduleDataCron.cronExpression = connectionPatchRequest.schedule!!.cronExpression
-        connectionScheduleDataCron.cronTimeZone = connectionPatchRequest.schedule!!.cronTimeZone ?: "UTC"
-        val connectionScheduleData = ConnectionScheduleData()
-        connectionScheduleData.cron = connectionScheduleDataCron
-        connectionUpdateOss.scheduleData = connectionScheduleData
-      } else {
-        connectionUpdateOss.scheduleType = ConnectionScheduleType.MANUAL
+    val schedule = connectionPatchRequest.schedule
+    val scheduleType =
+      schedule?.let {
+        if (it.scheduleType === ScheduleTypeEnum.MANUAL) {
+          ConnectionScheduleType.MANUAL
+        } else {
+          ConnectionScheduleType.decode(it.scheduleType.toString())
+            ?: throw IllegalArgumentException("Unexpected schedule type: ${it.scheduleType}")
+        }
       }
-    }
+    // Schedule data is only set if we're not manual. A schedule without a cron expression carries no schedule
+    // data; the schedule helper rejects it for cron schedules.
+    val scheduleData =
+      schedule?.takeIf { it.scheduleType !== ScheduleTypeEnum.MANUAL }?.cronExpression?.let { cronExpression ->
+        ConnectionScheduleData(cron = ConnectionScheduleDataCron(cronExpression = cronExpression, cronTimeZone = schedule.cronTimeZone ?: "UTC"))
+      }
 
-    // set streams
-    if (catalogId != null) {
-      connectionUpdateOss.sourceCatalogId = catalogId
-    }
-    if (configuredCatalog != null) {
-      connectionUpdateOss.syncCatalog = configuredCatalog
-    }
-    if (connectionPatchRequest.status != null) {
-      connectionUpdateOss.status = ConnectionStatus.fromValue(connectionPatchRequest.status.toString())
-    }
-    if (connectionPatchRequest.tags != null) {
-      connectionUpdateOss.tags = ConnectionHelper.convertTags(connectionPatchRequest.tags ?: emptyList())
-    }
-    return connectionUpdateOss
+    return ConnectionUpdate(
+      connectionId = connectionId!!,
+      name = connectionPatchRequest.name,
+      nonBreakingChangesPreference =
+        connectionPatchRequest.nonBreakingSchemaUpdatesBehavior?.let { ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(it) },
+      namespaceDefinition = connectionPatchRequest.namespaceDefinition?.let { ConnectionHelper.convertNamespaceDefinitionEnum(it) },
+      namespaceFormat = connectionPatchRequest.namespaceFormat,
+      prefix = connectionPatchRequest.prefix,
+      scheduleType = scheduleType,
+      scheduleData = scheduleData,
+      sourceCatalogId = catalogId,
+      syncCatalog = configuredCatalog,
+      status =
+        connectionPatchRequest.status?.let {
+          ConnectionStatus.decode(it.toString()) ?: throw IllegalArgumentException("Unexpected connection status: $it")
+        },
+      tags = connectionPatchRequest.tags?.let { ConnectionHelper.convertTags(it) },
+    )
   }
 }

@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.SchedulerApi
-import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DestinationCoreConfig
-import io.airbyte.api.model.generated.SourceCoreConfig
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.server.generated.apis.SchedulerApi
+import io.airbyte.api.server.generated.models.CheckConnectionRead
+import io.airbyte.api.server.generated.models.DestinationCoreConfig
+import io.airbyte.api.server.generated.models.SourceCoreConfig
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -18,17 +18,15 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/scheduler")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class SchedulerApiController(
   private val schedulerHandler: SchedulerHandler,
 ) : SchedulerApi {
-  @Post("/destinations/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -37,14 +35,13 @@ open class SchedulerApiController(
   )
   override fun executeDestinationCheckConnection(
     @Body destinationCoreConfig: DestinationCoreConfig,
-  ): CheckConnectionRead? =
+  ): CheckConnectionRead =
     execute {
       schedulerHandler.checkDestinationConnectionFromDestinationCreate(
         destinationCoreConfig,
       )
     }
 
-  @Post("/sources/check_connection")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -53,9 +50,8 @@ open class SchedulerApiController(
   )
   override fun executeSourceCheckConnection(
     @Body sourceCoreConfig: SourceCoreConfig,
-  ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig) }
+  ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig) }
 
-  @Post("/sources/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
@@ -64,7 +60,7 @@ open class SchedulerApiController(
   )
   override fun executeSourceDiscoverSchema(
     @Body sourceCoreConfig: SourceCoreConfig,
-  ): SourceDiscoverSchemaRead? =
+  ): SourceDiscoverSchemaRead =
     execute {
       schedulerHandler.discoverSchemaForSourceFromSourceCreate(
         sourceCoreConfig,

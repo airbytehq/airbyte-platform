@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.services
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.CatalogDiff
-import io.airbyte.api.model.generated.DiffCatalogsRequest
-import io.airbyte.api.model.generated.DiffCatalogsResponse
-import io.airbyte.api.model.generated.SchemaChange
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.DiffCatalogsRequest
+import io.airbyte.api.server.generated.models.DiffCatalogsResponse
+import io.airbyte.api.server.generated.models.SchemaChange
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getCatalogDiff
 import io.airbyte.commons.server.converters.CatalogDiffConverters.streamTransformToApi
@@ -98,10 +98,11 @@ class CatalogDiffService(
       persistCatalogChanges(connectionId, newCatalogId, schemaChange, catalogDiff, configuredCatalog)
     }
 
-    return DiffCatalogsResponse()
-      .catalogDiff(catalogDiff)
-      .schemaChange(schemaChange)
-      .mergedCatalog(mergedCatalog)
+    return DiffCatalogsResponse(
+      catalogDiff = catalogDiff,
+      schemaChange = schemaChange,
+      mergedCatalog = mergedCatalog,
+    )
   }
 
   /**
@@ -121,11 +122,12 @@ class CatalogDiffService(
         configuredCatalog ?: ConfiguredAirbyteCatalog().withStreams(emptyList()),
       )
 
-    return CatalogDiff().transforms(
-      streamTransforms
-        .stream()
-        .map { streamTransformToApi(it) }
-        .toList(),
+    return CatalogDiff(
+      transforms =
+        streamTransforms
+          .stream()
+          .map { streamTransformToApi(it) }
+          .toList(),
     )
   }
 

@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
+import io.airbyte.api.server.generated.models.WebBackendCheckUpdatesRead
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
@@ -32,9 +32,10 @@ open class WebBackendCheckUpdatesHandler(
     val destinationDiffCount = destinationDiffCount
     val sourceDiffCount = sourceDiffCount
 
-    return WebBackendCheckUpdatesRead()
-      .destinationDefinitions(destinationDiffCount)
-      .sourceDefinitions(sourceDiffCount)
+    return WebBackendCheckUpdatesRead(
+      destinationDefinitions = destinationDiffCount,
+      sourceDefinitions = sourceDiffCount,
+    )
   }
 
   private val destinationDiffCount: Int

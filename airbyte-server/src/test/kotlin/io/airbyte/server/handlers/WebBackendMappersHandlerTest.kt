@@ -4,13 +4,14 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.ConnectionRead
-import io.airbyte.api.model.generated.FieldSpec
-import io.airbyte.api.model.generated.MapperValidationErrorType
-import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
+import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.ConnectionRead
+import io.airbyte.api.server.generated.models.ConnectionStatus
+import io.airbyte.api.server.generated.models.FieldSpec
+import io.airbyte.api.server.generated.models.MapperValidationErrorType
+import io.airbyte.api.server.generated.models.StreamDescriptor
+import io.airbyte.api.server.generated.models.WebBackendValidateMappersRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -52,7 +53,16 @@ class WebBackendMappersHandlerTest {
     val connectionId = UUID.randomUUID()
 
     val apiCatalog = mockk<AirbyteCatalog>()
-    every { connectionsHandler.getConnection(any()) } returns ConnectionRead().syncCatalog(apiCatalog)
+    every { connectionsHandler.getConnection(any()) } returns
+      ConnectionRead(
+        connectionId = connectionId,
+        name = "connection",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog = apiCatalog,
+        status = ConnectionStatus.ACTIVE,
+        breakingChange = false,
+      )
 
     val ogFields = buildFields(USERNAME_FIELD, PASSWORD_FIELD, CURSOR_FIELD, PK_FIELD)
     val configuredStream = buildStream(STREAM_NAME, ogFields)
@@ -104,93 +114,106 @@ class WebBackendMappersHandlerTest {
       )
 
     val req =
-      WebBackendValidateMappersRequestBody()
-        .connectionId(connectionId)
-        .streamDescriptor(StreamDescriptor().name(STREAM_NAME).namespace(STREAM_NAMESPACE))
-        .mappers(apiMappers)
+      WebBackendValidateMappersRequestBody(
+        connectionId = connectionId,
+        streamDescriptor = StreamDescriptor(name = STREAM_NAME, namespace = STREAM_NAMESPACE),
+        mappers = apiMappers,
+      )
 
     val res = webBackendMappersHandler.validateMappers(req)
 
     val expectedInitialFields =
       listOf(
-        FieldSpec()
-          .name(USERNAME_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PASSWORD_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(CURSOR_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(true)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PK_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(true),
+        FieldSpec(
+          name = USERNAME_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PASSWORD_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = CURSOR_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = true,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PK_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = true,
+        ),
       )
     assertEquals(expectedInitialFields, res.initialFields)
 
     assertEquals(2, res.mappers.size)
     val expectedFirstMapperOutputFields =
       listOf(
-        FieldSpec()
-          .name(USERNAME_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PASSWORD_FIELD_HASHED)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PK_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(true),
-        FieldSpec()
-          .name(CURSOR_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(true)
-          .isSelectedPrimaryKey(false),
+        FieldSpec(
+          name = USERNAME_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PASSWORD_FIELD_HASHED,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PK_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = true,
+        ),
+        FieldSpec(
+          name = CURSOR_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = true,
+          isSelectedPrimaryKey = false,
+        ),
       )
     assertEquals(expectedInitialFields, res.mappers[0].inputFields)
     assertEquals(expectedFirstMapperOutputFields, res.mappers[0].outputFields)
 
     val expectedSecondMapperOutputFields =
       listOf(
-        FieldSpec()
-          .name(USERNAME_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PASSWORD_FIELD_HASHED)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(false),
-        FieldSpec()
-          .name(PK_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(false)
-          .isSelectedPrimaryKey(true),
-        FieldSpec()
-          .name(CURSOR_FIELD)
-          .type(FieldSpec.TypeEnum.STRING)
-          .isSelectedCursor(true)
-          .isSelectedPrimaryKey(false),
+        FieldSpec(
+          name = USERNAME_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PASSWORD_FIELD_HASHED,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = false,
+        ),
+        FieldSpec(
+          name = PK_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = false,
+          isSelectedPrimaryKey = true,
+        ),
+        FieldSpec(
+          name = CURSOR_FIELD,
+          type = FieldSpec.Type.STRING,
+          isSelectedCursor = true,
+          isSelectedPrimaryKey = false,
+        ),
       )
     assertEquals(expectedFirstMapperOutputFields, res.mappers[1].inputFields)
     assertEquals(expectedSecondMapperOutputFields, res.mappers[1].outputFields)
 
-    assertEquals(MapperValidationErrorType.FIELD_NOT_FOUND, res.mappers[1].validationError.type)
-    assertEquals("Field not found", res.mappers[1].validationError.message)
+    assertEquals(MapperValidationErrorType.FIELD_NOT_FOUND, res.mappers[1].validationError!!.type)
+    assertEquals("Field not found", res.mappers[1].validationError!!.message)
 
     assertEquals(expectedSecondMapperOutputFields, res.outputFields)
 

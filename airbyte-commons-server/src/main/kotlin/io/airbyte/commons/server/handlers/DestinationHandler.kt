@@ -5,22 +5,22 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.DestinationSnippetRead
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.api.server.generated.models.ActorType
 import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.DestinationSearch
+import io.airbyte.api.server.generated.models.DestinationSnippetRead
 import io.airbyte.api.server.generated.models.DestinationUpdate
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.PartialDestinationUpdate
 import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -75,7 +75,6 @@ import java.util.UUID
 import java.util.function.Supplier
 import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
 import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
-import io.airbyte.api.model.generated.ScopedResourceRequirements as JavaScopedResourceRequirements
 
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -149,7 +148,7 @@ class DestinationHandler
     fun deleteDestination(destination: DestinationRead) {
       // disable all connections associated with this destination
       // Delete connections first in case it fails in the middle, destination will still be visible
-      val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(destination.workspaceId)
+      val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = destination.workspaceId)
       for (connectionRead in connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody).connections) {
         if (connectionRead.destinationId != destination.destinationId) {
           continue
@@ -533,7 +532,7 @@ class DestinationHandler
           .withTombstone(tombstone)
           .withIsDraft(isDraft)
           .withResourceRequirements(
-            apiPojoConverters.scopedResourceReqsToInternal(Jsons.convertValue(resourceRequirements, JavaScopedResourceRequirements::class.java)),
+            apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements),
           )
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
@@ -747,12 +746,13 @@ class DestinationHandler
       destinationConnection: DestinationConnection,
       standardDestinationDefinition: StandardDestinationDefinition,
     ): DestinationSnippetRead =
-      DestinationSnippetRead()
-        .destinationId(destinationConnection.destinationId)
-        .name(destinationConnection.name)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .destinationName(standardDestinationDefinition.name)
-        .icon(standardDestinationDefinition.iconUrl)
+      DestinationSnippetRead(
+        destinationId = destinationConnection.destinationId,
+        name = destinationConnection.name,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        destinationName = standardDestinationDefinition.name,
+        icon = standardDestinationDefinition.iconUrl,
+      )
 
     companion object {
       private val log = KotlinLogging.logger {}

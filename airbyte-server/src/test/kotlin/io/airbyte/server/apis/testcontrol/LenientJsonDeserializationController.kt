@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.testcontrol
 
-import io.airbyte.api.model.generated.ConnectionIdRequestBody
+import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration

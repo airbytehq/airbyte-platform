@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
+import io.airbyte.api.server.generated.models.AirbyteCatalog
 import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -128,16 +128,19 @@ open class ConnectionsController(
 
     // refer to documentation to understand what we need to do for the catalog
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
-    var configuredCatalog = AirbyteCatalog()
+    var configuredCatalog = AirbyteCatalog(streams = emptyList())
 
     if (AirbyteCatalogHelper.hasStreamConfigurations(validConnectionCreateRequest.configurations)) {
       trackingHelper.callWithTracker(
         {
-          configuredCatalog.streams =
-            AirbyteCatalogHelper.getValidConfiguredStreams(
-              airbyteCatalogFromDiscoverSchema,
-              validConnectionCreateRequest.configurations!!,
-              validDestinationSyncModes,
+          configuredCatalog =
+            AirbyteCatalog(
+              streams =
+                AirbyteCatalogHelper.getValidConfiguredStreams(
+                  airbyteCatalogFromDiscoverSchema!!,
+                  validConnectionCreateRequest.configurations!!,
+                  validDestinationSyncModes,
+                ),
             )
         },
         CONNECTIONS_PATH,
@@ -395,14 +398,16 @@ open class ConnectionsController(
           userId,
         ) as List<DestinationSyncMode>
 
-      newConfiguredCatalog = AirbyteCatalog()
       trackingHelper.callWithTracker(
         {
-          newConfiguredCatalog.streams =
-            AirbyteCatalogHelper.getValidConfiguredStreams(
-              airbyteCatalogFromDiscoverSchema,
-              validConnectionPatchRequest.configurations!!,
-              validDestinationSyncModes,
+          newConfiguredCatalog =
+            AirbyteCatalog(
+              streams =
+                AirbyteCatalogHelper.getValidConfiguredStreams(
+                  airbyteCatalogFromDiscoverSchema!!,
+                  validConnectionPatchRequest.configurations!!,
+                  validDestinationSyncModes,
+                ),
             )
         },
         CONNECTIONS_PATH,
