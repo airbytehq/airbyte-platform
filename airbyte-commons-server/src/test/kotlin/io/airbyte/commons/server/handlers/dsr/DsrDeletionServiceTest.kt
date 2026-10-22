@@ -49,6 +49,8 @@ import io.airbyte.domain.models.SecretReferenceWithConfig
 import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.domain.services.secrets.SecretPersistenceService
+import io.airbyte.featureflag.BypassDsrDeletionConnectionLimit
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -80,6 +82,7 @@ import java.util.UUID
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import io.airbyte.featureflag.User as FeatureFlagUser
 
 internal class DsrDeletionServiceTest {
   private lateinit var userPersistence: UserPersistence
@@ -102,6 +105,7 @@ internal class DsrDeletionServiceTest {
   private lateinit var dsrAuditLogDeletion: DsrAuditLogDeletion
   private lateinit var configDatabase: Database
   private lateinit var metricClient: MetricClient
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var objectMapper: ObjectMapper
   private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
   private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
@@ -151,6 +155,8 @@ internal class DsrDeletionServiceTest {
     deletionRequestTimeoutService = mockk(relaxed = true)
     dsrAuditLogDeletion = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
+    featureFlagClient = mockk()
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, any()) } returns false
     objectMapper = jacksonObjectMapper()
     executionHeartbeatExecutor = mockk(relaxed = true)
     executionHeartbeatFuture = mockk(relaxed = true)
@@ -296,6 +302,7 @@ internal class DsrDeletionServiceTest {
       dsrAuditLogDeletion = dsrAuditLogDeletion,
       objectMapper = objectMapper,
       metricClient = metricClient,
+      featureFlagClient = featureFlagClient,
       configDatabase = configDatabase,
       executionTimeout = Duration.ofMinutes(30),
       executionHeartbeatExecutor = executionHeartbeatExecutor,
@@ -482,7 +489,8 @@ internal class DsrDeletionServiceTest {
   }
 
   @Test
-  fun `preview rejects manifests that exceed the workspace deletion limit`() {
+  fun `preview retains the workspace limit when connection override is on`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(userId)) } returns true
     val extraWorkspaces =
       (1..10).map { index ->
         Workspace(
@@ -515,11 +523,13 @@ internal class DsrDeletionServiceTest {
       }
 
     assertTrue(error.message!!.contains("workspace count 11 exceeds maximum 10"))
+    assertFalse(error.message!!.contains("LaunchDarkly"))
     verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
   }
 
   @Test
-  fun `preview rejects manifests that exceed the organization deletion limit`() {
+  fun `preview retains the organization limit when connection override is on`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(userId)) } returns true
     val organizations =
       (1..6).map { index ->
         Organization(id = UUID.randomUUID(), name = "org-$index", userId = userId, email = email)
@@ -534,6 +544,7 @@ internal class DsrDeletionServiceTest {
       }
 
     assertTrue(error.message!!.contains("organization count 6 exceeds maximum 5"))
+    assertFalse(error.message!!.contains("LaunchDarkly"))
     verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
   }
 
@@ -553,7 +564,45 @@ internal class DsrDeletionServiceTest {
       }
 
     assertTrue(error.message!!.contains("connection count 101 exceeds maximum 100"))
+    assertTrue(error.message!!.contains("Airbyte user ID $userId"))
+    assertTrue(error.message!!.contains("platform.bypass-dsr-deletion-connection-limit (context kind: user)"))
     verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
+  }
+
+  @Test
+  fun `preview allows an approved user above the connection limit`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(userId)) } returns true
+    val connectionIds = (1..101).map { UUID.randomUUID() }
+    every { connectionService.listConnectionIdsForWorkspace(workspaceId) } returns connectionIds
+    connectionIds.forEach { connectionId ->
+      every { connectionService.getStandardSync(connectionId) } returns StandardSync().withConnectionId(connectionId)
+    }
+    every { dbPrune.countJobsAndAttemptsByScopes(connectionIds.map { it.toString() }) } returns
+      DbPrune.JobScopeCounts(jobCount = 0L, attemptCount = 0L)
+
+    val result = service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+
+    assertEquals("PREVIEWED", result.status)
+    assertEquals(101, result.manifest.connectionIds.size)
+  }
+
+  @Test
+  fun `preview keeps the connection limit for a different user`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(UUID.randomUUID())) } returns true
+    val connectionIds = (1..101).map { UUID.randomUUID() }
+    every { connectionService.listConnectionIdsForWorkspace(workspaceId) } returns connectionIds
+    connectionIds.forEach { connectionId ->
+      every { connectionService.getStandardSync(connectionId) } returns StandardSync().withConnectionId(connectionId)
+    }
+    every { dbPrune.countJobsAndAttemptsByScopes(connectionIds.map { it.toString() }) } returns
+      DbPrune.JobScopeCounts(jobCount = 0L, attemptCount = 0L)
+
+    val error =
+      assertThrows<DsrInvalidConfirmationException> {
+        service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+      }
+
+    assertTrue(error.message!!.contains("connection count 101 exceeds maximum 100"))
   }
 
   @Test
@@ -957,6 +1006,91 @@ internal class DsrDeletionServiceTest {
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
     verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `execute retains the connection limit when the override is off`() {
+    val requestId = UUID.randomUUID()
+    val previewManifest = manifest().copy(connectionIds = (1..101).map { UUID.randomUUID() })
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(previewManifest),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("FAILED", result.status)
+    assertTrue(result.errors.single().contains("connection count 101 exceeds maximum 100"))
+    assertTrue(result.errors.single().contains("Airbyte user ID $userId"))
+    assertTrue(result.errors.single().contains("platform.bypass-dsr-deletion-connection-limit (context kind: user)"))
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+  }
+
+  @Test
+  fun `execute applies the user override to the stored preview manifest`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(userId)) } returns true
+    val requestId = UUID.randomUUID()
+    val previewManifest = manifest().copy(connectionIds = (1..101).map { UUID.randomUUID() })
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(previewManifest),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("FAILED", result.status)
+    assertTrue(result.errors.single().contains("Preview manifest is stale"))
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+  }
+
+  @Test
+  fun `execute applies the user override to the refreshed manifest`() {
+    every { featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, FeatureFlagUser(userId)) } returns true
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    val connectionIds = (1..101).map { UUID.randomUUID() }
+    every { connectionService.listConnectionIdsForWorkspace(workspaceId) } returns connectionIds
+    connectionIds.forEach { connectionId ->
+      every { connectionService.getStandardSync(connectionId) } returns StandardSync().withConnectionId(connectionId)
+    }
+    every { dbPrune.countJobsAndAttemptsByScopes(connectionIds.map { it.toString() }) } returns
+      DbPrune.JobScopeCounts(jobCount = 0L, attemptCount = 0L)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("FAILED", result.status)
+    assertTrue(result.errors.single().contains("Preview manifest is stale"))
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
   }
 
   @Test

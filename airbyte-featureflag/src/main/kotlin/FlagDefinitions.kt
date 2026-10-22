@@ -283,3 +283,10 @@ object EnableBillingNotificationSettings : Temporary<Boolean>(key = "platform.bi
  * Temporary on purpose: the approved list moves to a Stigg entitlement, and this flag is removed with that change.
  */
 object AllowCustomDockerConnectors : Temporary<Boolean>(key = "platform.allow-custom-docker-connectors", default = false)
+
+/**
+ * Bypasses the DSR connection count limit for a targeted Airbyte user UUID. Target the
+ * `user` context kind with the target user's UUID as its key; leave the fallthrough off.
+ * Workspace and organization limits, email protection, and manifest drift checks still apply.
+ */
+object BypassDsrDeletionConnectionLimit : Temporary<Boolean>(key = "platform.bypass-dsr-deletion-connection-limit", default = false)

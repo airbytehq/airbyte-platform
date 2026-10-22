@@ -48,6 +48,7 @@ import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.domain.services.secrets.SecretPersistenceService
+import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DbPrune
 import io.airbyte.test.utils.BaseConfigDatabaseTest
@@ -243,6 +244,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       dsrAuditLogDeletion = dsrAuditLogDeletion,
       objectMapper = objectMapper,
       metricClient = metricClient,
+      featureFlagClient = TestClient(),
       configDatabase = database!!,
       executionHeartbeatExecutor = executionHeartbeatExecutor,
     ) {

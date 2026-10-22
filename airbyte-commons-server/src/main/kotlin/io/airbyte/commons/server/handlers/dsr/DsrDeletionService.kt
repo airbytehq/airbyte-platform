@@ -45,6 +45,9 @@ import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.domain.services.secrets.SecretHydrationContext
 import io.airbyte.domain.services.secrets.SecretPersistenceService
+import io.airbyte.featureflag.BypassDsrDeletionConnectionLimit
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.User
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -104,6 +107,7 @@ open class DsrDeletionService(
   @param:Nullable private val dsrAuditLogDeletion: DsrAuditLogDeletion?,
   private val objectMapper: ObjectMapper,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("configDatabase") configDatabase: Database,
   @param:Value("\${airbyte.dsr-deletion.execution-timeout:PT2H}") private val executionTimeout: Duration = Duration.ofHours(2),
   @Named(AirbyteTaskExecutors.DSR_DELETION_HEARTBEAT) executionHeartbeatExecutor: ExecutorService,
@@ -1095,7 +1099,7 @@ open class DsrDeletionService(
   private fun validateDeletionScope(manifest: DsrManifest) {
     val violations = deletionScopeViolations(manifest)
     if (violations.isNotEmpty()) {
-      throw DsrInvalidConfirmationException("DSR deletion manifest exceeds safety limits: ${violations.joinToString("; ")}.")
+      throw DsrInvalidConfirmationException(deletionScopeError(manifest, violations))
     }
   }
 
@@ -1107,9 +1111,21 @@ open class DsrDeletionService(
     targetEmailValidationError(email)?.let { errors.add(it) }
     val scopeViolations = deletionScopeViolations(manifest)
     if (scopeViolations.isNotEmpty()) {
-      errors.add("DSR deletion manifest exceeds safety limits: ${scopeViolations.joinToString("; ")}.")
+      errors.add(deletionScopeError(manifest, scopeViolations))
     }
     return errors
+  }
+
+  private fun deletionScopeError(
+    manifest: DsrManifest,
+    violations: List<String>,
+  ): String {
+    val message = "DSR deletion manifest exceeds safety limits: ${violations.joinToString("; ")}."
+    if (violations.none { it.startsWith("connection count ") }) {
+      return message
+    }
+    return "$message Add Airbyte user ID ${manifest.userId} to the LaunchDarkly flag ${BypassDsrDeletionConnectionLimit.key} " +
+      "(context kind: user) to bypass the connection limit."
   }
 
   private fun targetEmailValidationError(email: String): String? {
@@ -1124,12 +1140,18 @@ open class DsrDeletionService(
     return null
   }
 
-  private fun deletionScopeViolations(manifest: DsrManifest): List<String> =
-    listOfNotNull(
-      deletionLimitViolation("workspace", manifest.workspaceIds.size, maxWorkspacesPerRequest),
-      deletionLimitViolation("organization", manifest.organizationIds.size, maxOrganizationsPerRequest),
-      deletionLimitViolation("connection", manifest.connectionIds.size, maxConnectionsPerRequest),
-    )
+  private fun deletionScopeViolations(manifest: DsrManifest): List<String> {
+    val violations =
+      listOfNotNull(
+        deletionLimitViolation("workspace", manifest.workspaceIds.size, maxWorkspacesPerRequest),
+        deletionLimitViolation("organization", manifest.organizationIds.size, maxOrganizationsPerRequest),
+      )
+    val connectionViolation = deletionLimitViolation("connection", manifest.connectionIds.size, maxConnectionsPerRequest)
+    if (connectionViolation != null && !featureFlagClient.boolVariation(BypassDsrDeletionConnectionLimit, User(manifest.userId))) {
+      return violations + connectionViolation
+    }
+    return violations
+  }
 
   private fun deletionLimitViolation(
     resourceName: String,
