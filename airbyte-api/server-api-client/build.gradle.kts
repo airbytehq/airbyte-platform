@@ -58,7 +58,7 @@ val genApiClient =
     modelPackage = "io.airbyte.api.client.model.generated"
 
     // Keep in sync with the schemaMappings blocks in server-api/build.gradle.kts (generateApiServer,
-    // genApiServer2, generateApiDocs). An entry missing here still compiles but generates a typed
+    // generateApiDocs). An entry missing here still compiles but generates a typed
     // client model where the server sees JsonNode — a wire mismatch that only surfaces at runtime.
     schemaMappings =
       mapOf(

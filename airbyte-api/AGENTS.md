@@ -45,8 +45,7 @@ it's currently `config.yaml`.
    operation in the spec.
 2. **Build the API modules** — `./gradlew :oss:airbyte-api:build` (the
    aggregator builds every submodule). Codegen runs automatically:
-   - `generateApiServer` — JAX-RS Java interfaces (`server-api`)
-   - `genApiServer2` — Kotlin server interfaces (`server-api`)
+   - `generateApiServer` — Kotlin server interfaces and models (`server-api`)
    - `genApiClient` — Kotlin client classes (`server-api-client`,
      generated from `server-api`'s spec)
    Building only `:oss:airbyte-api:server-api` skips the client — build
@@ -89,7 +88,7 @@ it's currently `config.yaml`.
   them (see `server-api/build.gradle.kts` `airbyte.spotless.excludes`).
   Keeping the YAML diff small makes review tractable.
 - **Avoid polymorphic discriminators** for fields that are wide
-  unions — they currently break `kotlin-server`/`jaxrs-spec` codegen.
+  unions — they currently break `kotlin-server` codegen.
   When you need a polymorphic field, mark it as opaque
   (`JsonNode` via `schemaMappings` in the `build.gradle.kts`) and
   parse it into a sealed class downstream with Jackson
@@ -158,7 +157,7 @@ it's currently `config.yaml`.
 - Codegen task fails on a `schemaMappings` entry → you added a
   schema that needs to be mapped to `JsonNode`. Add it to every
   `schemaMappings` block in **both** build files:
-  `server-api/build.gradle.kts` (server, server2, docs) and
+  `server-api/build.gradle.kts` (generateApiServer, generateApiDocs) and
   `server-api-client/build.gradle.kts` (client). An entry mapped on
   the server side but missing on the client still compiles, yet
   generates a typed client model where the server sees `JsonNode` —

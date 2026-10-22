@@ -31,8 +31,7 @@ airbyte {
 // KSP matches excludedSources against source roots, so list the exact generated roots (a fileTree would be ignored).
 ksp {
   excludedSources.from(
-    layout.buildDirectory.dir("generated/api/server/src/gen/java"),
-    layout.buildDirectory.dir("generated/api/server2/src/main/kotlin"),
+    layout.buildDirectory.dir("generated/api/server/src/main/kotlin"),
     layout.buildDirectory.dir("generated/api/scim-server/src/main/kotlin"),
   )
 }
@@ -51,13 +50,10 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
-  implementation(libs.jakarta.validation.api)
   implementation(libs.jackson.datatype)
   implementation(libs.jackson.databind)
-  implementation(libs.openapi.jackson.databind.nullable)
   implementation(libs.reactor.core)
   implementation(libs.slf4j.api)
-  implementation(libs.swagger.annotations)
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
 
@@ -73,92 +69,9 @@ dependencies {
 val specFile = "$projectDir/src/main/openapi/config.yaml"
 val scimSpecFile = "$projectDir/src/main/openapi/scim.yaml"
 
-val genApiServer =
-  tasks.register<GenerateTask>("generateApiServer") {
-    val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server"
-
-    inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir(serverOutputDir)
-
-    generatorName = "jaxrs-spec"
-    inputSpec = specFile
-    outputDir = serverOutputDir
-    templateDir.set("$projectDir/src/main/resources/templates/jaxrs-spec")
-
-    apiPackage = "io.airbyte.api.generated"
-    invokerPackage = "io.airbyte.api.invoker.generated"
-    modelPackage = "io.airbyte.api.model.generated"
-
-    // Keep the schemaMappings here, in genApiServer2 and generateApiDocs below, and in
-    // server-api-client/build.gradle.kts (genApiClient) in sync — the client is generated
-    // from this module's spec in a separate module.
-    schemaMappings =
-      mapOf(
-        "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
-        "DestinationExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
-        "FusionSearchResponse" to "com.fasterxml.jackson.databind.JsonNode",
-        "FusionSearchStatusResponse" to "com.fasterxml.jackson.databind.JsonNode",
-        "FusionUsageWindow" to "io.airbyte.api.model.FusionUsageWindow",
-        "DestinationExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
-        "SkillDocsResponse" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
-        "DestinationExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
-        "SourceExecuteMeta" to "com.fasterxml.jackson.databind.JsonNode",
-        "DestinationExecuteMeta" to "com.fasterxml.jackson.databind.JsonNode",
-        "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
-        "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-        "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
-        "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
-        "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
-        "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
-        // Polymorphic on `type`; generated as opaque JsonNode and parsed into the
-        // domain sealed class via Jackson @JsonTypeInfo. See config.yaml note —
-        // an OpenAPI discriminator here breaks kotlin-server/jaxrs-spec codegen.
-        "PrivateLinkServiceConfig" to "com.fasterxml.jackson.databind.JsonNode",
-        "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
-        "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
-        "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
-        "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
-        "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
-        "AuditLogDetails" to "com.fasterxml.jackson.databind.JsonNode",
-      )
-
-    generateApiDocumentation = false
-
-    configOptions =
-      mapOf(
-        "dateLibrary" to "java8",
-        "generatePom" to "false",
-        "interfaceOnly" to "true",
-        "hideGenerationTimestamp" to "true",
-            /*
-            JAX-RS generator does not respect nullable properties defined in the OpenApi Spec.
-            It means that if a field is not nullable but not set it is still returning a null value for this field in the serialized json.
-            The below Jackson annotation is made to only keep non null values in serialized json.
-            We are not yet using nullable=true properties in our OpenApi so this is a valid workaround at the moment to circumvent the default JAX-RS behavior described above.
-            Feel free to read the conversation on https://github.com/airbytehq/airbyte/pull/13370 for more details.
-             */
-        "additionalModelTypeAnnotations" to
-          "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
-        // Generate separate classes for each endpoint "domain"
-        "useTags" to "true",
-        "useJakartaEe" to "true",
-      )
-
-    doLast {
-      // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
-      delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
-    }
-  }
-
-// The kotlin-server generator copies an operation into the API interface of every tag it carries,
-// while jaxrs-spec only uses the first tag. Generate the Kotlin flavor from a copy of the spec that
-// keeps only the first tag, so both flavors have the same interfaces and a controller can switch
-// flavors without inheriting operations it does not serve.
+// The kotlin-server generator copies an operation into the API interface of every tag it carries.
+// Generate from a copy of the spec that keeps only the first tag, so each operation belongs to one
+// interface and a controller doesn't inherit operations it does not serve.
 val firstTagSpecFile = layout.buildDirectory.file("openapi/config-first-tag.yaml")
 val genFirstTagSpec =
   tasks.register("genFirstTagSpec") {
@@ -190,9 +103,9 @@ val genFirstTagSpec =
     }
   }
 
-val genApiServer2 =
-  tasks.register<GenerateTask>("genApiServer2") {
-    val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server2"
+val genApiServer =
+  tasks.register<GenerateTask>("generateApiServer") {
+    val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/server"
 
     dependsOn(genFirstTagSpec)
     inputs.file(firstTagSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
@@ -204,8 +117,8 @@ val genApiServer2 =
     // the generator never deletes files, so interfaces dropped from the spec would otherwise linger
     cleanupOutput = true
     // templates/kotlin-server is shared with the SCIM generator. This flag turns on the template
-    // behavior that matches the Java models (empty collection defaults, enum toString), which the
-    // Config API models need while both flavors exist and SCIM does not.
+    // behavior the Config API wire format relies on (empty collection defaults, enum toString), which
+    // SCIM does not use.
     additionalProperties = mapOf("javaModelParity" to true)
     templateDir.set("$projectDir/src/main/resources/templates/kotlin-server")
 
@@ -227,6 +140,9 @@ val genApiServer2 =
         "useJakartaEe" to "true",
       )
 
+    // Keep the schemaMappings here, in generateApiDocs below, and in
+    // server-api-client/build.gradle.kts (genApiClient) in sync — the client is generated
+    // from this module's spec in a separate module.
     schemaMappings =
       mapOf(
         "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
@@ -363,15 +279,9 @@ val genApiDocs =
 
 sourceSets {
   main {
-    java {
-      srcDirs(
-        "${project.layout.buildDirectory.get()}/generated/api/server/src/gen/java",
-        "$projectDir/src/main/java",
-      )
-    }
     kotlin {
       srcDirs(
-        "${project.layout.buildDirectory.get()}/generated/api/server2/src/main/kotlin",
+        "${project.layout.buildDirectory.get()}/generated/api/server/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/api/scim-server/src/main/kotlin",
         "$projectDir/src/main/kotlin",
       )
@@ -382,22 +292,14 @@ sourceSets {
   }
 }
 
-tasks.named("compileJava") {
-  dependsOn(genApiDocs, genApiServer)
-}
-
-tasks.withType<JavaCompile>().configureEach {
-  options.compilerArgs = listOf("-parameters")
-}
-
 tasks.named("compileKotlin") {
-  dependsOn(genApiServer2, genScimApiServer)
+  dependsOn(genApiDocs, genApiServer, genScimApiServer)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
 afterEvaluate {
   tasks.named("kspKotlin").configure {
-    mustRunAfter(genApiDocs, genApiServer, genApiServer2, genScimApiServer)
+    mustRunAfter(genApiDocs, genApiServer, genScimApiServer)
   }
 }
 
