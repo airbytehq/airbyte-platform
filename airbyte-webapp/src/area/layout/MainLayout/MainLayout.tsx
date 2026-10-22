@@ -6,7 +6,6 @@ import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
 import { SideBar } from "area/layout/SideBar";
-import { PlusUpgradePromoBanner } from "cloud/area/billing/components/PlusUpgradePromoBanner";
 import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
 import { AdpOrganizationAccessGuard } from "cloud/components/AdpOrganizationAccessGuard";
 import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
@@ -25,7 +24,6 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
     <ForbiddenErrorBoundary>
       <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
         {isCloudApp && <StatusBanner />}
-        {isCloudApp && <PlusUpgradePromoBanner />}
         {isCloudApp && <AdpOrganizationBanner />}
         {isCloudApp && <AgentsOptInBanner />}
         <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">

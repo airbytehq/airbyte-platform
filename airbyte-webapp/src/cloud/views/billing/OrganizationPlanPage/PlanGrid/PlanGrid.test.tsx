@@ -360,58 +360,6 @@ describe("PlanGrid", () => {
     expect(screen.queryByTestId("pending-plan-change-banner")).not.toBeInTheDocument();
   });
 
-  it("shows the Plus promo credits callout for a Standard org", async () => {
-    mocked(useOrgInfo).mockReturnValue(billingState());
-    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
-
-    await render(<PlanGrid />);
-
-    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by October 21");
-  });
-
-  it.each([
-    ["from the subscription", subscriptionInfo({ name: "Plus", selfServePlan: "plus_500" })],
-    ["from the entitlement plan only", subscriptionInfo(undefined)],
-  ])("hides the Plus promo credits callout for a Plus org resolved %s", async (_label, subscription) => {
-    mocked(useOrgInfo).mockReturnValue(billingState());
-    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
-    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscription);
-
-    await render(<PlanGrid />);
-
-    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
-  });
-
-  it.each([
-    ["Pro", { isProPlan: true }],
-    ["Flex", { isFlexPlan: true }],
-  ])("hides the Plus promo credits callout for a %s org", async (_label, flags) => {
-    mocked(useOrgInfo).mockReturnValue(billingState());
-    mocked(useOrganizationPlan).mockReturnValue(planFlags(flags));
-
-    await render(<PlanGrid />);
-
-    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
-  });
-
-  it("hides the Plus promo credits callout when the org is not subscribed", async () => {
-    mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
-    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
-
-    await render(<PlanGrid />);
-
-    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
-  });
-
-  it("shows the Plus promo credits callout for a Standard Trial org", async () => {
-    mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
-    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardTrialPlan: true, isStiggPlanEnabled: true }));
-
-    await render(<PlanGrid />);
-
-    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by October 21");
-  });
-
   it.each([
     ["Pro", { isProPlan: true }],
     ["Flex", { isFlexPlan: true }],

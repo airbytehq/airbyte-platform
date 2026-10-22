@@ -11,7 +11,6 @@ import { FlexPlanGridCard } from "./FlexPlanGridCard";
 import { PendingPlanChangeBanner } from "./PendingPlanChangeBanner";
 import styles from "./PlanGrid.module.scss";
 import { PlusPlanGridCard } from "./PlusPlanGridCard";
-import { PlusPromoCreditsCallout } from "./PlusPromoCreditsCallout";
 import { ProPlanGridCard } from "./ProPlanGridCard";
 import { StandardPlanGridCard } from "./StandardPlanGridCard";
 import { PricingCalculator } from "../PricingCalculator";
@@ -27,7 +26,7 @@ export const PlanGrid: React.FC = () => {
   const isLockedSubscription = billing?.paymentStatus === "locked";
   const isPlanDowngradeBannerEnabled = useExperiment("billing.plan-downgrade-banner");
 
-  const { isStandardPlan, isStandardTrialPlan, isPlusPlan, isProPlan, isFlexPlan } = useOrganizationPlan();
+  const { isStandardPlan, isPlusPlan, isProPlan, isFlexPlan } = useOrganizationPlan();
 
   const { data: subscription } = useGetOrganizationSubscriptionInfo(organizationId, isSubscribed);
   const cancellationDate = subscription?.cancellationDate;
@@ -48,15 +47,12 @@ export const PlanGrid: React.FC = () => {
     : null;
   const activeTier: PlanTier | null = isSubscribed ? selfServeTier ?? entitlementTier : null;
   const isTopTier = activeTier === "pro" || activeTier === "flex";
-  // Trial orgs are never subscribed, so they have no active tier and are matched on the entitlement plan instead.
-  const showPlusPromo = activeTier === "standard" || (activeTier === null && isStandardTrialPlan);
 
   return (
     <>
       {isPlanDowngradeBannerEnabled && (
         <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
       )}
-      {showPlusPromo && <PlusPromoCreditsCallout />}
       <div className={styles.page}>
         <div className={styles.grid}>
           <StandardPlanGridCard
