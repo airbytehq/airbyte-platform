@@ -403,6 +403,7 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
           }
           xAxisInterval={0}
           xAxisPadding={{ left: 20, right: 20 }}
+          yAxisLabel={formatMessage({ id: "settings.organization.usage.capacity.unit" })}
           chartKey={`${displayedTimeRange}${comparisonReady ? "-comparison" : ""}`}
           chartMargin={{ top: 0, right: 20, left: 0, bottom: 0 }}
           renderTooltipContent={(barColor, comparisonBarColor) =>

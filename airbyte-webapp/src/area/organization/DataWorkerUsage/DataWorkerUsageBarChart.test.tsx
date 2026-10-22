@@ -172,6 +172,24 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
     expect(new Set(mockBar.mock.calls.map(([props]) => props.dataKey))).toEqual(new Set(["maxWorkspaceUsage"]));
   });
 
+  it("renders the y-axis label as a rotated axis title", async () => {
+    await render(
+      <DataWorkerUsageBarChart
+        data={organizationData}
+        xAxisDataKey="formattedDate"
+        barDataKey="maxWorkspaceUsage"
+        yAxisLabel="DW"
+        renderTooltipContent={() => <span>Tooltip</span>}
+      />
+    );
+
+    expect(lastProps(mockYAxis)).toEqual(
+      expect.objectContaining({
+        label: expect.objectContaining({ value: "DW", angle: -90, position: "insideLeft" }),
+      })
+    );
+  });
+
   it("omits the optional capacity line", async () => {
     await render(
       <DataWorkerUsageBarChart

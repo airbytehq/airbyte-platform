@@ -36,6 +36,7 @@ interface MockDataWorkerUsageBarChartProps {
   xAxisTickFormatter?: (value: unknown, index: number) => string;
   xAxisInterval?: number;
   xAxisPadding?: { left?: number; right?: number };
+  yAxisLabel?: string;
   chartKey?: React.Key;
   chartMargin?: { top?: number; right?: number; bottom?: number; left?: number };
   renderTooltipContent: (barColor: string, comparisonBarColor?: string) => React.ReactElement;
@@ -107,6 +108,14 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
 
   afterAll(() => {
     jest.useRealTimers();
+  });
+
+  it("shows the DW unit as the y-axis title", async () => {
+    mockOrganizationUsage = workspaceUsage([{ date: "2026-08-24T19:15:00Z", used: 1 }]);
+
+    await render(<WorkspaceDataWorkerUsageGraph />);
+
+    expect(lastChartProps().yAxisLabel).not.toBe(undefined);
   });
 
   it("defaults to 1W with exactly 168 hourly buckets and clips the date-only response", async () => {

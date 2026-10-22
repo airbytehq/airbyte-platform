@@ -43,6 +43,7 @@ export interface DataWorkerUsageBarChartProps<ChartData extends object> {
   xAxisTickFormatter?: XAxisProps["tickFormatter"];
   xAxisInterval?: XAxisProps["interval"];
   xAxisPadding?: XAxisProps["padding"];
+  yAxisLabel?: YAxisProps["label"];
   yAxisTickFormatter?: YAxisProps["tickFormatter"];
   chartKey?: React.Key;
   chartMargin?: ChartMargin;
@@ -124,6 +125,7 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
   tooltipPosition,
   barSize,
   referenceLine,
+  yAxisLabel,
 }: DataWorkerUsageBarChartProps<ChartData>) => {
   const [colorMap, setColorMap] = useState<ColorMap>({
     gridLine: "",
@@ -174,6 +176,16 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
             allowDecimals={false}
             tickMargin={10}
             stroke={colorMap.tickColor}
+            label={
+              yAxisLabel && {
+                value: yAxisLabel,
+                angle: -90,
+                position: "insideLeft",
+                offset: 10,
+                fill: colorMap.tickColor,
+                fontSize: 12,
+              }
+            }
           />
           <Tooltip
             wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}

@@ -268,7 +268,7 @@ export const UsageByWorkspaceGraph = ({
           )
         }
         xAxisInterval={0}
-        yAxisTickFormatter={(value) => formatMessage({ id: "settings.organization.usage.graph.yAxisTick" }, { value })}
+        yAxisLabel={formatMessage({ id: "settings.organization.usage.capacity.unit" })}
         renderTooltipContent={(barColor, comparisonBarColor) =>
           comparisonReady ? (
             <GraphTooltip

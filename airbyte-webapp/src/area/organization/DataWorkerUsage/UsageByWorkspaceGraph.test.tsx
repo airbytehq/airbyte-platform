@@ -179,6 +179,12 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     );
   });
 
+  it("shows the y-label unit once as the y-axis title", async () => {
+    await renderGraph("1w");
+
+    expect(lastChartProps().yAxisLabel).not.toBe(undefined);
+  });
+
   it("renders the 1W range with 168 hourly bars and daily ticks", async () => {
     await renderGraph("1w");
 
