@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.server.generated.models.ActorCatalogWithUpdatedAt
-import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.api.server.generated.models.ActorType
@@ -90,8 +89,6 @@ import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
-import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
-import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
 
 /**
  * SourceHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -377,11 +374,11 @@ class SourceHandler
 
       // Parse sort key to extract field and direction
       val sortKeyInfo =
-        parseSortKey(actorListCursorPaginatedRequestBody.sortKey?.let { JavaActorListSortKey.fromValue(it.value) }, ActorType.SOURCE)
+        parseSortKey(actorListCursorPaginatedRequestBody.sortKey, ActorType.SOURCE)
       val internalSortKey = sortKeyInfo.sortKey
       val ascending = sortKeyInfo.ascending
       // airbyte-data still takes the Java filter model
-      val actorFilters = buildFilters(Jsons.convertValue(filters, JavaActorListFilters::class.java))
+      val actorFilters = buildFilters(filters)
 
       val cursorPagination =
         sourceService.buildCursorPagination(
@@ -835,12 +832,10 @@ class SourceHandler
           sourceConnection.sourceId,
         )
 
-      // the helper and converters still build the Java models
       val breakingChanges =
         actorDefinitionHandlerHelper
           .getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion)
           .orElse(null)
-          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.workspaceId)
       val isEntitled =

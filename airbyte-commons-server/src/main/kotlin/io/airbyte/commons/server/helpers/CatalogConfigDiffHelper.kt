@@ -7,21 +7,19 @@ package io.airbyte.commons.server.helpers
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.AirbyteCatalogDiff
-import io.airbyte.api.model.generated.CatalogConfigDiff
-import io.airbyte.api.model.generated.StreamCursorFieldDiff
-import io.airbyte.api.model.generated.StreamFieldStatusChanged
-import io.airbyte.api.model.generated.StreamPrimaryKeyDiff
-import io.airbyte.api.model.generated.StreamSyncModeDiff
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.AirbyteCatalogDiff
 import io.airbyte.api.server.generated.models.AirbyteStream
 import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
 import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.CatalogConfigDiff
 import io.airbyte.api.server.generated.models.CatalogDiff
+import io.airbyte.api.server.generated.models.StreamCursorFieldDiff
 import io.airbyte.api.server.generated.models.StreamDescriptor
-import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
+import io.airbyte.api.server.generated.models.StreamFieldStatusChanged
+import io.airbyte.api.server.generated.models.StreamPrimaryKeyDiff
+import io.airbyte.api.server.generated.models.StreamSyncModeDiff
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
@@ -70,16 +68,7 @@ class CatalogConfigDiffHelper {
     oldConfig: AirbyteCatalog,
     newConfig: AirbyteCatalog,
   ): CatalogConfigDiff {
-    val catalogConfigDiff =
-      CatalogConfigDiff().apply {
-        this.streamsEnabled = mutableListOf<StreamFieldStatusChanged>()
-        this.streamsDisabled = mutableListOf<StreamFieldStatusChanged>()
-        this.fieldsEnabled = mutableListOf<StreamFieldStatusChanged>()
-        this.fieldsDisabled = mutableListOf<StreamFieldStatusChanged>()
-        this.primaryKeysChanged = mutableListOf<StreamPrimaryKeyDiff>()
-        this.cursorFieldsChanged = mutableListOf<StreamCursorFieldDiff>()
-        this.syncModesChanged = mutableListOf<StreamSyncModeDiff>()
-      }
+    val catalogConfigDiff = CatalogConfigDiffBuilder()
 
     // Convert catalogs to maps with StreamDescriptor as key
     val oldStreamMap = streamDescriptorToMap(oldConfig)
@@ -93,17 +82,17 @@ class CatalogConfigDiffHelper {
       val newStream = newStreamMap[streamKey] ?: return@forEach
       if (newStream.config!!.selected == true) {
         catalogConfigDiff.streamsEnabled.add(
-          StreamFieldStatusChanged().apply {
-            this.streamName = newStream.stream!!.name
-            this.streamNamespace = newStream.stream!!.namespace
-            this.status = StreamFieldStatusChanged.StatusEnum.ENABLED
+          StreamFieldStatusChanged(
+            streamName = newStream.stream!!.name,
+            streamNamespace = newStream.stream!!.namespace,
+            status = StreamFieldStatusChanged.Status.ENABLED,
             // Note: if all fields are selected, fieldSelectionEnabled will be false and selectedFields will be empty
-            this.fields =
+            fields =
               newStream.config!!
                 .selectedFields
                 ?.takeIf { it.isNotEmpty() }
-                ?.mapNotNull { it.fieldPath?.firstOrNull()?.toString() }
-          },
+                ?.mapNotNull { it.fieldPath?.firstOrNull()?.toString() },
+          ),
         )
       }
     }
@@ -121,7 +110,7 @@ class CatalogConfigDiffHelper {
         )
       }
     }
-    return catalogConfigDiff
+    return catalogConfigDiff.build()
   }
 
   private fun streamDescriptorToMap(catalog: AirbyteCatalog): Map<StreamDescriptor, AirbyteStreamAndConfiguration> =
@@ -132,11 +121,11 @@ class CatalogConfigDiffHelper {
   private fun AirbyteStream.toStreamDescriptor(): StreamDescriptor =
     StreamDescriptor(name = this@toStreamDescriptor.name, namespace = this@toStreamDescriptor.namespace)
 
-  fun compareStreamConfigs(
+  private fun compareStreamConfigs(
     stream: AirbyteStream,
     oldConfig: AirbyteStreamConfiguration,
     newConfig: AirbyteStreamConfiguration,
-    catalogConfigDiff: CatalogConfigDiff,
+    catalogConfigDiff: CatalogConfigDiffBuilder,
   ) {
     val streamDescriptor = stream.toStreamDescriptor()
     // Compare stream enablement status
@@ -148,11 +137,11 @@ class CatalogConfigDiffHelper {
     // Stream was enabled and is now disabled
     if (streamWasEnabled == true && streamIsEnabled == false) {
       val streamFieldStatusChanged =
-        StreamFieldStatusChanged().apply {
-          this.streamName = streamDescriptor.name
-          this.streamNamespace = streamDescriptor.namespace
-          this.status = StreamFieldStatusChanged.StatusEnum.DISABLED
-        }
+        StreamFieldStatusChanged(
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          status = StreamFieldStatusChanged.Status.DISABLED,
+        )
       catalogConfigDiff.streamsDisabled.add(streamFieldStatusChanged)
     }
     // Stream is still enabled, further compare field selection changes
@@ -171,12 +160,12 @@ class CatalogConfigDiffHelper {
     if (!(oldConfig.primaryKey.isNullOrEmpty() && newConfig.primaryKey.isNullOrEmpty())) {
       if (!arePrimaryKeysEqual(oldConfig.primaryKey.orEmpty(), newConfig.primaryKey.orEmpty())) {
         catalogConfigDiff.primaryKeysChanged.add(
-          StreamPrimaryKeyDiff().apply {
-            this.streamName = streamDescriptor.name
-            this.streamNamespace = streamDescriptor.namespace
-            this.current = newConfig.primaryKey
-            this.prev = oldConfig.primaryKey
-          },
+          StreamPrimaryKeyDiff(
+            streamName = streamDescriptor.name,
+            streamNamespace = streamDescriptor.namespace,
+            current = newConfig.primaryKey,
+            prev = oldConfig.primaryKey,
+          ),
         )
       }
     }
@@ -187,12 +176,12 @@ class CatalogConfigDiffHelper {
       oldConfig.cursorField != newConfig.cursorField
     ) {
       catalogConfigDiff.cursorFieldsChanged.add(
-        StreamCursorFieldDiff().apply {
-          this.streamName = streamDescriptor.name
-          this.streamNamespace = streamDescriptor.namespace
-          this.current = newConfig.cursorField
-          this.prev = oldConfig.cursorField
-        },
+        StreamCursorFieldDiff(
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          current = newConfig.cursorField,
+          prev = oldConfig.cursorField,
+        ),
       )
     }
 
@@ -200,15 +189,14 @@ class CatalogConfigDiffHelper {
     // syncMode and destinationSyncMode are required fields
     if (oldConfig.syncMode != newConfig.syncMode || oldConfig.destinationSyncMode != newConfig.destinationSyncMode) {
       catalogConfigDiff.syncModesChanged.add(
-        StreamSyncModeDiff().apply {
-          this.streamName = streamDescriptor.name
-          this.streamNamespace = streamDescriptor.namespace
-          // the config diff is persisted in timeline events and stays on the Java models
-          this.currentDestinationSyncMode = newConfig.destinationSyncMode.convertTo<io.airbyte.api.model.generated.DestinationSyncMode>()
-          this.currentSourceSyncMode = newConfig.syncMode.convertTo<io.airbyte.api.model.generated.SyncMode>()
-          this.prevDestinationSyncMode = oldConfig.destinationSyncMode.convertTo<io.airbyte.api.model.generated.DestinationSyncMode>()
-          this.prevSourceSyncMode = oldConfig.syncMode.convertTo<io.airbyte.api.model.generated.SyncMode>()
-        },
+        StreamSyncModeDiff(
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          currentDestinationSyncMode = newConfig.destinationSyncMode,
+          currentSourceSyncMode = newConfig.syncMode,
+          prevDestinationSyncMode = oldConfig.destinationSyncMode,
+          prevSourceSyncMode = oldConfig.syncMode,
+        ),
       )
     }
   }
@@ -227,7 +215,7 @@ class CatalogConfigDiffHelper {
     newSelectedFields: List<String>?,
     allFields: Set<String>,
     streamDescriptor: StreamDescriptor,
-    catalogConfigDiff: CatalogConfigDiff,
+    catalogConfigDiff: CatalogConfigDiffBuilder,
   ) {
     val prevSelectedFieldsSet = prevSelectedFields?.toSet() ?: emptySet()
     val newSelectedFieldsSet = newSelectedFields?.toSet() ?: emptySet()
@@ -240,23 +228,23 @@ class CatalogConfigDiffHelper {
     // case 1: deselect a few fields from ALL fields
     if (prevSelectedFieldsSet.isEmpty() && newSelectedFieldsSet.isNotEmpty()) {
       catalogConfigDiff.fieldsDisabled.add(
-        StreamFieldStatusChanged().apply {
-          this.streamName = streamDescriptor.name
-          this.streamNamespace = streamDescriptor.namespace
-          this.status = StreamFieldStatusChanged.StatusEnum.DISABLED
-          this.fields = (allFields - newSelectedFieldsSet).toList()
-        },
+        StreamFieldStatusChanged(
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          status = StreamFieldStatusChanged.Status.DISABLED,
+          fields = (allFields - newSelectedFieldsSet).toList(),
+        ),
       )
     }
     // case 2: select more fields to enable ALL
     if (prevSelectedFieldsSet.isNotEmpty() && newSelectedFieldsSet.isEmpty()) {
       catalogConfigDiff.fieldsEnabled.add(
-        StreamFieldStatusChanged().apply {
-          this.streamName = streamDescriptor.name
-          this.streamNamespace = streamDescriptor.namespace
-          this.status = StreamFieldStatusChanged.StatusEnum.ENABLED
-          this.fields = (allFields - prevSelectedFieldsSet).toList()
-        },
+        StreamFieldStatusChanged(
+          streamName = streamDescriptor.name,
+          streamNamespace = streamDescriptor.namespace,
+          status = StreamFieldStatusChanged.Status.ENABLED,
+          fields = (allFields - prevSelectedFieldsSet).toList(),
+        ),
       )
     }
     if (prevSelectedFieldsSet.isNotEmpty() && newSelectedFieldsSet.isNotEmpty()) {
@@ -264,24 +252,24 @@ class CatalogConfigDiffHelper {
       val disabledFields = prevSelectedFieldsSet - newSelectedFieldsSet
       if (disabledFields.isNotEmpty()) {
         catalogConfigDiff.fieldsDisabled.add(
-          StreamFieldStatusChanged().apply {
-            this.streamName = streamDescriptor.name
-            this.streamNamespace = streamDescriptor.namespace
-            this.status = StreamFieldStatusChanged.StatusEnum.DISABLED
-            this.fields = disabledFields.toList()
-          },
+          StreamFieldStatusChanged(
+            streamName = streamDescriptor.name,
+            streamNamespace = streamDescriptor.namespace,
+            status = StreamFieldStatusChanged.Status.DISABLED,
+            fields = disabledFields.toList(),
+          ),
         )
       }
       // case 4: select more fields but not all
       val enabledFields = newSelectedFieldsSet - prevSelectedFieldsSet
       if (enabledFields.isNotEmpty()) {
         catalogConfigDiff.fieldsEnabled.add(
-          StreamFieldStatusChanged().apply {
-            this.streamName = streamDescriptor.name
-            this.streamNamespace = streamDescriptor.namespace
-            this.status = StreamFieldStatusChanged.StatusEnum.ENABLED
-            this.fields = enabledFields.toList()
-          },
+          StreamFieldStatusChanged(
+            streamName = streamDescriptor.name,
+            streamNamespace = streamDescriptor.namespace,
+            status = StreamFieldStatusChanged.Status.ENABLED,
+            fields = enabledFields.toList(),
+          ),
         )
       }
     }
@@ -294,11 +282,7 @@ class CatalogConfigDiffHelper {
     if (catalogDiff?.transforms.isNullOrEmpty() && (catalogConfigDiff == null || isCatalogConfigDiffEmpty(catalogConfigDiff))) {
       return null
     }
-    return AirbyteCatalogDiff().apply {
-      // the catalog diff is persisted in timeline events and stays on the Java models
-      this.catalogDiff = catalogDiff?.let { Jsons.convertValue(it, io.airbyte.api.model.generated.CatalogDiff::class.java) }
-      this.catalogConfigDiff = catalogConfigDiff
-    }
+    return AirbyteCatalogDiff(catalogDiff = catalogDiff, catalogConfigDiff = catalogConfigDiff)
   }
 
   private fun isCatalogConfigDiffEmpty(catalogConfigDiff: CatalogConfigDiff): Boolean =
@@ -309,4 +293,26 @@ class CatalogConfigDiffHelper {
       catalogConfigDiff.primaryKeysChanged.isNullOrEmpty() &&
       catalogConfigDiff.cursorFieldsChanged.isNullOrEmpty() &&
       catalogConfigDiff.syncModesChanged.isNullOrEmpty()
+}
+
+/** Collects the changes as [CatalogConfigDiffHelper] walks the streams, then builds the immutable diff. */
+private class CatalogConfigDiffBuilder {
+  val streamsEnabled = mutableListOf<StreamFieldStatusChanged>()
+  val streamsDisabled = mutableListOf<StreamFieldStatusChanged>()
+  val fieldsEnabled = mutableListOf<StreamFieldStatusChanged>()
+  val fieldsDisabled = mutableListOf<StreamFieldStatusChanged>()
+  val primaryKeysChanged = mutableListOf<StreamPrimaryKeyDiff>()
+  val cursorFieldsChanged = mutableListOf<StreamCursorFieldDiff>()
+  val syncModesChanged = mutableListOf<StreamSyncModeDiff>()
+
+  fun build(): CatalogConfigDiff =
+    CatalogConfigDiff(
+      streamsEnabled = streamsEnabled,
+      streamsDisabled = streamsDisabled,
+      fieldsEnabled = fieldsEnabled,
+      fieldsDisabled = fieldsDisabled,
+      primaryKeysChanged = primaryKeysChanged,
+      cursorFieldsChanged = cursorFieldsChanged,
+      syncModesChanged = syncModesChanged,
+    )
 }

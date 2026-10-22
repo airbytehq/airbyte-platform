@@ -4,15 +4,14 @@
 
 package io.airbyte.data.services.shared
 
-import io.airbyte.api.model.generated.ActorListFilters
-import io.airbyte.api.model.generated.ActorListSortKey
+import io.airbyte.api.server.generated.models.ActorListFilters
+import io.airbyte.api.server.generated.models.ActorListSortKey
 import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.api.server.generated.models.ActorType
 import io.airbyte.api.server.generated.models.WebBackendConnectionListFilters
 import io.airbyte.api.server.generated.models.WebBackendConnectionListSortKey
 import io.airbyte.commons.annotation.InternalForTesting
 import java.util.UUID
-import java.util.stream.Collectors
 
 const val DEFAULT_PAGE_SIZE = 20
 
@@ -270,14 +269,7 @@ fun buildFilters(filters: ActorListFilters?): Filters? {
     null,
     null,
     null,
-    if (filters.states == null) {
-      null
-    } else {
-      filters.states
-        .stream()
-        .map { apiState: io.airbyte.api.model.generated.ActorStatus -> ActorStatus.valueOf(apiState.name) }
-        .collect(Collectors.toList())
-    },
+    filters.states,
     null,
   )
 }

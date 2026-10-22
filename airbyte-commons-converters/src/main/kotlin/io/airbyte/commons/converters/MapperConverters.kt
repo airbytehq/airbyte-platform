@@ -4,22 +4,20 @@
 
 package io.airbyte.commons.converters
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.exc.InvalidNullException
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
-import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
-import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
-import io.airbyte.api.model.generated.FieldFilteringMapperConfiguration
-import io.airbyte.api.model.generated.FieldRenamingMapperConfiguration
-import io.airbyte.api.model.generated.HashingMapperConfiguration
-import io.airbyte.api.model.generated.HashingMapperConfiguration.MethodEnum
-import io.airbyte.api.model.generated.RowFilteringMapperConfiguration
-import io.airbyte.api.model.generated.RowFilteringOperation
-import io.airbyte.api.model.generated.RowFilteringOperationEqual
-import io.airbyte.api.model.generated.RowFilteringOperationType
 import io.airbyte.api.problems.model.generated.ProblemMapperIdData
 import io.airbyte.api.problems.throwable.generated.MapperValidationInvalidConfigProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationMissingRequiredParamProblem
 import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.EncryptionMapperAESConfiguration.Mode
+import io.airbyte.api.server.generated.models.EncryptionMapperAESConfiguration.Padding
+import io.airbyte.api.server.generated.models.EncryptionMapperAlgorithm
+import io.airbyte.api.server.generated.models.FieldFilteringMapperConfiguration
+import io.airbyte.api.server.generated.models.FieldRenamingMapperConfiguration
+import io.airbyte.api.server.generated.models.HashingMapperConfiguration
+import io.airbyte.api.server.generated.models.RowFilteringOperationType
 import io.airbyte.api.server.generated.models.StreamMapperType
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
@@ -50,26 +48,62 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val mapperLog = KotlinLogging.logger {}
 
-private fun MethodEnum.toInternal(): HashingMethods =
+// Mapper configurations travel as JSON. The generated models can't represent two of them: the
+// RowFilteringOperation oneOf generates as Any, and the encryption configurations require a
+// fieldNameSuffix that stored configurations may omit. These mirror the JSON the API has always
+// sent and accepted.
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+private data class RowFilteringOperationJson(
+  val type: RowFilteringOperationType? = null,
+  val fieldName: String? = null,
+  val comparisonValue: String? = null,
+  val conditions: List<RowFilteringOperationJson> = emptyList(),
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+private data class RowFilteringMapperConfigurationJson(
+  val conditions: RowFilteringOperationJson? = null,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+private data class EncryptionMapperAESConfigurationJson(
+  val algorithm: EncryptionMapperAlgorithm? = null,
+  val fieldNameSuffix: String? = null,
+  val key: String? = null,
+  val mode: Mode? = null,
+  val padding: Padding? = null,
+  val targetField: String? = null,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+private data class EncryptionMapperRSAConfigurationJson(
+  val algorithm: EncryptionMapperAlgorithm? = null,
+  val fieldNameSuffix: String? = null,
+  val publicKey: String? = null,
+  val targetField: String? = null,
+)
+
+private fun HashingMapperConfiguration.Method.toInternal(): HashingMethods =
   when (this) {
-    MethodEnum.MD2 -> HashingMethods.MD2
-    MethodEnum.MD5 -> HashingMethods.MD5
-    MethodEnum.SHA_1 -> HashingMethods.SHA1
-    MethodEnum.SHA_224 -> HashingMethods.SHA224
-    MethodEnum.SHA_256 -> HashingMethods.SHA256
-    MethodEnum.SHA_384 -> HashingMethods.SHA384
-    MethodEnum.SHA_512 -> HashingMethods.SHA512
+    HashingMapperConfiguration.Method.MD2 -> HashingMethods.MD2
+    HashingMapperConfiguration.Method.MD5 -> HashingMethods.MD5
+    HashingMapperConfiguration.Method.SHA_MINUS1 -> HashingMethods.SHA1
+    HashingMapperConfiguration.Method.SHA_MINUS224 -> HashingMethods.SHA224
+    HashingMapperConfiguration.Method.SHA_MINUS256 -> HashingMethods.SHA256
+    HashingMapperConfiguration.Method.SHA_MINUS384 -> HashingMethods.SHA384
+    HashingMapperConfiguration.Method.SHA_MINUS512 -> HashingMethods.SHA512
   }
 
-private fun HashingMethods.toApi(): MethodEnum =
+private fun HashingMethods.toApi(): HashingMapperConfiguration.Method =
   when (this) {
-    HashingMethods.MD2 -> MethodEnum.MD2
-    HashingMethods.MD5 -> MethodEnum.MD5
-    HashingMethods.SHA1 -> MethodEnum.SHA_1
-    HashingMethods.SHA224 -> MethodEnum.SHA_224
-    HashingMethods.SHA256 -> MethodEnum.SHA_256
-    HashingMethods.SHA384 -> MethodEnum.SHA_384
-    HashingMethods.SHA512 -> MethodEnum.SHA_512
+    HashingMethods.MD2 -> HashingMapperConfiguration.Method.MD2
+    HashingMethods.MD5 -> HashingMapperConfiguration.Method.MD5
+    HashingMethods.SHA1 -> HashingMapperConfiguration.Method.SHA_MINUS1
+    HashingMethods.SHA224 -> HashingMapperConfiguration.Method.SHA_MINUS224
+    HashingMethods.SHA256 -> HashingMapperConfiguration.Method.SHA_MINUS256
+    HashingMethods.SHA384 -> HashingMapperConfiguration.Method.SHA_MINUS384
+    HashingMethods.SHA512 -> HashingMapperConfiguration.Method.SHA_MINUS512
   }
 
 private fun HashingMapperConfiguration.toInternal(): HashingConfig =
@@ -90,48 +124,49 @@ private fun FieldRenamingMapperConfiguration.toInternal(): FieldRenamingConfig =
     newFieldName = this.newFieldName,
   )
 
-private fun EncryptionMapperAESConfiguration.ModeEnum.toInternal(): AesMode =
+private fun Mode.toInternal(): AesMode =
   when (this) {
-    EncryptionMapperAESConfiguration.ModeEnum.CBC -> AesMode.CBC
-    EncryptionMapperAESConfiguration.ModeEnum.CFB -> AesMode.CFB
-    EncryptionMapperAESConfiguration.ModeEnum.CTR -> AesMode.CTR
-    EncryptionMapperAESConfiguration.ModeEnum.ECB -> AesMode.ECB
-    EncryptionMapperAESConfiguration.ModeEnum.GCM -> AesMode.GCM
-    EncryptionMapperAESConfiguration.ModeEnum.OFB -> AesMode.OFB
+    Mode.CBC -> AesMode.CBC
+    Mode.CFB -> AesMode.CFB
+    Mode.CTR -> AesMode.CTR
+    Mode.ECB -> AesMode.ECB
+    Mode.GCM -> AesMode.GCM
+    Mode.OFB -> AesMode.OFB
   }
 
-private fun EncryptionMapperAESConfiguration.PaddingEnum.toInternal(): AesPadding =
+private fun Padding.toInternal(): AesPadding =
   when (this) {
-    EncryptionMapperAESConfiguration.PaddingEnum.PKCS5_PADDING -> AesPadding.PKCS5Padding
-    EncryptionMapperAESConfiguration.PaddingEnum.NO_PADDING -> AesPadding.NoPadding
+    Padding.PKCS5_PADDING -> AesPadding.PKCS5Padding
+    Padding.NO_PADDING -> AesPadding.NoPadding
   }
 
-private fun EncryptionMapperAESConfiguration.toInternal(): EncryptionConfig =
+// a missing required field surfaces as a NullPointerException, reported as a missing parameter
+private fun EncryptionMapperAESConfigurationJson.toInternal(): EncryptionConfig =
   AesEncryptionConfig(
     algorithm = ALGO_AES,
-    key = AirbyteSecret.Hydrated(this.key),
-    targetField = this.targetField,
+    key = AirbyteSecret.Hydrated(this.key!!),
+    targetField = this.targetField!!,
     fieldNameSuffix = this.fieldNameSuffix,
-    mode = this.mode.toInternal(),
-    padding = this.padding.toInternal(),
+    mode = this.mode!!.toInternal(),
+    padding = this.padding!!.toInternal(),
   )
 
-private fun EncryptionMapperRSAConfiguration.toInternal(): EncryptionConfig =
+private fun EncryptionMapperRSAConfigurationJson.toInternal(): EncryptionConfig =
   RsaEncryptionConfig(
     algorithm = ALGO_RSA,
-    publicKey = this.publicKey,
-    targetField = this.targetField,
+    publicKey = this.publicKey!!,
+    targetField = this.targetField!!,
     fieldNameSuffix = this.fieldNameSuffix,
   )
 
 private fun operationJsonToInternal(operationJson: ObjectNode): Operation =
   when (val type = operationJson.get("type")!!.textValue()) {
     RowFilteringOperationType.EQUAL.toString() -> {
-      val apiOperation = Jsons.convertValue(operationJson, RowFilteringOperationEqual::class.java)
+      val apiOperation = Jsons.convertValue(operationJson, RowFilteringOperationJson::class.java)
       EqualOperation(
         type = "EQUAL",
-        fieldName = apiOperation.fieldName,
-        comparisonValue = apiOperation.comparisonValue,
+        fieldName = apiOperation.fieldName!!,
+        comparisonValue = apiOperation.comparisonValue!!,
       )
     }
     RowFilteringOperationType.NOT.toString() -> {
@@ -190,11 +225,11 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
         val config =
           when (val encAlgo = this.mapperConfiguration.get("algorithm")!!.textValue()) {
             EncryptionMapperAlgorithm.AES.toString() -> {
-              Jsons.convertValue(this.mapperConfiguration, EncryptionMapperAESConfiguration::class.java).toInternal()
+              Jsons.convertValue(this.mapperConfiguration, EncryptionMapperAESConfigurationJson::class.java).toInternal()
             }
 
             EncryptionMapperAlgorithm.RSA.toString() -> {
-              Jsons.convertValue(this.mapperConfiguration, EncryptionMapperRSAConfiguration::class.java).toInternal()
+              Jsons.convertValue(this.mapperConfiguration, EncryptionMapperRSAConfigurationJson::class.java).toInternal()
             }
 
             else -> throw IllegalArgumentException("Unsupported encryption algorithm: $encAlgo")
@@ -208,6 +243,15 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
       }
     }
   } catch (e: IllegalArgumentException) {
+    // a generated model rejects a missing required field while it's built, rather than with a null check later
+    if (e.cause is InvalidNullException) {
+      mapperLog.error(e) { "Missing required configuration for mapper ${this.id}" }
+      throw MapperValidationMissingRequiredParamProblem(
+        ProblemMapperIdData()
+          .mapperId(this.id)
+          .mapperType(this.type.toString()),
+      )
+    }
     mapperLog.error(e) { "Invalid mapper configuration for mapper ${this.id}" }
     throw MapperValidationInvalidConfigProblem(
       ProblemMapperIdData()
@@ -229,10 +273,11 @@ private fun HashingMapperConfig.toApi(): ConfiguredStreamMapper =
     type = StreamMapperType.HASHING,
     mapperConfiguration =
       Jsons.jsonNode(
-        HashingMapperConfiguration()
-          .method(this.config.method.toApi())
-          .fieldNameSuffix(this.config.fieldNameSuffix)
-          .targetField(this.config.targetField),
+        HashingMapperConfiguration(
+          method = this.config.method.toApi(),
+          fieldNameSuffix = this.config.fieldNameSuffix,
+          targetField = this.config.targetField,
+        ),
       ),
   )
 
@@ -242,7 +287,7 @@ private fun FieldFilteringMapperConfig.toApi(): ConfiguredStreamMapper =
     type = StreamMapperType.FIELD_MINUS_FILTERING,
     mapperConfiguration =
       Jsons.jsonNode(
-        FieldFilteringMapperConfiguration().targetField(this.config.targetField),
+        FieldFilteringMapperConfiguration(targetField = this.config.targetField),
       ),
   )
 
@@ -252,23 +297,26 @@ private fun FieldRenamingMapperConfig.toApi(): ConfiguredStreamMapper =
     type = StreamMapperType.FIELD_MINUS_RENAMING,
     mapperConfiguration =
       Jsons.jsonNode(
-        FieldRenamingMapperConfiguration()
-          .originalFieldName(this.config.originalFieldName)
-          .newFieldName(this.config.newFieldName),
+        FieldRenamingMapperConfiguration(
+          originalFieldName = this.config.originalFieldName,
+          newFieldName = this.config.newFieldName,
+        ),
       ),
   )
 
-private fun Operation.toApi(): RowFilteringOperation =
+private fun Operation.toApi(): RowFilteringOperationJson =
   when (this) {
     is EqualOperation ->
-      RowFilteringOperation()
-        .type(RowFilteringOperationType.EQUAL)
-        .fieldName(this.fieldName)
-        .comparisonValue(this.comparisonValue)
+      RowFilteringOperationJson(
+        type = RowFilteringOperationType.EQUAL,
+        fieldName = this.fieldName,
+        comparisonValue = this.comparisonValue,
+      )
     is NotOperation ->
-      RowFilteringOperation()
-        .type(RowFilteringOperationType.NOT)
-        .conditions(this.conditions.map { it.toApi() })
+      RowFilteringOperationJson(
+        type = RowFilteringOperationType.NOT,
+        conditions = this.conditions.map { it.toApi() },
+      )
     else -> throw IllegalArgumentException("Unsupported operation type: ${this.type}")
   }
 
@@ -278,25 +326,24 @@ private fun RowFilteringMapperConfig.toApi(): ConfiguredStreamMapper =
     type = StreamMapperType.ROW_MINUS_FILTERING,
     mapperConfiguration =
       Jsons.jsonNode(
-        RowFilteringMapperConfiguration()
-          .conditions(this.config.conditions.toApi()),
+        RowFilteringMapperConfigurationJson(conditions = this.config.conditions.toApi()),
       ),
   )
 
-private fun AesMode.toApi(): EncryptionMapperAESConfiguration.ModeEnum =
+private fun AesMode.toApi(): Mode =
   when (this) {
-    AesMode.CBC -> EncryptionMapperAESConfiguration.ModeEnum.CBC
-    AesMode.CFB -> EncryptionMapperAESConfiguration.ModeEnum.CFB
-    AesMode.CTR -> EncryptionMapperAESConfiguration.ModeEnum.CTR
-    AesMode.ECB -> EncryptionMapperAESConfiguration.ModeEnum.ECB
-    AesMode.GCM -> EncryptionMapperAESConfiguration.ModeEnum.GCM
-    AesMode.OFB -> EncryptionMapperAESConfiguration.ModeEnum.OFB
+    AesMode.CBC -> Mode.CBC
+    AesMode.CFB -> Mode.CFB
+    AesMode.CTR -> Mode.CTR
+    AesMode.ECB -> Mode.ECB
+    AesMode.GCM -> Mode.GCM
+    AesMode.OFB -> Mode.OFB
   }
 
-private fun AesPadding.toApi(): EncryptionMapperAESConfiguration.PaddingEnum =
+private fun AesPadding.toApi(): Padding =
   when (this) {
-    AesPadding.PKCS5Padding -> EncryptionMapperAESConfiguration.PaddingEnum.PKCS5_PADDING
-    AesPadding.NoPadding -> EncryptionMapperAESConfiguration.PaddingEnum.NO_PADDING
+    AesPadding.PKCS5Padding -> Padding.PKCS5_PADDING
+    AesPadding.NoPadding -> Padding.NO_PADDING
   }
 
 private fun AirbyteSecret.toApi(): String =
@@ -305,21 +352,23 @@ private fun AirbyteSecret.toApi(): String =
     is AirbyteSecret.Reference -> AirbyteSecretConstants.SECRETS_MASK
   }
 
-private fun AesEncryptionConfig.toApi(): EncryptionMapperAESConfiguration =
-  EncryptionMapperAESConfiguration()
-    .algorithm(EncryptionMapperAlgorithm.AES)
-    .key(this.key.toApi())
-    .targetField(this.targetField)
-    .fieldNameSuffix(this.fieldNameSuffix)
-    .mode(this.mode.toApi())
-    .padding(this.padding.toApi())
+private fun AesEncryptionConfig.toApi(): EncryptionMapperAESConfigurationJson =
+  EncryptionMapperAESConfigurationJson(
+    algorithm = EncryptionMapperAlgorithm.AES,
+    key = this.key.toApi(),
+    targetField = this.targetField,
+    fieldNameSuffix = this.fieldNameSuffix,
+    mode = this.mode.toApi(),
+    padding = this.padding.toApi(),
+  )
 
-private fun RsaEncryptionConfig.toApi(): EncryptionMapperRSAConfiguration =
-  EncryptionMapperRSAConfiguration()
-    .algorithm(EncryptionMapperAlgorithm.RSA)
-    .publicKey(this.publicKey)
-    .targetField(this.targetField)
-    .fieldNameSuffix(this.fieldNameSuffix)
+private fun RsaEncryptionConfig.toApi(): EncryptionMapperRSAConfigurationJson =
+  EncryptionMapperRSAConfigurationJson(
+    algorithm = EncryptionMapperAlgorithm.RSA,
+    publicKey = this.publicKey,
+    targetField = this.targetField,
+    fieldNameSuffix = this.fieldNameSuffix,
+  )
 
 private fun EncryptionMapperConfig.toApi(): ConfiguredStreamMapper {
   val config =

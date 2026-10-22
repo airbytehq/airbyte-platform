@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.api.model.generated.ActorTypeEnum
+import io.airbyte.api.server.generated.models.ActorTypeEnum
 import io.airbyte.api.server.generated.models.CompleteOAuthResponse
 import io.airbyte.api.server.generated.models.CompleteSourceOauthRequest
 import io.airbyte.api.server.generated.models.OAuthScopeItem

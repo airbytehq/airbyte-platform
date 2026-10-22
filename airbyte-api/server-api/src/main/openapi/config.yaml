@@ -13229,12 +13229,12 @@ components:
           type: string
         resource_id:
           type: string
-          format: UUID
+          format: uuid
         resource_type:
           type: string
         scope_id:
           type: string
-          format: UUID
+          format: uuid
         scope_type:
           type: string
 

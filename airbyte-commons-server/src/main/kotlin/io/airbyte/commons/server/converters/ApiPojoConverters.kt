@@ -251,12 +251,12 @@ class ApiPojoConverters(
 
   fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnit?): Schedule.TimeUnit? = timeUnit?.convertTo<Schedule.TimeUnit>()
 
-  fun toApiReleaseStage(releaseStage: ReleaseStage?): io.airbyte.api.model.generated.ReleaseStage? {
+  fun toApiReleaseStage(releaseStage: ReleaseStage?): io.airbyte.api.server.generated.models.ReleaseStage? {
     if (releaseStage == null) {
       return null
     }
-    return io.airbyte.api.model.generated.ReleaseStage
-      .fromValue(releaseStage.value())
+    return io.airbyte.api.server.generated.models.ReleaseStage.entries
+      .first { it.value == releaseStage.value() }
   }
 
   fun toApiSupportLevel(supportLevel: SupportLevel?): io.airbyte.api.server.generated.models.SupportLevel {

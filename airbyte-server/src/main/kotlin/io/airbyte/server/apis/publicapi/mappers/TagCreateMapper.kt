@@ -4,15 +4,14 @@
 
 package io.airbyte.server.apis.publicapi.mappers
 
-import io.airbyte.api.model.generated.TagCreateRequestBody
+import io.airbyte.api.server.generated.models.TagCreateRequestBody
 import io.airbyte.publicApi.server.generated.models.TagCreateRequest
 
 object TagCreateMapper {
-  fun from(tagCreateRequest: TagCreateRequest): TagCreateRequestBody {
-    val tagCreateRequestBody = TagCreateRequestBody()
-    tagCreateRequestBody.workspaceId = tagCreateRequest.workspaceId
-    tagCreateRequestBody.name = tagCreateRequest.name
-    tagCreateRequestBody.color = tagCreateRequest.color
-    return tagCreateRequestBody
-  }
+  fun from(tagCreateRequest: TagCreateRequest): TagCreateRequestBody =
+    TagCreateRequestBody(
+      workspaceId = tagCreateRequest.workspaceId,
+      name = tagCreateRequest.name,
+      color = tagCreateRequest.color,
+    )
 }

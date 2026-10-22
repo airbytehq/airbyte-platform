@@ -4,13 +4,13 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.ApplicationsApi
-import io.airbyte.api.model.generated.AccessToken
-import io.airbyte.api.model.generated.ApplicationCreate
-import io.airbyte.api.model.generated.ApplicationIdRequestBody
-import io.airbyte.api.model.generated.ApplicationRead
-import io.airbyte.api.model.generated.ApplicationReadList
-import io.airbyte.api.model.generated.ApplicationTokenRequest
+import io.airbyte.api.server.generated.apis.ApplicationsApi
+import io.airbyte.api.server.generated.models.AccessToken
+import io.airbyte.api.server.generated.models.ApplicationCreate
+import io.airbyte.api.server.generated.models.ApplicationIdRequestBody
+import io.airbyte.api.server.generated.models.ApplicationRead
+import io.airbyte.api.server.generated.models.ApplicationReadList
+import io.airbyte.api.server.generated.models.ApplicationTokenRequest
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -35,7 +35,7 @@ import java.time.format.DateTimeFormatter
  * An API for Applications. Tied to a user or non-user entity i.e. an organization.
  */
 @Context
-@Controller("/api/v1/applications")
+@Controller
 @Requires(bean = ApplicationService::class)
 open class ApplicationsController(
   val applicationService: ApplicationService,
@@ -64,9 +64,7 @@ open class ApplicationsController(
         applicationTokenRequest.clientSecret,
       )
 
-    val accessToken = AccessToken()
-    accessToken.accessToken = token
-    return accessToken
+    return AccessToken(accessToken = token)
   }
 
   /**
@@ -119,17 +117,13 @@ open class ApplicationsController(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  override fun listApplications(): ApplicationReadList? {
+  override fun listApplications(): ApplicationReadList {
     val applications =
       applicationService
         .listApplicationsByUser(currentUserService.getCurrentUser())
         .map { application -> this.toApplicationRead(application) }
 
-    val applicationReadList =
-      io.airbyte.api.model.generated
-        .ApplicationReadList()
-    applicationReadList.setApplications(applications)
-    return applicationReadList
+    return ApplicationReadList(applications = applications)
   }
 
   /**
@@ -138,16 +132,15 @@ open class ApplicationsController(
    * @param application The Application to convert.
    * @return The converted Application.
    */
-  private fun toApplicationRead(application: Application): ApplicationRead {
-    val applicationRead = ApplicationRead()
-    applicationRead.id = application.id
-    applicationRead.name = application.name
-    applicationRead.clientId = application.clientId
-    applicationRead.clientSecret = application.clientSecret
-    applicationRead.createdAt =
-      OffsetDateTime
-        .parse(application.createdOn, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        .toEpochSecond()
-    return applicationRead
-  }
+  private fun toApplicationRead(application: Application): ApplicationRead =
+    ApplicationRead(
+      id = application.id,
+      name = application.name,
+      clientId = application.clientId,
+      clientSecret = application.clientSecret,
+      createdAt =
+        OffsetDateTime
+          .parse(application.createdOn, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+          .toEpochSecond(),
+    )
 }

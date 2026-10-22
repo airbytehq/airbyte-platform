@@ -63,7 +63,7 @@ internal class CatalogConverterTest {
   fun testEnumCompatibility() {
     Assertions.assertTrue(isCompatible<io.airbyte.config.SyncMode, io.airbyte.api.server.generated.models.SyncMode>())
     Assertions.assertTrue(isCompatible<io.airbyte.config.DestinationSyncMode, DestinationSyncMode>())
-    Assertions.assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.model.generated.DataType>())
+    Assertions.assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.server.generated.models.DataType>())
   }
 
   @Test

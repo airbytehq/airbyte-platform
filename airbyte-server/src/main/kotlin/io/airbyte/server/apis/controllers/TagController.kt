@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.TagCreateRequestBody
-import io.airbyte.api.model.generated.TagDeleteRequestBody
-import io.airbyte.api.model.generated.TagListRequestBody
-import io.airbyte.api.model.generated.TagUpdateRequestBody
+import io.airbyte.api.server.generated.models.TagCreateRequestBody
+import io.airbyte.api.server.generated.models.TagDeleteRequestBody
+import io.airbyte.api.server.generated.models.TagListRequestBody
+import io.airbyte.api.server.generated.models.TagUpdateRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation

@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.api.model.generated.TagDeleteRequestBody
-import io.airbyte.api.model.generated.TagUpdateRequestBody
+import io.airbyte.api.server.generated.models.TagDeleteRequestBody
+import io.airbyte.api.server.generated.models.TagUpdateRequestBody
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.models.TagCreateRequest
 import io.airbyte.publicApi.server.generated.models.TagPatchRequest
@@ -92,7 +92,7 @@ class TagServiceImpl(
     workspaceId: UUID,
   ) {
     kotlin
-      .runCatching { tagHandler.deleteTag(TagDeleteRequestBody().tagId(tagId).workspaceId(workspaceId)) }
+      .runCatching { tagHandler.deleteTag(TagDeleteRequestBody(tagId = tagId, workspaceId = workspaceId)) }
       .onFailure {
         log.error(it) { "Error for deleteTag" }
         ConfigClientErrorHandler.handleError(it)
@@ -109,11 +109,12 @@ class TagServiceImpl(
         .runCatching {
           tagHandler
             .updateTag(
-              TagUpdateRequestBody()
-                .tagId(tagId)
-                .workspaceId(workspaceId)
-                .name(tagPatchRequest.name)
-                .color(tagPatchRequest.color),
+              TagUpdateRequestBody(
+                tagId = tagId,
+                workspaceId = workspaceId,
+                name = tagPatchRequest.name,
+                color = tagPatchRequest.color,
+              ),
             )
         }.onFailure {
           log.error(it) { "Error for updateTag" }

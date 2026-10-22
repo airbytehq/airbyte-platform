@@ -5,7 +5,7 @@
 package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import io.airbyte.api.model.generated.AirbyteCatalogDiff
+import io.airbyte.api.server.generated.models.AirbyteCatalogDiff
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class SchemaConfigUpdateEvent(

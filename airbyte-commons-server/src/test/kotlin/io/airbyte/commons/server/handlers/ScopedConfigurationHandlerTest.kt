@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
-import io.airbyte.api.model.generated.ScopedConfigurationContextResponse
-import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody
-import io.airbyte.api.model.generated.ScopedConfigurationRead
+import io.airbyte.api.server.generated.models.ScopedConfigurationContextRequestBody
+import io.airbyte.api.server.generated.models.ScopedConfigurationContextResponse
+import io.airbyte.api.server.generated.models.ScopedConfigurationCreateRequestBody
+import io.airbyte.api.server.generated.models.ScopedConfigurationRead
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
 import io.airbyte.config.ActorDefinitionVersion
@@ -134,23 +134,24 @@ internal class ScopedConfigurationHandlerTest {
     val scopedConfigurationRead = scopedConfigurationHandler.getScopedConfiguration(testId)
 
     val expectedRead =
-      ScopedConfigurationRead()
-        .id(testId.toString())
-        .value(scopedConfiguration.value)
-        .valueName(null)
-        .configKey(scopedConfiguration.key)
-        .description(scopedConfiguration.description)
-        .referenceUrl(scopedConfiguration.referenceUrl)
-        .resourceId(scopedConfiguration.resourceId.toString())
-        .resourceType(scopedConfiguration.resourceType.toString())
-        .resourceName("source name")
-        .scopeId(scopedConfiguration.scopeId.toString())
-        .scopeType(scopedConfiguration.scopeType.toString())
-        .scopeName("workspace name")
-        .origin(scopedConfiguration.origin)
-        .originType(scopedConfiguration.originType.toString())
-        .originName("email@airbyte.io")
-        .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+      ScopedConfigurationRead(
+        id = testId.toString(),
+        value = scopedConfiguration.value,
+        valueName = null,
+        configKey = scopedConfiguration.key,
+        description = scopedConfiguration.description,
+        referenceUrl = scopedConfiguration.referenceUrl,
+        resourceId = scopedConfiguration.resourceId.toString(),
+        resourceType = scopedConfiguration.resourceType.toString(),
+        resourceName = "source name",
+        scopeId = scopedConfiguration.scopeId.toString(),
+        scopeType = scopedConfiguration.scopeType.toString(),
+        scopeName = "workspace name",
+        origin = scopedConfiguration.origin,
+        originType = scopedConfiguration.originType.toString(),
+        originName = "email@airbyte.io",
+        expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) },
+      )
 
     assertEquals(expectedRead, scopedConfigurationRead)
   }
@@ -221,22 +222,23 @@ internal class ScopedConfigurationHandlerTest {
 
     val expectedScopedConfigurationReads =
       scopedConfigurations.map { scopedConfiguration ->
-        ScopedConfigurationRead()
-          .id(scopedConfiguration.id.toString())
-          .value(scopedConfiguration.value)
-          .configKey(scopedConfiguration.key)
-          .description(scopedConfiguration.description)
-          .referenceUrl(scopedConfiguration.referenceUrl)
-          .resourceId(scopedConfiguration.resourceId.toString())
-          .resourceType(scopedConfiguration.resourceType.toString())
-          .resourceName("source def name")
-          .scopeId(scopedConfiguration.scopeId.toString())
-          .scopeType(scopedConfiguration.scopeType.toString())
-          .scopeName(if (scopedConfiguration.scopeType == ConfigScopeType.ORGANIZATION) "org name" else "source actor name")
-          .origin(scopedConfiguration.origin)
-          .originType(scopedConfiguration.originType.toString())
-          .originName("me@airbyte.io")
-          .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+        ScopedConfigurationRead(
+          id = scopedConfiguration.id.toString(),
+          value = scopedConfiguration.value,
+          configKey = scopedConfiguration.key,
+          description = scopedConfiguration.description,
+          referenceUrl = scopedConfiguration.referenceUrl,
+          resourceId = scopedConfiguration.resourceId.toString(),
+          resourceType = scopedConfiguration.resourceType.toString(),
+          resourceName = "source def name",
+          scopeId = scopedConfiguration.scopeId.toString(),
+          scopeType = scopedConfiguration.scopeType.toString(),
+          scopeName = if (scopedConfiguration.scopeType == ConfigScopeType.ORGANIZATION) "org name" else "source actor name",
+          origin = scopedConfiguration.origin,
+          originType = scopedConfiguration.originType.toString(),
+          originName = "me@airbyte.io",
+          expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) },
+        )
       }
 
     val actualScopedConfigurationReads = scopedConfigurationHandler.listScopedConfigurations(ConfigOriginType.USER)
@@ -283,22 +285,23 @@ internal class ScopedConfigurationHandlerTest {
 
     val expectedScopedConfigurationReads =
       scopedConfigurations.map { scopedConfiguration ->
-        ScopedConfigurationRead()
-          .id(scopedConfiguration.id.toString())
-          .value(scopedConfiguration.value)
-          .configKey(scopedConfiguration.key)
-          .description(scopedConfiguration.description)
-          .referenceUrl(scopedConfiguration.referenceUrl)
-          .resourceId(scopedConfiguration.resourceId.toString())
-          .resourceType(scopedConfiguration.resourceType.toString())
-          .resourceName("source def name")
-          .scopeId(scopedConfiguration.scopeId.toString())
-          .scopeType(scopedConfiguration.scopeType.toString())
-          .scopeName(if (scopedConfiguration.scopeType == ConfigScopeType.ORGANIZATION) "org name" else "source actor name")
-          .origin(scopedConfiguration.origin)
-          .originType(scopedConfiguration.originType.toString())
-          .originName("me@airbyte.io")
-          .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+        ScopedConfigurationRead(
+          id = scopedConfiguration.id.toString(),
+          value = scopedConfiguration.value,
+          configKey = scopedConfiguration.key,
+          description = scopedConfiguration.description,
+          referenceUrl = scopedConfiguration.referenceUrl,
+          resourceId = scopedConfiguration.resourceId.toString(),
+          resourceType = scopedConfiguration.resourceType.toString(),
+          resourceName = "source def name",
+          scopeId = scopedConfiguration.scopeId.toString(),
+          scopeType = scopedConfiguration.scopeType.toString(),
+          scopeName = if (scopedConfiguration.scopeType == ConfigScopeType.ORGANIZATION) "org name" else "source actor name",
+          origin = scopedConfiguration.origin,
+          originType = scopedConfiguration.originType.toString(),
+          originName = "me@airbyte.io",
+          expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) },
+        )
       }
 
     val actualScopedConfigurationReads = scopedConfigurationHandler.listScopedConfigurations("key1")
@@ -310,18 +313,19 @@ internal class ScopedConfigurationHandlerTest {
   fun `test insertScopedConfiguration all fields`() {
     val scopedConfigUUID = UUID.randomUUID()
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value("value")
-        .configKey("key")
-        .description("description")
-        .referenceUrl("url")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
-        .expiresAt(LocalDate.parse("2023-01-01"))
+      ScopedConfigurationCreateRequestBody(
+        value = "value",
+        configKey = "key",
+        description = "description",
+        referenceUrl = "url",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+        expiresAt = LocalDate.parse("2023-01-01"),
+      )
 
     val scopedConfiguration =
       ScopedConfiguration()
@@ -350,22 +354,23 @@ internal class ScopedConfigurationHandlerTest {
       )
 
     val expectedScopedConfigurationRead =
-      ScopedConfigurationRead()
-        .id(scopedConfiguration.id.toString())
-        .value(scopedConfiguration.value)
-        .configKey(scopedConfiguration.key)
-        .description(scopedConfiguration.description)
-        .referenceUrl(scopedConfiguration.referenceUrl)
-        .resourceId(scopedConfiguration.resourceId.toString())
-        .resourceType(scopedConfiguration.resourceType.toString())
-        .resourceName("source definition name")
-        .scopeId(scopedConfiguration.scopeId.toString())
-        .scopeType(scopedConfiguration.scopeType.toString())
-        .scopeName("wkspc name")
-        .origin(scopedConfiguration.origin)
-        .originType(scopedConfiguration.originType.toString())
-        .originName("user@airbyte.io")
-        .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+      ScopedConfigurationRead(
+        id = scopedConfiguration.id.toString(),
+        value = scopedConfiguration.value,
+        configKey = scopedConfiguration.key,
+        description = scopedConfiguration.description,
+        referenceUrl = scopedConfiguration.referenceUrl,
+        resourceId = scopedConfiguration.resourceId.toString(),
+        resourceType = scopedConfiguration.resourceType.toString(),
+        resourceName = "source definition name",
+        scopeId = scopedConfiguration.scopeId.toString(),
+        scopeType = scopedConfiguration.scopeType.toString(),
+        scopeName = "wkspc name",
+        origin = scopedConfiguration.origin,
+        originType = scopedConfiguration.originType.toString(),
+        originName = "user@airbyte.io",
+        expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) },
+      )
 
     val actualScopedConfigurationRead = scopedConfigurationHandler.insertScopedConfiguration(scopedConfigurationCreate)
 
@@ -376,15 +381,16 @@ internal class ScopedConfigurationHandlerTest {
   fun `test insertScopedConfiguration only required`() {
     val scopedConfigUUID = UUID.randomUUID()
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value("value")
-        .configKey("key")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = "value",
+        configKey = "key",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+      )
 
     val scopedConfiguration =
       ScopedConfiguration()
@@ -413,22 +419,23 @@ internal class ScopedConfigurationHandlerTest {
       )
 
     val expectedScopedConfigurationRead =
-      ScopedConfigurationRead()
-        .id(scopedConfiguration.id.toString())
-        .value(scopedConfiguration.value)
-        .configKey(scopedConfiguration.key)
-        .description(scopedConfiguration.description)
-        .referenceUrl(scopedConfiguration.referenceUrl)
-        .resourceId(scopedConfiguration.resourceId.toString())
-        .resourceType(scopedConfiguration.resourceType.toString())
-        .resourceName("source definition name")
-        .scopeId(scopedConfiguration.scopeId.toString())
-        .scopeType(scopedConfiguration.scopeType.toString())
-        .scopeName("organization name")
-        .origin(scopedConfiguration.origin)
-        .originType(scopedConfiguration.originType.toString())
-        .originName("user@airbyte.io")
-        .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+      ScopedConfigurationRead(
+        id = scopedConfiguration.id.toString(),
+        value = scopedConfiguration.value,
+        configKey = scopedConfiguration.key,
+        description = scopedConfiguration.description,
+        referenceUrl = scopedConfiguration.referenceUrl,
+        resourceId = scopedConfiguration.resourceId.toString(),
+        resourceType = scopedConfiguration.resourceType.toString(),
+        resourceName = "source definition name",
+        scopeId = scopedConfiguration.scopeId.toString(),
+        scopeType = scopedConfiguration.scopeType.toString(),
+        scopeName = "organization name",
+        origin = scopedConfiguration.origin,
+        originType = scopedConfiguration.originType.toString(),
+        originName = "user@airbyte.io",
+        expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) },
+      )
 
     val actualScopedConfigurationRead = scopedConfigurationHandler.insertScopedConfiguration(scopedConfigurationCreate)
 
@@ -441,18 +448,19 @@ internal class ScopedConfigurationHandlerTest {
     every { uuidGenerator.get() } returns scopedConfigUUID
 
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value("value")
-        .configKey("key")
-        .description("description")
-        .referenceUrl("url")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
-        .expiresAt(LocalDate.parse("2023-01-01"))
+      ScopedConfigurationCreateRequestBody(
+        value = "value",
+        configKey = "key",
+        description = "description",
+        referenceUrl = "url",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+        expiresAt = LocalDate.parse("2023-01-01"),
+      )
 
     val expectedScopedConfiguration =
       ScopedConfiguration()
@@ -483,22 +491,23 @@ internal class ScopedConfigurationHandlerTest {
     val updatedScopedConfiguration = scopedConfigurationHandler.updateScopedConfiguration(scopedConfigUUID, scopedConfigurationCreate)
 
     val expectedUpdatedConfigurationRead =
-      ScopedConfigurationRead()
-        .id(expectedScopedConfiguration.id.toString())
-        .value(expectedScopedConfiguration.value)
-        .configKey(expectedScopedConfiguration.key)
-        .description(expectedScopedConfiguration.description)
-        .referenceUrl(expectedScopedConfiguration.referenceUrl)
-        .resourceId(expectedScopedConfiguration.resourceId.toString())
-        .resourceType(expectedScopedConfiguration.resourceType.toString())
-        .resourceName("source definition name")
-        .scopeId(expectedScopedConfiguration.scopeId.toString())
-        .scopeType(expectedScopedConfiguration.scopeType.toString())
-        .scopeName("organization name")
-        .origin(expectedScopedConfiguration.origin)
-        .originType(expectedScopedConfiguration.originType.toString())
-        .originName("user@airbyte.io")
-        .expiresAt(expectedScopedConfiguration.expiresAt?.let { LocalDate.parse(expectedScopedConfiguration.expiresAt) })
+      ScopedConfigurationRead(
+        id = expectedScopedConfiguration.id.toString(),
+        value = expectedScopedConfiguration.value,
+        configKey = expectedScopedConfiguration.key,
+        description = expectedScopedConfiguration.description,
+        referenceUrl = expectedScopedConfiguration.referenceUrl,
+        resourceId = expectedScopedConfiguration.resourceId.toString(),
+        resourceType = expectedScopedConfiguration.resourceType.toString(),
+        resourceName = "source definition name",
+        scopeId = expectedScopedConfiguration.scopeId.toString(),
+        scopeType = expectedScopedConfiguration.scopeType.toString(),
+        scopeName = "organization name",
+        origin = expectedScopedConfiguration.origin,
+        originType = expectedScopedConfiguration.originType.toString(),
+        originName = "user@airbyte.io",
+        expiresAt = expectedScopedConfiguration.expiresAt?.let { LocalDate.parse(expectedScopedConfiguration.expiresAt) },
+      )
 
     assertEquals(expectedUpdatedConfigurationRead, updatedScopedConfiguration)
   }
@@ -646,18 +655,19 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("connector_version")
-        .description("description")
-        .referenceUrl("url")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
-        .expiresAt(LocalDate.parse("2023-01-01"))
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "connector_version",
+        description = "description",
+        referenceUrl = "url",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+        expiresAt = LocalDate.parse("2023-01-01"),
+      )
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
@@ -677,13 +687,14 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist skips resource lookup when resourceType and resourceId are null`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("network_security_token")
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.WORKSPACE.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "network_security_token",
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.WORKSPACE.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.PRIVATE_LINK.toString(),
+      )
 
     every { workspaceService.getStandardWorkspaceNoSecrets(any(), any()) } returns
       io.airbyte.config
@@ -700,14 +711,15 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist rejects partial resource (resourceType set, resourceId null)`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("network_security_token")
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.WORKSPACE.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "network_security_token",
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.WORKSPACE.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.PRIVATE_LINK.toString(),
+      )
 
     assertThrows<BadRequestException> {
       scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
@@ -721,14 +733,15 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist rejects partial resource (resourceId set, resourceType null)`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("network_security_token")
-        .resourceId(UUID.randomUUID().toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.WORKSPACE.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "network_security_token",
+        resourceId = UUID.randomUUID().toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.WORKSPACE.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.PRIVATE_LINK.toString(),
+      )
 
     assertThrows<BadRequestException> {
       scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
@@ -742,15 +755,16 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist with missing resource`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("connector_version")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "connector_version",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+      )
 
     every { sourceService.getStandardSourceDefinition(any()) } throws
       ConfigNotFoundException(
@@ -776,15 +790,16 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist with missing scope`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("connector_version")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "connector_version",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+      )
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.empty()
@@ -802,15 +817,16 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist with missing origin`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("connector_version")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "connector_version",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+      )
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
@@ -830,15 +846,16 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test assertCreateRelatedRecordsExist with missing actor definition version`() {
     val scopedConfigurationCreate =
-      ScopedConfigurationCreateRequestBody()
-        .value(UUID.randomUUID().toString())
-        .configKey("connector_version")
-        .resourceId(UUID.randomUUID().toString())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .scopeId(UUID.randomUUID().toString())
-        .scopeType(ConfigScopeType.ORGANIZATION.toString())
-        .origin(UUID.randomUUID().toString())
-        .originType(ConfigOriginType.USER.toString())
+      ScopedConfigurationCreateRequestBody(
+        value = UUID.randomUUID().toString(),
+        configKey = "connector_version",
+        resourceId = UUID.randomUUID().toString(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        scopeId = UUID.randomUUID().toString(),
+        scopeType = ConfigScopeType.ORGANIZATION.toString(),
+        origin = UUID.randomUUID().toString(),
+        originType = ConfigOriginType.USER.toString(),
+      )
 
     every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source definition name")
     every { organizationService.getOrganization(any()) } returns Optional.of(Organization().withName("organization name"))
@@ -864,12 +881,13 @@ internal class ScopedConfigurationHandlerTest {
   @Test
   fun `test get scoped configuration context for non-existent key throws`() {
     val contextReq =
-      ScopedConfigurationContextRequestBody()
-        .scopeType(ConfigScopeType.WORKSPACE.toString())
-        .scopeId(UUID.randomUUID())
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .resourceId(UUID.randomUUID())
-        .configKey("non_existent_key")
+      ScopedConfigurationContextRequestBody(
+        scopeType = ConfigScopeType.WORKSPACE.toString(),
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        resourceId = UUID.randomUUID(),
+        configKey = "non_existent_key",
+      )
 
     assertThrows<BadRequestException> {
       scopedConfigurationHandler.getScopedConfigurationContext(contextReq)
@@ -999,80 +1017,85 @@ internal class ScopedConfigurationHandlerTest {
       )
 
     val contextReq =
-      ScopedConfigurationContextRequestBody()
-        .scopeType(ConfigScopeType.WORKSPACE.toString())
-        .scopeId(workspaceId)
-        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-        .resourceId(actorDefId)
-        .configKey("connector_version")
+      ScopedConfigurationContextRequestBody(
+        scopeType = ConfigScopeType.WORKSPACE.toString(),
+        scopeId = workspaceId,
+        resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+        resourceId = actorDefId,
+        configKey = "connector_version",
+      )
     val scopedConfigurationContext = scopedConfigurationHandler.getScopedConfigurationContext(contextReq)
 
     val expectedRes =
-      ScopedConfigurationContextResponse()
-        .activeConfiguration(
-          ScopedConfigurationRead()
-            .id(workspaceId.toString())
-            .value(workspaceVersionId.toString())
-            .valueName(workspaceVersion)
-            .configKey(ConnectorVersionKey.key)
-            .resourceId(actorDefId.toString())
-            .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-            .resourceName(actorDefName)
-            .scopeId(workspaceId.toString())
-            .scopeType(ConfigScopeType.WORKSPACE.toString())
-            .scopeName("workspace name")
-            .origin(origin)
-            .originType(ConfigOriginType.USER.toString())
-            .originName(originName),
-        ).ancestorConfigurations(
-          listOf(
-            ScopedConfigurationRead()
-              .id(orgId.toString())
-              .value(orgVersionId.toString())
-              .valueName(orgVersion)
-              .scopeId(orgId.toString())
-              .scopeType(ConfigScopeType.ORGANIZATION.toString())
-              .scopeName("org name")
-              .configKey(ConnectorVersionKey.key)
-              .resourceId(actorDefId.toString())
-              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-              .resourceName(actorDefName)
-              .origin(origin)
-              .originType(ConfigOriginType.USER.toString())
-              .originName(originName),
+      ScopedConfigurationContextResponse(
+        activeConfiguration =
+          ScopedConfigurationRead(
+            id = workspaceId.toString(),
+            value = workspaceVersionId.toString(),
+            valueName = workspaceVersion,
+            configKey = ConnectorVersionKey.key,
+            resourceId = actorDefId.toString(),
+            resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+            resourceName = actorDefName,
+            scopeId = workspaceId.toString(),
+            scopeType = ConfigScopeType.WORKSPACE.toString(),
+            scopeName = "workspace name",
+            origin = origin,
+            originType = ConfigOriginType.USER.toString(),
+            originName = originName,
           ),
-        ).descendantConfigurations(
+        ancestorConfigurations =
           listOf(
-            ScopedConfigurationRead()
-              .id(sourceId.toString())
-              .value(sourceVersionId.toString())
-              .valueName(sourceVersion)
-              .scopeType(ConfigScopeType.ACTOR.toString())
-              .scopeId(sourceId.toString())
-              .scopeName("source actor")
-              .configKey(ConnectorVersionKey.key)
-              .resourceId(actorDefId.toString())
-              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-              .resourceName(actorDefName)
-              .origin(origin)
-              .originType(ConfigOriginType.USER.toString())
-              .originName(originName),
-            ScopedConfigurationRead()
-              .id(sourceId2.toString())
-              .value(sourceVersionId.toString())
-              .valueName(sourceVersion)
-              .configKey(ConnectorVersionKey.key)
-              .scopeType(ConfigScopeType.ACTOR.toString())
-              .scopeId(sourceId2.toString())
-              .scopeName("source actor 2")
-              .resourceId(actorDefId.toString())
-              .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
-              .resourceName(actorDefName)
-              .origin(origin)
-              .originType(ConfigOriginType.USER.toString())
-              .originName(originName),
+            ScopedConfigurationRead(
+              id = orgId.toString(),
+              value = orgVersionId.toString(),
+              valueName = orgVersion,
+              scopeId = orgId.toString(),
+              scopeType = ConfigScopeType.ORGANIZATION.toString(),
+              scopeName = "org name",
+              configKey = ConnectorVersionKey.key,
+              resourceId = actorDefId.toString(),
+              resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+              resourceName = actorDefName,
+              origin = origin,
+              originType = ConfigOriginType.USER.toString(),
+              originName = originName,
+            ),
           ),
-        )
+        descendantConfigurations =
+          listOf(
+            ScopedConfigurationRead(
+              id = sourceId.toString(),
+              value = sourceVersionId.toString(),
+              valueName = sourceVersion,
+              scopeType = ConfigScopeType.ACTOR.toString(),
+              scopeId = sourceId.toString(),
+              scopeName = "source actor",
+              configKey = ConnectorVersionKey.key,
+              resourceId = actorDefId.toString(),
+              resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+              resourceName = actorDefName,
+              origin = origin,
+              originType = ConfigOriginType.USER.toString(),
+              originName = originName,
+            ),
+            ScopedConfigurationRead(
+              id = sourceId2.toString(),
+              value = sourceVersionId.toString(),
+              valueName = sourceVersion,
+              configKey = ConnectorVersionKey.key,
+              scopeType = ConfigScopeType.ACTOR.toString(),
+              scopeId = sourceId2.toString(),
+              scopeName = "source actor 2",
+              resourceId = actorDefId.toString(),
+              resourceType = ConfigResourceType.ACTOR_DEFINITION.toString(),
+              resourceName = actorDefName,
+              origin = origin,
+              originType = ConfigOriginType.USER.toString(),
+              originName = originName,
+            ),
+          ),
+      )
 
     assertEquals(expectedRes, scopedConfigurationContext)
 

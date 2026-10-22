@@ -5,20 +5,22 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorListFilters
 import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.api.server.generated.models.ConnectionReadList
 import io.airbyte.api.server.generated.models.DestinationCreate
+import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationSearch
 import io.airbyte.api.server.generated.models.DestinationUpdate
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.ResourceRequirements
 import io.airbyte.api.server.generated.models.ScopedResourceRequirements
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
@@ -155,10 +157,19 @@ internal class DestinationHandlerTest {
       )
 
     destinationDefinitionSpecificationRead =
-      DestinationDefinitionSpecificationRead()
-        .connectionSpecification(connectorSpecification.connectionSpecification)
-        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
-        .documentationUrl(connectorSpecification.documentationUrl.toString())
+      DestinationDefinitionSpecificationRead(
+        connectionSpecification = connectorSpecification.connectionSpecification,
+        destinationDefinitionId = standardDestinationDefinition.destinationDefinitionId,
+        documentationUrl = connectorSpecification.documentationUrl.toString(),
+        jobInfo =
+          SynchronousJobRead(
+            id = UUID.randomUUID(),
+            configType = JobConfigType.GET_SPEC,
+            createdAt = 0L,
+            endedAt = 0L,
+            succeeded = true,
+          ),
+      )
 
     destinationConnection =
       DestinationHelpers.generateDestination(
@@ -253,7 +264,7 @@ internal class DestinationHandlerTest {
     val configWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         destinationCreate.connectionConfiguration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
         SecretStorageId(secretStorageId),
       )
     every {
@@ -294,7 +305,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         configWithSecretRefIds,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns configWithSecretRefIds
 
@@ -316,7 +327,7 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification)
+      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification!!)
     }
     verify {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
@@ -331,7 +342,7 @@ internal class DestinationHandlerTest {
       actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationCreate.connectionConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, destinationCreate.connectionConfiguration)
     }
   }
 
@@ -425,7 +436,7 @@ internal class DestinationHandlerTest {
     )
 
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationConnection.configuration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, destinationConnection.configuration)
     }
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
@@ -472,7 +483,7 @@ internal class DestinationHandlerTest {
     )
 
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationConnection.configuration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, destinationConnection.configuration)
     }
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
@@ -611,7 +622,7 @@ internal class DestinationHandlerTest {
     val newConfigWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         newConfiguration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
         SecretStorageId(secretStorageId),
       )
     every {
@@ -658,7 +669,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         newConfigWithSecretRefIds,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns newConfigWithSecretRefIds
 
@@ -682,7 +693,7 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification)
+      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification!!)
     }
     verify {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
@@ -702,9 +713,9 @@ internal class DestinationHandlerTest {
       )
     }
     if (isDraft) {
-      verify { validator.ensurePartial(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+      verify { validator.ensurePartial(destinationDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
     } else {
-      verify { validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+      verify { validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
     }
   }
 
@@ -734,7 +745,7 @@ internal class DestinationHandlerTest {
         .copySecrets(
           destinationConnection.configuration,
           newConfiguration,
-          destinationDefinitionSpecificationRead.connectionSpecification,
+          destinationDefinitionSpecificationRead.connectionSpecification!!,
         )
     } returns newConfiguration
     every {
@@ -784,7 +795,7 @@ internal class DestinationHandlerTest {
       )
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, newConfiguration)
     }
   }
 
@@ -814,7 +825,7 @@ internal class DestinationHandlerTest {
         .copySecrets(
           destinationConnection.configuration,
           newConfiguration,
-          destinationDefinitionSpecificationRead.connectionSpecification,
+          destinationDefinitionSpecificationRead.connectionSpecification!!,
         )
     } returns newConfiguration
     every {
@@ -864,7 +875,7 @@ internal class DestinationHandlerTest {
       )
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification!!, newConfiguration)
     }
   }
 
@@ -956,7 +967,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnection.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns destinationConnection.configuration
     every {
@@ -1005,7 +1016,7 @@ internal class DestinationHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnection.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
   }
@@ -1125,7 +1136,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnectionWithCount.destination.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns destinationConnectionWithCount.destination.configuration
     every {
@@ -1160,7 +1171,7 @@ internal class DestinationHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnectionWithCount.destination.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
     verify {
@@ -1495,7 +1506,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnection.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns destinationConnection.configuration
     every {
@@ -1572,7 +1583,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnection.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns destinationConnection.configuration
     every {
@@ -1595,7 +1606,7 @@ internal class DestinationHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         destinationConnection.configuration,
-        destinationDefinitionSpecificationRead.connectionSpecification,
+        destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
 

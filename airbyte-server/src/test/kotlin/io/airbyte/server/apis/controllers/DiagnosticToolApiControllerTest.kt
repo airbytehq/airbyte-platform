@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.DiagnosticReportRequestBody
+import io.airbyte.api.server.generated.models.DiagnosticReportRequestBody
 import io.airbyte.commons.server.handlers.DiagnosticToolHandler
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
@@ -20,6 +20,7 @@ import io.mockk.mockk
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.util.UUID
 
 @MicronautTest
 internal class DiagnosticToolApiControllerTest {
@@ -42,6 +43,6 @@ internal class DiagnosticToolApiControllerTest {
     every { diagnosticToolHandler.generateDiagnosticReport() } returns result
 
     val path = "/api/v1/diagnostic_tool/generate_report"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DiagnosticReportRequestBody())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DiagnosticReportRequestBody(organizationId = UUID.randomUUID()))))
   }
 }

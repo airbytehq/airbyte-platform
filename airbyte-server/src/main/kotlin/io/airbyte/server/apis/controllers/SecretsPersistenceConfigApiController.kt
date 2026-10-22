@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.generated.SecretsPersistenceConfigApi
-import io.airbyte.api.model.generated.CreateOrUpdateSecretsPersistenceConfigRequestBody
-import io.airbyte.api.model.generated.ScopeType
-import io.airbyte.api.model.generated.SecretPersistenceConfig
-import io.airbyte.api.model.generated.SecretPersistenceConfigGetRequestBody
+import io.airbyte.api.server.generated.apis.SecretsPersistenceConfigApi
+import io.airbyte.api.server.generated.models.CreateOrUpdateSecretsPersistenceConfigRequestBody
+import io.airbyte.api.server.generated.models.ScopeType
+import io.airbyte.api.server.generated.models.SecretPersistenceConfig
+import io.airbyte.api.server.generated.models.SecretPersistenceConfigGetRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -26,12 +26,11 @@ import io.airbyte.featureflag.Workspace
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.Objects
 
-@Controller("/api/v1/secrets_persistence_config")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class SecretsPersistenceConfigApiController(
   private val workspaceService: WorkspaceService,
@@ -39,7 +38,6 @@ class SecretsPersistenceConfigApiController(
   private val secretPersistenceConfigHandler: SecretPersistenceConfigHandler,
   private val featureFlagClient: FeatureFlagClient,
 ) : SecretsPersistenceConfigApi {
-  @Post("/create_or_update")
   @Secured(AuthRoleConstants.ADMIN)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -91,7 +89,6 @@ class SecretsPersistenceConfigApiController(
     }
   }
 
-  @Post("/get")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
@@ -99,8 +96,8 @@ class SecretsPersistenceConfigApiController(
   )
   override fun getSecretsPersistenceConfig(
     @Body requestBody: SecretPersistenceConfigGetRequestBody,
-  ): SecretPersistenceConfig? {
-    if (Objects.requireNonNull(requestBody.scopeType) == io.airbyte.api.model.generated.ScopeType.WORKSPACE) {
+  ): SecretPersistenceConfig {
+    if (Objects.requireNonNull(requestBody.scopeType) == io.airbyte.api.server.generated.models.ScopeType.WORKSPACE) {
       execute<Any> {
         throw BadObjectSchemaKnownException(
           String.format("Runtime secret persistence is not supported for workspace %s", requestBody.scopeId),

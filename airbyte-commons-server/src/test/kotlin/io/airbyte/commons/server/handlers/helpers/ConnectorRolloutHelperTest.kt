@@ -61,9 +61,9 @@ internal class ConnectorRolloutHelperTest {
 
     assertEquals(1, result.size)
     assertEquals(actorId, result.values.first().actorId)
-    assertEquals(nConnections, result.values.first().getNumConnections())
-    assertEquals(nSucceeded, result.values.first().getNumSucceeded())
-    assertEquals(nFailed, result.values.first().getNumFailed())
+    assertEquals(nConnections, result.values.first().numConnections)
+    assertEquals(nSucceeded, result.values.first().numSucceeded)
+    assertEquals(nFailed, result.values.first().numFailed)
   }
 
   private fun createMockConnectorRollout(

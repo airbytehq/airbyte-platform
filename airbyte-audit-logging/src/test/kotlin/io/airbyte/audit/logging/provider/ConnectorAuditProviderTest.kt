@@ -4,12 +4,12 @@
 
 package io.airbyte.audit.logging.provider
 
-import io.airbyte.api.model.generated.DestinationCreate
-import io.airbyte.api.model.generated.SourceCreate
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.api.model.generated.SourceUpdate
+import io.airbyte.api.server.generated.models.DestinationCreate
 import io.airbyte.api.server.generated.models.DestinationRead
+import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceRead
+import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.json.Jsons
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -24,12 +24,13 @@ class ConnectorAuditProviderTest {
     val workspaceId = UUID.randomUUID()
     val definitionId = UUID.randomUUID()
     val request =
-      SourceCreate()
-        .name("my postgres")
-        .sourceDefinitionId(definitionId)
-        .workspaceId(workspaceId)
-        .connectionConfiguration(Jsons.jsonNode(mapOf("password" to "super-secret-value")))
-        .secretId("secret-id-value")
+      SourceCreate(
+        name = "my postgres",
+        sourceDefinitionId = definitionId,
+        workspaceId = workspaceId,
+        connectionConfiguration = Jsons.jsonNode(mapOf("password" to "super-secret-value")),
+        secretId = "secret-id-value",
+      )
 
     val summary = provider.generateSummaryFromRequest(request)
 
@@ -74,10 +75,11 @@ class ConnectorAuditProviderTest {
   fun `updateSource request summary identifies which source was updated`() {
     val sourceId = UUID.randomUUID()
     val request =
-      SourceUpdate()
-        .sourceId(sourceId)
-        .name("renamed")
-        .connectionConfiguration(Jsons.jsonNode(mapOf("api_key" to "super-secret-value")))
+      SourceUpdate(
+        sourceId = sourceId,
+        name = "renamed",
+        connectionConfiguration = Jsons.jsonNode(mapOf("api_key" to "super-secret-value")),
+      )
 
     val summary = provider.generateSummaryFromRequest(request)
 
@@ -91,7 +93,7 @@ class ConnectorAuditProviderTest {
   fun `deleteSource request summary identifies which source was deleted`() {
     val sourceId = UUID.randomUUID()
 
-    val node = Jsons.deserialize(provider.generateSummaryFromRequest(SourceIdRequestBody().sourceId(sourceId)))
+    val node = Jsons.deserialize(provider.generateSummaryFromRequest(SourceIdRequestBody(sourceId = sourceId)))
 
     assertEquals(sourceId.toString(), node.get("sourceId").asText())
   }
@@ -100,11 +102,12 @@ class ConnectorAuditProviderTest {
   fun `destination bodies are allowlisted the same way as source bodies`() {
     val workspaceId = UUID.randomUUID()
     val request =
-      DestinationCreate()
-        .name("my snowflake")
-        .destinationDefinitionId(UUID.randomUUID())
-        .workspaceId(workspaceId)
-        .connectionConfiguration(Jsons.jsonNode(mapOf("password" to "super-secret-value")))
+      DestinationCreate(
+        name = "my snowflake",
+        destinationDefinitionId = UUID.randomUUID(),
+        workspaceId = workspaceId,
+        connectionConfiguration = Jsons.jsonNode(mapOf("password" to "super-secret-value")),
+      )
 
     val summary = provider.generateSummaryFromRequest(request)
 

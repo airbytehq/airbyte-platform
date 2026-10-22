@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.AirbyteCatalogDiff
+import io.airbyte.api.server.generated.models.AirbyteCatalogDiff
 import io.airbyte.api.server.generated.models.CatalogDiff
 import io.airbyte.api.server.generated.models.ConnectionRead
 import io.airbyte.api.server.generated.models.ConnectionStatus

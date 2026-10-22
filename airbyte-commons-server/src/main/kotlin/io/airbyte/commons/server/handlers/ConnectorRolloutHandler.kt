@@ -4,16 +4,16 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutRead
-import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
-import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
+import io.airbyte.api.server.generated.models.ConnectorRolloutFinalizeRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutRead
+import io.airbyte.api.server.generated.models.ConnectorRolloutRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutStartRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutStateTerminal
+import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
+import io.airbyte.api.server.generated.models.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -117,7 +117,7 @@ open class ConnectorRolloutHandler
       }
 
       connectorRolloutRequest.targetPercentage?.let { targetPercentage ->
-        pinByPercentage(connectorRollout, targetPercentage, connectorRolloutRequest.rolloutStrategy!!)
+        pinByPercentage(connectorRollout, targetPercentage, connectorRolloutRequest.rolloutStrategy)
       }
 
       connectorRollout.apply {
@@ -234,7 +234,7 @@ open class ConnectorRolloutHandler
 
       // Unpin all actors that are pinned to the release candidate, unless the state is CANCELED and the user opted to retain pins on cancellation
       // so that the same actors will be pinned to the next release candidate.
-      if (!(connectorRolloutFinalize.state == ConnectorRolloutStateTerminal.CANCELED && connectorRolloutFinalize.retainPinsOnCancellation)) {
+      if (!(connectorRolloutFinalize.state == ConnectorRolloutStateTerminal.CANCELED && connectorRolloutFinalize.retainPinsOnCancellation == true)) {
         actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(
           connectorRollout.actorDefinitionId,
           connectorRollout.releaseCandidateVersionId,
@@ -294,7 +294,7 @@ open class ConnectorRolloutHandler
       val connectorRollout = getAndValidateStartRequest(connectorRolloutStart)
 
       // If actors are still pinned to a previous rollout's release candidate, we migrate them to the new release candidate
-      if (connectorRolloutStart.migratePins) {
+      if (connectorRolloutStart.migratePins == true) {
         logger.info { "Migrating pins for connector rollout ID: ${connectorRollout.id}" }
         val rolloutOrigins = connectorRolloutService.listConnectorRollouts(connectorRollout.actorDefinitionId).map { it.id.toString() }
         val pinnedActorIds = actorDefinitionVersionUpdater.getActorsPinnedByRollouts(connectorRollout.actorDefinitionId, rolloutOrigins)
@@ -351,14 +351,15 @@ open class ConnectorRolloutHandler
     }
 
     open fun updateState(connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
+      val rolloutId = connectorRolloutUpdateStateRequestBody.id
       val rollout: ConnectorRollout =
-        if (connectorRolloutUpdateStateRequestBody.id == null) {
+        if (rolloutId == null) {
           getRolloutByActorDefinitionIdAndDockerImageTag(
-            connectorRolloutUpdateStateRequestBody.actorDefinitionId,
-            connectorRolloutUpdateStateRequestBody.dockerImageTag,
+            connectorRolloutUpdateStateRequestBody.actorDefinitionId!!,
+            connectorRolloutUpdateStateRequestBody.dockerImageTag!!,
           )
         } else {
-          connectorRolloutService.getConnectorRollout(connectorRolloutUpdateStateRequestBody.id)
+          connectorRolloutService.getConnectorRollout(rolloutId)
         }
       val connectorRollout =
         getAndValidateUpdateStateRequest(

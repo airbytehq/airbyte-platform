@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.CatalogConfigDiff
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
 import io.airbyte.api.server.generated.models.AirbyteCatalog
+import io.airbyte.api.server.generated.models.CatalogConfigDiff
 import io.airbyte.api.server.generated.models.CatalogDiff
 import io.airbyte.api.server.generated.models.ConnectionCreate
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody

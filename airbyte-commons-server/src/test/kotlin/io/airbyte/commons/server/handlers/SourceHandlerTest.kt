@@ -6,20 +6,22 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorListFilters
 import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.api.server.generated.models.ConnectionReadList
+import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.PartialSourceUpdate
 import io.airbyte.api.server.generated.models.ResourceRequirements
 import io.airbyte.api.server.generated.models.SourceCreate
+import io.airbyte.api.server.generated.models.SourceDefinitionSpecificationRead
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SourceSearch
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.api.server.generated.models.SupportState
+import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
@@ -191,10 +193,19 @@ internal class SourceHandlerTest {
     sourceDefinitionVersionWithOverrideStatus = ActorDefinitionVersionWithOverrideStatus(sourceDefinitionVersion, IS_VERSION_OVERRIDE_APPLIED)
 
     sourceDefinitionSpecificationRead =
-      SourceDefinitionSpecificationRead()
-        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
-        .connectionSpecification(connectorSpecification.connectionSpecification)
-        .documentationUrl(connectorSpecification.documentationUrl.toString())
+      SourceDefinitionSpecificationRead(
+        sourceDefinitionId = standardSourceDefinition.sourceDefinitionId,
+        connectionSpecification = connectorSpecification.connectionSpecification,
+        documentationUrl = connectorSpecification.documentationUrl.toString(),
+        jobInfo =
+          SynchronousJobRead(
+            id = UUID.randomUUID(),
+            configType = JobConfigType.GET_SPEC,
+            createdAt = 0L,
+            endedAt = 0L,
+            succeeded = true,
+          ),
+      )
 
     sourceConnection =
       SourceHelpers.generateSource(
@@ -300,7 +311,7 @@ internal class SourceHandlerTest {
     val configWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         sourceCreate.connectionConfiguration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
         secretStorageId,
       )
     every {
@@ -338,7 +349,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         configWithSecretRefIds,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns configWithSecretRefIds
 
@@ -362,7 +373,7 @@ internal class SourceHandlerTest {
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification)
+      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification!!)
     }
     verify {
       oAuthConfigSupplier.maskSourceOAuthParameters(
@@ -378,7 +389,7 @@ internal class SourceHandlerTest {
       actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceCreate.connectionConfiguration)
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, sourceCreate.connectionConfiguration)
     }
   }
 
@@ -473,7 +484,7 @@ internal class SourceHandlerTest {
       actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceConnection.configuration)
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, sourceConnection.configuration)
     }
   }
 
@@ -515,7 +526,7 @@ internal class SourceHandlerTest {
       actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceConnection.configuration)
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, sourceConnection.configuration)
     }
   }
 
@@ -643,7 +654,7 @@ internal class SourceHandlerTest {
     val newConfigWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         newConfiguration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
         secretStorageId,
       )
     every {
@@ -690,7 +701,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         newConfigWithSecretRefIds,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns newConfigWithSecretRefIds
 
@@ -714,7 +725,7 @@ internal class SourceHandlerTest {
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification)
+      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification!!)
     }
     verify {
       oAuthConfigSupplier.maskSourceOAuthParameters(
@@ -734,9 +745,9 @@ internal class SourceHandlerTest {
       )
     }
     if (isDraft) {
-      verify { validator.ensurePartial(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+      verify { validator.ensurePartial(sourceDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
     } else {
-      verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+      verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
     }
   }
 
@@ -766,7 +777,7 @@ internal class SourceHandlerTest {
       secretsProcessor.copySecrets(
         sourceConnection.configuration,
         newConfiguration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns newConfiguration
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -801,7 +812,7 @@ internal class SourceHandlerTest {
         sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
   }
 
   @Test
@@ -830,7 +841,7 @@ internal class SourceHandlerTest {
       secretsProcessor.copySecrets(
         sourceConnection.configuration,
         newConfiguration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns newConfiguration
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
@@ -865,7 +876,7 @@ internal class SourceHandlerTest {
         sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification!!, newConfiguration) }
   }
 
   @Test
@@ -959,7 +970,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnection.configuration
     every {
@@ -996,7 +1007,7 @@ internal class SourceHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
   }
@@ -1083,7 +1094,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnection.configuration
     every {
@@ -1153,7 +1164,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnectionWithCount.source.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnectionWithCount.source.configuration
     every {
@@ -1172,7 +1183,7 @@ internal class SourceHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnectionWithCount.source.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
     verify {
@@ -1336,7 +1347,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnection.configuration
     every {
@@ -1365,7 +1376,7 @@ internal class SourceHandlerTest {
     verify {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     }
   }
@@ -1396,7 +1407,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnection.configuration
     every {
@@ -1464,7 +1475,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
-        sourceDefinitionSpecificationRead.connectionSpecification,
+        sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
     } returns sourceConnection.configuration
     every {

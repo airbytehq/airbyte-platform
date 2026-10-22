@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
-import io.airbyte.api.model.generated.ScopedConfigurationContextResponse
-import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody
-import io.airbyte.api.model.generated.ScopedConfigurationRead
+import io.airbyte.api.server.generated.models.ScopedConfigurationContextRequestBody
+import io.airbyte.api.server.generated.models.ScopedConfigurationContextResponse
+import io.airbyte.api.server.generated.models.ScopedConfigurationCreateRequestBody
+import io.airbyte.api.server.generated.models.ScopedConfigurationRead
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
@@ -156,30 +156,31 @@ open class ScopedConfigurationHandler
 
     @InternalForTesting
     fun buildScopedConfigurationRead(scopedConfiguration: ScopedConfiguration): ScopedConfigurationRead =
-      ScopedConfigurationRead()
-        .id(scopedConfiguration.id.toString())
-        .configKey(scopedConfiguration.key)
-        .value(scopedConfiguration.value)
-        .valueName(getValueName(scopedConfiguration.key, scopedConfiguration.value))
-        .description(scopedConfiguration.description)
-        .referenceUrl(scopedConfiguration.referenceUrl)
-        .resourceType(scopedConfiguration.resourceType?.toString())
-        .resourceId(scopedConfiguration.resourceId?.toString())
-        .resourceName(
+      ScopedConfigurationRead(
+        id = scopedConfiguration.id.toString(),
+        configKey = scopedConfiguration.key,
+        value = scopedConfiguration.value,
+        valueName = getValueName(scopedConfiguration.key, scopedConfiguration.value),
+        description = scopedConfiguration.description,
+        referenceUrl = scopedConfiguration.referenceUrl,
+        resourceType = scopedConfiguration.resourceType?.toString(),
+        resourceId = scopedConfiguration.resourceId?.toString(),
+        resourceName =
           if (scopedConfiguration.resourceType != null && scopedConfiguration.resourceId != null) {
             getResourceName(scopedConfiguration.resourceType, scopedConfiguration.resourceId)
           } else {
             null
           },
-        ).scopeType(scopedConfiguration.scopeType.toString())
-        .scopeId(scopedConfiguration.scopeId.toString())
-        .scopeName(getScopeName(scopedConfiguration.scopeType, scopedConfiguration.scopeId))
-        .originType(scopedConfiguration.originType.toString())
-        .origin(scopedConfiguration.origin)
-        .originName(getOriginName(scopedConfiguration.originType, scopedConfiguration.origin))
-        .updatedAt(scopedConfiguration.updatedAt?.let { unixTimestampToOffsetDateTime(it) })
-        .createdAt(scopedConfiguration.createdAt?.let { unixTimestampToOffsetDateTime(it) })
-        .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(it) })
+        scopeType = scopedConfiguration.scopeType.toString(),
+        scopeId = scopedConfiguration.scopeId.toString(),
+        scopeName = getScopeName(scopedConfiguration.scopeType, scopedConfiguration.scopeId),
+        originType = scopedConfiguration.originType.toString(),
+        origin = scopedConfiguration.origin,
+        originName = getOriginName(scopedConfiguration.originType, scopedConfiguration.origin),
+        updatedAt = scopedConfiguration.updatedAt?.let { unixTimestampToOffsetDateTime(it) },
+        createdAt = scopedConfiguration.createdAt?.let { unixTimestampToOffsetDateTime(it) },
+        expiresAt = scopedConfiguration.expiresAt?.let { LocalDate.parse(it) },
+      )
 
     @InternalForTesting
     fun buildScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfiguration =
@@ -317,7 +318,7 @@ open class ScopedConfigurationHandler
     fun getScopedConfigurationContext(contextRequestBody: ScopedConfigurationContextRequestBody): ScopedConfigurationContextResponse {
       val key = contextRequestBody.configKey
       val resourceType = ConfigResourceType.fromValue(contextRequestBody.resourceType)
-      val resourceId = contextRequestBody.resourceId
+      val resourceId = contextRequestBody.resourceId!!
       val scopeType = ConfigScopeType.fromValue(contextRequestBody.scopeType)
       val scopeId = contextRequestBody.scopeId
 
@@ -340,9 +341,10 @@ open class ScopedConfigurationHandler
           scopedConfigurationService.listScopedConfigurationsWithScopes(key, resourceType, resourceId, it.key, it.value)
         }
 
-      return ScopedConfigurationContextResponse()
-        .activeConfiguration(currentActiveConfig.map { buildScopedConfigurationRead(it) }.orElse(null))
-        .ancestorConfigurations(ancestorConfigs.map { buildScopedConfigurationRead(it) })
-        .descendantConfigurations(descendantConfigs.map { buildScopedConfigurationRead(it) })
+      return ScopedConfigurationContextResponse(
+        activeConfiguration = currentActiveConfig.map { buildScopedConfigurationRead(it) }.orElse(null),
+        ancestorConfigurations = ancestorConfigs.map { buildScopedConfigurationRead(it) },
+        descendantConfigurations = descendantConfigs.map { buildScopedConfigurationRead(it) },
+      )
     }
   }

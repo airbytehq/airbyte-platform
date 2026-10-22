@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
-import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
-import io.airbyte.api.model.generated.ConnectorRolloutRead
-import io.airbyte.api.model.generated.ConnectorRolloutState
-import io.airbyte.api.model.generated.ConnectorRolloutStrategy
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutRead
+import io.airbyte.api.server.generated.models.ConnectorRolloutState
+import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
@@ -44,58 +44,56 @@ open class ConnectorRolloutHelper
       connectorRollout: ConnectorRollout,
       withActorSyncAndSelectionInfo: Boolean,
     ): ConnectorRolloutRead {
-      val rolloutStrategy = connectorRollout.rolloutStrategy?.let { ConnectorRolloutStrategy.fromValue(it.toString()) }
+      val rolloutStrategy = connectorRollout.rolloutStrategy?.let { ConnectorRolloutStrategy.decode(it.toString()) }
 
       val actorDefinitionVersion = actorDefinitionService.getActorDefinitionVersion(connectorRollout.releaseCandidateVersionId)
-      var rollout =
-        ConnectorRolloutRead()
-          .id(connectorRollout.id)
-          .dockerRepository(actorDefinitionVersion.dockerRepository)
-          .dockerImageTag(actorDefinitionVersion.dockerImageTag)
-          .workflowRunId(connectorRollout.workflowRunId)
-          .actorDefinitionId(connectorRollout.actorDefinitionId)
-          .releaseCandidateVersionId(connectorRollout.releaseCandidateVersionId)
-          .initialVersionId(connectorRollout.initialVersionId)
-          .state(ConnectorRolloutState.fromString(connectorRollout.state.toString()))
-          .initialRolloutPct(connectorRollout.initialRolloutPct)
-          .currentTargetRolloutPct(connectorRollout.currentTargetRolloutPct)
-          .finalTargetRolloutPct(connectorRollout.finalTargetRolloutPct)
-          .hasBreakingChanges(connectorRollout.hasBreakingChanges)
-          .rolloutStrategy(rolloutStrategy)
-          .maxStepWaitTimeMins(connectorRollout.maxStepWaitTimeMins)
-          .updatedAt(unixTimestampToOffsetDateTime(connectorRollout.updatedAt))
-          .createdAt(unixTimestampToOffsetDateTime(connectorRollout.createdAt))
-          .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
-          .errorMsg(connectorRollout.errorMsg)
-          .failedReason(connectorRollout.failedReason)
-          .pausedReason(connectorRollout.pausedReason)
-          .updatedBy(
+      val rollout =
+        ConnectorRolloutRead(
+          id = connectorRollout.id,
+          dockerRepository = actorDefinitionVersion.dockerRepository,
+          dockerImageTag = actorDefinitionVersion.dockerImageTag,
+          workflowRunId = connectorRollout.workflowRunId,
+          actorDefinitionId = connectorRollout.actorDefinitionId,
+          releaseCandidateVersionId = connectorRollout.releaseCandidateVersionId,
+          initialVersionId = connectorRollout.initialVersionId,
+          state = ConnectorRolloutState.decode(connectorRollout.state.toString())!!,
+          initialRolloutPct = connectorRollout.initialRolloutPct,
+          currentTargetRolloutPct = connectorRollout.currentTargetRolloutPct,
+          finalTargetRolloutPct = connectorRollout.finalTargetRolloutPct,
+          hasBreakingChanges = connectorRollout.hasBreakingChanges,
+          rolloutStrategy = rolloutStrategy,
+          maxStepWaitTimeMins = connectorRollout.maxStepWaitTimeMins,
+          updatedAt = unixTimestampToOffsetDateTime(connectorRollout.updatedAt),
+          createdAt = unixTimestampToOffsetDateTime(connectorRollout.createdAt),
+          errorMsg = connectorRollout.errorMsg,
+          failedReason = connectorRollout.failedReason,
+          pausedReason = connectorRollout.pausedReason,
+          updatedBy =
             connectorRollout.rolloutStrategy?.let { strategy ->
               connectorRollout.updatedBy?.let { updatedBy ->
                 getUpdatedBy(strategy, updatedBy)
               }
             },
-          ).completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
-          .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
-          .tag(connectorRollout.tag)
+          completedAt = connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) },
+          expiresAt = connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) },
+          tag = connectorRollout.tag,
+        )
 
-      if (withActorSyncAndSelectionInfo) {
-        val pinnedActorInfo = getActorSelectionInfoForPinnedActors(connectorRollout.id)
-        val actorSyncInfo = getActorSyncInfo(connectorRollout.id).mapKeys { (uuidKey, _) -> uuidKey.toString() }
-
-        logger.info {
-          "buildConnectorRolloutRead withActorSyncAndSelectionInfo " +
-            "rolloutId=${connectorRollout.id} " +
-            "numPinnedToConnectorRollout=${pinnedActorInfo.numPinnedToConnectorRollout} " +
-            "actorSyncInfo=${actorSyncInfo.entries.associate { it.key to it.value.toString() }}"
-        }
-
-        rollout =
-          rollout
-            .actorSelectionInfo(pinnedActorInfo)
-            .actorSyncs(actorSyncInfo)
+      if (!withActorSyncAndSelectionInfo) {
+        return rollout
       }
-      return rollout
+
+      val pinnedActorInfo = getActorSelectionInfoForPinnedActors(connectorRollout.id)
+      val actorSyncInfo = getActorSyncInfo(connectorRollout.id).mapKeys { (uuidKey, _) -> uuidKey.toString() }
+
+      logger.info {
+        "buildConnectorRolloutRead withActorSyncAndSelectionInfo " +
+          "rolloutId=${connectorRollout.id} " +
+          "numPinnedToConnectorRollout=${pinnedActorInfo.numPinnedToConnectorRollout} " +
+          "actorSyncInfo=${actorSyncInfo.entries.associate { it.key to it.value.toString() }}"
+      }
+
+      return rollout.copy(actorSelectionInfo = pinnedActorInfo, actorSyncs = actorSyncInfo)
     }
 
     private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime = Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
@@ -116,21 +114,23 @@ open class ConnectorRolloutHelper
       val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(rollout, null, rollout.filters)
       logger.info { "getActorSelectionInfoForPinnedActors: actorSelectionInfo=$actorSelectionInfo" }
 
-      return ConnectorRolloutActorSelectionInfo()
-        .numActors(actorSelectionInfo.nActors)
-        .numPinnedToConnectorRollout(actorSelectionInfo.nPreviouslyPinned)
-        .numActorsEligibleOrAlreadyPinned(actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+      return ConnectorRolloutActorSelectionInfo(
+        numActors = actorSelectionInfo.nActors,
+        numPinnedToConnectorRollout = actorSelectionInfo.nPreviouslyPinned,
+        numActorsEligibleOrAlreadyPinned = actorSelectionInfo.nActorsEligibleOrAlreadyPinned,
+      )
     }
 
     fun getActorSyncInfo(id: UUID): Map<UUID, ConnectorRolloutActorSyncInfo> {
       val rollout = connectorRolloutService.getConnectorRollout(id)
       val actorSyncInfoMap = rolloutActorFinder.getSyncInfoForPinnedActors(rollout)
       return actorSyncInfoMap.mapValues { (id, syncInfo) ->
-        ConnectorRolloutActorSyncInfo()
-          .actorId(id)
-          .numConnections(syncInfo.nConnections)
-          .numSucceeded(syncInfo.nSucceeded)
-          .numFailed(syncInfo.nFailed)
+        ConnectorRolloutActorSyncInfo(
+          actorId = id,
+          numConnections = syncInfo.nConnections,
+          numSucceeded = syncInfo.nSucceeded,
+          numFailed = syncInfo.nFailed,
+        )
       }
     }
   }

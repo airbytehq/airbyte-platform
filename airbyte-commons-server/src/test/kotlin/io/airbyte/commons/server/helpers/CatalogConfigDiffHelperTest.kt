@@ -5,17 +5,17 @@
 package io.airbyte.commons.server.helpers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.CatalogConfigDiff
-import io.airbyte.api.model.generated.StreamCursorFieldDiff
-import io.airbyte.api.model.generated.StreamFieldStatusChanged
-import io.airbyte.api.model.generated.StreamPrimaryKeyDiff
-import io.airbyte.api.model.generated.StreamSyncModeDiff
 import io.airbyte.api.server.generated.models.AirbyteCatalog
 import io.airbyte.api.server.generated.models.AirbyteStream
 import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
 import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
+import io.airbyte.api.server.generated.models.CatalogConfigDiff
 import io.airbyte.api.server.generated.models.CatalogDiff
 import io.airbyte.api.server.generated.models.DestinationSyncMode
+import io.airbyte.api.server.generated.models.StreamCursorFieldDiff
+import io.airbyte.api.server.generated.models.StreamFieldStatusChanged
+import io.airbyte.api.server.generated.models.StreamPrimaryKeyDiff
+import io.airbyte.api.server.generated.models.StreamSyncModeDiff
 import io.airbyte.api.server.generated.models.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
@@ -28,15 +28,15 @@ class CatalogConfigDiffHelperTest {
   fun testEmptyAirbyteCatalogDiff() {
     val catalogDiff = CatalogDiff(transforms = listOf())
     val catalogConfigDiff =
-      CatalogConfigDiff().apply {
-        this.streamsEnabled = mutableListOf<StreamFieldStatusChanged>()
-        this.streamsDisabled = mutableListOf<StreamFieldStatusChanged>()
-        this.fieldsEnabled = mutableListOf<StreamFieldStatusChanged>()
-        this.fieldsDisabled = mutableListOf<StreamFieldStatusChanged>()
-        this.primaryKeysChanged = mutableListOf<StreamPrimaryKeyDiff>()
-        this.cursorFieldsChanged = mutableListOf<StreamCursorFieldDiff>()
-        this.syncModesChanged = mutableListOf<StreamSyncModeDiff>()
-      }
+      CatalogConfigDiff(
+        streamsEnabled = mutableListOf<StreamFieldStatusChanged>(),
+        streamsDisabled = mutableListOf<StreamFieldStatusChanged>(),
+        fieldsEnabled = mutableListOf<StreamFieldStatusChanged>(),
+        fieldsDisabled = mutableListOf<StreamFieldStatusChanged>(),
+        primaryKeysChanged = mutableListOf<StreamPrimaryKeyDiff>(),
+        cursorFieldsChanged = mutableListOf<StreamCursorFieldDiff>(),
+        syncModesChanged = mutableListOf<StreamSyncModeDiff>(),
+      )
     assertEquals(null, catalogConfigDiffHelper.getAirbyteCatalogDiff(catalogDiff, catalogConfigDiff))
   }
 
@@ -99,7 +99,7 @@ class CatalogConfigDiffHelperTest {
         AirbyteCatalog(streams = listOf(stream1ConfigNew, stream2ConfigNew))
 
       val catalogConfigDiff = catalogConfigDiffHelper.getCatalogConfigDiff(sourceCatalog, oldConfig, newConfig)
-      assertEquals(1, catalogConfigDiff.streamsEnabled.size)
+      assertEquals(1, catalogConfigDiff.streamsEnabled!!.size)
     }
 
     @Test
@@ -115,7 +115,7 @@ class CatalogConfigDiffHelperTest {
         AirbyteCatalog(streams = listOf(stream1ConfigNew))
 
       val catalogConfigDiff = catalogConfigDiffHelper.getCatalogConfigDiff(sourceCatalog, oldConfig, newConfig)
-      assertEquals(1, catalogConfigDiff.streamsDisabled.size)
+      assertEquals(1, catalogConfigDiff.streamsDisabled!!.size)
     }
 
     private fun streamConfig(

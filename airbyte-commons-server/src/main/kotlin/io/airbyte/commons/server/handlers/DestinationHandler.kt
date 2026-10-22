@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ActorStatus
 import io.airbyte.api.server.generated.models.ActorType
@@ -73,8 +72,6 @@ import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
-import io.airbyte.api.model.generated.ActorListFilters as JavaActorListFilters
-import io.airbyte.api.model.generated.ActorListSortKey as JavaActorListSortKey
 
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -319,11 +316,11 @@ class DestinationHandler
 
       // Parse sort key to extract field and direction
       val sortKeyInfo =
-        parseSortKey(actorListCursorPaginatedRequestBody.sortKey?.let { JavaActorListSortKey.fromValue(it.value) }, ActorType.DESTINATION)
+        parseSortKey(actorListCursorPaginatedRequestBody.sortKey, ActorType.DESTINATION)
       val internalSortKey = sortKeyInfo.sortKey
       val ascending = sortKeyInfo.ascending
       // airbyte-data still takes the Java filter model
-      val actorFilters = buildFilters(Jsons.convertValue(filters, JavaActorListFilters::class.java))
+      val actorFilters = buildFilters(filters)
 
       val cursorPagination =
         destinationService.buildCursorPagination(
@@ -704,12 +701,10 @@ class DestinationHandler
           destinationConnection.destinationId,
         )
 
-      // the helper and converters still build the Java models
       val breakingChanges =
         actorDefinitionHandlerHelper
           .getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion)
           .orElse(null)
-          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.workspaceId)
       val isEntitled =

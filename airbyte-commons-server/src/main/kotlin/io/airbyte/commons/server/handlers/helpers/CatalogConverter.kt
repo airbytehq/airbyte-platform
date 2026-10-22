@@ -42,7 +42,7 @@ import java.util.stream.Collectors
 private val log = KotlinLogging.logger {}
 
 /**
- * Convert classes between io.airbyte.protocol.models and io.airbyte.api.model.generated.
+ * Convert classes between io.airbyte.protocol.models and the API models.
  */
 @Singleton
 class CatalogConverter(

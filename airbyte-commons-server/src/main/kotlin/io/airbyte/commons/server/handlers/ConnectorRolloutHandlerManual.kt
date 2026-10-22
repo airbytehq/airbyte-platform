@@ -4,18 +4,18 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
-import io.airbyte.api.model.generated.ConnectorRolloutFilters
-import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeResponse
-import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutResponse
-import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutRead
-import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutFilters
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualFinalizeResponse
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualRolloutResponse
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualStartRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutRead
+import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
+import io.airbyte.api.server.generated.models.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.AttributeName
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -271,7 +271,7 @@ open class ConnectorRolloutHandlerManual
           connectorRolloutUpdate.dockerRepository,
           connectorRolloutUpdate.dockerImageTag,
           connectorRolloutUpdate.actorDefinitionId,
-          connectorRolloutUpdate.actorIds,
+          connectorRolloutUpdate.actorIds.orEmpty(),
           connectorRolloutUpdate.targetPercentage,
           connectorRolloutUpdate.updatedBy,
           getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
@@ -279,9 +279,7 @@ open class ConnectorRolloutHandlerManual
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
       }
-      val response = ConnectorRolloutManualRolloutResponse()
-      response.status("ok")
-      return response
+      return ConnectorRolloutManualRolloutResponse(status = "ok")
     }
 
     open fun manualFinalizeConnectorRollout(
@@ -310,16 +308,14 @@ open class ConnectorRolloutHandlerManual
             connectorRolloutFinalize.failedReason,
             connectorRolloutFinalize.updatedBy,
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-            connectorRolloutFinalize.retainPinsOnCancellation,
+            connectorRolloutFinalize.retainPinsOnCancellation == true,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("finalizeRollout", e)
         }
       }
 
-      val response = ConnectorRolloutManualFinalizeResponse()
-      response.status("ok")
-      return response
+      return ConnectorRolloutManualFinalizeResponse(status = "ok")
     }
 
     fun cancelRollout(
@@ -355,7 +351,7 @@ open class ConnectorRolloutHandlerManual
     }
 
     open fun manualPauseConnectorRollout(connectorRolloutPause: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
-      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutPause.id!!)
 
       logger.info {
         "Pausing rollout for ${connectorRolloutPause.id}; " +
@@ -366,10 +362,10 @@ open class ConnectorRolloutHandlerManual
       try {
         connectorRolloutClient.pauseRollout(
           connectorRollout,
-          connectorRolloutPause.dockerRepository,
-          connectorRolloutPause.dockerImageTag,
-          connectorRolloutPause.actorDefinitionId,
-          connectorRolloutPause.pausedReason,
+          connectorRolloutPause.dockerRepository!!,
+          connectorRolloutPause.dockerImageTag!!,
+          connectorRolloutPause.actorDefinitionId!!,
+          connectorRolloutPause.pausedReason!!,
           connectorRolloutPause.updatedBy,
           getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
         )
@@ -413,7 +409,7 @@ open class ConnectorRolloutHandlerManual
                 value = listOf(CustomerTier.TIER_2),
               ),
             )
-          } else if (requestFilters.tierFilter?.tier == io.airbyte.api.model.generated.CustomerTier.ALL) {
+          } else if (requestFilters.tierFilter?.tier == io.airbyte.api.server.generated.models.CustomerTier.ALL) {
             emptyList()
           } else {
             listOf(

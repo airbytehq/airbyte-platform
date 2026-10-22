@@ -4,17 +4,17 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutManualRolloutRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutManualStartRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutRead
-import io.airbyte.api.model.generated.ConnectorRolloutState
-import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
-import io.airbyte.api.model.generated.ConnectorRolloutStrategy
-import io.airbyte.api.model.generated.ConnectorRolloutTierFilter
-import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualFinalizeRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualRolloutRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutManualStartRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutRead
+import io.airbyte.api.server.generated.models.ConnectorRolloutState
+import io.airbyte.api.server.generated.models.ConnectorRolloutStateTerminal
+import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
+import io.airbyte.api.server.generated.models.ConnectorRolloutTierFilter
+import io.airbyte.api.server.generated.models.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AttributeName
@@ -215,14 +215,14 @@ internal class ConnectorRolloutHandlerManualTest {
   fun `test manualStartConnectorRollout with no filters`() {
     val rolloutId = UUID.randomUUID()
     val connectorRolloutWorkflowStart =
-      ConnectorRolloutManualStartRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        updatedBy = UPDATED_BY
-        rolloutStrategy = ConnectorRolloutStrategy.MANUAL
-        migratePins = false
-      }
+      ConnectorRolloutManualStartRequestBody(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        updatedBy = UPDATED_BY,
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        migratePins = false,
+      )
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
@@ -269,22 +269,18 @@ internal class ConnectorRolloutHandlerManualTest {
   fun `test manualStartConnectorRollout with filters`() {
     val rolloutId = UUID.randomUUID()
     val connectorRolloutWorkflowStart =
-      ConnectorRolloutManualStartRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        updatedBy = UPDATED_BY
-        rolloutStrategy = ConnectorRolloutStrategy.MANUAL
-        migratePins = false
+      ConnectorRolloutManualStartRequestBody(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        updatedBy = UPDATED_BY,
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        migratePins = false,
         filters =
-          io.airbyte.api.model.generated
-            .ConnectorRolloutFilters()
-            .tierFilter(
-              ConnectorRolloutTierFilter().tier(
-                io.airbyte.api.model.generated.CustomerTier.TIER_1,
-              ),
-            )
-      }
+          io.airbyte.api.server.generated.models.ConnectorRolloutFilters(
+            tierFilter = ConnectorRolloutTierFilter(tier = io.airbyte.api.server.generated.models.CustomerTier.TIER_1),
+          ),
+      )
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
@@ -339,22 +335,18 @@ internal class ConnectorRolloutHandlerManualTest {
   fun `test manualStartConnectorRollout all tiers`() {
     val rolloutId = UUID.randomUUID()
     val connectorRolloutWorkflowStart =
-      ConnectorRolloutManualStartRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        updatedBy = UPDATED_BY
-        rolloutStrategy = ConnectorRolloutStrategy.MANUAL
-        migratePins = false
+      ConnectorRolloutManualStartRequestBody(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        updatedBy = UPDATED_BY,
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        migratePins = false,
         filters =
-          io.airbyte.api.model.generated
-            .ConnectorRolloutFilters()
-            .tierFilter(
-              ConnectorRolloutTierFilter().tier(
-                io.airbyte.api.model.generated.CustomerTier.ALL,
-              ),
-            )
-      }
+          io.airbyte.api.server.generated.models.ConnectorRolloutFilters(
+            tierFilter = ConnectorRolloutTierFilter(tier = io.airbyte.api.server.generated.models.CustomerTier.ALL),
+          ),
+      )
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
@@ -425,13 +417,14 @@ internal class ConnectorRolloutHandlerManualTest {
     val rolloutId = UUID.randomUUID()
     val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
     val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutManualRolloutRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        this.actorIds = actorIds
-      }
+      ConnectorRolloutManualRolloutRequestBody(
+        updatedBy = UPDATED_BY,
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        id = rolloutId,
+        actorIds = actorIds,
+      )
     val connectorRollout = createMockConnectorRollout(rolloutId)
     // Rollout has been started
     connectorRollout.apply { this.state = state }
@@ -459,13 +452,14 @@ internal class ConnectorRolloutHandlerManualTest {
     rollout.apply { state = initialState }
     val state = ConnectorRolloutStateTerminal.SUCCEEDED
     val connectorRolloutFinalizeWorkflowUpdate =
-      ConnectorRolloutManualFinalizeRequestBody().apply {
-        dockerRepository = "airbyte/source-faker"
-        dockerImageTag = "0.1"
-        actorDefinitionId = UUID.randomUUID()
-        id = rolloutId
-        this.state = state
-      }
+      ConnectorRolloutManualFinalizeRequestBody(
+        updatedBy = UPDATED_BY,
+        dockerRepository = "airbyte/source-faker",
+        dockerImageTag = "0.1",
+        actorDefinitionId = UUID.randomUUID(),
+        id = rolloutId,
+        state = state,
+      )
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -486,14 +480,15 @@ internal class ConnectorRolloutHandlerManualTest {
     val rollout = createMockConnectorRollout(rolloutId)
     val state = ConnectorRolloutStateTerminal.CANCELED
     val connectorRolloutFinalizeWorkflowUpdate =
-      ConnectorRolloutManualFinalizeRequestBody().apply {
-        dockerRepository = "airbyte/source-faker"
-        dockerImageTag = "0.1"
-        actorDefinitionId = UUID.randomUUID()
-        id = rolloutId
-        this.state = state
-        retainPinsOnCancellation = false
-      }
+      ConnectorRolloutManualFinalizeRequestBody(
+        updatedBy = UPDATED_BY,
+        dockerRepository = "airbyte/source-faker",
+        dockerImageTag = "0.1",
+        actorDefinitionId = UUID.randomUUID(),
+        id = rolloutId,
+        state = state,
+        retainPinsOnCancellation = false,
+      )
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -520,14 +515,15 @@ internal class ConnectorRolloutHandlerManualTest {
     val rollout = createMockConnectorRollout(rolloutId)
     val state = ConnectorRolloutStateTerminal.CANCELED
     val connectorRolloutFinalizeWorkflowUpdate =
-      ConnectorRolloutManualFinalizeRequestBody().apply {
-        dockerRepository = "airbyte/source-faker"
-        dockerImageTag = "0.1"
-        actorDefinitionId = UUID.randomUUID()
-        id = rolloutId
-        this.state = state
-        retainPinsOnCancellation = true
-      }
+      ConnectorRolloutManualFinalizeRequestBody(
+        updatedBy = UPDATED_BY,
+        dockerRepository = "airbyte/source-faker",
+        dockerImageTag = "0.1",
+        actorDefinitionId = UUID.randomUUID(),
+        id = rolloutId,
+        state = state,
+        retainPinsOnCancellation = true,
+      )
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -549,14 +545,14 @@ internal class ConnectorRolloutHandlerManualTest {
   fun `test manualPauseConnectorRollout`(rolloutState: ConnectorEnumRolloutState) {
     val rolloutId = UUID.randomUUID()
     val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutUpdateStateRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        state = ConnectorRolloutState.PAUSED
-        pausedReason = "test"
-      }
+      ConnectorRolloutUpdateStateRequestBody(
+        dockerRepository = DOCKER_REPOSITORY,
+        dockerImageTag = DOCKER_IMAGE_TAG,
+        actorDefinitionId = ACTOR_DEFINITION_ID,
+        id = rolloutId,
+        state = ConnectorRolloutState.PAUSED,
+        pausedReason = "test",
+      )
     val connectorRollout = createMockConnectorRollout(rolloutId)
     // Rollout has been started
     connectorRollout.apply { this.state = state }
@@ -878,12 +874,14 @@ internal class ConnectorRolloutHandlerManualTest {
     val problem =
       assertThrows<ConnectorRolloutInvalidRequestProblem> {
         connectorRolloutHandler.manualDoConnectorRollout(
-          ConnectorRolloutManualRolloutRequestBody()
-            .id(rolloutId)
-            .dockerRepository(DOCKER_REPOSITORY)
-            .dockerImageTag(DOCKER_IMAGE_TAG)
-            .actorDefinitionId(ACTOR_DEFINITION_ID)
-            .actorIds(listOf(UUID.randomUUID())),
+          ConnectorRolloutManualRolloutRequestBody(
+            updatedBy = UPDATED_BY,
+            id = rolloutId,
+            dockerRepository = DOCKER_REPOSITORY,
+            dockerImageTag = DOCKER_IMAGE_TAG,
+            actorDefinitionId = ACTOR_DEFINITION_ID,
+            actorIds = listOf(UUID.randomUUID()),
+          ),
         )
       }
     assertEquals(

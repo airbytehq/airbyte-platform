@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationSearch
 import io.airbyte.api.server.generated.models.SourceRead
 import io.airbyte.api.server.generated.models.SourceSearch
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher
 import io.airbyte.commons.server.handlers.helpers.DestinationMatcher
@@ -55,9 +54,8 @@ open class MatchSearchHandler
       val connectionReadFromSearch = connectionMatcher.match(connectionRead)
 
       return connectionReadFromSearch == connectionRead &&
-        // ConnectionSearch is still a Java model; its source and destination filters are converted here
-        matchSearch(Jsons.convertValue(connectionSearch?.source, SourceSearch::class.java), sourceRead) &&
-        matchSearch(Jsons.convertValue(connectionSearch?.destination, DestinationSearch::class.java), destinationRead)
+        matchSearch(connectionSearch?.source, sourceRead) &&
+        matchSearch(connectionSearch?.destination, destinationRead)
     }
 
     fun searchConnections(connectionSearch: ConnectionSearch?): ConnectionReadList {

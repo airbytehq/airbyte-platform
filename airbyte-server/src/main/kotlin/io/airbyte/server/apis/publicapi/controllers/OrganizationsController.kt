@@ -65,8 +65,8 @@ open class OrganizationsController(
 
         val actorType =
           when (organizationOAuthCredentialsRequest.actorType) {
-            ActorTypeEnum.SOURCE -> io.airbyte.api.model.generated.ActorTypeEnum.SOURCE
-            ActorTypeEnum.DESTINATION -> io.airbyte.api.model.generated.ActorTypeEnum.DESTINATION
+            ActorTypeEnum.SOURCE -> io.airbyte.api.server.generated.models.ActorTypeEnum.SOURCE
+            ActorTypeEnum.DESTINATION -> io.airbyte.api.server.generated.models.ActorTypeEnum.DESTINATION
           }
 
         organizationService.setOrganizationOverrideOauthParams(
@@ -110,8 +110,8 @@ open class OrganizationsController(
 
         val internalActorType =
           when (actorType) {
-            ActorTypeEnum.SOURCE -> io.airbyte.api.model.generated.ActorTypeEnum.SOURCE
-            ActorTypeEnum.DESTINATION -> io.airbyte.api.model.generated.ActorTypeEnum.DESTINATION
+            ActorTypeEnum.SOURCE -> io.airbyte.api.server.generated.models.ActorTypeEnum.SOURCE
+            ActorTypeEnum.DESTINATION -> io.airbyte.api.server.generated.models.ActorTypeEnum.DESTINATION
           }
 
         organizationService.deleteOrganizationOverrideOauthParams(

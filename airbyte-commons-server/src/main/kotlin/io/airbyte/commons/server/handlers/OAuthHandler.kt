@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody
-import io.airbyte.api.model.generated.ActorTypeEnum
+import io.airbyte.api.server.generated.models.ActorTypeEnum
 import io.airbyte.api.server.generated.models.CompleteDestinationOAuthRequest
 import io.airbyte.api.server.generated.models.CompleteOAuthResponse
 import io.airbyte.api.server.generated.models.CompleteSourceOauthRequest
@@ -700,8 +700,8 @@ open class OAuthHandler(
         .orElseGet { SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
         .withConfiguration(Jsons.jsonNode(requestBody.params))
         .withSourceDefinitionId(requestBody.sourceDefinitionId)
-    // TODO validate requestBody.getParams() against
-    // spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerInputSpecification()
+    // TODO validate requestBody.params against
+    // spec.advancedAuth.oauthConfigSpecification.getCompleteOauthServerInputSpecification()
     oAuthService.writeSourceOAuthParam(param)
   }
 
@@ -712,8 +712,8 @@ open class OAuthHandler(
         .orElseGet { DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
         .withConfiguration(Jsons.jsonNode(requestBody.params))
         .withDestinationDefinitionId(requestBody.destinationDefinitionId)
-    // TODO validate requestBody.getParams() against
-    // spec.getAdvancedAuth().getOauthConfigSpecification().getCompleteOauthServerInputSpecification()
+    // TODO validate requestBody.params against
+    // spec.advancedAuth.oauthConfigSpecification.getCompleteOauthServerInputSpecification()
     oAuthService.writeDestinationOAuthParam(param)
   }
 

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.server.generated.models.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.server.generated.models.ActorDefinitionVersionRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.api.server.generated.models.GetActorDefinitionVersionDefaultRequestBody
@@ -15,7 +14,6 @@ import io.airbyte.api.server.generated.models.SupportLevel
 import io.airbyte.api.server.generated.models.SupportState
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper
@@ -135,12 +133,10 @@ open class ActorDefinitionVersionHandler
     @InternalForTesting
     fun createActorDefinitionVersionRead(versionWithOverrideStatus: ActorDefinitionVersionWithOverrideStatus): ActorDefinitionVersionRead {
       val actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion
-      // ApiPojoConverters and the helper still build Java models; convert them at this boundary
       val breakingChanges =
         actorDefinitionHandlerHelper
           .getVersionBreakingChanges(actorDefinitionVersion)
           .orElse(null)
-          ?.let { Jsons.convertValue(it, ActorDefinitionVersionBreakingChanges::class.java) }
 
       return ActorDefinitionVersionRead(
         dockerRepository = actorDefinitionVersion.dockerRepository,

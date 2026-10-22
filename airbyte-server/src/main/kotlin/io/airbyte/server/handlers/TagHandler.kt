@@ -4,10 +4,10 @@
 
 package io.airbyte.server.handlers
 
-import io.airbyte.api.model.generated.TagCreateRequestBody
-import io.airbyte.api.model.generated.TagDeleteRequestBody
-import io.airbyte.api.model.generated.TagUpdateRequestBody
 import io.airbyte.api.server.generated.models.Tag
+import io.airbyte.api.server.generated.models.TagCreateRequestBody
+import io.airbyte.api.server.generated.models.TagDeleteRequestBody
+import io.airbyte.api.server.generated.models.TagUpdateRequestBody
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.TagService

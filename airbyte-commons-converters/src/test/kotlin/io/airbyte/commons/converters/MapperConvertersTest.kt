@@ -4,20 +4,18 @@
 
 package io.airbyte.commons.converters
 
-import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
-import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
-import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
-import io.airbyte.api.model.generated.FieldFilteringMapperConfiguration
-import io.airbyte.api.model.generated.FieldRenamingMapperConfiguration
-import io.airbyte.api.model.generated.HashingMapperConfiguration
-import io.airbyte.api.model.generated.HashingMapperConfiguration.MethodEnum
-import io.airbyte.api.model.generated.RowFilteringMapperConfiguration
-import io.airbyte.api.model.generated.RowFilteringOperation
-import io.airbyte.api.model.generated.RowFilteringOperationType
 import io.airbyte.api.problems.model.generated.ProblemMapperIdData
 import io.airbyte.api.problems.throwable.generated.MapperValidationInvalidConfigProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationMissingRequiredParamProblem
 import io.airbyte.api.server.generated.models.ConfiguredStreamMapper
+import io.airbyte.api.server.generated.models.EncryptionMapperAESConfiguration
+import io.airbyte.api.server.generated.models.EncryptionMapperAlgorithm
+import io.airbyte.api.server.generated.models.EncryptionMapperRSAConfiguration
+import io.airbyte.api.server.generated.models.FieldFilteringMapperConfiguration
+import io.airbyte.api.server.generated.models.FieldRenamingMapperConfiguration
+import io.airbyte.api.server.generated.models.HashingMapperConfiguration
+import io.airbyte.api.server.generated.models.RowFilteringMapperConfiguration
+import io.airbyte.api.server.generated.models.RowFilteringOperationType
 import io.airbyte.api.server.generated.models.StreamMapperType
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteSecret
@@ -52,10 +50,11 @@ class MapperConvertersTest {
   @Test
   fun testConvertHashingMapper() {
     val hashingConfig =
-      HashingMapperConfiguration()
-        .method(MethodEnum.SHA_256)
-        .fieldNameSuffix("_hash")
-        .targetField("target_field")
+      HashingMapperConfiguration(
+        method = HashingMapperConfiguration.Method.SHA_MINUS256,
+        fieldNameSuffix = "_hash",
+        targetField = "target_field",
+      )
 
     val configuredMapper =
       ConfiguredStreamMapper(
@@ -86,8 +85,7 @@ class MapperConvertersTest {
   @Test
   fun testConvertFieldFilteringMapper() {
     val filteringConfig =
-      FieldFilteringMapperConfiguration()
-        .targetField("target_field")
+      FieldFilteringMapperConfiguration(targetField = "target_field")
 
     val configuredMapper =
       ConfiguredStreamMapper(
@@ -116,9 +114,7 @@ class MapperConvertersTest {
   @Test
   fun testConvertFieldRenamingMapper() {
     val renamingConfig =
-      FieldRenamingMapperConfiguration()
-        .originalFieldName("old_field")
-        .newFieldName("new_field")
+      FieldRenamingMapperConfiguration(originalFieldName = "old_field", newFieldName = "new_field")
 
     val configuredMapper =
       ConfiguredStreamMapper(
@@ -148,13 +144,14 @@ class MapperConvertersTest {
   @Test
   fun testAESEncryptionMapper() {
     val encryptionConfig =
-      EncryptionMapperAESConfiguration()
-        .algorithm(EncryptionMapperAlgorithm.AES)
-        .fieldNameSuffix("enc")
-        .targetField("target_field")
-        .key("key")
-        .mode(EncryptionMapperAESConfiguration.ModeEnum.CBC)
-        .padding(EncryptionMapperAESConfiguration.PaddingEnum.PKCS5_PADDING)
+      EncryptionMapperAESConfiguration(
+        algorithm = EncryptionMapperAlgorithm.AES,
+        fieldNameSuffix = "enc",
+        targetField = "target_field",
+        key = "key",
+        mode = EncryptionMapperAESConfiguration.Mode.CBC,
+        padding = EncryptionMapperAESConfiguration.Padding.PKCS5_PADDING,
+      )
 
     val configuredMapper =
       ConfiguredStreamMapper(
@@ -188,11 +185,12 @@ class MapperConvertersTest {
   @Test
   fun testRSAEncryptionMapper() {
     val encryptionConfig =
-      EncryptionMapperRSAConfiguration()
-        .algorithm(EncryptionMapperAlgorithm.RSA)
-        .fieldNameSuffix("enc")
-        .targetField("target_field")
-        .publicKey("my_public_key")
+      EncryptionMapperRSAConfiguration(
+        algorithm = EncryptionMapperAlgorithm.RSA,
+        fieldNameSuffix = "enc",
+        targetField = "target_field",
+        publicKey = "my_public_key",
+      )
 
     val configuredMapper =
       ConfiguredStreamMapper(
@@ -223,20 +221,23 @@ class MapperConvertersTest {
 
   @Test
   fun testRowFilteringMapper() {
+    // RowFilteringOperation is a oneOf, which the generated Kotlin models represent as Any
     val rowFilteringConfig =
-      RowFilteringMapperConfiguration()
-        .conditions(
-          RowFilteringOperation()
-            .type(RowFilteringOperationType.NOT)
-            .conditions(
+      RowFilteringMapperConfiguration(
+        conditions =
+          mapOf(
+            "type" to RowFilteringOperationType.NOT,
+            "conditions" to
               listOf(
-                RowFilteringOperation()
-                  .type(RowFilteringOperationType.EQUAL)
-                  .fieldName("field1")
-                  .comparisonValue("value1"),
+                mapOf(
+                  "type" to RowFilteringOperationType.EQUAL,
+                  "fieldName" to "field1",
+                  "comparisonValue" to "value1",
+                  "conditions" to emptyList<Any>(),
+                ),
               ),
-            ),
-        )
+          ),
+      )
 
     val configuredMapper =
       ConfiguredStreamMapper(

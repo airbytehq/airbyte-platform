@@ -5,10 +5,10 @@
 package io.airbyte.server.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.model.generated.UserRead
 import io.airbyte.api.server.generated.models.DataplaneGroupRead
 import io.airbyte.api.server.generated.models.DataplaneRead
 import io.airbyte.api.server.generated.models.OrganizationPaymentConfigRead
+import io.airbyte.api.server.generated.models.UserRead
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -44,11 +44,13 @@ class JacksonDateSerializationTest {
   @Test
   fun `UserRead agenticEnabledAt serializes as ISO string`() {
     val userRead =
-      UserRead()
-        .userId(UUID.randomUUID())
-        .email("test@test.com")
-        .name("test")
-        .agenticEnabledAt(testTimestamp)
+      UserRead(
+        userId = UUID.randomUUID(),
+        email = "test@test.com",
+        metadata = emptyMap<String, Any>(),
+        name = "test",
+        agenticEnabledAt = testTimestamp,
+      )
 
     val json = objectMapper.writeValueAsString(userRead)
 

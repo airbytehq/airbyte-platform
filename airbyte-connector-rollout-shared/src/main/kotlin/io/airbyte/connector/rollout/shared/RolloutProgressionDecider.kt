@@ -4,7 +4,7 @@
 
 package io.airbyte.connector.rollout.shared
 
-import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_PERCENTAGE_OF_ACTORS_WITH_COMPLETED_SYNCS_REQUIRED
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_SUCCESS_THRESHOLD_PERCENTAGE
@@ -31,11 +31,11 @@ class RolloutProgressionDecider {
     }
     val finalPercentageToPin = connectorRolloutOutput.finalTargetRolloutPct ?: 0
     val actorSelectionInfo = connectorRolloutOutput.actorSelectionInfo!!
-    val nActorsEligibleOrAlreadyPinned = actorSelectionInfo.getNumActorsEligibleOrAlreadyPinned()
-    val nActorsPinned = actorSelectionInfo.getNumPinnedToConnectorRollout()
+    val nActorsEligibleOrAlreadyPinned = actorSelectionInfo.numActorsEligibleOrAlreadyPinned
+    val nActorsPinned = actorSelectionInfo.numPinnedToConnectorRollout
     val actorSyncs = connectorRolloutOutput.actorSyncs!!
 
-    val nFailedSyncs = actorSyncs.values.sumOf { it.getNumFailed() }
+    val nFailedSyncs = actorSyncs.values.sumOf { it.numFailed }
     if (nFailedSyncs > 0) {
       // If any syncs have failed, we pause the rollout so the dev can decide the next steps
       // For now, they will have to manually pin & monitor if they want to proceed with the rollout
@@ -103,7 +103,7 @@ class RolloutProgressionDecider {
     val actorsWithCompletedSyncs =
       actorSyncs
         .filter { (_, syncInfo) ->
-          syncInfo.getNumSucceeded() >= 1 || syncInfo.getNumFailed() >= 1
+          syncInfo.numSucceeded >= 1 || syncInfo.numFailed >= 1
         }.count()
     val percentageActorsWithCompletedSyncs = actorsWithCompletedSyncs / nActorsPinned * 100
     logger.info {
@@ -120,8 +120,8 @@ class RolloutProgressionDecider {
     actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>,
     thresholdPercentage: Int,
   ): Boolean {
-    val nSuccessfulSyncs = actorSyncs.values.sumOf { it.getNumSucceeded() }
-    val nFailedSyncs = actorSyncs.values.sumOf { it.getNumFailed() }
+    val nSuccessfulSyncs = actorSyncs.values.sumOf { it.numSucceeded }
+    val nFailedSyncs = actorSyncs.values.sumOf { it.numFailed }
     logger.info {
       "RolloutProgressionDecider.isSuccessful " +
         "nSuccessfulSyncs=$nSuccessfulSyncs nFailedSyncs=$nFailedSyncs thresholdPercentage=$thresholdPercentage actorSyncs=$actorSyncs"

@@ -13,7 +13,6 @@ import io.airbyte.api.server.generated.models.SourceDefinitionSpecificationRead
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.OauthModelConverter.getAdvancedAuth
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata.Companion.mock
@@ -194,13 +193,9 @@ open class ConnectorDefinitionSpecificationHandler(
     )
   }
 
-  // JobConverter and OauthModelConverter still build the Java models. Convert through JSON, not by enum name:
-  // the logs field is untyped in Kotlin, and AdvancedAuth's flow-type constants are named differently.
-  private fun getSpecJobInfo(): SynchronousJobRead =
-    Jsons.convertValue(jobConverter.getSynchronousJobRead(mock(JobConfig.ConfigType.GET_SPEC)), SynchronousJobRead::class.java)
+  private fun getSpecJobInfo(): SynchronousJobRead = jobConverter.getSynchronousJobRead(mock(JobConfig.ConfigType.GET_SPEC))
 
-  private fun getKotlinAdvancedAuth(spec: ConnectorSpecification): AdvancedAuth? =
-    getAdvancedAuth(spec).orElse(null)?.let { Jsons.convertValue(it, AdvancedAuth::class.java) }
+  private fun getKotlinAdvancedAuth(spec: ConnectorSpecification): AdvancedAuth? = getAdvancedAuth(spec).orElse(null)
 
   private fun getFinalDestinationSyncModes(
     syncModes: List<DestinationSyncMode>,

@@ -4,8 +4,8 @@
 
 package io.airbyte.connector.rollout.shared
 
-import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
-import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSelectionInfo
+import io.airbyte.api.server.generated.models.ConnectorRolloutActorSyncInfo
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -149,15 +149,9 @@ class RolloutProgressionDeciderTest {
     val actorSyncs =
       mapOf(
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(0)
-            .numConnections(1),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(1)
-            .numConnections(2),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
       )
     assertTrue(
       RolloutProgressionDecider().hasEnoughFinishedSyncs(
@@ -173,15 +167,9 @@ class RolloutProgressionDeciderTest {
     val actorSyncs =
       mapOf(
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(0)
-            .numConnections(1),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(1)
-            .numConnections(2),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
       )
     assertFalse(
       RolloutProgressionDecider().hasEnoughFinishedSyncs(
@@ -198,15 +186,9 @@ class RolloutProgressionDeciderTest {
       mapOf(
         // the first actor has syncs listed but not completed
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(0)
-            .numFailed(0)
-            .numConnections(1),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 0, numConnections = 1),
         UUID.randomUUID() to
-          ConnectorRolloutActorSyncInfo()
-            .numSucceeded(1)
-            .numFailed(1)
-            .numConnections(2),
+          ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
       )
     assertFalse(
       RolloutProgressionDecider().hasEnoughFinishedSyncs(
@@ -224,15 +206,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
         ),
         50,
       ),
@@ -243,15 +219,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(1)
-              .numConnections(2),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
         ),
         50,
       ),
@@ -262,15 +232,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(0)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 0, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(1)
-              .numConnections(2),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
         ),
         50,
       ),
@@ -284,15 +248,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(0)
-              .numFailed(1)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 1, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(0)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 0, numConnections = 1),
         ),
         50,
       ),
@@ -303,15 +261,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 0, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(1)
-              .numFailed(1)
-              .numConnections(2),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 1, numFailed = 1, numConnections = 2),
         ),
         90,
       ),
@@ -322,15 +274,9 @@ class RolloutProgressionDeciderTest {
       RolloutProgressionDecider().isSuccessful(
         mapOf(
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(0)
-              .numFailed(0)
-              .numConnections(1),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 0, numConnections = 1),
           UUID.randomUUID() to
-            ConnectorRolloutActorSyncInfo()
-              .numSucceeded(0)
-              .numFailed(0)
-              .numConnections(2),
+            ConnectorRolloutActorSyncInfo(actorId = UUID.randomUUID(), numSucceeded = 0, numFailed = 0, numConnections = 2),
         ),
         90,
       ),
@@ -354,16 +300,20 @@ class RolloutProgressionDeciderTest {
     nFailed: Int,
     nConnections: Int,
   ): ConnectorRolloutActorSyncInfo =
-    ConnectorRolloutActorSyncInfo()
-      .numSucceeded(nSucceeded)
-      .numFailed(nFailed)
-      .numConnections(nConnections)
+    ConnectorRolloutActorSyncInfo(
+      actorId = UUID.randomUUID(),
+      numSucceeded = nSucceeded,
+      numFailed = nFailed,
+      numConnections = nConnections,
+    )
 
   private fun mockActorSelectionInfo(
     nActorsEligibleOrAlreadyPinned: Int = 1,
     nPinnedToConnectorRollout: Int = 1,
   ): ConnectorRolloutActorSelectionInfo =
-    ConnectorRolloutActorSelectionInfo()
-      .numPinnedToConnectorRollout(nPinnedToConnectorRollout)
-      .numActorsEligibleOrAlreadyPinned(nActorsEligibleOrAlreadyPinned)
+    ConnectorRolloutActorSelectionInfo(
+      numActors = nActorsEligibleOrAlreadyPinned,
+      numPinnedToConnectorRollout = nPinnedToConnectorRollout,
+      numActorsEligibleOrAlreadyPinned = nActorsEligibleOrAlreadyPinned,
+    )
 }

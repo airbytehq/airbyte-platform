@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
-import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
-import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.api.server.generated.models.ConnectorRolloutFinalizeRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutStartRequestBody
+import io.airbyte.api.server.generated.models.ConnectorRolloutStateTerminal
+import io.airbyte.api.server.generated.models.ConnectorRolloutStrategy
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -169,9 +169,7 @@ internal class ConnectorRolloutHandlerTest {
       }
 
     val connectorRolloutRequestBody =
-      createMockConnectorRolloutRequestBody(rolloutId, rolloutStrategy, actorIds, null).apply {
-        this.actorIds = actorIds
-      }
+      createMockConnectorRolloutRequestBody(rolloutId, rolloutStrategy, actorIds, null)
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns initialRollout
     every { actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(any(), any(), any(), any()) } returns Unit
@@ -489,11 +487,12 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
     connectorRolloutHandler.startConnectorRollout(
-      ConnectorRolloutStartRequestBody()
-        .id(rolloutId)
-        .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(rolloutStrategy)
-        .migratePins(true),
+      ConnectorRolloutStartRequestBody(
+        id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
+        rolloutStrategy = rolloutStrategy,
+        migratePins = true,
+      ),
     )
 
     verify {
@@ -538,11 +537,12 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
     connectorRolloutHandler.startConnectorRollout(
-      ConnectorRolloutStartRequestBody()
-        .id(rolloutId)
-        .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
-        .migratePins(true),
+      ConnectorRolloutStartRequestBody(
+        id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        migratePins = true,
+      ),
     )
 
     verify {
@@ -581,11 +581,12 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
     connectorRolloutHandler.startConnectorRollout(
-      ConnectorRolloutStartRequestBody()
-        .id(rolloutId)
-        .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
-        .migratePins(true),
+      ConnectorRolloutStartRequestBody(
+        id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        migratePins = true,
+      ),
     )
 
     verify {
@@ -617,11 +618,12 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
 
     connectorRolloutHandler.startConnectorRollout(
-      ConnectorRolloutStartRequestBody()
-        .id(rolloutId)
-        .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(rolloutStrategy)
-        .migratePins(false),
+      ConnectorRolloutStartRequestBody(
+        id = rolloutId,
+        workflowRunId = UUID.randomUUID().toString(),
+        rolloutStrategy = rolloutStrategy,
+        migratePins = false,
+      ),
     )
 
     verify(exactly = 0) {
@@ -649,10 +651,11 @@ internal class ConnectorRolloutHandlerTest {
 
     val result =
       connectorRolloutHandler.getAndValidateStartRequest(
-        ConnectorRolloutStartRequestBody()
-          .id(rolloutId)
-          .workflowRunId(UUID.randomUUID().toString())
-          .rolloutStrategy(ConnectorRolloutStrategy.MANUAL),
+        ConnectorRolloutStartRequestBody(
+          id = rolloutId,
+          workflowRunId = UUID.randomUUID().toString(),
+          rolloutStrategy = ConnectorRolloutStrategy.MANUAL,
+        ),
       )
 
     assertEquals(connectorRollout, result)
@@ -677,10 +680,11 @@ internal class ConnectorRolloutHandlerTest {
 
     val result =
       connectorRolloutHandler.getAndValidateStartRequest(
-        ConnectorRolloutStartRequestBody()
-          .id(rolloutId)
-          .workflowRunId(runId)
-          .rolloutStrategy(rolloutStrategy),
+        ConnectorRolloutStartRequestBody(
+          id = rolloutId,
+          workflowRunId = runId,
+          rolloutStrategy = rolloutStrategy,
+        ),
       )
 
     assertEquals(connectorRollout.workflowRunId, result.workflowRunId)
@@ -1047,11 +1051,12 @@ internal class ConnectorRolloutHandlerTest {
     actorIds: List<UUID>?,
     targetPercentage: Int?,
   ): ConnectorRolloutRequestBody =
-    ConnectorRolloutRequestBody()
-      .id(rolloutId)
-      .rolloutStrategy(rolloutStrategy)
-      .actorIds(actorIds)
-      .targetPercentage(targetPercentage)
+    ConnectorRolloutRequestBody(
+      id = rolloutId,
+      rolloutStrategy = rolloutStrategy,
+      actorIds = actorIds,
+      targetPercentage = targetPercentage,
+    )
 
   private fun createMockConnectorRolloutFinalizeRequestBody(
     rolloutId: UUID,
@@ -1061,13 +1066,14 @@ internal class ConnectorRolloutHandlerTest {
     failedReason: String,
     retainPinsOnCancellation: Boolean,
   ): ConnectorRolloutFinalizeRequestBody =
-    ConnectorRolloutFinalizeRequestBody()
-      .id(rolloutId)
-      .state(state)
-      .rolloutStrategy(rolloutStrategy)
-      .errorMsg(errorMsg)
-      .failedReason(failedReason)
-      .retainPinsOnCancellation(retainPinsOnCancellation)
+    ConnectorRolloutFinalizeRequestBody(
+      id = rolloutId,
+      state = state,
+      rolloutStrategy = rolloutStrategy,
+      errorMsg = errorMsg,
+      failedReason = failedReason,
+      retainPinsOnCancellation = retainPinsOnCancellation,
+    )
 
   private fun createMockActorDefinitionVersion(): ActorDefinitionVersion =
     ActorDefinitionVersion()

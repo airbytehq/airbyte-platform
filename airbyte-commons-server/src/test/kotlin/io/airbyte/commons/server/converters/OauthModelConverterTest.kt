@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.AdvancedAuth.AuthFlowTypeEnum
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.converters.OauthModelConverter.getAdvancedAuth
 import io.airbyte.protocol.models.v0.AdvancedAuth
@@ -45,24 +44,27 @@ internal class OauthModelConverterTest {
       )
 
     val expectedAuthFlowTypeEnum =
-      if (authFlowType == AdvancedAuth.AuthFlowType.OAUTH_1_0) AuthFlowTypeEnum.OAUTH1_0 else AuthFlowTypeEnum.OAUTH2_0
+      if (authFlowType == AdvancedAuth.AuthFlowType.OAUTH_1_0) {
+        io.airbyte.api.server.generated.models.AdvancedAuth.AuthFlowType.OAUTH1_PERIOD0
+      } else {
+        io.airbyte.api.server.generated.models.AdvancedAuth.AuthFlowType.OAUTH2_PERIOD0
+      }
 
     val expected =
-      io.airbyte.api.model.generated
-        .AdvancedAuth()
-        .authFlowType(expectedAuthFlowTypeEnum)
-        .predicateKey(predicateKey)
-        .predicateValue(predicateValue)
-        .oauthConfigSpecification(
-          io.airbyte.api.model.generated
-            .OAuthConfigSpecification()
-            .oauthUserInputFromConnectorConfigSpecification(oauthUserInputFromConnectorConfigSpecification)
-            .completeOAuthOutputSpecification(completeOauthOutputSpecification)
-            .completeOAuthServerInputSpecification(completeOauthServerInputSpecification)
-            .completeOAuthServerOutputSpecification(completeOauthServerOutputSpecification),
-        )
+      io.airbyte.api.server.generated.models.AdvancedAuth(
+        authFlowType = expectedAuthFlowTypeEnum,
+        predicateKey = predicateKey?.filterNotNull(),
+        predicateValue = predicateValue,
+        oauthConfigSpecification =
+          io.airbyte.api.server.generated.models.OAuthConfigSpecification(
+            oauthUserInputFromConnectorConfigSpecification = oauthUserInputFromConnectorConfigSpecification,
+            completeOAuthOutputSpecification = completeOauthOutputSpecification,
+            completeOAuthServerInputSpecification = completeOauthServerInputSpecification,
+            completeOAuthServerOutputSpecification = completeOauthServerOutputSpecification,
+          ),
+      )
 
-    val advancedAuth: Optional<io.airbyte.api.model.generated.AdvancedAuth> = getAdvancedAuth(input)
+    val advancedAuth: Optional<io.airbyte.api.server.generated.models.AdvancedAuth> = getAdvancedAuth(input)
     Assertions.assertTrue(advancedAuth.isPresent())
     Assertions.assertEquals(expected, advancedAuth.get())
   }

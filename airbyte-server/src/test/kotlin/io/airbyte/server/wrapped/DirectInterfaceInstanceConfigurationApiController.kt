@@ -4,9 +4,10 @@
 
 package io.airbyte.server.wrapped
 
-import io.airbyte.api.generated.InstanceConfigurationApi
-import io.airbyte.api.model.generated.InstanceConfigurationResponse
-import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
+import io.airbyte.api.server.generated.apis.InstanceConfigurationApi
+import io.airbyte.api.server.generated.models.AuthConfiguration
+import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
+import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -14,12 +15,14 @@ import io.airbyte.server.apis.controllers.InstanceConfigurationApiController
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
 import jakarta.inject.Singleton
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-@Controller("/api/v1/instance_configuration")
+@Controller
 @Replaces(InstanceConfigurationApiController::class)
 @Requires(property = "spec.name", value = "StrictJsonDeserializationTest")
 class DirectInterfaceInstanceConfigurationApiController(
@@ -30,7 +33,7 @@ class DirectInterfaceInstanceConfigurationApiController(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
-  override fun getInstanceConfiguration(): InstanceConfigurationResponse? = null
+  override fun getInstanceConfiguration(): InstanceConfigurationResponse = instanceConfigurationResponse()
 
   @Status(HttpStatus.NO_CONTENT)
   @AuthorizeOperation(
@@ -38,11 +41,24 @@ class DirectInterfaceInstanceConfigurationApiController(
     migration = RouteMigration.LEGACY,
   )
   override fun setupInstanceConfiguration(
-    instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,
-  ): InstanceConfigurationResponse? {
+    @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody?,
+  ): InstanceConfigurationResponse {
     tracker.recordSetup()
-    return InstanceConfigurationResponse()
+    return instanceConfigurationResponse()
   }
+
+  private fun instanceConfigurationResponse(): InstanceConfigurationResponse =
+    InstanceConfigurationResponse(
+      edition = InstanceConfigurationResponse.Edition.COMMUNITY,
+      version = "dev",
+      auth = AuthConfiguration(mode = AuthConfiguration.Mode.NONE),
+      airbyteUrl = "http://localhost:8000",
+      initialSetupComplete = true,
+      defaultUserId = UUID.randomUUID(),
+      defaultOrganizationId = UUID.randomUUID(),
+      defaultOrganizationEmail = "test@airbyte.io",
+      trackingStrategy = InstanceConfigurationResponse.TrackingStrategy.LOGGING,
+    )
 }
 
 @Singleton

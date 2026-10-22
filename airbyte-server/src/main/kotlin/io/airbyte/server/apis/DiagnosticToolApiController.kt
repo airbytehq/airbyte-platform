@@ -4,8 +4,9 @@
 
 package io.airbyte.server.apis
 
-import io.airbyte.api.generated.DiagnosticToolApi
-import io.airbyte.api.model.generated.DiagnosticReportRequestBody
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.api.server.generated.apis.DiagnosticToolApi
+import io.airbyte.api.server.generated.models.DiagnosticReportRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
@@ -20,7 +21,7 @@ import io.micronaut.security.rules.SecurityRule
 import jakarta.validation.Valid
 import java.io.File
 
-@Controller("/api/v1/diagnostic_tool")
+@Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DiagnosticToolApiController(
   private val diagnosticToolHandler: DiagnosticToolHandler,
@@ -32,6 +33,10 @@ class DiagnosticToolApiController(
     migration = RouteMigration.LEGACY,
   )
   override fun generateDiagnosticReport(
-    @Body @Valid diagnosticReportRequestBody: DiagnosticReportRequestBody,
-  ): File? = execute { diagnosticToolHandler.generateDiagnosticReport() }
+    @Body @Valid diagnosticReportRequestBody: DiagnosticReportRequestBody?,
+  ): File {
+    diagnosticReportRequestBody.requireBody()
+    return execute { diagnosticToolHandler.generateDiagnosticReport() }
+      ?: throw UnexpectedProblem("The diagnostic report could not be generated. Retry; if it keeps failing, contact support.", null)
+  }
 }

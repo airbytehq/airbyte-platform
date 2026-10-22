@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.SecretPersistenceType
+import io.airbyte.api.server.generated.models.SecretPersistenceType
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ScopeType
@@ -20,14 +20,13 @@ open class SecretPersistenceConfigHandler(
 ) {
   fun buildSecretPersistenceConfigResponse(
     secretPersistenceConfig: SecretPersistenceConfig,
-  ): io.airbyte.api.model.generated.SecretPersistenceConfig =
-    io.airbyte.api.model.generated
-      .SecretPersistenceConfig()
-      .secretPersistenceType(
-        secretPersistenceConfig.secretPersistenceType.value().toEnum<SecretPersistenceType>()!!,
-      )._configuration(Jsons.jsonNode(secretPersistenceConfig.configuration))
-      .scopeType(secretPersistenceConfig.scopeType.value().toEnum<io.airbyte.api.model.generated.ScopeType>()!!)
-      .scopeId(secretPersistenceConfig.scopeId)
+  ): io.airbyte.api.server.generated.models.SecretPersistenceConfig =
+    io.airbyte.api.server.generated.models.SecretPersistenceConfig(
+      secretPersistenceType = secretPersistenceConfig.secretPersistenceType.value().toEnum<SecretPersistenceType>()!!,
+      configuration = Jsons.jsonNode(secretPersistenceConfig.configuration),
+      scopeType = secretPersistenceConfig.scopeType.value().toEnum<io.airbyte.api.server.generated.models.ScopeType>()!!,
+      scopeId = secretPersistenceConfig.scopeId,
+    )
 
   fun writeToEnvironmentSecretPersistence(
     secretCoordinate: AirbyteManagedSecretCoordinate,

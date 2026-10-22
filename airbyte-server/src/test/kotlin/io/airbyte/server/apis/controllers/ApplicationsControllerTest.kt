@@ -4,8 +4,8 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.ApplicationTokenRequest
 import io.airbyte.api.problems.throwable.generated.RequestTimeoutExceededProblem
+import io.airbyte.api.server.generated.models.ApplicationTokenRequest
 import io.airbyte.data.services.ApplicationService
 import io.micronaut.context.ApplicationContext
 import io.micronaut.http.HttpStatus

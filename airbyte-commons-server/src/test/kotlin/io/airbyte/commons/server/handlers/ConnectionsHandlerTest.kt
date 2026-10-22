@@ -1161,7 +1161,7 @@ internal class ConnectionsHandlerTest {
       assertTrue(isCompatible<StandardSync.Status, ConnectionStatus>())
       assertTrue(isCompatible<ConnectionSchedule.TimeUnit, Schedule.TimeUnit>())
       assertTrue(isCompatible<io.airbyte.config.DestinationSyncMode, DestinationSyncMode>())
-      assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.model.generated.DataType>())
+      assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.server.generated.models.DataType>())
       assertTrue(isCompatible<StandardSync.NonBreakingChangesPreference, io.airbyte.api.server.generated.models.NonBreakingChangesPreference>())
       assertTrue(isCompatible<StandardSync.BackfillPreference, SchemaChangeBackfillPreference>())
       assertTrue(isCompatible<JobSyncConfig.NamespaceDefinitionType, NamespaceDefinitionType>())
