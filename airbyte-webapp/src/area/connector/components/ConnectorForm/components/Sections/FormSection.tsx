@@ -104,32 +104,18 @@ export const FormSection: React.FC<FormSectionProps> = ({
     ));
 
     if (!rootLevel) {
-      // visible cards are only rendered on the top level
       return sectionElements;
     }
 
-    if (index === 0 && headerBlock) {
-      // if a headerBlock is defined, the first card gets it assigned
-      // TODO if the type dropdown gets removed from the form, this case can probably be removed
-      return (
-        <Card key={index} title={headerBlock.title} description={headerBlock.description} titleWithBottomBorder>
-          {headerBlock.elements}
-          {sectionElements}
-        </Card>
-      );
-    }
-
     return (
-      <Card key={index}>
-        <FlexContainer direction="column" gap="xl">
-          {sectionGroup.title && !collapsedNamedGroup && (
-            <Heading as="h2" size="sm">
-              {sectionGroup.title}
-            </Heading>
-          )}
-          <FlexItem>{sectionElements}</FlexItem>
-        </FlexContainer>
-      </Card>
+      <FlexContainer key={index} direction="column" gap="xl">
+        {sectionGroup.title && !collapsedNamedGroup && (
+          <Heading as="h2" size="sm">
+            {sectionGroup.title}
+          </Heading>
+        )}
+        <FlexItem>{sectionElements}</FlexItem>
+      </FlexContainer>
     );
   });
 
@@ -138,11 +124,13 @@ export const FormSection: React.FC<FormSectionProps> = ({
     return <>{groupElements}</>;
   }
 
-  // on the top level, render individual cards in a flex container to get gaps between them
   return (
-    <FlexContainer direction="column" gap="xl">
-      {groupElements}
-    </FlexContainer>
+    <Card title={headerBlock?.title} description={headerBlock?.description} titleWithBottomBorder>
+      {headerBlock?.elements}
+      <FlexContainer direction="column" gap="2xl">
+        {groupElements}
+      </FlexContainer>
+    </Card>
   );
 };
 
