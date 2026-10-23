@@ -1,23 +1,15 @@
 import { isOrganizationSubscribed, useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
 import { useOrgInfo } from "core/api";
-import { useExperiment } from "core/services/Experiment";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 /**
- * Whether the organization manages its billing alerts in the billing page instead of the Retool form.
+ * Whether the billing page shows the billing alerts section for the current organization.
  */
-export const useHasInAppBillingAlerts = (): boolean => {
+export const useShowsBillingAlertsSection = (): boolean => {
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
-  const isBillingNotificationSettingsEnabled = useExperiment("platform.billing-notification-settings");
   const { isProPlan, isFlexPlan } = useOrganizationPlan();
 
-  return (
-    isBillingNotificationSettingsEnabled &&
-    canManageOrganizationBilling &&
-    isOrganizationSubscribed(billing) &&
-    !isProPlan &&
-    !isFlexPlan
-  );
+  return canManageOrganizationBilling && isOrganizationSubscribed(billing) && !isProPlan && !isFlexPlan;
 };

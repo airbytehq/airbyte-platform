@@ -271,12 +271,6 @@ object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-re
 object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.external-cloud-orgs.enabled", default = false)
 
 /**
- * Gates the webapp settings section and the update endpoint (which sends the Customer.io confirmation).
- * Remove once the Retool form is retired and every organization is on the platform settings.
- */
-object EnableBillingNotificationSettings : Temporary<Boolean>(key = "platform.billing-notification-settings", default = false)
-
-/**
  * Cloud gate for custom docker image connector definitions. Evaluated with the calling user (email attribute),
  * the workspace and its organization, so the approved-customer targeting can be expressed on any of the three.
  * Instance admins bypass it. Community edition never evaluates it.

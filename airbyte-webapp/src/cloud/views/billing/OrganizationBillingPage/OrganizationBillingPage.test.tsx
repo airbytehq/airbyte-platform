@@ -1,5 +1,4 @@
 import { mocked, render } from "test-utils";
-import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useOrganizationPlan } from "area/organization/utils";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
@@ -23,9 +22,6 @@ jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: jest.fn(),
 }));
 
-jest.mock("area/organization/components/SetupBillingAlertsLink", () => ({
-  SetupBillingAlertsLink: () => <div>Retool alerts link</div>,
-}));
 jest.mock("./BillingAlerts", () => ({ BillingAlerts: () => <div>Billing alerts section</div> }));
 jest.mock("./AccountBalance", () => ({ AccountBalance: () => <div>Account balance</div> }));
 jest.mock("./BillingBanners", () => ({ BillingBanners: () => null }));
@@ -39,16 +35,13 @@ type Plan = "standard" | "plus" | "flex" | "pro";
 
 const setup = async ({
   plan = "standard",
-  flagEnabled = true,
   canManageBilling = true,
   subscribed = true,
 }: {
   plan?: Plan;
-  flagEnabled?: boolean;
   canManageBilling?: boolean;
   subscribed?: boolean;
 } = {}) => {
-  mockExperiments({ "platform.billing-notification-settings": flagEnabled });
   mocked(useGeneratedIntent).mockReturnValue(canManageBilling);
   mocked(useOrganizationPlan).mockReturnValue({
     isStiggPlanEnabled: true,
@@ -71,28 +64,16 @@ const setup = async ({
 };
 
 describe("OrganizationBillingPage billing alerts", () => {
-  it.each<Plan>(["standard", "plus"])(
-    "shows the billing alerts section instead of the Retool link on %s",
-    async (plan) => {
-      const wrapper = await setup({ plan });
+  it.each<Plan>(["standard", "plus"])("shows the billing alerts section on %s", async (plan) => {
+    const wrapper = await setup({ plan });
 
-      expect(wrapper.queryByText("Billing alerts section")).toBeInTheDocument();
-      expect(wrapper.queryByText("Retool alerts link")).not.toBeInTheDocument();
-    }
-  );
+    expect(wrapper.queryByText("Billing alerts section")).toBeInTheDocument();
+  });
 
-  it.each<Plan>(["pro", "flex"])("hides the billing alerts section and keeps the Retool link on %s", async (plan) => {
+  it.each<Plan>(["pro", "flex"])("hides the billing alerts section on %s", async (plan) => {
     const wrapper = await setup({ plan });
 
     expect(wrapper.queryByText("Billing alerts section")).not.toBeInTheDocument();
-    expect(wrapper.queryByText("Retool alerts link")).toBeInTheDocument();
-  });
-
-  it("hides the billing alerts section and keeps the Retool link when the flag is off", async () => {
-    const wrapper = await setup({ flagEnabled: false });
-
-    expect(wrapper.queryByText("Billing alerts section")).not.toBeInTheDocument();
-    expect(wrapper.queryByText("Retool alerts link")).toBeInTheDocument();
   });
 
   it("hides the billing alerts section when the user cannot manage billing", async () => {
@@ -101,12 +82,11 @@ describe("OrganizationBillingPage billing alerts", () => {
     expect(wrapper.queryByText("Billing alerts section")).not.toBeInTheDocument();
   });
 
-  it("shows neither the section nor the link while the subscribe cards are shown", async () => {
+  it("hides the billing alerts section while the subscribe cards are shown", async () => {
     const wrapper = await setup({ subscribed: false });
 
     expect(wrapper.queryByText("Subscribe cards")).toBeInTheDocument();
     expect(wrapper.queryByText("Billing alerts section")).not.toBeInTheDocument();
-    expect(wrapper.queryByText("Retool alerts link")).not.toBeInTheDocument();
   });
 
   it("places the billing alerts section between the summary tiles and the invoices", async () => {

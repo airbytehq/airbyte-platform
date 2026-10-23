@@ -1,8 +1,7 @@
 import { mocked, render } from "test-utils";
-import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useOrganizationPlan } from "area/organization/utils";
-import { useOrganization, useOrgInfo } from "core/api";
+import { useOrgInfo } from "core/api";
 import { OrganizationInfoReadBilling } from "core/api/types/AirbyteClient";
 import { useGeneratedIntent } from "core/utils/rbac";
 
@@ -15,7 +14,6 @@ jest.mock("area/organization/utils", () => ({
 }));
 
 jest.mock("core/api", () => ({
-  useOrganization: jest.fn(),
   useOrgInfo: jest.fn(),
 }));
 
@@ -28,17 +26,16 @@ type Plan = "standard" | "plus" | "flex" | "pro";
 
 const setup = async ({
   plan = "standard",
-  flagEnabled = true,
+  canManageBilling = true,
   subscriptionStatus = "subscribed",
   paymentStatus = "okay",
 }: {
   plan?: Plan;
-  flagEnabled?: boolean;
+  canManageBilling?: boolean;
   subscriptionStatus?: OrganizationInfoReadBilling["subscriptionStatus"];
   paymentStatus?: OrganizationInfoReadBilling["paymentStatus"];
 } = {}) => {
-  mockExperiments({ "platform.billing-notification-settings": flagEnabled });
-  mocked(useGeneratedIntent).mockReturnValue(true);
+  mocked(useGeneratedIntent).mockReturnValue(canManageBilling);
   mocked(useOrganizationPlan).mockReturnValue({
     isStiggPlanEnabled: true,
     isStandardTrialPlan: false,
@@ -47,7 +44,6 @@ const setup = async ({
     isFlexPlan: plan === "flex",
     isProPlan: plan === "pro",
   });
-  mocked(useOrganization).mockReturnValue({ email: "billing@example.com" } as ReturnType<typeof useOrganization>);
   mocked(useOrgInfo).mockReturnValue({
     billing: { subscriptionStatus, paymentStatus },
   } as unknown as ReturnType<typeof useOrgInfo>);
@@ -57,33 +53,32 @@ const setup = async ({
 };
 
 describe("SetupBillingAlertsLink", () => {
-  it.each<Plan>(["standard", "plus"])("links to the billing page on %s when the flag is on", async (plan) => {
+  it.each<Plan>(["standard", "plus"])("links to the billing page on %s", async (plan) => {
     const link = await setup({ plan });
 
     expect(link).toHaveAttribute("href", "/organization/test-organization-id/settings/billing");
     expect(link).not.toHaveAttribute("target");
   });
 
-  it.each<Plan>(["pro", "flex"])("links to the Retool form on %s", async (plan) => {
+  it.each<Plan>(["pro", "flex"])("renders nothing on %s", async (plan) => {
     const link = await setup({ plan });
 
-    expect(link).toHaveAttribute("href", expect.stringContaining("retool"));
-    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).not.toBeInTheDocument();
   });
 
-  it("links to the Retool form when the flag is off", async () => {
-    const link = await setup({ flagEnabled: false });
+  it("renders nothing when the user cannot manage billing", async () => {
+    const link = await setup({ canManageBilling: false });
 
-    expect(link).toHaveAttribute("href", expect.stringContaining("retool"));
+    expect(link).not.toBeInTheDocument();
   });
 
-  it("links to the Retool form when the organization has unsubscribed", async () => {
+  it("renders nothing when the organization has unsubscribed", async () => {
     const link = await setup({ subscriptionStatus: "unsubscribed" });
 
-    expect(link).toHaveAttribute("href", expect.stringContaining("retool"));
+    expect(link).not.toBeInTheDocument();
   });
 
-  it("renders nothing without billing history", async () => {
+  it("renders nothing before the organization subscribes", async () => {
     const link = await setup({ subscriptionStatus: "pre_subscription", paymentStatus: "uninitialized" });
 
     expect(link).not.toBeInTheDocument();
