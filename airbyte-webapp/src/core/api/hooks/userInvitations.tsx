@@ -127,7 +127,7 @@ export const useCreateUserInvitation = () => {
 export const useListUserInvitations = (userInvitationListRequestBody: UserInvitationListRequestBody) => {
   const requestOptions = useRequestOptions();
   const keyScope = userInvitationListRequestBody.scopeType === "workspace" ? SCOPE_WORKSPACE : SCOPE_ORGANIZATION;
-  return useSuspenseQuery([keyScope, "userInvitations"], () =>
+  return useSuspenseQuery([keyScope, "userInvitations", userInvitationListRequestBody.scopeId], () =>
     listPendingInvitations(userInvitationListRequestBody, requestOptions)
   );
 };
