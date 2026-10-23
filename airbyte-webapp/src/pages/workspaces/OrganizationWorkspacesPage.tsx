@@ -131,11 +131,11 @@ const OrganizationWorkspacesPage: React.FC = () => {
   }, [hasNextPage, fetchNextPage]);
 
   const statusFilterOptions = [
-    { label: "All sync statuses", value: "all" as StatusFilter },
-    { label: "Successful syncs", value: "healthy" as StatusFilter },
-    { label: "Running syncs", value: "running" as StatusFilter },
-    { label: "Incomplete syncs", value: "paused" as StatusFilter },
-    { label: "Failed syncs", value: "failed" as StatusFilter },
+    { label: formatMessage({ id: "workspaces.statusFilter.all" }), value: "all" as StatusFilter },
+    { label: formatMessage({ id: "workspaces.statusFilter.healthy" }), value: "healthy" as StatusFilter },
+    { label: formatMessage({ id: "workspaces.statusFilter.running" }), value: "running" as StatusFilter },
+    { label: formatMessage({ id: "workspaces.statusFilter.paused" }), value: "paused" as StatusFilter },
+    { label: formatMessage({ id: "workspaces.statusFilter.failed" }), value: "failed" as StatusFilter },
   ];
 
   useEffect(() => {

@@ -138,7 +138,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
       registerNotification({
         id: "connection.missingCatalogId",
         type: "error",
-        text: "No catalog ID found for this connection. Schema cannot be refreshed.",
+        text: formatMessage({ id: "connection.updateSchema.missingCatalogId" }),
       });
       return;
     }

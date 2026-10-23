@@ -95,7 +95,7 @@ export const TagsTable: React.FC = () => {
               variant="clear"
               icon="pencil"
               size="xs"
-              aria-label="Edit"
+              aria-label={formatMessage({ id: "form.edit" })}
               onClick={() => onEdit(props.row.original)}
               disabled={!canEditTags}
             />
@@ -103,7 +103,7 @@ export const TagsTable: React.FC = () => {
               variant="clear"
               icon="trash"
               size="xs"
-              aria-label="Delete"
+              aria-label={formatMessage({ id: "form.delete" })}
               onClick={() => onDelete(props.row.original)}
               disabled={!canEditTags}
             />
@@ -116,7 +116,7 @@ export const TagsTable: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, onDelete, onEdit, canEditTags]
+    [columnHelper, onDelete, onEdit, canEditTags, formatMessage]
   );
 
   return (
@@ -135,7 +135,7 @@ export const TagsTable: React.FC = () => {
             variant="primary"
             size="xs"
             icon="plus"
-            aria-label="create tag"
+            aria-label={formatMessage({ id: "settings.workspace.tags.tagForm.create" })}
             onClick={() => onEdit()}
             disabled={!canEditTags}
           >

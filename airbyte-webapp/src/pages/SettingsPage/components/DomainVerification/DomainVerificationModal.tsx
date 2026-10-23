@@ -177,7 +177,10 @@ export const DomainVerificationModal: React.FC<AddDomainModalProps> = ({ onClose
                         <CopyButton content={domainResponse.dnsRecordName} variant="secondary" />
                       )}
                     </FlexContainer>
-                    <Text className={styles.monospaceText}>{domainResponse.dnsRecordName || "N/A"}</Text>
+                    <Text className={styles.monospaceText}>
+                      {domainResponse.dnsRecordName ||
+                        formatMessage({ id: "settings.organizationSettings.domainVerification.notAvailable" })}
+                    </Text>
                   </FlexContainer>
 
                   <FlexContainer direction="column" gap="sm">
@@ -189,7 +192,10 @@ export const DomainVerificationModal: React.FC<AddDomainModalProps> = ({ onClose
                         <CopyButton content={domainResponse.dnsRecordValue} variant="secondary" />
                       )}
                     </FlexContainer>
-                    <Text className={styles.monospaceText}>{domainResponse.dnsRecordValue || "N/A"}</Text>
+                    <Text className={styles.monospaceText}>
+                      {domainResponse.dnsRecordValue ||
+                        formatMessage({ id: "settings.organizationSettings.domainVerification.notAvailable" })}
+                    </Text>
                   </FlexContainer>
                 </FlexContainer>
               </div>

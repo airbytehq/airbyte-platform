@@ -70,10 +70,16 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
     });
 
     return [
-      { sectionTitle: "AIRBYTE", innerOptions: sourceDefinitionOptions },
-      { sectionTitle: "Custom", innerOptions: builderProjectOptions },
+      {
+        sectionTitle: formatMessage({ id: "connectorBuilder.forkPage.section.airbyte" }),
+        innerOptions: sourceDefinitionOptions,
+      },
+      {
+        sectionTitle: formatMessage({ id: "connectorBuilder.forkPage.section.custom" }),
+        innerOptions: builderProjectOptions,
+      },
     ];
-  }, [builderCompatibleSourceDefinitions, projects]);
+  }, [builderCompatibleSourceDefinitions, projects, formatMessage]);
 
   const selectedProject = useMemo(
     () => (selection && selection.type === "builderProject" ? selection.project : undefined),
@@ -158,7 +164,7 @@ const ConnectorBuilderForkPageInner: React.FC = () => {
                       name: selection.project.name,
                       version:
                         selectedBuilderProjectVersion === "draft"
-                          ? "current draft"
+                          ? formatMessage({ id: "connectorBuilder.forkPage.currentDraft" })
                           : `v${selectedBuilderProjectVersion}`,
                     }}
                   />

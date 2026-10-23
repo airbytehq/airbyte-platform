@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -28,6 +28,7 @@ interface ErrorDetailsProps {
 const jsonReplacer = (_: string, value: unknown) => (typeof value === "function" ? `[Function ${value.name}]` : value);
 
 export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
+  const { formatMessage } = useIntl();
   const formatError = useFormatError();
   const getAllExperiments = useGetAllExperiments();
   const getErrorDetails = useCallback(
@@ -89,7 +90,7 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
             </FlexContainer>
             <Separator />
             <Collapsible
-              label="Error details"
+              label={formatMessage({ id: "errorView.errorDetails" })}
               className={styles.error__collapsible}
               noBodyPadding
               initiallyOpen={false}
@@ -99,7 +100,7 @@ export const ErrorDetails: React.FC<ErrorDetailsProps> = ({ error }) => {
             </Collapsible>
             {error.stack && (
               <Collapsible
-                label="Stack trace"
+                label={formatMessage({ id: "errorView.stackTrace" })}
                 className={styles.error__collapsible}
                 noBodyPadding
                 initiallyOpen={false}

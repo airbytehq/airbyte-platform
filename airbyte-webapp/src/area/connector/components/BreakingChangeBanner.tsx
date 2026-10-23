@@ -169,7 +169,7 @@ const ConfirmUpdateModal = ({
             <FormattedMessage
               id="connector.breakingChange.upgradeToast.success"
               values={{
-                type: connectorType === "source" ? "Source" : "Destination",
+                type: formatMessage({ id: connectorType === "source" ? "connector.source" : "connector.destination" }),
                 a: (node: ReactNode) => <Anchor href={migrationGuideUrl}>{node}</Anchor>,
               }}
             />

@@ -115,7 +115,7 @@ const DataActivationStreamSchema = z
       if (seen.has(name)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Duplicate destinationFieldName",
+          message: "connection.dataActivation.duplicateDestinationFieldName",
           path: ["fields", i, "destinationFieldName"],
         });
       } else {

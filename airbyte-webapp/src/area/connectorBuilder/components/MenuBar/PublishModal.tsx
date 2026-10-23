@@ -288,7 +288,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
             <FormControl<PublishToWorkspaceFormValues>
               name="name"
               fieldType="input"
-              label="Connector Name"
+              label={formatMessage({ id: "connectorBuilder.publishModal.connectorName.label" })}
               containerControlClassName={styles.formControl}
             />
             <FlexContainer direction="row">
@@ -297,7 +297,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
                   <FormControl<PublishToWorkspaceFormValues>
                     name="version"
                     fieldType="input"
-                    label="Version"
+                    label={formatMessage({ id: "connectorBuilder.publishModal.version.label" })}
                     disabled
                   />
                 </div>
@@ -305,7 +305,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
               <FormControl<PublishToWorkspaceFormValues>
                 name="description"
                 fieldType="textarea"
-                label="Description"
+                label={formatMessage({ id: "connectorBuilder.publishModal.description.label" })}
                 optional
                 containerControlClassName={styles.formControl}
               />
