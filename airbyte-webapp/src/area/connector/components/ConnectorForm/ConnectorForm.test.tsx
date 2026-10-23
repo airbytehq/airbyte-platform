@@ -1157,6 +1157,18 @@ describe("Connector form", () => {
   });
 
   describe("Advanced section", () => {
+    it("names the collapsible section of optional fields Advanced", async () => {
+      await renderForm({
+        propertiesOverride: {
+          additional_same_group: { type: "string" },
+        },
+      });
+
+      const optionalFields = screen.getAllByTestId("optional-fields");
+      expect(optionalFields).toHaveLength(1);
+      expect(optionalFields[0]).toHaveTextContent("Advanced");
+    });
+
     it("does not render the advanced section if Resource Allocation is off + spec does not define it", async () => {
       await renderForm({});
 
@@ -1180,7 +1192,7 @@ describe("Connector form", () => {
       });
 
       const optionalFields = screen.getAllByTestId("optional-fields");
-      expect(optionalFields[0]).toHaveTextContent("Optional fields");
+      expect(optionalFields[0]).toHaveTextContent("Advanced");
       expect(optionalFields[1]).toHaveTextContent("Advanced");
       expect(optionalFields).toHaveLength(2);
     });

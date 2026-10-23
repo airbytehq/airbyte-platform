@@ -315,7 +315,6 @@
   "form.linkComponentsToggle.confirmationText": "This value differs from the shared one. Do you want to use the shared {fieldName} here, or overwrite the shared {fieldName} with this one?",
   "form.linkComponentsToggle.useFieldValue": "Use this {fieldName}",
   "form.linkComponentsToggle.useTargetValue": "Use shared {fieldName}",
-  "form.optionalFields": "Optional fields",
   "form.advanced": "Advanced",
   "form.min.error": "Must be greater than or equal to {min}",
   "form.max.error": "Must be less than or equal to {max}",

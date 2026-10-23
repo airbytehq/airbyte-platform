@@ -168,7 +168,7 @@ const SubSection: React.FC<React.PropsWithChildren<SubSectionProps>> = ({
 
   return (
     <Collapsible
-      label={label || formatMessage({ id: "form.optionalFields" })}
+      label={label || formatMessage({ id: "form.advanced" })}
       data-testid="optional-fields"
       showErrorIndicator={hasError}
       type={displayType === "collapsed-footer" ? "footer" : displayType === "collapsed-group" ? "section" : undefined}
