@@ -14713,7 +14713,6 @@ components:
         - dockerRepository
         - dockerImageTag
         - actorDefinitionId
-        - icon
       properties:
         name:
           type: string

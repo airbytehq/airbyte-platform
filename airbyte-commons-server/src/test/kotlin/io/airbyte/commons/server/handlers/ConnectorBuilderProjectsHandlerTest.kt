@@ -564,6 +564,43 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
+  @DisplayName("listConnectorBuilderProject should list a forked project whose base source definition has no icon")
+  fun testListForkedProjectWithBaseSourceDefinitionWithoutIcon() {
+    val forkedProject = generateBuilderProject().withActorDefinitionId(UUID.randomUUID())
+    forkedProject.baseActorDefinitionVersionId = FORKED_ADV.versionId
+    val sourceWithoutIcon =
+      StandardSourceDefinition()
+        .withSourceDefinitionId(FORKED_SOURCE.getSourceDefinitionId())
+        .withName(FORKED_SOURCE.name)
+
+    Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(
+      listOf(forkedProject).stream(),
+    )
+    Mockito
+      .`when`(actorDefinitionService.getActorDefinitionVersions(listOf(FORKED_ADV.versionId)))
+      .thenReturn(listOf(FORKED_ADV))
+    Mockito
+      .`when`(sourceService.listStandardSourceDefinitions(false))
+      .thenReturn(listOf(sourceWithoutIcon))
+
+    val response =
+      connectorBuilderProjectsHandler.listConnectorBuilderProjects(WorkspaceIdRequestBody(workspaceId = workspaceId))
+
+    val expectedBaseActorDefinitionVersionInfo =
+      BaseActorDefinitionVersionInfo(
+        name = FORKED_SOURCE.name,
+        dockerRepository = FORKED_ADV.dockerRepository,
+        dockerImageTag = FORKED_ADV.dockerImageTag,
+        actorDefinitionId = FORKED_SOURCE.getSourceDefinitionId(),
+        icon = null,
+        documentationUrl = FORKED_ADV.documentationUrl,
+      )
+
+    Assertions.assertEquals(1, response.projects.size)
+    Assertions.assertEquals(expectedBaseActorDefinitionVersionInfo, response.projects[0].baseActorDefinitionVersionInfo)
+  }
+
+  @Test
   @DisplayName("getConnectorBuilderProject should return a builder project with draft and retain object structures without primitive leafs")
   fun testGetConnectorBuilderProject() {
     val project = generateBuilderProject()
@@ -708,6 +745,46 @@ internal class ConnectorBuilderProjectsHandlerTest {
       )
 
     Assertions.assertEquals(project.builderProjectId, response.builderProject.builderProjectId)
+    Assertions.assertEquals(expectedBaseActorDefinitionVersionInfo, response.builderProject.baseActorDefinitionVersionInfo)
+  }
+
+  @Test
+  fun testGetConnectorBuilderProjectWithBaseSourceDefinitionWithoutIcon() {
+    val project = generateBuilderProject()
+    project.setBaseActorDefinitionVersionId(FORKED_ADV.getVersionId())
+    val sourceWithoutIcon =
+      StandardSourceDefinition()
+        .withSourceDefinitionId(FORKED_SOURCE.getSourceDefinitionId())
+        .withName(FORKED_SOURCE.name)
+
+    Mockito
+      .`when`(
+        connectorBuilderService.getConnectorBuilderProject(
+          eq(project.builderProjectId),
+          anyOrNull(),
+        ),
+      ).thenReturn(project)
+    Mockito.`when`(actorDefinitionService.getActorDefinitionVersion(FORKED_ADV.getVersionId())).thenReturn(FORKED_ADV)
+    Mockito.`when`(sourceService.getStandardSourceDefinition(FORKED_SOURCE.getSourceDefinitionId())).thenReturn(sourceWithoutIcon)
+
+    val response =
+      connectorBuilderProjectsHandler.getConnectorBuilderProjectWithManifest(
+        ConnectorBuilderProjectIdWithWorkspaceId(
+          builderProjectId = project.builderProjectId,
+          workspaceId = workspaceId,
+        ),
+      )
+
+    val expectedBaseActorDefinitionVersionInfo =
+      BaseActorDefinitionVersionInfo(
+        name = FORKED_SOURCE.name,
+        dockerRepository = FORKED_ADV.dockerRepository,
+        dockerImageTag = FORKED_ADV.dockerImageTag,
+        actorDefinitionId = FORKED_SOURCE.getSourceDefinitionId(),
+        icon = null,
+        documentationUrl = FORKED_ADV.documentationUrl,
+      )
+
     Assertions.assertEquals(expectedBaseActorDefinitionVersionInfo, response.builderProject.baseActorDefinitionVersionInfo)
   }
 
