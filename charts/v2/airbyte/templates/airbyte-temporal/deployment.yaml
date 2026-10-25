@@ -51,9 +51,49 @@ spec:
       {{- if .Values.temporal.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporal.affinity "context" $) | nindent 8 }}
       {{- end }}
-{{- if .Values.temporal.extraInitContainers }}
+{{- $autoSetup := eq (include "airbyte.temporal.autoSetup" .) "true" }}
+{{- if or $autoSetup .Values.temporal.extraInitContainers }}
       initContainers:
+{{- if $autoSetup }}
+      - name: temporal-schema-setup
+        image: {{ include "imageUrl" (list .Values.temporal.adminTools.image $) }}
+        imagePullPolicy: {{ .Values.temporal.adminTools.image.pullPolicy }}
+        env:
+          {{- include "airbyte.temporal.database.envs" . | nindent 10 }}
+        {{- if .Values.temporal.extraEnv }}
+        {{ .Values.temporal.extraEnv | toYaml | nindent 10 }}
+        {{- end }}
+        {{- if or .Values.temporal.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.temporal.env_vars .Values.global.env_vars }}
+          - name: {{ $k }}
+            value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            if [ "${SKIP_SCHEMA_SETUP:-false}" = "true" ]; then exit 0; fi
+            until nc -z "${POSTGRES_SEEDS%%,*}" "$DB_PORT"; do echo "Waiting for PostgreSQL to start up."; sleep 1; done
+            export SQL_PASSWORD="$POSTGRES_PWD"
+            setup() {
+              db="$1"; schema="$2"
+              set -- --plugin "$DB" --ep "$POSTGRES_SEEDS" -u "$POSTGRES_USER" -p "$DB_PORT" --db "$db" --tls="${POSTGRES_TLS_ENABLED:-false}" --tls-disable-host-verification="${POSTGRES_TLS_DISABLE_HOST_VERIFICATION:-false}"
+              if [ "$db" != "$POSTGRES_USER" ] && [ "${SKIP_DB_CREATE:-false}" != "true" ]; then
+                temporal-sql-tool "$@" create
+              fi
+              temporal-sql-tool "$@" setup-schema -v 0.0
+              temporal-sql-tool "$@" update-schema -d "/etc/temporal/schema/postgresql/v12/$schema/versioned"
+            }
+            setup "${DBNAME:-temporal}" temporal
+            setup "${VISIBILITY_DBNAME:-temporal_visibility}" visibility
+        {{- if .Values.temporal.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.temporal.containerSecurityContext | nindent 10 }}
+        {{- end }}
+{{- end }}
+{{- if .Values.temporal.extraInitContainers }}
 {{- toYaml .Values.temporal.extraInitContainers | nindent 6 }}
+{{- end }}
 {{- end }}
       containers:
       - name: airbyte-temporal
@@ -124,6 +164,26 @@ spec:
           successThreshold: {{ .Values.temporal.readinessProbe.successThreshold }}
           failureThreshold: {{ .Values.temporal.readinessProbe.failureThreshold }}
         {{- end }}
+      {{- if $autoSetup }}
+      - name: temporal-namespace-setup
+        image: {{ include "imageUrl" (list .Values.temporal.adminTools.image $) }}
+        imagePullPolicy: {{ .Values.temporal.adminTools.image.pullPolicy }}
+        env:
+          - name: TEMPORAL_ADDRESS
+            value: {{ include "airbyte.temporal.host" . | quote }}
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            trap 'exit 0' TERM INT
+            until temporal operator cluster health | grep -q SERVING; do echo "Waiting for Temporal server to start."; sleep 1; done
+            temporal operator namespace describe --namespace default || temporal operator namespace create --namespace default --retention 24h
+            sleep infinity &
+            wait
+        {{- if .Values.temporal.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.temporal.containerSecurityContext | nindent 10 }}
+        {{- end }}
+      {{- end }}
         {{- if .Values.temporal.extraContainers }}
         {{ toYaml .Values.temporal.extraContainers | nindent 6 }}
         {{- end }}

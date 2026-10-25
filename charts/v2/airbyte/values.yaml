@@ -1800,11 +1800,17 @@ temporal:
 
   image:
     # -- The temporal image repository to use
-    repository: temporalio/auto-setup
+    repository: temporalio/server
     # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
-    tag: "1.27.2"
+    tag: "1.30.8"
+
+  adminTools:
+    image:
+      repository: temporalio/admin-tools
+      pullPolicy: IfNotPresent
+      tag: "1.30.8"
 
   secretName: ""
 
@@ -1865,18 +1871,6 @@ temporal:
     seccompProfile:
       type: RuntimeDefault
 
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraInitContainers:
-  ##   - name: config-loader
-  ##     image: temporalio/auto-setup:1.27.2
-  ##     command:
-  ##       - /bin/sh
-  ##       - -c
-  ##       - >-
-  ##         find /etc/temporal/config/ -maxdepth 1 -mindepth 1 -exec cp -ar {} /config/ \;
-  ##     volumeMounts:
-  ##       - name: config
-  ##         mountPath: /config
   # -- Additional InitContainers to initialize the pod
   extraInitContainers: []
 
@@ -1906,21 +1900,9 @@ temporal:
   # -- Additional env vars for temporal pod(s).
   extraEnv: []
 
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraVolumeMounts:
-  ##   - name: tmpdir
-  ##     mountPath: /tmp
-  ##   - name: config
-  ##     mountPath: /etc/temporal/config
   # -- Additional volumeMounts for temporal containers
   extraVolumeMounts: []
 
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraVolumes:
-  ##   - name: tmpdir
-  ##     emptyDir: {}
-  ##  - name: config
-  ##    emptyDir: {}
   # -- Additional volumes for temporal pods
   extraVolumes: []
 
