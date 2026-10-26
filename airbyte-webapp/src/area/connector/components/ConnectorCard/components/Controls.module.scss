@@ -1,3 +1,4 @@
+@use "scss/colors";
 @use "scss/mixins";
 @use "scss/variables";
 
@@ -9,4 +10,13 @@
   padding-left: variables.$spacing-xl;
   margin-top: variables.$spacing-sm;
   margin-bottom: 0;
+}
+
+.footer {
+  min-width: 0;
+  margin: 0;
+  padding: variables.$spacing-md variables.$spacing-xl;
+  border: 0;
+  border-top: variables.$border-thin solid colors.$dark-blue-50;
+  background-color: colors.$foreground;
 }

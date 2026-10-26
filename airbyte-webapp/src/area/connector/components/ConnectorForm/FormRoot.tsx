@@ -22,6 +22,9 @@ interface RenderFooterArgs {
    * ignored. Empty fields that OAuth fills show as one entry that asks the user to authenticate.
    */
   emptyRequiredFields: string[];
+  /** The `id` of the `<form>` element. Submit buttons that render outside the form element need it. */
+  formElementId: string;
+  canEdit: boolean;
   resetConnectorForm: () => void;
   isEditMode?: boolean;
   formType: "source" | "destination";
@@ -41,6 +44,8 @@ export interface FormRootProps {
   castValues: (values: ConnectorFormValues) => ConnectorFormValues;
   formHeader?: ReactNode;
   renderFooter?: (formProps: RenderFooterArgs) => ReactNode;
+  formElementId: string;
+  canEdit: boolean;
 }
 
 interface EmptyRequiredField {
@@ -95,6 +100,8 @@ export const FormRoot: React.FC<FormRootProps> = ({
   formHeader,
   renderFooter,
   castValues,
+  formElementId,
+  canEdit,
   ...props
 }) => {
   const form = useFormContext<ConnectorFormValues>();
@@ -131,6 +138,8 @@ export const FormRoot: React.FC<FormRootProps> = ({
             dirty,
             isSubmitting,
             isValid,
+            formElementId,
+            canEdit,
             resetConnectorForm,
             isEditMode,
             formType,

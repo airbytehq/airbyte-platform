@@ -9,6 +9,8 @@ import { useFormContext } from "react-hook-form";
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
+import { Controls } from "area/connector/components/ConnectorCard/components/Controls";
+import { ConnectorDocumentationLayout } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationLayout";
 import { ConnectorForm, ConnectorFormProps } from "area/connector/components/ConnectorForm";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
@@ -383,6 +385,52 @@ describe("Connector form", () => {
     await renderForm({ formAutomation: <FormAutomationProbe /> });
 
     expect(screen.getByTestId("form-automation")).toHaveTextContent("source:test-name");
+  });
+
+  it("submits from the footer buttons in the layout's footer slot, outside the form element", async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    await render(
+      <ConnectorDocumentationLayout>
+        <ConnectorForm
+          canEdit
+          formType="source"
+          formValues={{ name: "test-name" }}
+          onSubmit={onSubmit}
+          selectedConnectorDefinition={connectorDefinition}
+          selectedConnectorDefinitionSpecification={
+            {
+              sourceDefinitionId: "test-service-type",
+              documentationUrl: "",
+              connectionSpecification: { type: "object", properties: {} },
+            } as unknown as DestinationDefinitionSpecificationRead
+          }
+          renderFooter={({ dirty, isSubmitting, isValid, emptyRequiredFields, formElementId, canEdit }) => (
+            <Controls
+              formType="source"
+              isSubmitting={isSubmitting}
+              isValid={isValid}
+              emptyRequiredFields={emptyRequiredFields}
+              dirty={dirty}
+              onCancelClick={jest.fn()}
+              onRetestClick={jest.fn()}
+              onCancelTesting={jest.fn()}
+              connectionTestSuccess={false}
+              hasDefinition
+              isEditMode={false}
+              formElementId={formElementId}
+              canEdit={canEdit}
+            />
+          )}
+        />
+      </ConnectorDocumentationLayout>
+    );
+
+    const submitButton = screen.getByRole("button", { name: "Save & Test" });
+    expect(document.querySelector("form")).not.toContainElement(submitButton);
+
+    await userEvent.click(submitButton);
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
   });
 
   describe("empty required fields", () => {

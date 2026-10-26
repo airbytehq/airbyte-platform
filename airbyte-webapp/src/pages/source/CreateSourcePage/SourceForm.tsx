@@ -20,6 +20,7 @@ interface SourceFormProps {
   onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
+  leftFooterSlot?: React.ReactNode;
   contextLayerOptIn?: React.ReactNode;
   formAutomation?: React.ReactNode;
   onSaveDraft?: (values: SourceFormValues, existingDraft?: SourceRead) => Promise<SourceRead>;
@@ -38,6 +39,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
   onSubmit,
   sourceDefinitions,
   selectedSourceDefinitionId,
+  leftFooterSlot = null,
   contextLayerOptIn,
   formAutomation,
   onSaveDraft,
@@ -79,6 +81,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       onDraftPromoted={onDraftPromoted}
       supportLevel={selectedSourceDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
+      leftFooterSlot={leftFooterSlot}
       formAutomation={formAutomation}
     />
   );

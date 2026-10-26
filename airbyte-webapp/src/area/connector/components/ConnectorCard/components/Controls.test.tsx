@@ -1,13 +1,18 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
+import { Form } from "components/ui/forms";
 import { render } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
+
+import { FormFooterSlotContext } from "area/connector/components/ConnectorDocumentationLayout/FormFooterSlotContext";
 
 import { Controls } from "./Controls";
 
 const FILL_REQUIRED_FIELDS = "Fill out required fields before saving";
+const FORM_ELEMENT_ID = "connector-form";
 
 const ControlsWithForm = ({
   onSaveDraft,
@@ -47,6 +52,8 @@ const ControlsWithForm = ({
         onSaveDraft={onSaveDraft}
         onSubmitWithoutCheck={onSubmitWithoutCheck}
         errorMessage={errorMessage}
+        formElementId={FORM_ELEMENT_ID}
+        canEdit
       />
     </FormProvider>
   );
@@ -61,9 +68,50 @@ const hoverTooltipTrigger = async (button: HTMLElement) => {
   await userEvent.hover(trigger);
 };
 
+const ControlsInForm = ({
+  onSubmit,
+  withFooterSlot,
+  canEdit = true,
+  isEditMode = false,
+  onSubmitWithoutCheck,
+}: {
+  onSubmit: () => Promise<void>;
+  withFooterSlot: boolean;
+  canEdit?: boolean;
+  isEditMode?: boolean;
+  onSubmitWithoutCheck?: () => Promise<void>;
+}) => {
+  const [footerSlot, setFooterSlot] = useState<HTMLDivElement | null>(null);
+  return (
+    <FormFooterSlotContext.Provider value={withFooterSlot ? footerSlot : null}>
+      <Form id={FORM_ELEMENT_ID} defaultValues={{}} onSubmit={onSubmit} disabled={!canEdit} dataTestId="form">
+        <Controls
+          formType="source"
+          isSubmitting={false}
+          isValid
+          emptyRequiredFields={[]}
+          dirty
+          onCancelClick={jest.fn()}
+          onDeleteClick={jest.fn()}
+          onRetestClick={jest.fn()}
+          onCancelTesting={jest.fn()}
+          connectionTestSuccess={false}
+          hasDefinition
+          isEditMode={isEditMode}
+          onSubmitWithoutCheck={onSubmitWithoutCheck}
+          formElementId={FORM_ELEMENT_ID}
+          canEdit={canEdit}
+        />
+      </Form>
+      <div ref={setFooterSlot} data-testid="footer-slot" />
+    </FormFooterSlotContext.Provider>
+  );
+};
+
 describe("Controls", () => {
   beforeEach(() => {
     mockExperiments({ "connector.allowSavingWithoutTesting": false });
+    jest.mocked(Element.prototype.scrollIntoView).mockClear();
   });
 
   it("saves an incomplete draft without running required-field validation", async () => {
@@ -89,7 +137,8 @@ describe("Controls", () => {
     expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
   });
 
-  it("shows a draft check failure without offering Retest", async () => {
+  it("shows a draft check failure without offering Retest, and scrolls the check card into view", async () => {
+    const scrollIntoView = jest.mocked(Element.prototype.scrollIntoView);
     await render(
       <ControlsWithForm
         onSaveDraft={jest.fn().mockResolvedValue(undefined)}
@@ -102,6 +151,7 @@ describe("Controls", () => {
     );
 
     expect(screen.getByText("check failed")).toBeInTheDocument();
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Retest saved source" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
   });
@@ -205,9 +255,80 @@ describe("Controls", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
-  it("keeps Retest available for an unchanged ready actor", async () => {
+  it("keeps Retest available for an unchanged ready actor, without scrolling to the check card", async () => {
+    const scrollIntoView = jest.mocked(Element.prototype.scrollIntoView);
     await render(<ControlsWithForm isEditMode dirty={false} isValid />);
 
     expect(screen.getByRole("button", { name: "Retest saved source" })).toBeEnabled();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  describe("footer slot", () => {
+    it("submits the form from the footer slot outside the form element", async () => {
+      const onSubmit = jest.fn().mockResolvedValue(undefined);
+      await render(<ControlsInForm onSubmit={onSubmit} withFooterSlot />);
+
+      const submitButton = screen.getByRole("button", { name: "Save & Test" });
+      expect(screen.getByTestId("footer-slot")).toContainElement(submitButton);
+      expect(screen.getByTestId("form")).not.toContainElement(submitButton);
+
+      await userEvent.click(submitButton);
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    it("disables every button in the footer slot when the user cannot edit the connector", async () => {
+      const onSubmit = jest.fn().mockResolvedValue(undefined);
+      await render(<ControlsInForm onSubmit={onSubmit} withFooterSlot isEditMode canEdit={false} />);
+
+      const footerSlot = screen.getByTestId("footer-slot");
+      for (const name of ["Delete this source", "Cancel", "Save & Test"]) {
+        expect(within(footerSlot).getByRole("button", { name })).toBeDisabled();
+      }
+
+      await userEvent.click(within(footerSlot).getByRole("button", { name: "Save & Test" }));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("submits the form from the Save & Test dropdown in the footer slot, and disables it with its caret when the user cannot edit", async () => {
+      mockExperiments({ "connector.allowSavingWithoutTesting": true });
+      const onSubmit = jest.fn().mockResolvedValue(undefined);
+      const onSubmitWithoutCheck = jest.fn().mockResolvedValue(undefined);
+      const { rerender } = await render(
+        <ControlsInForm onSubmit={onSubmit} onSubmitWithoutCheck={onSubmitWithoutCheck} withFooterSlot />
+      );
+
+      const submitButton = screen.getByRole("button", { name: "Save & Test" });
+      expect(screen.getByTestId("footer-slot")).toContainElement(submitButton);
+
+      await userEvent.click(submitButton);
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+
+      rerender(
+        <ControlsInForm
+          onSubmit={onSubmit}
+          onSubmitWithoutCheck={onSubmitWithoutCheck}
+          withFooterSlot
+          canEdit={false}
+        />
+      );
+
+      expect(screen.getByRole("button", { name: "Save & Test" })).toBeDisabled();
+      expect(screen.getByTestId("create-source-button_dropdown-caret")).toBeDisabled();
+    });
+
+    it("renders the buttons in the form and submits it when there is no footer slot", async () => {
+      const onSubmit = jest.fn().mockResolvedValue(undefined);
+      await render(<ControlsInForm onSubmit={onSubmit} withFooterSlot={false} />);
+
+      const submitButton = screen.getByRole("button", { name: "Save & Test" });
+      expect(screen.getByTestId("form")).toContainElement(submitButton);
+
+      await userEvent.click(submitButton);
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
   });
 });

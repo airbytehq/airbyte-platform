@@ -2,9 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
 import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
@@ -198,19 +196,17 @@ export const CreateDestinationPage: React.FC = () => {
   const renderSetupForm = (formAutomation?: React.ReactNode) => (
     <ConnectorDocumentationWrapper>
       <FormPageContent>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
         <DestinationForm
           onSubmit={onSubmitDestinationForm}
           onSaveDraft={onSaveDestinationDraft}
           onDraftPromoted={onDestinationDraftPromoted}
           destinationDefinitions={destinationDefinitions}
           selectedDestinationDefinitionId={destinationDefinitionId}
+          leftFooterSlot={
+            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="xs">
+              <FormattedMessage id="connectorBuilder.backButtonLabel" />
+            </Button>
+          }
           contextLayerOptIn={
             <DestinationContextLayerOptIn
               destinationDefinitionId={destinationDefinitionId}

@@ -9,3 +9,15 @@
   border-top-left-radius: variables.$border-radius-lg;
   border-bottom-left-radius: variables.$border-radius-lg;
 }
+
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.leftPanelContent {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

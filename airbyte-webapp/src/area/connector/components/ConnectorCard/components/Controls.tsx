@@ -1,4 +1,5 @@
 import React, { useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -7,6 +8,7 @@ import { DropdownButton } from "components/ui/DropdownButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { useFormFooterSlot } from "area/connector/components/ConnectorDocumentationLayout/FormFooterSlotContext";
 import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 
@@ -40,6 +42,9 @@ interface IProps {
   leftSlot?: React.ReactNode;
   onSubmitWithoutCheck?: () => Promise<void>;
   onSaveDraft?: () => Promise<void>;
+  /** The `id` of the `<form>` element. The submit button needs it when it renders in the footer slot, outside the form. */
+  formElementId: string;
+  canEdit: boolean;
 }
 
 const MAX_LISTED_REQUIRED_FIELDS = 3;
@@ -81,6 +86,24 @@ const useFillRequiredFieldsMessage = (emptyRequiredFields: string[]) => {
   };
 };
 
+/**
+ * Renders in the form footer slot of `ConnectorDocumentationLayout` when there is one, else in place.
+ * In the slot, the buttons are outside the form's disabled fieldset, so they get their own.
+ */
+const FooterSlotButtonRow: React.FC<React.PropsWithChildren<{ canEdit: boolean }>> = ({ canEdit, children }) => {
+  const footerSlot = useFormFooterSlot();
+  const row = <FlexContainer>{children}</FlexContainer>;
+
+  return footerSlot
+    ? createPortal(
+        <fieldset disabled={!canEdit} className={styles.footer}>
+          {row}
+        </fieldset>,
+        footerSlot
+      )
+    : row;
+};
+
 export const Controls: React.FC<IProps> = ({
   isTestConnectionInProgress,
   isSubmitting,
@@ -96,6 +119,8 @@ export const Controls: React.FC<IProps> = ({
   leftSlot = null,
   onSubmitWithoutCheck,
   onSaveDraft,
+  formElementId,
+  canEdit,
   ...restProps
 }) => {
   const { formatMessage } = useIntl();
@@ -114,6 +139,7 @@ export const Controls: React.FC<IProps> = ({
     onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
       <DropdownButton
         type="submit"
+        form={formElementId}
         data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
         isLoading={isSubmitting || isSubmittingWithoutCheck}
         disabled={submitBlocked || (isEditMode && !dirty)}
@@ -146,6 +172,7 @@ export const Controls: React.FC<IProps> = ({
     ) : (
       <Button
         type="submit"
+        form={formElementId}
         data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
         isLoading={isSubmitting}
         disabled={submitBlocked || (isEditMode && !isDraftMode && !dirty)}
@@ -168,7 +195,7 @@ export const Controls: React.FC<IProps> = ({
           isEditMode={isEditMode}
         />
       )}
-      <FlexContainer>
+      <FooterSlotButtonRow canEdit={canEdit}>
         {leftSlot}
         <FlexItem grow>
           {isEditMode && (
@@ -209,7 +236,7 @@ export const Controls: React.FC<IProps> = ({
             {fillRequiredFieldsMessage.description}
           </span>
         )}
-      </FlexContainer>
+      </FooterSlotButtonRow>
     </>
   );
 };

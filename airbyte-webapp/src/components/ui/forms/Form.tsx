@@ -56,6 +56,10 @@ interface FormProps<T extends FormValues> {
   disabled?: boolean;
   dataTestId?: string;
   /**
+   * The `id` of the `<form>` element. Submit buttons outside the form element point to it with their `form` attribute.
+   */
+  id?: string;
+  /**
    * A unique identifier for tracking changes to the form, integrates with the form change tracking service
    */
   formTrackerId?: string;
@@ -75,6 +79,7 @@ export const Form = <T extends FormValues>({
   reValidateMode,
   disabled = false,
   dataTestId,
+  id,
   formTrackerId,
 }: FormProps<T>) => {
   const methods = useForm<T>({
@@ -113,7 +118,7 @@ export const Form = <T extends FormValues>({
     <FormProvider {...methods}>
       <FormDevTools />
       {trackDirtyChanges && <FormChangeTracker formId={formTrackerId} changed={methods.formState.isDirty} />}
-      <form onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId} className={styles.flex}>
+      <form id={id} onSubmit={methods.handleSubmit(processSubmission)} data-testid={dataTestId} className={styles.flex}>
         <fieldset disabled={disabled} className={classNames(styles.fieldset, styles.flex)}>
           {children}
         </fieldset>

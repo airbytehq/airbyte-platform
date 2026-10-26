@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useId } from "react";
 import { AnyObjectSchema } from "yup";
 
 import { Form } from "components/ui/forms";
@@ -17,7 +17,8 @@ import { FormRootProps, FormRoot } from "./FormRoot";
 import { ConnectorFormValues } from "./types";
 import { useBuildForm } from "./useBuildForm";
 
-export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure"> {
+export interface ConnectorFormProps
+  extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure" | "formElementId"> {
   formType: "source" | "destination";
   formId?: string;
   /**
@@ -30,7 +31,6 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   formValues?: Partial<ConnectorFormValues>;
   connectorId?: string;
   trackDirtyChanges?: boolean;
-  canEdit: boolean;
   /**
    * Components that read or fill the form from code, such as the connector setup agent's tools.
    * They render inside the form's providers and take no place in its layout.
@@ -42,6 +42,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
   const { clearFormChange } = useFormChangeTrackerService();
   const isResourceAllocationEnabled = useFeature(FeatureItem.ConnectorResourceAllocation);
+  const formElementId = useId();
 
   const {
     formType,
@@ -89,6 +90,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
 
   return (
     <Form
+      id={formElementId}
       trackDirtyChanges={props.trackDirtyChanges}
       defaultValues={initialValues}
       schema={validationSchema as AnyObjectSchema}
@@ -104,7 +106,13 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
         validationSchema={validationSchema}
         connectorId={connectorId}
       >
-        <FormRoot {...props} formFields={formFields} castValues={castValues} groupStructure={groups} />
+        <FormRoot
+          {...props}
+          formElementId={formElementId}
+          formFields={formFields}
+          castValues={castValues}
+          groupStructure={groups}
+        />
         {formAutomation}
       </ConnectorFormContextProvider>
     </Form>

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { useIntl } from "react-intl";
 import { useWindowSize } from "react-use";
 
@@ -9,6 +9,7 @@ import { EXCLUDED_DOC_URLS } from "core/api";
 
 import styles from "./ConnectorDocumentationLayout.module.scss";
 import { useDocumentationPanelContext } from "./DocumentationPanelContext";
+import { FormFooterSlotContext } from "./FormFooterSlotContext";
 
 const LazyDocumentationPanel = lazy(() => import("./DocumentationPanel"));
 
@@ -16,6 +17,7 @@ export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unkn
   const { formatMessage } = useIntl();
   const { documentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
   const screenWidth = useWindowSize().width;
+  const [formFooterSlot, setFormFooterSlot] = useState<HTMLDivElement | null>(null);
   const showDocumentationPanel =
     screenWidth > 500 &&
     documentationPanelOpen &&
@@ -33,7 +35,14 @@ export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unkn
       onlyShowFirstPanel={!showDocumentationPanel}
       panels={[
         {
-          children,
+          children: (
+            <FormFooterSlotContext.Provider value={formFooterSlot}>
+              <div className={styles.leftPanel}>
+                <div className={styles.leftPanelContent}>{children}</div>
+                <div ref={setFormFooterSlot} />
+              </div>
+            </FormFooterSlotContext.Provider>
+          ),
           minWidth: 500,
         },
         {

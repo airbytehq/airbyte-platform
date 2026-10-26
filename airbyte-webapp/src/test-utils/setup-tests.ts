@@ -23,6 +23,9 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// jsdom doesn't implement `scrollIntoView`
+Element.prototype.scrollIntoView = jest.fn();
+
 // retry failed tests when configured to (e.g. `test:ci`)
 if (process.env.JEST_RETRIES) {
   jest.retryTimes(parseInt(process.env.JEST_RETRIES, 10));

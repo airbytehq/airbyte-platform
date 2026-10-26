@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -46,6 +46,15 @@ export const TestCard: React.FC<IProps> = ({
   isEditMode,
   dirty,
 }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const hasError = Boolean(errorMessage);
+
+  useEffect(() => {
+    if (isTestConnectionInProgress || hasError) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [isTestConnectionInProgress, hasError]);
+
   const renderStatusMessage = () => {
     if (errorMessage) {
       return (
@@ -65,7 +74,7 @@ export const TestCard: React.FC<IProps> = ({
   };
 
   return (
-    <Card>
+    <Card ref={cardRef}>
       <FlexContainer direction="column">
         <FlexContainer alignItems="center">
           <FlexItem grow>

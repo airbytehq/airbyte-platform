@@ -316,7 +316,16 @@ export const ConnectorCard = <T extends ConnectorT>({
       formValues={formValues}
       connectorId={connectorId}
       formHeader={!isEditMode && <ConnectorCardHeader connectorDefinition={selectedConnectorDefinition} />}
-      renderFooter={({ dirty, isSubmitting, isValid, emptyRequiredFields, resetConnectorForm, getValues }) =>
+      renderFooter={({
+        dirty,
+        isSubmitting,
+        isValid,
+        emptyRequiredFields,
+        formElementId,
+        canEdit,
+        resetConnectorForm,
+        getValues,
+      }) =>
         selectedConnectorDefinitionSpecification && (
           <>
             {isCloudApp &&
@@ -385,6 +394,8 @@ export const ConnectorCard = <T extends ConnectorT>({
               }
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
+              formElementId={formElementId}
+              canEdit={canEdit}
             />
           </>
         )
