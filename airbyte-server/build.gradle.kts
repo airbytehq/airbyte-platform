@@ -300,6 +300,8 @@ airbyte {
 tasks.named<Test>("test") {
   // Micronaut retains metadata from closed contexts, so limit how many test classes share a JVM.
   forkEvery = 50
+  // Safe to run test classes in parallel JVMs: tests use random ports and per-JVM containers.
+  maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 
   environment(
     mapOf(
