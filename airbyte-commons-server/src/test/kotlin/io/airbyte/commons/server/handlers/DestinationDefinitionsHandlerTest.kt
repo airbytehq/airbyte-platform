@@ -58,16 +58,18 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.Runs
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import java.net.URI
 import java.time.LocalDate
 import java.util.Date
@@ -106,24 +108,24 @@ internal class DestinationDefinitionsHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    destinationService = Mockito.mock(DestinationService::class.java)
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
-    actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    uuidSupplier = Mockito.mock(Supplier::class.java) as Supplier<UUID>
+    destinationService = mockk<DestinationService>()
+    workspaceService = mockk<WorkspaceService>()
+    actorDefinitionService = mockk<ActorDefinitionService>()
+    uuidSupplier = mockk<Supplier<UUID>>()
     destinationDefinition = generateDestinationDefinition()
     destinationDefinitionWithOptionals = generateDestinationDefinitionWithOptionals()
     destinationDefinitionVersion = generateVersionFromDestinationDefinition(destinationDefinition)
     destinationDefinitionVersionWithOptionals = generateDestinationDefinitionVersionWithOptionals(destinationDefinitionWithOptionals)
-    actorDefinitionHandlerHelper = Mockito.mock(ActorDefinitionHandlerHelper::class.java)
-    remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
-    licenseEntitlementChecker = Mockito.mock(LicenseEntitlementChecker::class.java)
-    destinationHandler = Mockito.mock(DestinationHandler::class.java)
-    supportStateUpdater = Mockito.mock(SupportStateUpdater::class.java)
+    actorDefinitionHandlerHelper = mockk<ActorDefinitionHandlerHelper>()
+    remoteDefinitionsProvider = mockk<RemoteDefinitionsProvider>()
+    licenseEntitlementChecker = mockk<LicenseEntitlementChecker>()
+    destinationHandler = mockk<DestinationHandler>()
+    supportStateUpdater = mockk<SupportStateUpdater>()
     workspaceId = UUID.randomUUID()
     organizationId = UUID.randomUUID()
-    featureFlagClient = Mockito.mock(TestClient::class.java)
-    actorDefinitionVersionHelper = Mockito.mock(ActorDefinitionVersionHelper::class.java)
-    airbyteCompatibleConnectorsValidator = Mockito.mock(AirbyteCompatibleConnectorsValidator::class.java)
+    featureFlagClient = mockk<TestClient>()
+    actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    airbyteCompatibleConnectorsValidator = mockk<AirbyteCompatibleConnectorsValidator>()
     destinationDefinitionsHandler =
       DestinationDefinitionsHandler(
         actorDefinitionService,
@@ -141,7 +143,15 @@ internal class DestinationDefinitionsHandlerTest {
         apiPojoConverters,
       )
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(UUID.randomUUID())
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+    every { actorDefinitionService.writeActorDefinitionWorkspaceGrant(any(), any(), any()) } just Runs
+    every { actorDefinitionService.deleteActorDefinitionWorkspaceGrant(any(), any(), any()) } just Runs
+    every { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) } just Runs
+    every { destinationService.writeCustomConnectorMetadata(any(), any(), any(), any()) } just Runs
+    every { destinationService.writeConnectorMetadata(any(), any(), any()) } just Runs
+    every { destinationService.updateStandardDestinationDefinition(any()) } just Runs
+    every { destinationHandler.deleteDestination(any<DestinationRead>()) } just Runs
+    every { supportStateUpdater.updateSupportStatesForDestinationDefinition(any()) } just Runs
   }
 
   private fun generateDestinationDefinition(): StandardDestinationDefinition =
@@ -210,22 +220,18 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listDestinationDefinition should return the right list")
   fun testListDestinations() {
-    Mockito
-      .`when`(destinationService.listStandardDestinationDefinitions(false))
-      .thenReturn(listOf(destinationDefinition, destinationDefinitionWithOptionals))
-    Mockito
-      .`when`(
-        actorDefinitionService.getActorDefinitionVersions(
-          listOf<UUID?>(
-            destinationDefinition.defaultVersionId,
-            destinationDefinitionWithOptionals.defaultVersionId,
-          ),
+    every { destinationService.listStandardDestinationDefinitions(false) } returns listOf(destinationDefinition, destinationDefinitionWithOptionals)
+    every {
+      actorDefinitionService.getActorDefinitionVersions(
+        listOf<UUID?>(
+          destinationDefinition.defaultVersionId,
+          destinationDefinitionWithOptionals.defaultVersionId,
         ),
-      ).thenReturn(
-        listOf(
-          destinationDefinitionVersion,
-          destinationDefinitionVersionWithOptionals,
-        ),
+      )
+    } returns
+      listOf(
+        destinationDefinitionVersion,
+        destinationDefinitionVersionWithOptionals,
       )
 
     val expectedDestinationDefinitionRead1 =
@@ -294,38 +300,32 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
   fun testListDestinationDefinitionsForWorkspace() {
-    Mockito
-      .`when`(
-        featureFlagClient.boolVariation(
-          eq(HideActorDefinitionFromList),
-          anyOrNull(),
+    every {
+      featureFlagClient.boolVariation(
+        HideActorDefinitionFromList,
+        any(),
+      )
+    } returns false
+    val workspace = mockk<StandardWorkspace>()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
+    every { workspace.organizationId } returns UUID.randomUUID()
+    every { destinationService.listPublicDestinationDefinitions(false) } returns listOf(destinationDefinition)
+    every { destinationService.listGrantedDestinationDefinitions(workspaceId, false) } returns emptyList()
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          destinationDefinition,
         ),
-      ).thenReturn(false)
-    val workspace = Mockito.mock(StandardWorkspace::class.java)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
-    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
-    Mockito
-      .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf(destinationDefinition))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            destinationDefinition,
-          ),
-          workspaceId,
-        ),
-      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
-    Mockito
-      .`when`(
-        licenseEntitlementChecker.checkEntitlements(
-          anyOrNull(),
-          eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(listOf(destinationDefinition.destinationDefinitionId)),
-        ),
-      ).thenReturn(mapOf(destinationDefinition.destinationDefinitionId to true))
+        workspaceId,
+      )
+    } returns mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion)
+    every {
+      licenseEntitlementChecker.checkEntitlements(
+        any(),
+        Entitlement.DESTINATION_CONNECTOR,
+        listOf(destinationDefinition.destinationDefinitionId),
+      )
+    } returns mapOf(destinationDefinition.destinationDefinitionId to true)
 
     val expectedDestinationDefinitionRead1 =
       DestinationDefinitionRead(
@@ -370,50 +370,41 @@ internal class DestinationDefinitionsHandlerTest {
   fun testListDestinationDefinitionsForWorkspaceWithUnentitledConnectors() {
     val unentitledDestinationDefinition = generateDestinationDefinition()
 
-    Mockito
-      .`when`(
-        featureFlagClient.boolVariation(
-          eq(HideActorDefinitionFromList),
-          anyOrNull(),
-        ),
-      ).thenReturn(false)
-    val workspace = Mockito.mock(StandardWorkspace::class.java)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
-    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
+    every {
+      featureFlagClient.boolVariation(
+        HideActorDefinitionFromList,
+        any(),
+      )
+    } returns false
+    val workspace = mockk<StandardWorkspace>()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
+    every { workspace.organizationId } returns UUID.randomUUID()
 
-    Mockito
-      .`when`(
-        licenseEntitlementChecker.checkEntitlements(
-          anyOrNull(),
-          eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(
-            listOf(
-              destinationDefinition.destinationDefinitionId,
-              unentitledDestinationDefinition.destinationDefinitionId,
-            ),
-          ),
-        ),
-      ).thenReturn(
-        mapOf(
-          destinationDefinition.destinationDefinitionId to true,
-          unentitledDestinationDefinition.destinationDefinitionId to false,
+    every {
+      licenseEntitlementChecker.checkEntitlements(
+        any(),
+        Entitlement.DESTINATION_CONNECTOR,
+        listOf(
+          destinationDefinition.destinationDefinitionId,
+          unentitledDestinationDefinition.destinationDefinitionId,
         ),
       )
+    } returns
+      mapOf(
+        destinationDefinition.destinationDefinitionId to true,
+        unentitledDestinationDefinition.destinationDefinitionId to false,
+      )
 
-    Mockito
-      .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf(destinationDefinition, unentitledDestinationDefinition))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            destinationDefinition,
-          ),
-          workspaceId,
+    every { destinationService.listPublicDestinationDefinitions(false) } returns listOf(destinationDefinition, unentitledDestinationDefinition)
+    every { destinationService.listGrantedDestinationDefinitions(workspaceId, false) } returns emptyList()
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          destinationDefinition,
         ),
-      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
+        workspaceId,
+      )
+    } returns mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion)
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
@@ -437,57 +428,47 @@ internal class DestinationDefinitionsHandlerTest {
   fun testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() {
     val hiddenDestinationDefinition = generateDestinationDefinition()
 
-    Mockito
-      .`when`(
-        featureFlagClient.boolVariation(
-          eq(HideActorDefinitionFromList),
-          anyOrNull(),
-        ),
-      ).thenReturn(false)
-    Mockito
-      .`when`(
-        featureFlagClient.boolVariation(
-          HideActorDefinitionFromList,
-          Multi(listOf(DestinationDefinition(hiddenDestinationDefinition.destinationDefinitionId), Workspace(workspaceId))),
-        ),
-      ).thenReturn(true)
+    every {
+      featureFlagClient.boolVariation(
+        HideActorDefinitionFromList,
+        any(),
+      )
+    } returns false
+    every {
+      featureFlagClient.boolVariation(
+        HideActorDefinitionFromList,
+        Multi(listOf(DestinationDefinition(hiddenDestinationDefinition.destinationDefinitionId), Workspace(workspaceId))),
+      )
+    } returns true
 
-    val workspace = Mockito.mock(StandardWorkspace::class.java)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
-    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
-    Mockito
-      .`when`(
-        licenseEntitlementChecker.checkEntitlements(
-          anyOrNull(),
-          eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(
-            listOf(
-              destinationDefinition.destinationDefinitionId,
-              hiddenDestinationDefinition.destinationDefinitionId,
-            ),
-          ),
-        ),
-      ).thenReturn(
-        mapOf(
-          destinationDefinition.destinationDefinitionId to true,
-          hiddenDestinationDefinition.destinationDefinitionId to true,
+    val workspace = mockk<StandardWorkspace>()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
+    every { workspace.organizationId } returns UUID.randomUUID()
+    every {
+      licenseEntitlementChecker.checkEntitlements(
+        any(),
+        Entitlement.DESTINATION_CONNECTOR,
+        listOf(
+          destinationDefinition.destinationDefinitionId,
+          hiddenDestinationDefinition.destinationDefinitionId,
         ),
       )
+    } returns
+      mapOf(
+        destinationDefinition.destinationDefinitionId to true,
+        hiddenDestinationDefinition.destinationDefinitionId to true,
+      )
 
-    Mockito
-      .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf(destinationDefinition, hiddenDestinationDefinition))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            destinationDefinition,
-          ),
-          workspaceId,
+    every { destinationService.listPublicDestinationDefinitions(false) } returns listOf(destinationDefinition, hiddenDestinationDefinition)
+    every { destinationService.listGrantedDestinationDefinitions(workspaceId, false) } returns emptyList()
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          destinationDefinition,
         ),
-      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
+        workspaceId,
+      )
+    } returns mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion)
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
@@ -512,26 +493,20 @@ internal class DestinationDefinitionsHandlerTest {
     val usedDestinationDefinition = generateDestinationDefinition()
     val usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition)
 
-    Mockito
-      .`when`(
-        destinationService.listDestinationDefinitionsForWorkspace(
-          workspaceId,
-          false,
-        ),
-      ).thenReturn(
-        listOf(usedDestinationDefinition),
+    every {
+      destinationService.listDestinationDefinitionsForWorkspace(
+        workspaceId,
+        false,
       )
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            usedDestinationDefinition,
-          ),
-          workspaceId,
+    } returns listOf(usedDestinationDefinition)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          usedDestinationDefinition,
         ),
-      ).thenReturn(
-        mapOf(usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion),
+        workspaceId,
       )
+    } returns mapOf(usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion)
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
@@ -556,49 +531,37 @@ internal class DestinationDefinitionsHandlerTest {
     val destinationDefinition2 = generateDestinationDefinition()
     val destinationDefinitionVersion2 = generateVersionFromDestinationDefinition(destinationDefinition2)
 
-    Mockito
-      .`when`(
-        featureFlagClient.boolVariation(
-          eq(HideActorDefinitionFromList),
-          anyOrNull(),
-        ),
-      ).thenReturn(false)
-    Mockito
-      .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf(destinationDefinition))
-    Mockito
-      .`when`(destinationService.listGrantedDestinationDefinitions(workspaceId, false))
-      .thenReturn(
-        listOf(destinationDefinition2),
+    every {
+      featureFlagClient.boolVariation(
+        HideActorDefinitionFromList,
+        any(),
       )
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            destinationDefinition,
-            destinationDefinition2,
-          ),
-          workspaceId,
+    } returns false
+    every { destinationService.listPublicDestinationDefinitions(false) } returns listOf(destinationDefinition)
+    every { destinationService.listGrantedDestinationDefinitions(workspaceId, false) } returns listOf(destinationDefinition2)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          destinationDefinition,
+          destinationDefinition2,
         ),
-      ).thenReturn(
-        mapOf(
-          destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion,
-          destinationDefinitionVersion2.actorDefinitionId to destinationDefinitionVersion2,
-        ),
+        workspaceId,
       )
-    val workspace = Mockito.mock(StandardWorkspace::class.java)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
-    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
-    Mockito
-      .`when`(
-        licenseEntitlementChecker.checkEntitlements(
-          anyOrNull(),
-          eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(listOf(destinationDefinition.destinationDefinitionId)),
-        ),
-      ).thenReturn(mapOf(destinationDefinition.destinationDefinitionId to true))
+    } returns
+      mapOf(
+        destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion,
+        destinationDefinitionVersion2.actorDefinitionId to destinationDefinitionVersion2,
+      )
+    val workspace = mockk<StandardWorkspace>()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
+    every { workspace.organizationId } returns UUID.randomUUID()
+    every {
+      licenseEntitlementChecker.checkEntitlements(
+        any(),
+        Entitlement.DESTINATION_CONNECTOR,
+        listOf(destinationDefinition.destinationDefinitionId),
+      )
+    } returns mapOf(destinationDefinition.destinationDefinitionId to true)
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
@@ -621,27 +584,22 @@ internal class DestinationDefinitionsHandlerTest {
     val usedDestinationDefinition = generateDestinationDefinition()
     val usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition)
 
-    Mockito
-      .`when`(
-        destinationService.listDestinationDefinitionsForWorkspace(
-          workspaceId,
-          false,
-        ),
-      ).thenReturn(
-        listOf(usedDestinationDefinition),
+    every {
+      destinationService.listDestinationDefinitionsForWorkspace(
+        workspaceId,
+        false,
       )
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersions(
-          listOf(
-            usedDestinationDefinition,
-          ),
-          workspaceId,
+    } returns listOf(usedDestinationDefinition)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersions(
+        listOf(
+          usedDestinationDefinition,
         ),
-      ).thenReturn(
-        mapOf(
-          usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion,
-        ),
+        workspaceId,
+      )
+    } returns
+      mapOf(
+        usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion,
       )
 
     val actualDestinationDefinitionReadList =
@@ -662,21 +620,17 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("listPrivateDestinationDefinitions should return the right list")
   fun testListPrivateDestinationDefinitions() {
-    Mockito
-      .`when`(
-        destinationService.listGrantableDestinationDefinitions(
-          workspaceId,
-          false,
-        ),
-      ).thenReturn(
-        mapOf(destinationDefinition to false).entries.toList(),
+    every {
+      destinationService.listGrantableDestinationDefinitions(
+        workspaceId,
+        false,
       )
-    Mockito
-      .`when`(
-        actorDefinitionService.getActorDefinitionVersions(
-          listOf<UUID?>(destinationDefinition.defaultVersionId),
-        ),
-      ).thenReturn(listOf(destinationDefinitionVersion))
+    } returns mapOf(destinationDefinition to false).entries.toList()
+    every {
+      actorDefinitionService.getActorDefinitionVersions(
+        listOf<UUID?>(destinationDefinition.defaultVersionId),
+      )
+    } returns listOf(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead1 =
       DestinationDefinitionRead(
@@ -726,16 +680,13 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinition should return the right destination")
   fun testGetDestination() {
-    Mockito
-      .`when`(
-        destinationService.getStandardDestinationDefinition(
-          destinationDefinition.destinationDefinitionId,
-          true,
-        ),
-      ).thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinition.destinationDefinitionId,
+        true,
+      )
+    } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead(
@@ -774,9 +725,7 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should throw an exception for a missing grant")
   fun testGetDefinitionWithoutGrantForWorkspace() {
-    Mockito
-      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId))
-      .thenReturn(false)
+    every { workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId) } returns false
 
     val destinationDefinitionIdWithWorkspaceId =
       DestinationDefinitionIdWithWorkspaceId(
@@ -792,14 +741,13 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForScope should throw an exception for a missing grant")
   fun testGetDefinitionWithoutGrantForScope() {
-    Mockito
-      .`when`(
-        actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.destinationDefinitionId,
-          workspaceId,
-          ScopeType.WORKSPACE.value(),
-        ),
-      ).thenReturn(false)
+    every {
+      actorDefinitionService.scopeCanUseDefinition(
+        destinationDefinition.destinationDefinitionId,
+        workspaceId,
+        ScopeType.WORKSPACE.value(),
+      )
+    } returns false
     val actorDefinitionIdWithScopeForWorkspace =
       ActorDefinitionIdWithScope(
         actorDefinitionId = destinationDefinition.destinationDefinitionId,
@@ -810,14 +758,13 @@ internal class DestinationDefinitionsHandlerTest {
       IdNotFoundKnownException::class.java,
     ) { destinationDefinitionsHandler.getDestinationDefinitionForScope(actorDefinitionIdWithScopeForWorkspace) }
 
-    Mockito
-      .`when`(
-        actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.destinationDefinitionId,
-          organizationId,
-          ScopeType.ORGANIZATION.value(),
-        ),
-      ).thenReturn(false)
+    every {
+      actorDefinitionService.scopeCanUseDefinition(
+        destinationDefinition.destinationDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION.value(),
+      )
+    } returns false
     val actorDefinitionIdWithScopeForOrganization =
       ActorDefinitionIdWithScope(
         actorDefinitionId = destinationDefinition.destinationDefinitionId,
@@ -832,19 +779,14 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should return the destination definition if the grant exists")
   fun testGetDefinitionWithGrantForWorkspace() {
-    Mockito
-      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId))
-      .thenReturn(true)
-    Mockito
-      .`when`(
-        destinationService.getStandardDestinationDefinition(
-          destinationDefinition.destinationDefinitionId,
-          true,
-        ),
-      ).thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every { workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId) } returns true
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinition.destinationDefinitionId,
+        true,
+      )
+    } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead(
@@ -890,32 +832,27 @@ internal class DestinationDefinitionsHandlerTest {
   @Test
   @DisplayName("getDestinationDefinitionForScope should return the destination definition if the grant exists")
   fun testGetDefinitionWithGrantForScope() {
-    Mockito
-      .`when`(
-        actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.destinationDefinitionId,
-          workspaceId,
-          ScopeType.WORKSPACE.value(),
-        ),
-      ).thenReturn(true)
-    Mockito
-      .`when`(
-        actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.destinationDefinitionId,
-          organizationId,
-          ScopeType.ORGANIZATION.value(),
-        ),
-      ).thenReturn(true)
-    Mockito
-      .`when`(
-        destinationService.getStandardDestinationDefinition(
-          destinationDefinition.destinationDefinitionId,
-          true,
-        ),
-      ).thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every {
+      actorDefinitionService.scopeCanUseDefinition(
+        destinationDefinition.destinationDefinitionId,
+        workspaceId,
+        ScopeType.WORKSPACE.value(),
+      )
+    } returns true
+    every {
+      actorDefinitionService.scopeCanUseDefinition(
+        destinationDefinition.destinationDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION.value(),
+      )
+    } returns true
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinition.destinationDefinitionId,
+        true,
+      )
+    } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead(
@@ -978,7 +915,7 @@ internal class DestinationDefinitionsHandlerTest {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.destinationDefinitionId)
+    every { uuidSupplier.get() } returns newDestinationDefinition.destinationDefinitionId
 
     val create =
       DestinationDefinitionCreate(
@@ -1000,15 +937,14 @@ internal class DestinationDefinitionsHandlerTest {
     val customCreate =
       CustomDestinationDefinitionCreate(destinationDefinition = create, workspaceId = workspaceId)
 
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.dockerRepository,
-          create.dockerImageTag,
-          create.documentationUrl,
-          workspaceId,
-        ),
-      ).thenReturn(destinationDefinitionVersion)
+    every {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    } returns destinationDefinitionVersion
 
     val expectedRead =
       DestinationDefinitionRead(
@@ -1039,23 +975,27 @@ internal class DestinationDefinitionsHandlerTest {
     val actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate)
 
     Assertions.assertEquals(expectedRead, actualRead)
-    Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    Mockito.verify(destinationService).writeCustomConnectorMetadata(
-      newDestinationDefinition
-        .withCustom(true)
-        .withDefaultVersionId(null)
-        .withIconUrl(null),
-      destinationDefinitionVersion,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) {
+      destinationService.writeCustomConnectorMetadata(
+        newDestinationDefinition
+          .withCustom(true)
+          .withDefaultVersionId(null)
+          .withIconUrl(null),
+        destinationDefinitionVersion,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
 
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1064,7 +1004,7 @@ internal class DestinationDefinitionsHandlerTest {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.destinationDefinitionId)
+    every { uuidSupplier.get() } returns newDestinationDefinition.destinationDefinitionId
 
     val create =
       DestinationDefinitionCreate(
@@ -1091,15 +1031,14 @@ internal class DestinationDefinitionsHandlerTest {
         workspaceId = null,
       ) // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
 
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.dockerRepository,
-          create.dockerImageTag,
-          create.documentationUrl,
-          workspaceId,
-        ),
-      ).thenReturn(destinationDefinitionVersion)
+    every {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    } returns destinationDefinitionVersion
 
     val expectedRead =
       DestinationDefinitionRead(
@@ -1131,21 +1070,25 @@ internal class DestinationDefinitionsHandlerTest {
       destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace)
 
     Assertions.assertEquals(expectedRead, actualRead)
-    Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    Mockito.verify(destinationService).writeCustomConnectorMetadata(
-      newDestinationDefinition
-        .withCustom(true)
-        .withDefaultVersionId(null)
-        .withIconUrl(null),
-      destinationDefinitionVersion,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) {
+      destinationService.writeCustomConnectorMetadata(
+        newDestinationDefinition
+          .withCustom(true)
+          .withDefaultVersionId(null)
+          .withIconUrl(null),
+        destinationDefinitionVersion,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
 
     // TODO: custom connectors for organizations are not currently supported. Jobs currently require an
     // explicit workspace ID to resolve a dataplane group where the job should run. We can uncomment
@@ -1174,7 +1117,7 @@ internal class DestinationDefinitionsHandlerTest {
     // null);
     // verify(destinationService).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
     // destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1208,45 +1151,47 @@ internal class DestinationDefinitionsHandlerTest {
     val customCreate =
       CustomDestinationDefinitionCreate(destinationDefinition = create, workspaceId = workspaceId)
 
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.dockerRepository,
-          create.dockerImageTag,
-          create.documentationUrl,
-          workspaceId,
-        ),
-      ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
+    every {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    } throws UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0"))
     Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
     ) { destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate) }
 
-    Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    Mockito.verify(destinationService, Mockito.never()).writeCustomConnectorMetadata(
-      anyOrNull(),
-      anyOrNull(),
-      anyOrNull(),
-      anyOrNull(),
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 0) {
+      destinationService.writeCustomConnectorMetadata(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
 
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
   fun testUpdateDestination() {
-    Mockito
-      .`when`(
-        airbyteCompatibleConnectorsValidator.validate(
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+    every {
+      airbyteCompatibleConnectorsValidator.validate(
+        any(),
+        any(),
+      )
+    } returns ConnectorPlatformCompatibilityValidationResult(true, "")
 
     val newDockerImageTag = "averydifferenttag"
     val updatedDestination =
@@ -1259,34 +1204,31 @@ internal class DestinationDefinitionsHandlerTest {
     val persistedUpdatedDestination =
       clone<StandardDestinationDefinition>(updatedDestination).withDefaultVersionId(updatedDestinationDefVersion.versionId)
 
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(destinationDefinition) // Call at the beginning of the method
-      .thenReturn(persistedUpdatedDestination) // Call after we've persisted
+    every { destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId) } returnsMany
+      listOf(
+        destinationDefinition, // Call at the beginning of the method
+        persistedUpdatedDestination, // Call after we've persisted
+      )
 
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-          destinationDefinitionVersion,
-          ActorType.DESTINATION,
-          newDockerImageTag,
-          destinationDefinition.custom,
-          workspaceId,
-        ),
-      ).thenReturn(updatedDestinationDefVersion)
+    every {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        destinationDefinitionVersion,
+        ActorType.DESTINATION,
+        newDockerImageTag,
+        destinationDefinition.custom,
+        workspaceId,
+      )
+    } returns updatedDestinationDefVersion
 
     val breakingChanges: MutableList<ActorDefinitionBreakingChange> = generateBreakingChangesFromDestinationDefinition(updatedDestination)
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.getBreakingChanges(
-          updatedDestinationDefVersion,
-          ActorType.DESTINATION,
-        ),
-      ).thenReturn(breakingChanges)
+    every {
+      actorDefinitionHandlerHelper.getBreakingChanges(
+        updatedDestinationDefVersion,
+        ActorType.DESTINATION,
+      )
+    } returns breakingChanges
 
     val destinationRead =
       destinationDefinitionsHandler.updateDestinationDefinition(
@@ -1326,22 +1268,20 @@ internal class DestinationDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedDestinationDefinitionRead, destinationRead)
-    Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
-      destinationDefinitionVersion,
-      ActorType.DESTINATION,
-      newDockerImageTag,
-      destinationDefinition.custom,
-      workspaceId,
-    )
-    Mockito
-      .verify(actorDefinitionHandlerHelper)
-      .getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION)
-    Mockito
-      .verify(destinationService)
-      .writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges)
-    Mockito.verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination)
-    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater)
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        destinationDefinitionVersion,
+        ActorType.DESTINATION,
+        newDockerImageTag,
+        destinationDefinition.custom,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) { actorDefinitionHandlerHelper.getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION) }
+    verify(exactly = 1) { destinationService.writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges) }
+    verify(exactly = 1) { supportStateUpdater.updateSupportStatesForDestinationDefinition(persistedUpdatedDestination) }
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper, supportStateUpdater)
   }
 
   @Test
@@ -1383,26 +1323,20 @@ internal class DestinationDefinitionsHandlerTest {
     ),
   )
   fun testOutOfProtocolRangeUpdateDestination() {
-    Mockito
-      .`when`(
-        airbyteCompatibleConnectorsValidator.validate(
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(destinationDefinition)
-    Mockito
-      .`when`(
-        destinationService.getStandardDestinationDefinition(
-          destinationDefinition.destinationDefinitionId,
-          true,
-        ),
-      ).thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every {
+      airbyteCompatibleConnectorsValidator.validate(
+        any(),
+        any(),
+      )
+    } returns ConnectorPlatformCompatibilityValidationResult(true, "")
+    every { destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId) } returns destinationDefinition
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinition.destinationDefinitionId,
+        true,
+      )
+    } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
     val currentDestination =
       destinationDefinitionsHandler
         .getDestinationDefinition(destinationDefinition.destinationDefinitionId, true)
@@ -1410,16 +1344,15 @@ internal class DestinationDefinitionsHandlerTest {
     val newDockerImageTag = "averydifferenttagforprotocolversion"
     Assertions.assertNotEquals(newDockerImageTag, currentTag)
 
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-          destinationDefinitionVersion,
-          ActorType.DESTINATION,
-          newDockerImageTag,
-          destinationDefinition.custom,
-          workspaceId,
-        ),
-      ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
+    every {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        destinationDefinitionVersion,
+        ActorType.DESTINATION,
+        newDockerImageTag,
+        destinationDefinition.custom,
+        workspaceId,
+      )
+    } throws UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0"))
 
     Assertions.assertThrows(UnsupportedProtocolVersionException::class.java) {
       destinationDefinitionsHandler.updateDestinationDefinition(
@@ -1431,21 +1364,25 @@ internal class DestinationDefinitionsHandlerTest {
       )
     }
 
-    Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
-      destinationDefinitionVersion,
-      ActorType.DESTINATION,
-      newDockerImageTag,
-      destinationDefinition.custom,
-      workspaceId,
-    )
-    Mockito.verify(destinationService, Mockito.never()).writeConnectorMetadata(
-      anyOrNull(),
-      anyOrNull(),
-      anyOrNull(),
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        destinationDefinitionVersion,
+        ActorType.DESTINATION,
+        newDockerImageTag,
+        destinationDefinition.custom,
+        workspaceId,
+      )
+    }
+    verify(exactly = 0) {
+      destinationService.writeConnectorMetadata(
+        any(),
+        any(),
+        any(),
+      )
+    }
 
-    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1456,24 +1393,20 @@ internal class DestinationDefinitionsHandlerTest {
     ),
   )
   fun testUnsupportedAirbyteVersionUpdateDestination() {
-    Mockito
-      .`when`(
-        actorDefinitionHandlerHelper.validateVersionSupport(
-          anyOrNull(),
-          eq("12.4.0"),
-          eq(ActorType.DESTINATION),
-        ),
-      ).thenAnswer { throw BadRequestProblem() }
-    Mockito
-      .`when`(
-        destinationService.getStandardDestinationDefinition(
-          destinationDefinition.destinationDefinitionId,
-          true,
-        ),
-      ).thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every {
+      actorDefinitionHandlerHelper.validateVersionSupport(
+        any(),
+        "12.4.0",
+        ActorType.DESTINATION,
+      )
+    } throws BadRequestProblem()
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinition.destinationDefinitionId,
+        true,
+      )
+    } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
     val currentDestination =
       destinationDefinitionsHandler
         .getDestinationDefinition(destinationDefinition.destinationDefinitionId, true)
@@ -1490,13 +1423,15 @@ internal class DestinationDefinitionsHandlerTest {
         ),
       )
     }
-    Mockito.verify(destinationService, Mockito.never()).writeConnectorMetadata(
-      anyOrNull(),
-      anyOrNull(),
-      anyOrNull(),
-    )
-    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    verify(exactly = 0) {
+      destinationService.writeConnectorMetadata(
+        any(),
+        any(),
+        any(),
+      )
+    }
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1514,30 +1449,23 @@ internal class DestinationDefinitionsHandlerTest {
         createdAt = 1L,
       )
 
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(destinationDefinition)
-    Mockito
-      .`when`(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(DestinationReadList(destinations = listOf(newDestinationDefinition)))
+    every { destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId) } returns destinationDefinition
+    every { destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.destinationDefinitionId) } returns
+      DestinationReadList(destinations = listOf(newDestinationDefinition))
 
     Assertions.assertFalse(destinationDefinition.tombstone)
 
     destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinition.destinationDefinitionId)
 
-    Mockito.verify(destinationHandler).deleteDestination(newDestinationDefinition)
-    Mockito.verify(destinationService).updateStandardDestinationDefinition(updatedDestinationDefinition)
+    verify(exactly = 1) { destinationHandler.deleteDestination(newDestinationDefinition) }
+    verify(exactly = 1) { destinationService.updateStandardDestinationDefinition(updatedDestinationDefinition) }
   }
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspace should correctly create a workspace grant")
   fun testGrantDestinationDefinitionToWorkspace() {
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every { destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId) } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead(
@@ -1583,22 +1511,20 @@ internal class DestinationDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead)
-    Mockito.verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(
-      destinationDefinition.destinationDefinitionId,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.writeActorDefinitionWorkspaceGrant(
+        destinationDefinition.destinationDefinitionId,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
   }
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspaceOrOrganization should correctly create an organization grant")
   fun testGrantDestinationDefinitionToOrganization() {
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
-      .thenReturn(destinationDefinition)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
-      .thenReturn(destinationDefinitionVersion)
+    every { destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId) } returns destinationDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId) } returns destinationDefinitionVersion
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead(
@@ -1644,11 +1570,13 @@ internal class DestinationDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead)
-    Mockito.verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(
-      destinationDefinition.destinationDefinitionId,
-      organizationId,
-      ScopeType.ORGANIZATION,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.writeActorDefinitionWorkspaceGrant(
+        destinationDefinition.destinationDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION,
+      )
+    }
   }
 
   @Test
@@ -1661,11 +1589,13 @@ internal class DestinationDefinitionsHandlerTest {
         scopeType = KotlinScopeType.WORKSPACE,
       ),
     )
-    Mockito.verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
-      destinationDefinition.destinationDefinitionId,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
+        destinationDefinition.destinationDefinitionId,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
 
     destinationDefinitionsHandler.revokeDestinationDefinition(
       ActorDefinitionIdWithScope(
@@ -1674,11 +1604,13 @@ internal class DestinationDefinitionsHandlerTest {
         scopeType = KotlinScopeType.ORGANIZATION,
       ),
     )
-    Mockito.verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
-      destinationDefinition.destinationDefinitionId,
-      organizationId,
-      ScopeType.ORGANIZATION,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
+        destinationDefinition.destinationDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION,
+      )
+    }
   }
 
   @Nested
@@ -1707,9 +1639,7 @@ internal class DestinationDefinitionsHandlerTest {
           .withReleaseDate(todayDateString)
           .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
           .withLanguage("java")
-      Mockito.`when`(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(
-        mutableListOf(registryDestinationDefinition!!),
-      )
+      every { remoteDefinitionsProvider.getDestinationDefinitions() } returns mutableListOf(registryDestinationDefinition!!)
 
       val destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().destinationDefinitions
       Assertions.assertEquals(1, destinationDefinitionReadList.size)
@@ -1727,10 +1657,7 @@ internal class DestinationDefinitionsHandlerTest {
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
     fun testHttpTimeout() {
-      Mockito.`when`(remoteDefinitionsProvider.getDestinationDefinitions()).thenAnswer {
-        throw
-        RuntimeException()
-      }
+      every { remoteDefinitionsProvider.getDestinationDefinitions() } throws RuntimeException()
       Assertions.assertEquals(0, destinationDefinitionsHandler.listLatestDestinationDefinitions().destinationDefinitions.size)
     }
   }

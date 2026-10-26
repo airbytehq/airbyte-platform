@@ -81,8 +81,6 @@ dependencies {
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
-  testImplementation(libs.mockito.inline)
-  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)

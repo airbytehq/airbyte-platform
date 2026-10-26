@@ -19,17 +19,17 @@ import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.ConfiguredAirbyteStream
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.protocol.models.v0.SyncMode
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.UUID
 import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
 
@@ -59,10 +59,11 @@ internal class CatalogDiffServiceTest {
 
   @BeforeEach
   fun setUp() {
-    catalogService = mock()
-    connectionService = mock()
-    applySchemaChangeHelper = mock()
-    metricClient = mock()
+    catalogService = mockk()
+    connectionService = mockk()
+    applySchemaChangeHelper = mockk()
+    every { connectionService.writeStandardSync(any()) } just Runs
+    metricClient = mockk(relaxed = true)
 
     catalogDiffService =
       CatalogDiffService(
@@ -113,7 +114,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
 
     val request =
       DiffCatalogsRequest(
@@ -138,7 +139,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name", "email"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(true)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns true
 
     val request =
       DiffCatalogsRequest(
@@ -168,7 +169,7 @@ internal class CatalogDiffServiceTest {
         .withDestinationId(destinationId)
         .withCatalog(convertToConfigCatalog(configuredCatalog))
 
-    whenever(connectionService.getStandardSync(connectionId)).thenReturn(connection)
+    every { connectionService.getStandardSync(connectionId) } returns connection
 
     // Mock catalogs
     val currentActorCatalog =
@@ -181,8 +182,8 @@ internal class CatalogDiffServiceTest {
         .withId(newCatalogId)
         .withCatalog(Jsons.jsonNode(newCatalog))
 
-    whenever(catalogService.getActorCatalogById(currentCatalogId)).thenReturn(currentActorCatalog)
-    whenever(catalogService.getActorCatalogById(newCatalogId)).thenReturn(newActorCatalog)
+    every { catalogService.getActorCatalogById(currentCatalogId) } returns currentActorCatalog
+    every { catalogService.getActorCatalogById(newCatalogId) } returns newActorCatalog
   }
 
   private fun createAirbyteCatalog(
@@ -240,7 +241,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
 
     // catalogConverter is a real instance, so no need to mock it
 
@@ -285,8 +286,8 @@ internal class CatalogDiffServiceTest {
         .withId(newCatalogId)
         .withCatalog(Jsons.jsonNode(newCatalog))
 
-    whenever(catalogService.getActorCatalogById(currentCatalogId)).thenReturn(currentActorCatalog)
-    whenever(catalogService.getActorCatalogById(newCatalogId)).thenReturn(newActorCatalog)
+    every { catalogService.getActorCatalogById(currentCatalogId) } returns currentActorCatalog
+    every { catalogService.getActorCatalogById(newCatalogId) } returns newActorCatalog
 
     val request =
       DiffCatalogsRequest(currentCatalogId = currentCatalogId, newCatalogId = newCatalogId)
@@ -307,7 +308,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
 
     // Capture the original connection state
     val originalConnection = connectionService.getStandardSync(connectionId)
@@ -329,10 +330,10 @@ internal class CatalogDiffServiceTest {
     assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
 
     // Verify connection was updated
-    val connectionCaptor = argumentCaptor<StandardSync>()
-    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+    val connectionCaptor = slot<StandardSync>()
+    verify { connectionService.writeStandardSync(capture(connectionCaptor)) }
 
-    val updatedConnection = connectionCaptor.firstValue
+    val updatedConnection = connectionCaptor.captured
     assertEquals(false, updatedConnection.breakingChange, "breakingChange flag should be false for non-breaking change")
     assertEquals(originalStatus, updatedConnection.status, "status should remain unchanged for non-breaking change")
     assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
@@ -346,7 +347,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name", "email"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(true)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns true
 
     // Capture the original connection state
     val originalConnection = connectionService.getStandardSync(connectionId)
@@ -367,10 +368,10 @@ internal class CatalogDiffServiceTest {
     assertEquals(SchemaChange.BREAKING, result.schemaChange)
 
     // Verify connection was updated
-    val connectionCaptor = argumentCaptor<StandardSync>()
-    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+    val connectionCaptor = slot<StandardSync>()
+    verify { connectionService.writeStandardSync(capture(connectionCaptor)) }
 
-    val updatedConnection = connectionCaptor.firstValue
+    val updatedConnection = connectionCaptor.captured
     assertEquals(true, updatedConnection.breakingChange, "breakingChange flag should be true for breaking change")
     assertEquals(StandardSync.Status.INACTIVE, updatedConnection.status, "status should be set to INACTIVE for breaking change")
     assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
@@ -384,7 +385,7 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
 
     val request =
       DiffCatalogsRequest(
@@ -401,7 +402,7 @@ internal class CatalogDiffServiceTest {
     assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
 
     // Verify connection was NOT updated
-    verify(connectionService, never()).writeStandardSync(any())
+    verify(exactly = 0) { connectionService.writeStandardSync(any()) }
   }
 
   @Test
@@ -432,10 +433,10 @@ internal class CatalogDiffServiceTest {
     assertEquals(SchemaChange.NO_CHANGE, result.schemaChange)
 
     // Verify connection was updated
-    val connectionCaptor = argumentCaptor<StandardSync>()
-    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+    val connectionCaptor = slot<StandardSync>()
+    verify { connectionService.writeStandardSync(capture(connectionCaptor)) }
 
-    val updatedConnection = connectionCaptor.firstValue
+    val updatedConnection = connectionCaptor.captured
     assertFalse(updatedConnection.breakingChange, "breakingChange flag should be false for no change")
     assertEquals(originalStatus, updatedConnection.status, "status should remain unchanged for no change")
     assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
@@ -449,8 +450,8 @@ internal class CatalogDiffServiceTest {
     val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
 
     setupMocks(currentCatalog, newCatalog, configuredCatalog)
-    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
-    whenever(applySchemaChangeHelper.containsChanges(any())).thenReturn(true)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
+    every { applySchemaChangeHelper.containsChanges(any()) } returns true
 
     // Set the connection's nonBreakingChangesPreference to DISABLE
     val connection = connectionService.getStandardSync(connectionId)
@@ -473,10 +474,10 @@ internal class CatalogDiffServiceTest {
     assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
 
     // Verify connection was updated
-    val connectionCaptor = argumentCaptor<StandardSync>()
-    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+    val connectionCaptor = slot<StandardSync>()
+    verify { connectionService.writeStandardSync(capture(connectionCaptor)) }
 
-    val updatedConnection = connectionCaptor.firstValue
+    val updatedConnection = connectionCaptor.captured
     assertFalse(updatedConnection.breakingChange, "breakingChange flag should be false for non-breaking change")
     assertEquals(
       StandardSync.Status.INACTIVE,

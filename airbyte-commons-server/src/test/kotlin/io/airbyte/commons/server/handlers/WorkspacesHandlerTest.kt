@@ -75,6 +75,12 @@ import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
+import io.mockk.Called
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -86,11 +92,6 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -121,53 +122,51 @@ internal class WorkspacesHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    workspacePersistence = Mockito.mock(WorkspacePersistence::class.java)
-    organizationService = Mockito.mock(OrganizationService::class.java)
-    secretPersistence = Mockito.mock(SecretPersistence::class.java)
-    permissionHandler = Mockito.mock(PermissionHandler::class.java)
-    connectionsHandler = Mockito.mock(ConnectionsHandler::class.java)
-    destinationHandler = Mockito.mock(DestinationHandler::class.java)
-    sourceHandler = Mockito.mock(SourceHandler::class.java)
-    uuidSupplier = Mockito.mock(Supplier::class.java) as Supplier<UUID>
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
-    workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
-    dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    entitlementService = Mockito.mock(EntitlementService::class.java)
-    trackingClient = Mockito.mock(TrackingClient::class.java)
-    limitsProvider = Mockito.mock(ProductLimitsProvider::class.java)
-    consumptionService = Mockito.mock(ConsumptionService::class.java)
-    ffClient = Mockito.mock(TestClient::class.java)
-    roleResolver = Mockito.mock(RoleResolver::class.java)
-    roleRequest = Mockito.mock(RoleResolver.Request::class.java)
-    scimConfigurationService = Mockito.mock(ScimConfigurationService::class.java)
-    scimAccessGate = Mockito.mock(ScimAccessGate::class.java)
+    workspacePersistence = mockk<WorkspacePersistence>(relaxUnitFun = true)
+    organizationService = mockk<OrganizationService>(relaxUnitFun = true)
+    secretPersistence = mockk<SecretPersistence>(relaxUnitFun = true)
+    permissionHandler = mockk<PermissionHandler>(relaxUnitFun = true)
+    connectionsHandler = mockk<ConnectionsHandler>(relaxUnitFun = true)
+    destinationHandler = mockk<DestinationHandler>(relaxUnitFun = true)
+    sourceHandler = mockk<SourceHandler>(relaxUnitFun = true)
+    uuidSupplier = mockk<Supplier<UUID>>()
+    workspaceService = mockk<WorkspaceService>(relaxUnitFun = true)
+    workspaceHelper = mockk<WorkspaceHelper>(relaxUnitFun = true)
+    dataplaneGroupService = mockk<DataplaneGroupService>(relaxUnitFun = true)
+    entitlementService = mockk<EntitlementService>(relaxUnitFun = true)
+    trackingClient = mockk<TrackingClient>(relaxUnitFun = true)
+    limitsProvider = mockk<ProductLimitsProvider>(relaxUnitFun = true)
+    consumptionService = mockk<ConsumptionService>(relaxUnitFun = true)
+    ffClient = mockk<TestClient>(relaxUnitFun = true)
+    roleResolver = mockk<RoleResolver>(relaxUnitFun = true)
+    roleRequest = mockk<RoleResolver.Request>(relaxUnitFun = true)
+    scimConfigurationService = mockk<ScimConfigurationService>(relaxUnitFun = true)
+    scimAccessGate = mockk<ScimAccessGate>(relaxUnitFun = true)
 
     // Setup roleResolver mock chain
-    Mockito.`when`(roleResolver.newRequest()).thenReturn(roleRequest)
-    Mockito.`when`(roleRequest.withCurrentUser()).thenReturn(roleRequest)
-    Mockito.`when`(roleRequest.withOrg(any())).thenReturn(roleRequest)
-    Mockito.doNothing().`when`(roleRequest).requireRole(any())
+    every { roleResolver.newRequest() } returns roleRequest
+    every { roleRequest.withCurrentUser() } returns roleRequest
+    every { roleRequest.withOrg(any()) } returns roleRequest
+    every { roleRequest.requireRole(any()) } just Runs
 
-    Mockito.`when`(scimConfigurationService.getConfiguration(any())).thenReturn(
-      ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED),
-    )
-    Mockito.`when`(scimAccessGate.isAllowedForOrganizationInfo(any())).thenReturn(true)
+    every { scimConfigurationService.getConfiguration(any()) } returns ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED)
+    every { scimAccessGate.isAllowedForOrganizationInfo(any()) } returns true
 
     // By default, no maximum-workspaces entitlement is granted and the organization has no workspaces.
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = false,
-          value = null,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = false,
+        value = null,
       )
-    Mockito.`when`(workspacePersistence.workspaceExists(any())).thenReturn(false)
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(any())).thenReturn(0L)
+    every { workspacePersistence.workspaceExists(any()) } returns false
+    every { workspacePersistence.countWorkspacesByOrganizationId(any()) } returns 0L
+    every { workspaceService.getWorkspaceBySlugOptional(any(), any()) } returns Optional.empty()
+    every { entitlementService.getCurrentPlanId(any()) } returns null
+    every { ffClient.boolVariation(any(), any()) } returns false
 
     workspace = generateWorkspace()
-    Mockito.`when`(organizationService.getActiveOrganization(ORGANIZATION_ID)).thenReturn(Optional.of(generateOrganization(null)))
+    every { organizationService.getActiveOrganization(ORGANIZATION_ID) } returns Optional.of(generateOrganization(null))
   }
 
   private fun getWorkspacesHandler(airbyteEdition: AirbyteEdition): WorkspacesHandler =
@@ -311,23 +310,22 @@ internal class WorkspacesHandlerTest {
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspace(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock dataplane group service for DATAPLANE_GROUP_ID_1
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -345,7 +343,7 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
     val expectedRead =
@@ -375,23 +373,22 @@ internal class WorkspacesHandlerTest {
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspaceIfNotExist(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock dataplane group service for DATAPLANE_GROUP_ID_1
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -412,7 +409,7 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
     val secondActualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
@@ -444,23 +441,22 @@ internal class WorkspacesHandlerTest {
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspaceIfNotExistWithBlankEmail(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock dataplane group service for DATAPLANE_GROUP_ID_1
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -481,7 +477,7 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
     val secondActualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
@@ -513,23 +509,22 @@ internal class WorkspacesHandlerTest {
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspaceIfNotExistWithNullEmail(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock dataplane group service for DATAPLANE_GROUP_ID_1
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -550,7 +545,7 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
     val secondActualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
@@ -581,19 +576,16 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspaceWithMinimumInput(airbyteEdition: AirbyteEdition) {
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
-    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
-      DataplaneGroup().withId(DATAPLANE_GROUP_ID_1),
-    )
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns DataplaneGroup().withId(DATAPLANE_GROUP_ID_1)
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -626,17 +618,14 @@ internal class WorkspacesHandlerTest {
   }
 
   private fun stubSuccessfulWorkspaceCreate() {
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
-    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
-      DataplaneGroup().withId(DATAPLANE_GROUP_ID_1),
-    )
-    Mockito.`when`(uuidSupplier.get()).thenReturn(UUID.randomUUID())
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns DataplaneGroup().withId(DATAPLANE_GROUP_ID_1)
+    every { uuidSupplier.get() } returns UUID.randomUUID()
   }
 
   private fun generateWorkspaceCreateWithId(): WorkspaceCreateWithId =
@@ -648,16 +637,13 @@ internal class WorkspacesHandlerTest {
 
   @Test
   fun testCreateWorkspaceWhenAtMaximumWorkspacesLimitIsRejected() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = true,
-          value = 2L,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = true,
+        value = 2L,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
 
     val exception =
       assertThrows<WorkspaceLimitForOrganizationReachedProblem> {
@@ -665,84 +651,72 @@ internal class WorkspacesHandlerTest {
       }
 
     assertEquals(2L, (exception.problem.getData() as ProblemWorkspaceLimitData).limit)
-    Mockito.verify(workspaceService, Mockito.never()).writeWorkspaceWithSecrets(any())
+    verify(exactly = 0) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateWorkspaceBelowMaximumWorkspacesLimitIsAllowed() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = true,
-          value = 3L,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = true,
+        value = 3L,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateWorkspaceWithUnlimitedWorkspacesEntitlementIsAllowed() {
     // Stigg models an unlimited numeric entitlement with isUnlimited=true and a meaningless value.
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = true,
-          value = 0L,
-          isUnlimited = true,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = true,
+        value = 0L,
+        isUnlimited = true,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(100L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 100L
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateFirstWorkspaceWithoutMaximumWorkspacesEntitlementIsAllowed() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = false,
-          value = null,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = false,
+        value = null,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(0L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 0L
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateSecondWorkspaceWithoutMaximumWorkspacesEntitlementIsRejectedOnCloudPlan() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = false,
-          value = null,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = false,
+        value = null,
       )
-    Mockito.`when`(entitlementService.getCurrentPlanId(OrganizationId(ORGANIZATION_ID))).thenReturn("plan-airbyte-standard")
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
+    every { entitlementService.getCurrentPlanId(OrganizationId(ORGANIZATION_ID)) } returns "plan-airbyte-standard"
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 1L
 
     val exception =
       assertThrows<WorkspaceLimitForOrganizationReachedProblem> {
@@ -750,124 +724,107 @@ internal class WorkspacesHandlerTest {
       }
 
     assertEquals(1L, (exception.problem.getData() as ProblemWorkspaceLimitData).limit)
-    Mockito.verify(workspaceService, Mockito.never()).writeWorkspaceWithSecrets(any())
+    verify(exactly = 0) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateSecondWorkspaceWithoutMaximumWorkspacesEntitlementOrPlanIsAllowedOnCloud() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = false,
-          value = null,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = false,
+        value = null,
       )
-    Mockito.`when`(entitlementService.getCurrentPlanId(OrganizationId(ORGANIZATION_ID))).thenReturn(null)
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(100L)
+    every { entitlementService.getCurrentPlanId(OrganizationId(ORGANIZATION_ID)) } returns null
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 100L
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspacePersistence, Mockito.never()).countWorkspacesByOrganizationId(any())
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 0) { workspacePersistence.countWorkspacesByOrganizationId(any()) }
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class, names = ["COMMUNITY"])
   fun testCreateSecondWorkspaceWithoutMaximumWorkspacesEntitlementIsAllowedOutsideCloud(airbyteEdition: AirbyteEdition) {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = false,
-          value = null,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = false,
+        value = null,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(100L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 100L
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(entitlementService, Mockito.never()).getCurrentPlanId(any())
-    Mockito.verify(workspacePersistence, Mockito.never()).countWorkspacesByOrganizationId(any())
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 0) { entitlementService.getCurrentPlanId(any()) }
+    verify(exactly = 0) { workspacePersistence.countWorkspacesByOrganizationId(any()) }
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testCreateWorkspaceAtLimitIsAllowedForInstanceAdmin() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = true,
-          value = 1L,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = true,
+        value = 1L,
       )
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
-    Mockito.`when`(roleRequest.roles()).thenReturn(setOf(AuthRoleConstants.ADMIN))
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 1L
+    every { roleRequest.roles() } returns setOf(AuthRoleConstants.ADMIN)
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
   fun testReCreatingExistingWorkspaceAtLimitIsAllowed() {
-    Mockito
-      .`when`(entitlementService.getNumericEntitlement(any(), any()))
-      .thenReturn(
-        NumericEntitlementResult(
-          featureId = MaximumWorkspacesEntitlement.featureId,
-          hasAccess = true,
-          value = 1L,
-        ),
+    every { entitlementService.getNumericEntitlement(any(), any()) } returns
+      NumericEntitlementResult(
+        featureId = MaximumWorkspacesEntitlement.featureId,
+        hasAccess = true,
+        value = 1L,
       )
-    Mockito.`when`(workspacePersistence.workspaceExists(any())).thenReturn(true)
-    Mockito.`when`(roleRequest.roles()).thenReturn(emptySet())
+    every { workspacePersistence.workspaceExists(any()) } returns true
+    every { roleRequest.roles() } returns emptySet()
     stubSuccessfulWorkspaceCreate()
 
     val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
 
     assertEquals(ORGANIZATION_ID, actualRead.organizationId)
-    Mockito.verify(workspacePersistence, Mockito.never()).countWorkspacesByOrganizationId(any())
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+    verify(exactly = 0) { workspacePersistence.countWorkspacesByOrganizationId(any()) }
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   fun testCreateWorkspaceDuplicateSlug(airbyteEdition: AirbyteEdition) {
-    Mockito
-      .`when`(
-        workspaceService.getWorkspaceBySlugOptional(
-          any(),
-          eq(true),
-        ),
-      ).thenReturn(Optional.of<StandardWorkspace>(workspace))
-      .thenReturn(Optional.of<StandardWorkspace>(workspace))
-      .thenReturn(Optional.empty<StandardWorkspace>())
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getWorkspaceBySlugOptional(
+        any(),
+        true,
+      )
+    } returnsMany
+      listOf(Optional.of<StandardWorkspace>(workspace), Optional.of<StandardWorkspace>(workspace), Optional.empty<StandardWorkspace>())
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val dataplaneGroupId = UUID.randomUUID()
-    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
-      DataplaneGroup().withId(dataplaneGroupId),
-    )
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns DataplaneGroup().withId(dataplaneGroupId)
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -906,12 +863,12 @@ internal class WorkspacesHandlerTest {
     assertTrue(actualRead.slug.startsWith(workspace.slug))
     assertNotEquals(workspace.slug, actualRead.slug)
     assertEquals(expectedRead.copy(slug = ""), actualRead.copy(slug = ""))
-    val slugCaptor = argumentCaptor<String>()
-    Mockito.verify(workspaceService, Mockito.times(3)).getWorkspaceBySlugOptional(slugCaptor.capture(), eq(true))
-    assertEquals(3, slugCaptor.allValues.size)
-    assertEquals(workspace.slug, slugCaptor.allValues[0])
-    assertTrue(slugCaptor.allValues[1].startsWith(workspace.slug))
-    assertTrue(slugCaptor.allValues[2].startsWith(workspace.slug))
+    val slugs = mutableListOf<String>()
+    verify(exactly = 3) { workspaceService.getWorkspaceBySlugOptional(capture(slugs), true) }
+    assertEquals(3, slugs.size)
+    assertEquals(workspace.slug, slugs[0])
+    assertTrue(slugs[1].startsWith(workspace.slug))
+    assertTrue(slugs[2].startsWith(workspace.slug))
   }
 
   @Test
@@ -951,51 +908,46 @@ internal class WorkspacesHandlerTest {
         createdAt = 1L,
       )
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
 
-    Mockito.`when`(workspaceService.listStandardWorkspaces(false)).thenReturn(
+    every { workspaceService.listStandardWorkspaces(false) } returns
       mutableListOf(
         workspace,
-      ),
-    )
+      )
 
-    Mockito
-      .`when`(
-        connectionsHandler.listConnectionsForWorkspace(
-          io.airbyte.api.server.generated.models
-            .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
-        ),
-      ).thenReturn(ConnectionReadList(connections = listOf(connection)))
+    every {
+      connectionsHandler.listConnectionsForWorkspace(
+        io.airbyte.api.server.generated.models
+          .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
+      )
+    } returns ConnectionReadList(connections = listOf(connection))
 
-    Mockito
-      .`when`(
-        destinationHandler
-          .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId)),
-      ).thenReturn(DestinationReadList(destinations = listOf(destination)))
+    every {
+      destinationHandler
+        .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId))
+    } returns
+      DestinationReadList(destinations = listOf(destination))
 
-    Mockito
-      .`when`(
-        sourceHandler.listSourcesForWorkspace(
-          ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
-        ),
-      ).thenReturn(SourceReadList(sources = listOf(source)))
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every {
+      sourceHandler.listSourcesForWorkspace(
+        ActorListCursorPaginatedRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
+      )
+    } returns SourceReadList(sources = listOf(source))
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
     stubTombstone(WorkspaceTombstoneResult.TOMBSTONED, allowLastWorkspace = false)
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).deleteWorkspace(workspaceIdRequestBody)
 
-    Mockito.verify(workspacePersistence).tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, false)
-    Mockito.verify(connectionsHandler).deleteConnection(connection.connectionId)
-    Mockito.verify(destinationHandler).deleteDestination(destination)
-    Mockito.verify(sourceHandler).deleteSource(source)
+    verify { workspacePersistence.tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, false) }
+    verify { connectionsHandler.deleteConnection(connection.connectionId) }
+    verify { destinationHandler.deleteDestination(destination) }
+    verify { sourceHandler.deleteSource(source) }
   }
 
   @Test
   fun `deleteWorkspace rejects the last workspace before deleting anything`() {
     val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 1L
 
     val problem =
       assertThrows<StateConflictProblem> {
@@ -1003,14 +955,16 @@ internal class WorkspacesHandlerTest {
       }
 
     assertEquals(LAST_WORKSPACE_DELETE_MESSAGE, problem.problem.getDetail())
-    Mockito.verifyNoInteractions(connectionsHandler, destinationHandler, sourceHandler)
-    Mockito.verify(workspacePersistence, Mockito.never()).tombstoneWorkspace(any(), any(), any())
+    verify { connectionsHandler wasNot Called }
+    verify { destinationHandler wasNot Called }
+    verify { sourceHandler wasNot Called }
+    verify(exactly = 0) { workspacePersistence.tombstoneWorkspace(any(), any(), any()) }
   }
 
   @Test
   fun `deleteWorkspace returns 409 when a concurrent delete took the second-to-last workspace`() {
     val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
     stubTombstone(WorkspaceTombstoneResult.LAST_WORKSPACE, allowLastWorkspace = false)
 
     val problem =
@@ -1024,7 +978,7 @@ internal class WorkspacesHandlerTest {
   @Test
   fun `deleteWorkspace returns 409 when the workspace changed during deletion`() {
     val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
     stubTombstone(WorkspaceTombstoneResult.NOT_FOUND, allowLastWorkspace = false)
 
     val problem =
@@ -1038,42 +992,33 @@ internal class WorkspacesHandlerTest {
   @Test
   fun `deleteWorkspace allows an instance admin to delete the last workspace`() {
     val workspaceIdRequestBody = stubEmptyWorkspaceForDeletion()
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
-    Mockito.`when`(roleRequest.roles()).thenReturn(setOf(AuthRoleConstants.ADMIN))
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 1L
+    every { roleRequest.roles() } returns setOf(AuthRoleConstants.ADMIN)
     stubTombstone(WorkspaceTombstoneResult.TOMBSTONED, allowLastWorkspace = true)
 
     getWorkspacesHandler(AirbyteEdition.CLOUD).deleteWorkspace(workspaceIdRequestBody)
 
-    Mockito.verify(workspacePersistence).tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, true)
+    verify { workspacePersistence.tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, true) }
   }
 
   private fun stubTombstone(
     result: WorkspaceTombstoneResult,
     allowLastWorkspace: Boolean,
   ) {
-    Mockito
-      .`when`(workspacePersistence.tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, allowLastWorkspace))
-      .thenReturn(result)
+    every { workspacePersistence.tombstoneWorkspace(workspace.workspaceId, ORGANIZATION_ID, allowLastWorkspace) } returns result
   }
 
   private fun stubEmptyWorkspaceForDeletion(): WorkspaceIdRequestBody {
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-    Mockito
-      .`when`(
-        connectionsHandler.listConnectionsForWorkspace(
-          io.airbyte.api.server.generated.models
-            .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
-        ),
-      ).thenReturn(ConnectionReadList(connections = mutableListOf()))
-    Mockito
-      .`when`(destinationHandler.listDestinationsForWorkspace(any()))
-      .thenReturn(DestinationReadList(destinations = emptyList()))
-    Mockito
-      .`when`(sourceHandler.listSourcesForWorkspace(any()))
-      .thenReturn(SourceReadList(sources = emptyList()))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every {
+      connectionsHandler.listConnectionsForWorkspace(
+        io.airbyte.api.server.generated.models
+          .WorkspaceIdRequestBody(workspaceId = workspaceIdRequestBody.workspaceId),
+      )
+    } returns ConnectionReadList(connections = mutableListOf())
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList(destinations = emptyList())
+    every { sourceHandler.listSourcesForWorkspace(any()) } returns SourceReadList(sources = emptyList())
     return workspaceIdRequestBody
   }
 
@@ -1081,12 +1026,11 @@ internal class WorkspacesHandlerTest {
   fun testListWorkspaces() {
     val workspace2 = generateWorkspace()
 
-    Mockito.`when`(workspaceService.listStandardWorkspaces(false)).thenReturn(
+    every { workspaceService.listStandardWorkspaces(false) } returns
       listOf(
         workspace,
         workspace2,
-      ),
-    )
+      )
 
     val expectedWorkspaceRead1 =
       WorkspaceRead(
@@ -1137,9 +1081,7 @@ internal class WorkspacesHandlerTest {
   @Test
   fun testGetWorkspace() {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
 
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
@@ -1168,7 +1110,7 @@ internal class WorkspacesHandlerTest {
 
   @Test
   fun testGetWorkspaceBySlug() {
-    Mockito.`when`(workspaceService.getWorkspaceBySlug("default", false)).thenReturn(workspace)
+    every { workspaceService.getWorkspaceBySlug("default", false) } returns workspace
 
     val slugRequestBody = SlugRequestBody(slug = "default")
     val workspaceRead = getWorkspaceReadPerWorkspace(workspace)
@@ -1179,7 +1121,7 @@ internal class WorkspacesHandlerTest {
   @Test
   fun testGetWorkspaceByConnectionId() {
     val connectionId = UUID.randomUUID()
-    Mockito.`when`(workspaceService.getStandardWorkspaceFromConnection(connectionId, false)).thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceFromConnection(connectionId, false) } returns workspace
     val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val workspaceRead = getWorkspaceReadPerWorkspace(workspace)
 
@@ -1211,9 +1153,8 @@ internal class WorkspacesHandlerTest {
   @Test
   fun testGetWorkspaceByConnectionIdOnConfigNotFound() {
     val connectionId = UUID.randomUUID()
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceFromConnection(connectionId, false))
-      .thenAnswer { throw ConfigNotFoundException("something", connectionId.toString()) }
+    every { workspaceService.getStandardWorkspaceFromConnection(connectionId, false) } throws
+      ConfigNotFoundException("something", connectionId.toString())
     val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     assertThrows(
       ConfigNotFoundException::class.java,
@@ -1237,12 +1178,9 @@ internal class WorkspacesHandlerTest {
     val organization = generateOrganization(if (isSso) "test-realm" else null)
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.workspaceId)).thenReturn(
-      Optional.of<Organization>(organization),
-    )
-    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenReturn(
-      ScimConfigurationRead(status = scimStatus),
-    )
+    every { organizationService.getOrganizationForWorkspaceId(workspace.workspaceId) } returns Optional.of<Organization>(organization)
+    every { scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId)) } returns
+      ScimConfigurationRead(status = scimStatus)
 
     val orgInfo =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
@@ -1253,7 +1191,7 @@ internal class WorkspacesHandlerTest {
     assertEquals(expectedScim, orgInfo.scim)
     // Pins the org id passed to the SCIM lookup: without this, the false-expecting rows would also
     // pass against the setUp catch-all stub if the handler looked up the wrong organization.
-    Mockito.verify(scimConfigurationService).getConfiguration(OrganizationId(organization.organizationId))
+    verify { scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId)) }
   }
 
   @Test
@@ -1261,13 +1199,10 @@ internal class WorkspacesHandlerTest {
     val organization = generateOrganization("test-realm")
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.workspaceId)).thenReturn(
-      Optional.of<Organization>(organization),
-    )
-    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenReturn(
-      ScimConfigurationRead(status = ScimConfigurationStatus.ENABLED),
-    )
-    Mockito.`when`(scimAccessGate.isAllowedForOrganizationInfo(OrganizationId(organization.organizationId))).thenReturn(false)
+    every { organizationService.getOrganizationForWorkspaceId(workspace.workspaceId) } returns Optional.of<Organization>(organization)
+    every { scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId)) } returns
+      ScimConfigurationRead(status = ScimConfigurationStatus.ENABLED)
+    every { scimAccessGate.isAllowedForOrganizationInfo(OrganizationId(organization.organizationId)) } returns false
 
     val orgInfo =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
@@ -1280,12 +1215,9 @@ internal class WorkspacesHandlerTest {
     val organization = generateOrganization(null)
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.workspaceId)).thenReturn(
-      Optional.of<Organization>(organization),
-    )
-    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenThrow(
-      IllegalStateException("Unsupported SCIM IdP provider: jumpcloud"),
-    )
+    every { organizationService.getOrganizationForWorkspaceId(workspace.workspaceId) } returns Optional.of<Organization>(organization)
+    every { scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId)) } throws
+      IllegalStateException("Unsupported SCIM IdP provider: jumpcloud")
 
     val orgInfo =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
@@ -1298,9 +1230,7 @@ internal class WorkspacesHandlerTest {
   fun testGerWorkspaceOrganizationInfoConfigNotFound() {
     val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.workspaceId)).thenReturn(
-      Optional.empty<Organization>(),
-    )
+    every { organizationService.getOrganizationForWorkspaceId(workspace.workspaceId) } returns Optional.empty<Organization>()
 
     assertThrows(
       ConfigNotFoundException::class.java,
@@ -1348,21 +1278,18 @@ internal class WorkspacesHandlerTest {
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
         .withOrganizationId(ORGANIZATION_ID)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(WEBHOOK_CONFIG_ID)
+    every { uuidSupplier.get() } returns WEBHOOK_CONFIG_ID
 
     // Mock dataplane group validation for the update
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     val actualWorkspaceRead = getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
@@ -1408,7 +1335,7 @@ internal class WorkspacesHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withTombstone(false)
 
-    Mockito.verify(workspaceService).writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets)
+    verify { workspaceService.writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets) }
 
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
@@ -1440,16 +1367,14 @@ internal class WorkspacesHandlerTest {
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_1)
         .withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(WEBHOOK_CONFIG_ID)
+    every { uuidSupplier.get() } returns WEBHOOK_CONFIG_ID
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(expectedWorkspace)
-      .thenReturn(expectedWorkspace.withAnonymousDataCollection(false))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany
+      listOf(expectedWorkspace, expectedWorkspace.withAnonymousDataCollection(false))
 
     getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
   }
 
   @Test
@@ -1476,10 +1401,7 @@ internal class WorkspacesHandlerTest {
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_1)
         .withOrganizationId(ORGANIZATION_ID)
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
     val actualWorkspaceRead = getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspaceName(workspaceUpdate)
 
@@ -1502,7 +1424,7 @@ internal class WorkspacesHandlerTest {
         tombstone = false,
       )
 
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
 
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
@@ -1514,12 +1436,8 @@ internal class WorkspacesHandlerTest {
     val workspaceUpdateOrganization =
       WorkspaceUpdateOrganization(workspaceId = workspace.workspaceId, organizationId = newOrgId)
     val expectedWorkspace = clone(workspace).withOrganizationId(newOrgId)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(expectedWorkspace)
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns expectedWorkspace
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns expectedWorkspace
     // The same as the original workspace, with only the organization ID updated.
     val expectedWorkspaceRead =
       WorkspaceRead(
@@ -1542,8 +1460,8 @@ internal class WorkspacesHandlerTest {
 
     val actualWorkspaceRead =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspaceOrganization(workspaceUpdateOrganization)
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
-    Mockito.verify(workspaceHelper).invalidateWorkspaceOrganization(workspace.workspaceId)
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceHelper.invalidateWorkspaceOrganization(workspace.workspaceId) }
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
@@ -1565,7 +1483,7 @@ internal class WorkspacesHandlerTest {
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     val expectedWorkspace =
       clone(workspace)
@@ -1579,10 +1497,7 @@ internal class WorkspacesHandlerTest {
           ),
         )
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
     // The same as the original workspace, with only the email and data collection flags changed.
     val expectedWorkspaceRead =
@@ -1606,7 +1521,7 @@ internal class WorkspacesHandlerTest {
       )
 
     val actualWorkspaceRead = getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
@@ -1682,13 +1597,10 @@ internal class WorkspacesHandlerTest {
       ),
     )
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(existingWorkspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(existingWorkspace, expectedWorkspace)
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspace(workspaceUpdate)
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
   }
 
   @Test
@@ -1698,7 +1610,7 @@ internal class WorkspacesHandlerTest {
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).setFeedbackDone(workspaceGiveFeedback)
 
-    Mockito.verify(workspaceService).setFeedback(workspaceGiveFeedback.workspaceId)
+    verify { workspaceService.setFeedback(workspaceGiveFeedback.workspaceId) }
   }
 
   @ParameterizedTest
@@ -1728,14 +1640,14 @@ internal class WorkspacesHandlerTest {
       )
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock dataplane group validation for creation
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     val workspaceCreate =
       WorkspaceCreate(
@@ -1772,7 +1684,7 @@ internal class WorkspacesHandlerTest {
       )
 
     assertEquals(expectedRead, actualRead)
-    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(anyOrNull())
+    verify(exactly = 1) { workspaceService.writeWorkspaceWithSecrets(any()) }
   }
 
   @Test
@@ -1784,14 +1696,13 @@ internal class WorkspacesHandlerTest {
       )
     val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
 
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          Optional.empty<String>(),
-        ),
-      ).thenReturn(expectedWorkspaces)
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    every {
+      workspacePersistence.listWorkspacesByOrganizationIdPaginated(
+        ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        Optional.empty<String>(),
+      )
+    } returns expectedWorkspaces
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 2L
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
     assertEquals(2, result.workspaces.size)
     assertEquals(2L, result.totalWorkspaceCount)
@@ -1807,15 +1718,14 @@ internal class WorkspacesHandlerTest {
       )
     val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
 
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesByOrganizationIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          Optional.of<String>("nameContains"),
-        ),
-      ).thenReturn(expectedWorkspaces)
+    every {
+      workspacePersistence.listWorkspacesByOrganizationIdPaginated(
+        ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        Optional.of<String>("nameContains"),
+      )
+    } returns expectedWorkspaces
     // The total count ignores the keyword filter and counts all workspaces in the organization.
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(5L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 5L
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
     assertEquals(2, result.workspaces.size)
     assertEquals(5L, result.totalWorkspaceCount)
@@ -1830,16 +1740,15 @@ internal class WorkspacesHandlerTest {
         pagination = Pagination(pageSize = 100, rowOffset = 0),
       )
     val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          userId,
-          Optional.empty<String>(),
-        ),
-      ).thenReturn(expectedWorkspaces)
+    every {
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        userId,
+        Optional.empty<String>(),
+      )
+    } returns expectedWorkspaces
     // The user can only see 2 of the organization's 3 workspaces, but the total counts all of them.
-    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(3L)
+    every { workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID) } returns 3L
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
     assertEquals(2, result.workspaces.size)
     assertEquals(3L, result.totalWorkspaceCount)
@@ -1855,14 +1764,13 @@ internal class WorkspacesHandlerTest {
         pagination = Pagination(pageSize = 100, rowOffset = 0),
       )
     val expectedWorkspaces = listOf(generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          userId,
-          Optional.of<String>("test"),
-        ),
-      ).thenReturn(expectedWorkspaces)
+    every {
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
+        userId,
+        Optional.of<String>("test"),
+      )
+    } returns expectedWorkspaces
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
     assertEquals(1, result.workspaces.size)
   }
@@ -1872,14 +1780,13 @@ internal class WorkspacesHandlerTest {
     val userId = UUID.randomUUID()
     val request = ListWorkspacesInOrganizationRequestBody(organizationId = ORGANIZATION_ID)
     val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserId(
-          ORGANIZATION_ID,
-          userId,
-          Optional.empty<String>(),
-        ),
-      ).thenReturn(expectedWorkspaces)
+    every {
+      workspacePersistence.listWorkspacesInOrganizationByUserId(
+        ORGANIZATION_ID,
+        userId,
+        Optional.empty<String>(),
+      )
+    } returns expectedWorkspaces
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
     assertEquals(2, result.workspaces.size)
   }
@@ -1889,27 +1796,26 @@ internal class WorkspacesHandlerTest {
   @DisplayName("Creating workspace with explicit dataplane group requires org editor permission")
   fun testCreateWorkspaceWithDataplaneGroupRequiresOrgEditor(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock that DATAPLANE_GROUP_ID_2 is not a default group
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     // Mock the dataplane group that belongs to the same organization
     val dataplaneGroup = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(ORGANIZATION_ID)
-    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroup)
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2) } returns dataplaneGroup
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -1927,15 +1833,15 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
 
     // Verify that role check was performed
-    Mockito.verify(roleResolver).newRequest()
-    Mockito.verify(roleRequest).withCurrentUser()
-    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
-    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+    verify { roleResolver.newRequest() }
+    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withOrg(ORGANIZATION_ID) }
+    verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
 
   @ParameterizedTest
@@ -1947,11 +1853,11 @@ internal class WorkspacesHandlerTest {
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     // Mock the dataplane group that belongs to the same organization
     val dataplaneGroup = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(ORGANIZATION_ID)
-    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroup)
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2) } returns dataplaneGroup
 
     val workspaceUpdate =
       WorkspaceUpdate(workspaceId = workspace.workspaceId, dataplaneGroupId = DATAPLANE_GROUP_ID_2) // Changing dataplane group
@@ -1966,18 +1872,15 @@ internal class WorkspacesHandlerTest {
           ),
         )
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
     getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
     // Verify that role check was performed
-    Mockito.verify(roleResolver).newRequest()
-    Mockito.verify(roleRequest).withCurrentUser()
-    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
-    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+    verify { roleResolver.newRequest() }
+    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withOrg(ORGANIZATION_ID) }
+    verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
 
   @ParameterizedTest
@@ -1985,23 +1888,22 @@ internal class WorkspacesHandlerTest {
   @DisplayName("Creating workspace with default dataplane group should not require org editor permission")
   fun testCreateWorkspaceWithDefaultDataplaneGroupDoesNotRequireOrgEditor(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock default dataplane group
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -2019,15 +1921,15 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
 
     // Verify that role check was still performed (but won't throw since it's a default group)
-    Mockito.verify(roleResolver).newRequest()
-    Mockito.verify(roleRequest).withCurrentUser()
-    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
-    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+    verify { roleResolver.newRequest() }
+    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withOrg(ORGANIZATION_ID) }
+    verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
 
   @ParameterizedTest
@@ -2035,28 +1937,27 @@ internal class WorkspacesHandlerTest {
   @DisplayName("Creating workspace with non-default dataplane group from wrong org should throw forbidden")
   fun testCreateWorkspaceWithWrongOrgDataplaneGroupThrowsForbidden(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
-    Mockito
-      .`when`(
-        workspaceService.getStandardWorkspaceNoSecrets(
-          anyOrNull(),
-          eq(false),
-        ),
-      ).thenReturn(workspace)
+    every {
+      workspaceService.getStandardWorkspaceNoSecrets(
+        any(),
+        false,
+      )
+    } returns workspace
 
     val uuid = UUID.randomUUID()
-    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+    every { uuidSupplier.get() } returns uuid
 
     // Mock that DATAPLANE_GROUP_ID_2 is not a default group
     val defaultDataplaneGroups =
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     // Mock that the dataplane group belongs to a different organization
     val wrongOrgId = UUID.randomUUID()
     val dataplaneGroupFromWrongOrg = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(wrongOrgId)
-    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroupFromWrongOrg)
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2) } returns dataplaneGroupFromWrongOrg
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -2074,7 +1975,7 @@ internal class WorkspacesHandlerTest {
         organizationId = ORGANIZATION_ID,
       )
 
-    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+    every { secretPersistence.read(any()) } returns ""
 
     // Should throw ForbiddenProblem
     assertThrows<ForbiddenProblem> {
@@ -2091,7 +1992,7 @@ internal class WorkspacesHandlerTest {
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     val workspaceUpdate =
       WorkspaceUpdate(workspaceId = workspace.workspaceId, dataplaneGroupId = DATAPLANE_GROUP_ID_2) // This is a default group
@@ -2106,19 +2007,16 @@ internal class WorkspacesHandlerTest {
           ),
         )
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
-      .thenReturn(expectedWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
     getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
     // Verify that role check was still performed (but passed because it's a default group)
-    Mockito.verify(roleResolver).newRequest()
-    Mockito.verify(roleRequest).withCurrentUser()
-    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
-    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
-    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+    verify { roleResolver.newRequest() }
+    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withOrg(ORGANIZATION_ID) }
+    verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
+    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
   }
 
   @ParameterizedTest
@@ -2130,19 +2028,17 @@ internal class WorkspacesHandlerTest {
       listOf(
         DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
       )
-    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+    every { dataplaneGroupService.listDefaultDataplaneGroups() } returns defaultDataplaneGroups
 
     // Mock that the dataplane group belongs to a different organization
     val wrongOrgId = UUID.randomUUID()
     val dataplaneGroupFromWrongOrg = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(wrongOrgId)
-    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroupFromWrongOrg)
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2) } returns dataplaneGroupFromWrongOrg
 
     val workspaceUpdate =
       WorkspaceUpdate(workspaceId = workspace.workspaceId, dataplaneGroupId = DATAPLANE_GROUP_ID_2) // This belongs to wrong org
 
-    Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
 
     // Should throw ForbiddenProblem
     assertThrows<ForbiddenProblem> {

@@ -40,6 +40,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import org.jooq.exception.DataAccessException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -47,11 +51,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
 import java.util.UUID
-import org.mockito.Mockito.`when` as whenever
 
 /**
  * Tests for configRepository methods that write connector metadata together. Includes writing
@@ -71,27 +71,24 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   fun setup() {
     truncateAllTables()
 
-    val featureFlagClient = mock(TestClient::class.java)
-    whenever(
-      featureFlagClient.stringVariation(org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages), org.mockito.kotlin.any<SourceDefinition>()),
-    ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns "3600"
 
-    val secretsRepositoryReader = mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = mock(SecretPersistenceConfigService::class.java)
-    val connectionTimelineEventService = mock(ConnectionTimelineEventService::class.java)
-    val metricClient = mock(MetricClient::class.java)
-    val scopedConfigurationService = mock(ScopedConfigurationService::class.java)
-    val dataplaneGroupService = mock(DataplaneGroupService::class.java)
-    val actorServicePaginationHelper = mock(ActorServicePaginationHelper::class.java)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val dataplaneGroupService = mockk<DataplaneGroupService>(relaxed = true)
+    val actorServicePaginationHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
-    whenever(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(org.mockito.kotlin.any(), org.mockito.kotlin.any()))
-      .thenReturn(DataplaneGroup().withId(DATAPLANE_GROUP_ID))
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()) } returns DataplaneGroup().withId(DATAPLANE_GROUP_ID)
 
     connectionService = ConnectionServiceJooqImpl(database!!)
-    actorDefinitionService = spy(ActorDefinitionServiceJooqImpl(database!!))
+    actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
     actorDefinitionVersionUpdater =
-      spy(
+      spyk(
         ActorDefinitionVersionUpdater(
           connectionService!!,
           actorDefinitionService!!,
@@ -206,9 +203,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     org.assertj.core.api.Assertions
       .assertThat<ActorDefinitionBreakingChange?>(breakingChangesForDefFromDb)
       .containsExactlyInAnyOrderElementsOf(breakingChanges)
-    Mockito
-      .verify<ActorDefinitionVersionUpdater?>(actorDefinitionVersionUpdater)
-      .updateSourceDefaultVersion(sourceDefinition2, actorDefinitionVersion2, breakingChanges)
+    verify { actorDefinitionVersionUpdater!!.updateSourceDefaultVersion(sourceDefinition2, actorDefinitionVersion2, breakingChanges) }
   }
 
   @Test
@@ -272,9 +267,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     org.assertj.core.api.Assertions
       .assertThat(breakingChangesForDefFromDb)
       .containsExactlyInAnyOrderElementsOf(breakingChanges)
-    Mockito
-      .verify<ActorDefinitionVersionUpdater?>(actorDefinitionVersionUpdater)
-      .updateDestinationDefaultVersion(destinationDefinition2, actorDefinitionVersion2, breakingChanges)
+    verify { actorDefinitionVersionUpdater!!.updateDestinationDefaultVersion(destinationDefinition2, actorDefinitionVersion2, breakingChanges) }
   }
 
   @Test
@@ -323,9 +316,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(advForTag2, newADV.withVersionId(advForTag2.versionId))
     Assertions.assertNotEquals(advForTag2.versionId, advForTag.versionId)
     Assertions.assertNotEquals(advForTag2.spec, advForTag.spec)
-    Mockito
-      .verify<ActorDefinitionVersionUpdater?>(actorDefinitionVersionUpdater)
-      .updateSourceDefaultVersion(sourceDefinition, newADV, emptyList())
+    verify { actorDefinitionVersionUpdater!!.updateSourceDefaultVersion(sourceDefinition, newADV, emptyList()) }
   }
 
   @ParameterizedTest

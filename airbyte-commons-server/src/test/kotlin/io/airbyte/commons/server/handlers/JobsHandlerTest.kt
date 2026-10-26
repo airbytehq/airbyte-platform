@@ -43,6 +43,9 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -54,14 +57,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
@@ -109,16 +104,16 @@ class JobsHandlerTest {
 
   @BeforeEach
   fun setup() {
-    jobPersistence = mock()
-    jobNotifier = mock()
-    helper = mock()
-    jobErrorReporter = mock()
-    connectionTimelineEventHelper = mock()
-    featureFlagClient = mock<TestClient>()
-    metricClient = mock()
-    dataWorkerUsageService = mock()
-    connectionService = mock()
-    dataWorkerCapacityService = mock()
+    jobPersistence = mockk(relaxUnitFun = true)
+    jobNotifier = mockk(relaxUnitFun = true)
+    helper = mockk(relaxUnitFun = true)
+    jobErrorReporter = mockk(relaxUnitFun = true)
+    connectionTimelineEventHelper = mockk(relaxUnitFun = true)
+    featureFlagClient = mockk<TestClient>()
+    metricClient = mockk(relaxUnitFun = true)
+    dataWorkerUsageService = mockk(relaxUnitFun = true)
+    connectionService = mockk()
+    dataWorkerCapacityService = mockk()
 
     jobsHandler =
       JobsHandler(
@@ -160,26 +155,26 @@ class JobsHandlerTest {
         true,
       )
 
-    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
-    whenever(featureFlagClient.boolVariation(any(), any())).thenReturn(mergeStatsWithMetadata)
+    every { jobPersistence.getJob(jobId) } returns job
+    every { featureFlagClient.boolVariation(any(), any()) } returns mergeStatsWithMetadata
 
     val attemptStats = JobPersistence.AttemptStats(SyncStats().withBytesEmitted(1234L), listOf())
-    whenever(
+    every {
       if (mergeStatsWithMetadata) {
         jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attemptNumber)
       } else {
         jobPersistence.getAttemptStats(jobId, attemptNumber)
-      },
-    ).thenReturn(attemptStats)
+      }
+    } returns attemptStats
 
     jobsHandler.jobSuccessWithAttemptNumber(request)
 
-    verify(jobPersistence).writeOutput(jobId, attemptNumber, jobOutput)
-    verify(jobPersistence).succeedAttempt(jobId, attemptNumber)
-    verify(jobNotifier).successJob(anyOrNull(), anyOrNull())
-    verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.SUCCEEDED))
-    verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(job, connectionId, listOf(attemptStats))
-    verify(dataWorkerUsageService).releaseReservedUsageForJob(eq(jobId))
+    verify { jobPersistence.writeOutput(jobId, attemptNumber, jobOutput) }
+    verify { jobPersistence.succeedAttempt(jobId, attemptNumber) }
+    verify { jobNotifier.successJob(any(), any()) }
+    verify { helper.trackCompletion(any(), io.airbyte.commons.server.JobStatus.SUCCEEDED) }
+    verify { connectionTimelineEventHelper.logJobSuccessEventInConnectionTimeline(job, connectionId, listOf(attemptStats)) }
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(jobId) }
   }
 
   @Test
@@ -193,17 +188,17 @@ class JobsHandlerTest {
       )
 
     val job = Job(jobId, JobConfig.ConfigType.RESET_CONNECTION, "", simpleConfig, listOf(), JobStatus.SUCCEEDED, 0L, 0, 0, true)
-    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
+    every { jobPersistence.getJob(jobId) } returns job
 
     jobsHandler.jobSuccessWithAttemptNumber(request)
 
-    verify(jobNotifier, never()).successJob(anyOrNull(), anyOrNull())
+    verify(exactly = 0) { jobNotifier.successJob(any(), any()) }
   }
 
   @Test
   fun setJobSuccessWrapException() {
     val exception = IOException("oops")
-    doAnswer { throw exception }.whenever(jobPersistence).succeedAttempt(jobId, attemptNumber)
+    every { jobPersistence.succeedAttempt(jobId, attemptNumber) } throws exception
 
     assertThatThrownBy {
       jobsHandler.jobSuccessWithAttemptNumber(
@@ -217,14 +212,14 @@ class JobsHandlerTest {
     }.isInstanceOf(RuntimeException::class.java)
       .hasCauseInstanceOf(IOException::class.java)
 
-    verify(helper).trackCompletionForInternalFailure(jobId, connectionId, attemptNumber, io.airbyte.commons.server.JobStatus.SUCCEEDED, exception)
+    verify { helper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber, io.airbyte.commons.server.JobStatus.SUCCEEDED, exception) }
   }
 
   @Test
   fun didPreviousJobSucceedReturnsFalseIfNoPreviousJob() {
-    whenever(jobPersistence.listJobsIncludingId(anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(listOf(mock(), mock(), mock()))
-    whenever(helper.findPreviousJob(anyOrNull(), anyOrNull())).thenReturn(Optional.empty())
-    whenever(helper.didJobSucceed(anyOrNull())).thenReturn(true)
+    every { jobPersistence.listJobsIncludingId(any(), any(), any(), any()) } returns listOf(mockk(), mockk(), mockk())
+    every { helper.findPreviousJob(any(), any()) } returns Optional.empty()
+    every { helper.didJobSucceed(any()) } returns true
 
     val result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123)
     assertFalse(result.value)
@@ -232,9 +227,9 @@ class JobsHandlerTest {
 
   @Test
   fun didPreviousJobSucceedReturnsTrueIfPreviousJobSucceeded() {
-    whenever(jobPersistence.listJobsIncludingId(anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(listOf(mock(), mock(), mock()))
-    whenever(helper.findPreviousJob(anyOrNull(), anyOrNull())).thenReturn(Optional.of(mock()))
-    whenever(helper.didJobSucceed(anyOrNull())).thenReturn(true)
+    every { jobPersistence.listJobsIncludingId(any(), any(), any(), any()) } returns listOf(mockk(), mockk(), mockk())
+    every { helper.findPreviousJob(any(), any()) } returns Optional.of(mockk())
+    every { helper.didJobSucceed(any()) } returns true
 
     val result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123)
     assertTrue(result.value)
@@ -242,9 +237,9 @@ class JobsHandlerTest {
 
   @Test
   fun didPreviousJobSucceedReturnsFalseIfPreviousJobNotInSucceededState() {
-    whenever(jobPersistence.listJobsIncludingId(anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(listOf(mock(), mock(), mock()))
-    whenever(helper.findPreviousJob(anyOrNull(), anyOrNull())).thenReturn(Optional.of(mock()))
-    whenever(helper.didJobSucceed(anyOrNull())).thenReturn(false)
+    every { jobPersistence.listJobsIncludingId(any(), any(), any(), any()) } returns listOf(mockk(), mockk(), mockk())
+    every { helper.findPreviousJob(any(), any()) } returns Optional.of(mockk())
+    every { helper.didJobSucceed(any()) } returns false
 
     val result = jobsHandler.didPreviousJobSucceed(UUID.randomUUID(), 123)
     assertFalse(result.value)
@@ -275,16 +270,16 @@ class JobsHandlerTest {
         0,
         false,
       )
-    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
-    whenever(connectionService.getStandardSync(connectionId)).thenReturn(StandardSync().withOnDemandEnabled(true))
-    whenever(
+    every { jobPersistence.getJob(jobId) } returns job
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withOnDemandEnabled(true)
+    every {
       dataWorkerCapacityService.checkCapacityAndReserve(
         OrganizationId(organizationId),
         job,
         0.8125,
         true,
-      ),
-    ).thenReturn(
+      )
+    } returns
       CapacityCheckResult(
         hasAvailableCapacity = true,
         currentDataWorkers = 5.0,
@@ -292,19 +287,20 @@ class JobsHandlerTest {
         requiredDataWorkers = 0.8125,
         usedOnDemandCapacity = true,
         wasPersisted = true,
-      ),
-    )
+      )
 
     val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
 
     assertEquals(CheckDataWorkerCapacityRead(capacityAvailable = true, useOnDemandCapacity = true), result)
-    verify(dataWorkerCapacityService).checkCapacityAndReserve(
-      OrganizationId(organizationId),
-      job,
-      0.8125,
-      true,
-    )
-    verify(jobPersistence).updateSyncJobOnDemandCapacity(jobId, true)
+    verify {
+      dataWorkerCapacityService.checkCapacityAndReserve(
+        OrganizationId(organizationId),
+        job,
+        0.8125,
+        true,
+      )
+    }
+    verify { jobPersistence.updateSyncJobOnDemandCapacity(jobId, true) }
   }
 
   @ParameterizedTest
@@ -324,40 +320,40 @@ class JobsHandlerTest {
         0,
         false,
       )
-    whenever(jobPersistence.getJob(jobId)).thenReturn(nonSyncJob)
+    every { jobPersistence.getJob(jobId) } returns nonSyncJob
 
     val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
 
     assertEquals(CheckDataWorkerCapacityRead(capacityAvailable = true, useOnDemandCapacity = false), result)
-    verify(connectionService, never()).getStandardSync(any())
-    verify(dataWorkerCapacityService, never()).checkCapacityAndReserve(any(), any(), any(), any())
-    verify(jobPersistence, never()).updateSyncJobOnDemandCapacity(any(), any())
+    verify(exactly = 0) { connectionService.getStandardSync(any()) }
+    verify(exactly = 0) { dataWorkerCapacityService.checkCapacityAndReserve(any(), any(), any(), any()) }
+    verify(exactly = 0) { jobPersistence.updateSyncJobOnDemandCapacity(any(), any()) }
   }
 
   @Test
   fun persistJobCancellationSuccess() {
     val mockJob =
       Job(jobId, JobConfig.ConfigType.SYNC, connectionId.toString(), simpleConfig, listOf(), JobStatus.RUNNING, 0L, 0, 0, true)
-    whenever(jobPersistence.getJob(jobId)).thenReturn(mockJob)
+    every { jobPersistence.getJob(jobId) } returns mockJob
 
     jobsHandler.persistJobCancellation(connectionId, jobId, attemptNumber, failureSummary)
 
-    verify(jobPersistence).failAttempt(jobId, attemptNumber)
-    verify(jobPersistence).writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
-    verify(jobPersistence).cancelJob(jobId)
-    verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.FAILED))
-    verify(dataWorkerUsageService).releaseReservedUsageForJob(eq(jobId))
+    verify { jobPersistence.failAttempt(jobId, attemptNumber) }
+    verify { jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary) }
+    verify { jobPersistence.cancelJob(jobId) }
+    verify { helper.trackCompletion(any(), io.airbyte.commons.server.JobStatus.FAILED) }
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(jobId) }
   }
 
   @Test
   fun persistJobCancellationIOException() {
     val exception = IOException("bang.")
-    whenever(jobPersistence.getJob(jobId)).thenAnswer { throw exception }
+    every { jobPersistence.getJob(jobId) } throws exception
 
     assertThrows(RuntimeException::class.java) {
       jobsHandler.persistJobCancellation(connectionId, jobId, attemptNumber, failureSummary)
     }
-    verify(helper).trackCompletionForInternalFailure(jobId, connectionId, attemptNumber, io.airbyte.commons.server.JobStatus.FAILED, exception)
+    verify { helper.trackCompletionForInternalFailure(jobId, connectionId, attemptNumber, io.airbyte.commons.server.JobStatus.FAILED, exception) }
   }
 
   @ParameterizedTest
@@ -372,7 +368,7 @@ class JobsHandlerTest {
   fun testReportJobStart() {
     val result = jobsHandler.reportJobStart(5L)
     assertEquals(InternalOperationResult(succeeded = true), result)
-    verify(helper).reportJobStart(5L)
+    verify { helper.reportJobStart(5L) }
   }
 
   @Test
@@ -380,7 +376,7 @@ class JobsHandlerTest {
     val result = jobsHandler.setJobQueued(5L)
 
     assertEquals(InternalOperationResult(succeeded = true), result)
-    verify(helper).setJobQueued(5L)
+    verify { helper.setJobQueued(5L) }
   }
 
   @Test
@@ -388,7 +384,7 @@ class JobsHandlerTest {
     val result = jobsHandler.cancelQueuedJob(5L)
 
     assertEquals(InternalOperationResult(succeeded = true), result)
-    verify(helper).cancelQueuedJob(5L)
+    verify { helper.cancelQueuedJob(5L) }
   }
 
   companion object {

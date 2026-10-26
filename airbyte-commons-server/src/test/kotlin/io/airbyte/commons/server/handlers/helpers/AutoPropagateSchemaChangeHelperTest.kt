@@ -27,13 +27,12 @@ import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.mappers.transformations.Mapper
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.whenever
 import java.util.UUID
 
 internal class AutoPropagateSchemaChangeHelperTest {
@@ -43,9 +42,8 @@ internal class AutoPropagateSchemaChangeHelperTest {
 
   @BeforeEach
   fun beforeEach() {
-    featureFlagClient = Mockito.mock(TestClient::class.java)
-    whenever(featureFlagClient.boolVariation(anyOrNull(), anyOrNull()))
-      .thenReturn(false)
+    featureFlagClient = mockk<TestClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
   }
 
   @Test

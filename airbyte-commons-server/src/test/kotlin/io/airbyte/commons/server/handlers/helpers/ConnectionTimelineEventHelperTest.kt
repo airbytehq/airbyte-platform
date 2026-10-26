@@ -39,18 +39,16 @@ import io.airbyte.data.services.shared.ManuallyStartedEvent
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent
 import io.airbyte.domain.services.storage.ConnectorObjectStorageService
 import io.airbyte.persistence.job.JobPersistence
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
@@ -69,12 +67,14 @@ class ConnectionTimelineEventHelperTest {
 
   @BeforeEach
   fun setup() {
-    currentUserService = mock()
-    organizationService = mock()
-    permissionHandler = mock()
-    userPersistence = mock()
-    connectionTimelineEventService = mock()
-    connectorObjectStorageService = mock()
+    currentUserService = mockk()
+    organizationService = mockk()
+    permissionHandler = mockk()
+    userPersistence = mockk()
+    connectionTimelineEventService = mockk()
+    connectorObjectStorageService = mockk()
+    every { connectionTimelineEventService.writeEvent(any(), any(), any(), any()) } returns mockk()
+    every { connectorObjectStorageService.getRejectedRecordsForJob(any(), any(), any()) } returns null
   }
 
   @Test
@@ -177,10 +177,10 @@ class ConnectionTimelineEventHelperTest {
           connectorObjectStorageService,
           connectionTimelineEventService,
         )
-      whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(externalUser))
-      whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(false)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
-      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, anyOrNull())
+      every { userPersistence.getUser(any()) } returns Optional.of(externalUser)
+      every { permissionHandler.isUserInstanceAdmin(any()) } returns false
+      every { organizationService.getOrganizationForConnectionId(any()) } returns Optional.of(Organization().withEmail(userEmail))
+      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, null)
       assertEquals(false, userRead!!.isDeleted)
       assertEquals(userName, userRead.name)
     }
@@ -197,10 +197,10 @@ class ConnectionTimelineEventHelperTest {
           connectorObjectStorageService,
           connectionTimelineEventService,
         )
-      whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(airbyteUser))
-      whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(airbyteUserEmail)))
-      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, anyOrNull())
+      every { userPersistence.getUser(any()) } returns Optional.of(airbyteUser)
+      every { permissionHandler.isUserInstanceAdmin(any()) } returns true
+      every { organizationService.getOrganizationForConnectionId(any()) } returns Optional.of(Organization().withEmail(airbyteUserEmail))
+      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, null)
       assertEquals(airbyteUserName, userRead!!.name)
     }
 
@@ -216,9 +216,9 @@ class ConnectionTimelineEventHelperTest {
           connectorObjectStorageService,
           connectionTimelineEventService,
         )
-      whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(airbyteUser))
-      whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
+      every { userPersistence.getUser(any()) } returns Optional.of(airbyteUser)
+      every { permissionHandler.isUserInstanceAdmin(any()) } returns true
+      every { organizationService.getOrganizationForConnectionId(any()) } returns Optional.of(Organization().withEmail(userEmail))
       val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, CONNECTION_ID)
       assertEquals(ConnectionTimelineEventHelper.AIRBYTE_SUPPORT_USER_NAME, userRead!!.name)
     }
@@ -235,10 +235,10 @@ class ConnectionTimelineEventHelperTest {
           connectorObjectStorageService,
           connectionTimelineEventService,
         )
-      whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(externalUser))
-      whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
-      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, anyOrNull())
+      every { userPersistence.getUser(any()) } returns Optional.of(externalUser)
+      every { permissionHandler.isUserInstanceAdmin(any()) } returns true
+      every { organizationService.getOrganizationForConnectionId(any()) } returns Optional.of(Organization().withEmail(userEmail))
+      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, null)
       assertEquals(false, userRead!!.isDeleted)
       assertEquals(userName, userRead.name)
     }
@@ -290,9 +290,9 @@ class ConnectionTimelineEventHelperTest {
       )
 
     connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, originalConnectionRead, patch, null, true)
-    val eventCaptor = argumentCaptor<ConnectionSettingsChangedEvent>()
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), anyOrNull())
-    val capturedEvent = eventCaptor.firstValue
+    val eventCaptor = slot<ConnectionSettingsChangedEvent>()
+    verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), any()) }
+    val capturedEvent = eventCaptor.captured
     assertNotNull(capturedEvent)
     assertEquals(expectedPatches, capturedEvent.getPatches())
     assertNull(capturedEvent.getUpdateReason())
@@ -320,9 +320,9 @@ class ConnectionTimelineEventHelperTest {
       )
 
     connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, diff)
-    val eventCaptor = argumentCaptor<SchemaChangeAutoPropagationEvent>()
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), anyOrNull())
-    val capturedEvent: SchemaChangeAutoPropagationEvent = eventCaptor.firstValue
+    val eventCaptor = slot<SchemaChangeAutoPropagationEvent>()
+    verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), any()) }
+    val capturedEvent: SchemaChangeAutoPropagationEvent = eventCaptor.captured
 
     assertNotNull(capturedEvent)
     assertEquals(diff, capturedEvent.getCatalogDiff())
@@ -353,10 +353,10 @@ class ConnectionTimelineEventHelperTest {
 
       connectionTimelineEventHelper.logJobSuccessEventInConnectionTimeline(job, connectionId, attemptStats)
 
-      val eventCaptor = argumentCaptor<FinalStatusEvent>()
-      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+      val eventCaptor = slot<FinalStatusEvent>()
+      verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), jobId) }
 
-      val capturedEvent = eventCaptor.firstValue
+      val capturedEvent = eventCaptor.captured
       assertEquals(jobId, capturedEvent.getJobId())
       assertEquals(ConnectionEvent.Type.SYNC_SUCCEEDED, capturedEvent.getEventType())
     }
@@ -379,10 +379,10 @@ class ConnectionTimelineEventHelperTest {
 
       connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(job, connectionId, attemptStats)
 
-      val eventCaptor = argumentCaptor<FailedEvent>()
-      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+      val eventCaptor = slot<FailedEvent>()
+      verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), jobId) }
 
-      val capturedEvent = eventCaptor.firstValue
+      val capturedEvent = eventCaptor.captured
       assertEquals(jobId, capturedEvent.getJobId())
       assertEquals(ConnectionEvent.Type.SYNC_FAILED, capturedEvent.getEventType())
     }
@@ -405,10 +405,10 @@ class ConnectionTimelineEventHelperTest {
 
       connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats)
 
-      val eventCaptor = argumentCaptor<FinalStatusEvent>()
-      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+      val eventCaptor = slot<FinalStatusEvent>()
+      verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), jobId) }
 
-      val capturedEvent = eventCaptor.firstValue
+      val capturedEvent = eventCaptor.captured
       assertEquals(jobId, capturedEvent.getJobId())
       assertEquals(ConnectionEvent.Type.SYNC_CANCELLED, capturedEvent.getEventType())
     }
@@ -443,10 +443,10 @@ class ConnectionTimelineEventHelperTest {
 
       connectionTimelineEventHelper.logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, streams)
 
-      val eventCaptor = argumentCaptor<ManuallyStartedEvent>()
-      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+      val eventCaptor = slot<ManuallyStartedEvent>()
+      verify { connectionTimelineEventService.writeEvent(connectionId, capture(eventCaptor), any(), jobId) }
 
-      val capturedEvent = eventCaptor.firstValue
+      val capturedEvent = eventCaptor.captured
       assertEquals(jobId, capturedEvent.getJobId())
       assertEquals(ConnectionEvent.Type.SYNC_STARTED, capturedEvent.getEventType())
     }

@@ -18,10 +18,11 @@ import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
@@ -38,14 +39,10 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
 
   private fun setupTestData() {
     val userPersistence = UserPersistence(database)
-    val dataplaneGroupService = Mockito.mock<DataplaneGroupService>(DataplaneGroupService::class.java)
-    Mockito
-      .`when`<DataplaneGroup?>(
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(
-          org.mockito.kotlin.any<UUID>(),
-          org.mockito.kotlin.any<String>(),
-        ),
-      ).thenReturn(DataplaneGroup().withId(UUID.randomUUID()))
+    val dataplaneGroupService = mockk<DataplaneGroupService>()
+    every {
+      dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any<UUID>(), any<String>())
+    } returns DataplaneGroup().withId(UUID.randomUUID())
 
     // Create organizations first (default organization is included in MockData.organizations())
     for (organization in MockData.organizations()) {
@@ -55,11 +52,11 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
     val workspaceService: WorkspaceService =
       WorkspaceServiceJooqImpl(
         database,
-        Mockito.mock<TestClient?>(TestClient::class.java),
-        Mockito.mock<SecretsRepositoryReader?>(SecretsRepositoryReader::class.java),
-        Mockito.mock<SecretsRepositoryWriter?>(SecretsRepositoryWriter::class.java),
-        Mockito.mock<SecretPersistenceConfigService?>(SecretPersistenceConfigService::class.java),
-        Mockito.mock<MetricClient?>(MetricClient::class.java),
+        mockk<TestClient>(relaxed = true),
+        mockk<SecretsRepositoryReader>(relaxed = true),
+        mockk<SecretsRepositoryWriter>(relaxed = true),
+        mockk<SecretPersistenceConfigService>(relaxed = true),
+        mockk<MetricClient>(relaxed = true),
       )
     // write workspace table
     for (workspace in MockData.standardWorkspaces()) {

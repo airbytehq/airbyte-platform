@@ -7,14 +7,14 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
 import io.micronaut.context.env.Environment
+import io.mockk.every
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.Result
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class DeploymentMetadataHandlerTest {
@@ -25,13 +25,13 @@ internal class DeploymentMetadataHandlerTest {
     val version = "0.1.2"
     val airbyteVersion = AirbyteVersion(version)
     val airbyteEdition = AirbyteEdition.COMMUNITY
-    val dslContext = Mockito.mock<DSLContext>(DSLContext::class.java)
-    val environment = Mockito.mock<Environment>(Environment::class.java)
-    val result: Result<Record?> = Mockito.mock(Result::class.java) as Result<Record?>
+    val dslContext = mockk<DSLContext>()
+    val environment = mockk<Environment>()
+    val result = mockk<Result<Record?>>()
 
-    Mockito.`when`<Any?>(result.getValue(ArgumentMatchers.anyInt(), ArgumentMatchers.anyString())).thenReturn(deploymentId)
-    Mockito.`when`<Result<Record?>?>(dslContext.fetch(ArgumentMatchers.anyString())).thenReturn(result)
-    Mockito.`when`<MutableSet<String?>?>(environment.getActiveNames()).thenReturn(setOf(activeEnvironment).toMutableSet())
+    every { result.getValue(any<Int>(), any<String>()) } returns deploymentId
+    every { dslContext.fetch(any<String>()) } returns result
+    every { environment.activeNames } returns setOf(activeEnvironment).toMutableSet()
 
     val handler = DeploymentMetadataHandler(airbyteVersion, airbyteEdition, dslContext)
 

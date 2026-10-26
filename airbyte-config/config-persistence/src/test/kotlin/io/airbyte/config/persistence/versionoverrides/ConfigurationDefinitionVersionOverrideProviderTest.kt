@@ -22,12 +22,16 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.Called
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
@@ -39,49 +43,48 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
   @BeforeEach
   fun setup() {
-    mWorkspaceService = Mockito.mock(WorkspaceService::class.java)
-    mActorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    mScopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+    mWorkspaceService = mockk<WorkspaceService>()
+    mActorDefinitionService = mockk<ActorDefinitionService>()
+    mScopedConfigurationService = mockk<ScopedConfigurationService>()
     overrideProvider =
       ConfigurationDefinitionVersionOverrideProvider(mWorkspaceService, mActorDefinitionService, mScopedConfigurationService)
 
-    Mockito
-      .`when`(mWorkspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withOrganizationId(ORGANIZATION_ID))
+    every { mWorkspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns StandardWorkspace().withOrganizationId(ORGANIZATION_ID)
   }
 
   @Test
   fun testGetVersionNoOverride() {
-    Mockito
-      .`when`(
-        mScopedConfigurationService.getScopedConfiguration(
-          ConnectorVersionKey,
-          ConfigResourceType.ACTOR_DEFINITION,
-          ACTOR_DEFINITION_ID,
-          mapOf(
-            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-            ConfigScopeType.ACTOR to ACTOR_ID,
-          ),
+    every {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
         ),
-      ).thenReturn(Optional.empty())
+      )
+    } returns Optional.empty()
 
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
     Assertions.assertTrue(optResult.isEmpty)
 
-    Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
-      ConnectorVersionKey,
-      ConfigResourceType.ACTOR_DEFINITION,
-      ACTOR_DEFINITION_ID,
-      mapOf(
-        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-        ConfigScopeType.ACTOR to ACTOR_ID,
-      ),
-    )
+    verify {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
+        ),
+      )
+    }
 
-    Mockito.verifyNoInteractions(mActorDefinitionService)
+    verify { mActorDefinitionService wasNot Called }
   }
 
   @ParameterizedTest
@@ -98,21 +101,20 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withValue(versionId.toString())
         .withOriginType(ConfigOriginType.fromValue(originTypeStr))
 
-    Mockito
-      .`when`(
-        mScopedConfigurationService.getScopedConfiguration(
-          ConnectorVersionKey,
-          ConfigResourceType.ACTOR_DEFINITION,
-          ACTOR_DEFINITION_ID,
-          mapOf(
-            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-            ConfigScopeType.ACTOR to ACTOR_ID,
-          ),
+    every {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
         ),
-      ).thenReturn(Optional.of(versionConfig))
+      )
+    } returns Optional.of(versionConfig)
 
-    Mockito.`when`(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION)
+    every { mActorDefinitionService.getActorDefinitionVersion(versionId) } returns OVERRIDE_VERSION
 
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
@@ -123,19 +125,21 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
     val expectedOverrideStatus = originTypeStr == "user"
     Assertions.assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied)
 
-    Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
-      ConnectorVersionKey,
-      ConfigResourceType.ACTOR_DEFINITION,
-      ACTOR_DEFINITION_ID,
-      mapOf(
-        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-        ConfigScopeType.ACTOR to ACTOR_ID,
-      ),
-    )
-    Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
+    verify {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
+        ),
+      )
+    }
+    verify { mActorDefinitionService.getActorDefinitionVersion(versionId) }
 
-    Mockito.verifyNoMoreInteractions(mScopedConfigurationService, mActorDefinitionService)
+    confirmVerified(mScopedConfigurationService, mActorDefinitionService)
   }
 
   @ParameterizedTest
@@ -152,20 +156,19 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withValue(versionId.toString())
         .withOriginType(ConfigOriginType.fromValue(originTypeStr))
 
-    Mockito
-      .`when`(
-        mScopedConfigurationService.getScopedConfiguration(
-          ConnectorVersionKey,
-          ConfigResourceType.ACTOR_DEFINITION,
-          ACTOR_DEFINITION_ID,
-          mapOf(
-            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-          ),
+    every {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
         ),
-      ).thenReturn(Optional.of(versionConfig))
+      )
+    } returns Optional.of(versionConfig)
 
-    Mockito.`when`(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION)
+    every { mActorDefinitionService.getActorDefinitionVersion(versionId) } returns OVERRIDE_VERSION
 
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
@@ -176,18 +179,20 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
     val expectedOverrideStatus = originTypeStr == "user"
     Assertions.assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied)
 
-    Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
-      ConnectorVersionKey,
-      ConfigResourceType.ACTOR_DEFINITION,
-      ACTOR_DEFINITION_ID,
-      mapOf(
-        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-      ),
-    )
-    Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
+    verify {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+        ),
+      )
+    }
+    verify { mActorDefinitionService.getActorDefinitionVersion(versionId) }
 
-    Mockito.verifyNoMoreInteractions(mScopedConfigurationService, mActorDefinitionService)
+    confirmVerified(mScopedConfigurationService, mActorDefinitionService)
   }
 
   @Test
@@ -202,41 +207,41 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withResourceId(ACTOR_DEFINITION_ID)
         .withValue(versionId.toString())
 
-    Mockito
-      .`when`(
-        mScopedConfigurationService.getScopedConfiguration(
-          ConnectorVersionKey,
-          ConfigResourceType.ACTOR_DEFINITION,
-          ACTOR_DEFINITION_ID,
-          mapOf(
-            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-            ConfigScopeType.ACTOR to ACTOR_ID,
-          ),
+    every {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
         ),
-      ).thenReturn(Optional.of(versionConfig))
+      )
+    } returns Optional.of(versionConfig)
 
-    Mockito
-      .`when`(mActorDefinitionService.getActorDefinitionVersion(versionId))
-      .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, versionId) }
+    every { mActorDefinitionService.getActorDefinitionVersion(versionId) } throws
+      ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, versionId)
 
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) { overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID) }
 
-    Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
-      ConnectorVersionKey,
-      ConfigResourceType.ACTOR_DEFINITION,
-      ACTOR_DEFINITION_ID,
-      mapOf(
-        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-        ConfigScopeType.ACTOR to ACTOR_ID,
-      ),
-    )
-    Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
+    verify {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
+        ),
+      )
+    }
+    verify { mActorDefinitionService.getActorDefinitionVersion(versionId) }
 
-    Mockito.verifyNoMoreInteractions(mScopedConfigurationService, mActorDefinitionService)
+    confirmVerified(mScopedConfigurationService, mActorDefinitionService)
   }
 
   @ParameterizedTest
@@ -253,21 +258,20 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withValue(versionId.toString())
         .withOriginType(ConfigOriginType.BREAKING_CHANGE)
 
-    Mockito
-      .`when`(
-        mScopedConfigurationService.getScopedConfiguration(
-          ConnectorVersionKey,
-          ConfigResourceType.ACTOR_DEFINITION,
-          ACTOR_DEFINITION_ID,
-          mapOf(
-            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
-            ConfigScopeType.ACTOR to ACTOR_ID,
-          ),
+    every {
+      mScopedConfigurationService.getScopedConfiguration(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        mapOf(
+          ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+          ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+          ConfigScopeType.ACTOR to ACTOR_ID,
         ),
-      ).thenReturn(Optional.of(breakingChangePin))
+      )
+    } returns Optional.of(breakingChangePin)
 
-    Mockito.`when`(mActorDefinitionService.getActorDefinitionVersion(versionId)).thenReturn(OVERRIDE_VERSION)
+    every { mActorDefinitionService.getActorDefinitionVersion(versionId) } returns OVERRIDE_VERSION
 
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)

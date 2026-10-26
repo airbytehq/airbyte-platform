@@ -7,11 +7,11 @@ package io.airbyte.config.persistence
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.db.ContextQueryFunction
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.spyk
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -21,7 +21,7 @@ internal class StreamResetPersistenceTest : BaseConfigDatabaseTest() {
   fun setup() {
     truncateAllTables()
 
-    streamResetPersistence = Mockito.spy<StreamResetPersistence>(StreamResetPersistence(database))
+    streamResetPersistence = spyk(StreamResetPersistence(database))
   }
 
   @Test

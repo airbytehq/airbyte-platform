@@ -36,14 +36,14 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions
 import org.junit.Assert
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
 import java.util.Optional
 import java.util.UUID
-import org.mockito.Mockito.`when` as whenever
 
 internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest() {
   private var sourceService: SourceService? = null
@@ -61,20 +61,18 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   fun beforeEach() {
     truncateAllTables()
 
-    val featureFlagClient = mock(TestClient::class.java)
-    whenever(
-      featureFlagClient.stringVariation(org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages), org.mockito.kotlin.any<SourceDefinition>()),
-    ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns "3600"
 
-    val secretsRepositoryReader = mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = mock(SecretPersistenceConfigService::class.java)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
 
-    val connectionService = mock(ConnectionService::class.java)
+    val connectionService = mockk<ConnectionService>(relaxed = true)
     val organizationService = OrganizationServiceJooqImpl(database!!)
-    val actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater::class.java)
-    val metricClient = mock(MetricClient::class.java)
-    val actorPaginationServiceHelper = mock(ActorServicePaginationHelper::class.java)
+    val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     // Create organization first
     val defaultOrg = MockData.defaultOrganization()

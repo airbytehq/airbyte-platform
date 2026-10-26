@@ -15,10 +15,14 @@ import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.data.services.ConnectorBuilderService
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ConfigRepositoryBuilderProjectUpdaterTest {
@@ -45,7 +49,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
   @BeforeEach
   fun setUp() {
-    connectorBuilderService = Mockito.mock(ConnectorBuilderService::class.java)
+    connectorBuilderService = mockk<ConnectorBuilderService>()
     projectUpdater = ConfigRepositoryBuilderProjectUpdater(connectorBuilderService)
   }
 
@@ -54,9 +58,8 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
   fun testUpdateConnectorBuilderProjectWipeDraft() {
     val project = generateBuilderProject()
 
-    Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
-      .thenReturn(project)
+    every { connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false) } returns project
+    every { connectorBuilderService.writeBuilderProjectDraft(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
 
     val update =
       ExistingConnectorBuilderProjectWithWorkspaceId(
@@ -67,9 +70,8 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
     projectUpdater.persistBuilderProjectUpdate(update)
 
-    Mockito
-      .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
-      .writeBuilderProjectDraft(
+    verify(exactly = 1) {
+      connectorBuilderService.writeBuilderProjectDraft(
         project.builderProjectId,
         project.workspaceId,
         project.name,
@@ -79,6 +81,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         project.contributionPullRequestUrl,
         project.contributionActorDefinitionId,
       )
+    }
   }
 
   @Test
@@ -86,9 +89,8 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
   fun testUpdateConnectorBuilderProject() {
     val project = generateBuilderProject()
 
-    Mockito
-      .`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
-      .thenReturn(project)
+    every { connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false) } returns project
+    every { connectorBuilderService.writeBuilderProjectDraft(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
 
     val update =
       ExistingConnectorBuilderProjectWithWorkspaceId(
@@ -99,9 +101,8 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
     projectUpdater.persistBuilderProjectUpdate(update)
 
-    Mockito
-      .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
-      .writeBuilderProjectDraft(
+    verify(exactly = 1) {
+      connectorBuilderService.writeBuilderProjectDraft(
         project.builderProjectId,
         project.workspaceId,
         project.name,
@@ -111,19 +112,22 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         project.contributionPullRequestUrl,
         project.contributionActorDefinitionId,
       )
+    }
   }
 
   @Test
   fun givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() {
-    Mockito.`when`<ConnectorBuilderProject?>(connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(
+    every { connectorBuilderService.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false) } returns
       anyBuilderProject()
         .withBuilderProjectId(A_BUILDER_PROJECT_ID)
         .withWorkspaceId(A_WORKSPACE_ID)
         .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
         .withBaseActorDefinitionVersionId(A_BASE_ACTOR_DEFINITION_VERSION_ID)
         .withContributionPullRequestUrl(A_CONTRIBUTION_PULL_REQUEST_URL)
-        .withContributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID),
-    )
+        .withContributionActorDefinitionId(A_CONTRIBUTION_ACTOR_DEFINITION_ID)
+    every {
+      connectorBuilderService.updateBuilderProjectAndActorDefinition(any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } just Runs
 
     projectUpdater.persistBuilderProjectUpdate(
       ExistingConnectorBuilderProjectWithWorkspaceId(
@@ -140,9 +144,8 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
       ),
     )
 
-    Mockito
-      .verify<ConnectorBuilderService?>(connectorBuilderService, Mockito.times(1))
-      .updateBuilderProjectAndActorDefinition(
+    verify(exactly = 1) {
+      connectorBuilderService.updateBuilderProjectAndActorDefinition(
         A_BUILDER_PROJECT_ID,
         A_WORKSPACE_ID,
         A_SOURCE_NAME,
@@ -153,6 +156,7 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
         A_CONTRIBUTION_ACTOR_DEFINITION_ID,
         A_SOURCE_DEFINITION_ID,
       )
+    }
   }
 
   private fun generateBuilderProject(): ConnectorBuilderProject {

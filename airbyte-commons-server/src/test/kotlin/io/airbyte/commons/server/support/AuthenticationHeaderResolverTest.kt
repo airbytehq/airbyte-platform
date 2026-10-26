@@ -32,13 +32,13 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class AuthenticationHeaderResolverTest {
@@ -52,12 +52,13 @@ internal class AuthenticationHeaderResolverTest {
 
   @BeforeEach
   fun setup() {
-    this.workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
-    this.permissionHandler = Mockito.mock(PermissionHandler::class.java)
-    this.userPersistence = Mockito.mock(UserPersistence::class.java)
-    this.dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
-    this.dataplaneService = Mockito.mock(DataplaneService::class.java)
+    this.workspaceHelper = mockk<WorkspaceHelper>()
+    this.permissionHandler = mockk<PermissionHandler>()
+    this.userPersistence = mockk<UserPersistence>()
+    this.dataplaneGroupService = mockk<DataplaneGroupService>()
+    this.dataplaneService = mockk<DataplaneService>()
     this.metricClient = mockk(relaxed = true)
+    every { workspaceHelper.getOrganizationForWorkspace(any()) } returns UUID.randomUUID()
     this.resolver =
       AuthenticationHeaderResolver(
         workspaceHelper,
@@ -83,7 +84,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
     val properties = mapOf(CONNECTION_ID_HEADER to connectionId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -96,8 +97,8 @@ internal class AuthenticationHeaderResolverTest {
     val connectionId2 = UUID.randomUUID()
 
     val properties = mapOf(CONNECTION_IDS_HEADER to serialize(listOf(connectionId.toString(), connectionId2.toString())))
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenReturn(workspaceId)
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId2)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
+    every { workspaceHelper.getWorkspaceForConnectionId(connectionId2) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId, workspaceId), result)
@@ -109,7 +110,7 @@ internal class AuthenticationHeaderResolverTest {
     val destinationId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val properties = mapOf(DESTINATION_ID_HEADER to destinationId.toString(), SOURCE_ID_HEADER to sourceId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnection(sourceId, destinationId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForConnection(sourceId, destinationId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -120,7 +121,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
     val properties = mapOf(DESTINATION_ID_HEADER to destinationId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForDestinationId(destinationId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForDestinationId(destinationId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -131,7 +132,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val jobId = System.currentTimeMillis()
     val properties = mapOf(JOB_ID_HEADER to jobId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForJobId(jobId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForJobId(jobId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -142,7 +143,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val properties = mapOf(SOURCE_ID_HEADER to sourceId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForSourceId(sourceId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -153,7 +154,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val operationId = UUID.randomUUID()
     val properties = mapOf(OPERATION_ID_HEADER to operationId.toString())
-    Mockito.`when`(workspaceHelper.getWorkspaceForOperationId(operationId)).thenReturn(workspaceId)
+    every { workspaceHelper.getWorkspaceForOperationId(operationId) } returns workspaceId
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -179,7 +180,7 @@ internal class AuthenticationHeaderResolverTest {
           exceptionType.getDeclaredConstructor(String::class.java).newInstance("test")
         }
       )!!
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenAnswer { throw exception }
+    every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } throws exception
 
     val workspaceId: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertNull(workspaceId)
@@ -208,7 +209,7 @@ internal class AuthenticationHeaderResolverTest {
     val organizationId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
     val properties = mapOf(WORKSPACE_ID_HEADER to workspaceId.toString())
-    Mockito.`when`(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(organizationId)
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
@@ -219,9 +220,7 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
-    Mockito
-      .`when`(permissionHandler.getPermissionById(permissionId))
-      .thenReturn(Permission().withWorkspaceId(workspaceId))
+    every { permissionHandler.getPermissionById(permissionId) } returns Permission().withWorkspaceId(workspaceId)
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -232,9 +231,7 @@ internal class AuthenticationHeaderResolverTest {
     val organizationId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
-    Mockito
-      .`when`(permissionHandler.getPermissionById(permissionId))
-      .thenReturn(Permission().withOrganizationId(organizationId))
+    every { permissionHandler.getPermissionById(permissionId) } returns Permission().withOrganizationId(organizationId)
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
@@ -245,13 +242,10 @@ internal class AuthenticationHeaderResolverTest {
     val workspaceId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
-    Mockito
-      .`when`(permissionHandler.getPermissionById(permissionId))
-      .thenReturn(
-        Permission()
-          .withWorkspaceId(workspaceId)
-          .withGroupId(UUID.randomUUID()),
-      )
+    every { permissionHandler.getPermissionById(permissionId) } returns
+      Permission()
+        .withWorkspaceId(workspaceId)
+        .withGroupId(UUID.randomUUID())
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -262,13 +256,10 @@ internal class AuthenticationHeaderResolverTest {
     val organizationId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
-    Mockito
-      .`when`(permissionHandler.getPermissionById(permissionId))
-      .thenReturn(
-        Permission()
-          .withOrganizationId(organizationId)
-          .withGroupId(UUID.randomUUID()),
-      )
+    every { permissionHandler.getPermissionById(permissionId) } returns
+      Permission()
+        .withOrganizationId(organizationId)
+        .withGroupId(UUID.randomUUID())
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
@@ -279,7 +270,7 @@ internal class AuthenticationHeaderResolverTest {
     val userId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(AIRBYTE_USER_ID_HEADER to userId.toString())
     val expectedAuthUserIds = setOf(AUTH_USER_ID, "some-other-id")
-    Mockito.`when`(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(expectedAuthUserIds.stream().toList())
+    every { userPersistence.listAuthUserIdsForUser(userId) } returns expectedAuthUserIds.stream().toList()
 
     val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
 
@@ -291,7 +282,7 @@ internal class AuthenticationHeaderResolverTest {
     val userId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(CREATOR_USER_ID_HEADER to userId.toString())
     val expectedAuthUserIds = setOf(AUTH_USER_ID, "some-other-id")
-    Mockito.`when`(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(expectedAuthUserIds.stream().toList())
+    every { userPersistence.listAuthUserIdsForUser(userId) } returns expectedAuthUserIds.stream().toList()
 
     val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
 
@@ -311,7 +302,7 @@ internal class AuthenticationHeaderResolverTest {
   fun testUserIdsThatNameDifferentUsersResolveToNoUser() {
     val victimUserId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(EXTERNAL_AUTH_ID_HEADER to AUTH_USER_ID, AIRBYTE_USER_ID_HEADER to victimUserId.toString())
-    Mockito.`when`(userPersistence.listAuthUserIdsForUser(victimUserId)).thenReturn(listOf("victim-auth-id"))
+    every { userPersistence.listAuthUserIdsForUser(victimUserId) } returns listOf("victim-auth-id")
 
     val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
 
@@ -322,7 +313,7 @@ internal class AuthenticationHeaderResolverTest {
   fun testUserIdsThatNameTheSameUserResolveToThatUser() {
     val userId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(EXTERNAL_AUTH_ID_HEADER to AUTH_USER_ID, AIRBYTE_USER_ID_HEADER to userId.toString())
-    Mockito.`when`(userPersistence.listAuthUserIdsForUser(userId)).thenReturn(listOf(AUTH_USER_ID, "some-other-id"))
+    every { userPersistence.listAuthUserIdsForUser(userId) } returns listOf(AUTH_USER_ID, "some-other-id")
 
     val resolvedAuthUserIds: Set<String>? = resolver.resolveAuthUserIds(properties)
 
@@ -352,7 +343,7 @@ internal class AuthenticationHeaderResolverTest {
     val organizationId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
     val properties = mapOf(DATAPLANE_GROUP_ID_HEADER to dataplaneGroupId.toString())
-    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(organizationId)
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId) } returns organizationId
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
@@ -362,7 +353,7 @@ internal class AuthenticationHeaderResolverTest {
   fun testResolvingOrganizationFromDataplaneGroupIdWhenNotFound() {
     val dataplaneGroupId = UUID.randomUUID()
     val properties = mapOf(DATAPLANE_GROUP_ID_HEADER to dataplaneGroupId.toString())
-    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(null)
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId) } throws NoSuchElementException("dataplane group not found")
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertNull(result)
@@ -379,8 +370,8 @@ internal class AuthenticationHeaderResolverTest {
         this.dataplaneGroupId = dataplaneGroupId
       }
     val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
-    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenReturn(mockDataplane)
-    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(organizationId)
+    every { dataplaneService.getDataplane(dataplaneId) } returns mockDataplane
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId) } returns organizationId
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
@@ -390,7 +381,7 @@ internal class AuthenticationHeaderResolverTest {
   fun testResolvingOrganizationFromDataplaneIdWhenDataplaneNotFound() {
     val dataplaneId = UUID.randomUUID()
     val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
-    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenAnswer { throw RuntimeException("Dataplane not found: $dataplaneId") }
+    every { dataplaneService.getDataplane(dataplaneId) } throws RuntimeException("Dataplane not found: $dataplaneId")
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertNull(result)
@@ -406,8 +397,8 @@ internal class AuthenticationHeaderResolverTest {
         this.dataplaneGroupId = dataplaneGroupId
       }
     val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
-    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenReturn(mockDataplane)
-    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(null)
+    every { dataplaneService.getDataplane(dataplaneId) } returns mockDataplane
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId) } throws NoSuchElementException("dataplane group not found")
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertNull(result)

@@ -19,7 +19,6 @@ dependencies {
   implementation(libs.kotlin.logging)
 
   testImplementation(libs.airbyte.protocol)
-  testImplementation(libs.mockito.core)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.micronaut.test)
 }

@@ -28,10 +28,11 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
+import io.mockk.spyk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabaseTest() {
@@ -64,18 +65,18 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   fun setup() {
     truncateAllTables()
 
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
-    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
 
-    val connectionService = Mockito.mock(ConnectionService::class.java)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
-    val metricClient = Mockito.mock(MetricClient::class.java)
-    val actorPaginationServiceHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
-    actorDefinitionService = Mockito.spy(ActorDefinitionServiceJooqImpl(database!!))
+    val connectionService = mockk<ConnectionService>(relaxed = true)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
+    actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
 
     sourceService =
-      Mockito.spy(
+      spyk(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -92,7 +93,7 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
         ),
       )
     destinationService =
-      Mockito.spy(
+      spyk(
         DestinationServiceJooqImpl(
           database!!,
           featureFlagClient,

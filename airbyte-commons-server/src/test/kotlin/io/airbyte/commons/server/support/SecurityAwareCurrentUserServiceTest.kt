@@ -15,11 +15,13 @@ import io.micronaut.security.utils.SecurityService
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.transaction.TransactionOperations
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.io.IOException
 import java.sql.Connection
 import java.util.Optional
@@ -31,14 +33,12 @@ import java.util.UUID
 @Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
 internal class SecurityAwareCurrentUserServiceTest {
   @MockBean(SecurityService::class)
-  fun mockSecurityService(): SecurityService = Mockito.mock(SecurityService::class.java)
+  fun mockSecurityService(): SecurityService = mockk()
 
   @MockBean(UserPersistence::class)
-  fun mockUserPersistence(): UserPersistence = Mockito.mock(UserPersistence::class.java)
+  fun mockUserPersistence(): UserPersistence = mockk()
 
-  @Suppress("UNCHECKED_CAST")
-  private val transactionOperations =
-    Mockito.mock(TransactionOperations::class.java) as TransactionOperations<Connection>
+  private val transactionOperations: TransactionOperations<Connection> = mockk()
 
   @Inject
   lateinit var securityService: SecurityService
@@ -63,10 +63,8 @@ internal class SecurityAwareCurrentUserServiceTest {
         val authUserId = "testUser"
         val expectedUser = AuthenticatedUser().withAuthUserId(authUserId)
 
-        Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
-        Mockito
-          .`when`(userPersistence.getUserByAuthId(authUserId))
-          .thenReturn(Optional.of(expectedUser))
+        every { securityService.username() } returns Optional.of(authUserId)
+        every { userPersistence.getUserByAuthId(authUserId) } returns Optional.of(expectedUser)
 
         // First call - should fetch from userPersistence
         val user1 = currentUserService.getCurrentUser()
@@ -77,7 +75,7 @@ internal class SecurityAwareCurrentUserServiceTest {
         Assertions.assertEquals(expectedUser, user2)
 
         // Verify that getUserByAuthId is called only once
-        Mockito.verify(userPersistence, Mockito.times(1)).getUserByAuthId(authUserId)
+        verify(exactly = 1) { userPersistence.getUserByAuthId(authUserId) }
       } catch (e: IOException) {
         Assertions.fail<Any>(e)
       }
@@ -96,10 +94,8 @@ internal class SecurityAwareCurrentUserServiceTest {
         val authUserId = "123e4567-e89b-12d3-a456-426614174000"
         val expectedUser = AuthenticatedUser().withAuthUserId(authUserId).withUserId(userId)
 
-        Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
-        Mockito
-          .`when`(userPersistence.getUserByAuthId(authUserId))
-          .thenReturn(Optional.of(expectedUser))
+        every { securityService.username() } returns Optional.of(authUserId)
+        every { userPersistence.getUserByAuthId(authUserId) } returns Optional.of(expectedUser)
 
         val retrievedUserId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
         Assertions.assertTrue(retrievedUserId.isPresent)
@@ -116,7 +112,7 @@ internal class SecurityAwareCurrentUserServiceTest {
       HttpRequest.GET<Any>("/"),
     ) {
       Assertions.assertDoesNotThrow {
-        Mockito.`when`(securityService.username()).thenReturn(Optional.empty())
+        every { securityService.username() } returns Optional.empty()
         val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
         Assertions.assertTrue(userId.isEmpty)
       }

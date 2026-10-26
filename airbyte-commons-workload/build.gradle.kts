@@ -45,7 +45,6 @@ dependencies {
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)
-  testImplementation(libs.mockito.inline)
   testImplementation(libs.reactor.test)
   testImplementation(libs.mockk)
 }

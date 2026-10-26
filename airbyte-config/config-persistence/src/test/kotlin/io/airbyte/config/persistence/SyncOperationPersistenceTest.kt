@@ -22,10 +22,10 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
@@ -83,11 +83,11 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   private fun createWorkspace() {
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
-    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
-    val metricClient = Mockito.mock(MetricClient::class.java)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>(relaxed = true)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
 
     OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization())
 

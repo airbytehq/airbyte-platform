@@ -25,10 +25,15 @@ import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.WorkspaceService
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -43,10 +48,10 @@ internal class OperationsHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
-    operationService = Mockito.mock(OperationService::class.java)
-    connectionService = Mockito.mock(ConnectionService::class.java)
-    uuidGenerator = Mockito.mock(Supplier::class.java) as Supplier<UUID>
+    workspaceService = mockk<WorkspaceService>()
+    operationService = mockk<OperationService>()
+    connectionService = mockk<ConnectionService>()
+    uuidGenerator = mockk<Supplier<UUID>>()
 
     operationsHandler = OperationsHandler(workspaceService, uuidGenerator, connectionService, operationService)
     operatorWebhook =
@@ -69,7 +74,7 @@ internal class OperationsHandlerTest {
 
   @Test
   fun testCreateWebhookOperation() {
-    Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
+    every { uuidGenerator.get() } returns WEBHOOK_OPERATION_ID
     val webhookConfig =
       io.airbyte.api.server.generated.models.OperatorWebhook(
         webhookConfigId = WEBHOOK_CONFIG_ID,
@@ -113,10 +118,10 @@ internal class OperationsHandlerTest {
         ).withTombstone(false)
 
     val workspace = StandardWorkspace().withWebhookOperationConfigs(webhookOperationConfig)
-    Mockito.`when`(workspaceService.getWorkspaceWithSecrets(operationCreate.workspaceId, false)).thenReturn(workspace)
-    Mockito
-      .`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID))
-      .thenReturn(expectedPersistedOperation)
+    every { workspaceService.getWorkspaceWithSecrets(operationCreate.workspaceId, false) } returns workspace
+    every { operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID) } returns expectedPersistedOperation
+
+    every { operationService.writeStandardSyncOperation(any()) } just Runs
 
     val actualOperationRead = operationsHandler.createOperation(operationCreate)
 
@@ -138,14 +143,12 @@ internal class OperationsHandlerTest {
       )
     Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
-    Mockito
-      .verify(operationService)
-      .writeStandardSyncOperation(expectedPersistedOperation)
+    verify { operationService.writeStandardSyncOperation(expectedPersistedOperation) }
   }
 
   @Test
   fun testUpdateWebhookOperation() {
-    Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
+    every { uuidGenerator.get() } returns WEBHOOK_OPERATION_ID
     val webhookConfig =
       io.airbyte.api.server.generated.models.OperatorWebhook(
         webhookConfigId = WEBHOOK_CONFIG_ID,
@@ -202,13 +205,10 @@ internal class OperationsHandlerTest {
         .withOperatorWebhook(updatedWebhook)
 
     val workspace = StandardWorkspace()
-    Mockito
-      .`when`(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.workspaceId, false))
-      .thenReturn(workspace)
-    Mockito
-      .`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID))
-      .thenReturn(persistedOperation)
-      .thenReturn(updatedOperation)
+    every { workspaceService.getWorkspaceWithSecrets(standardSyncOperation.workspaceId, false) } returns workspace
+    every { operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID) } returnsMany listOf(persistedOperation, updatedOperation)
+
+    every { operationService.writeStandardSyncOperation(any()) } just Runs
 
     val actualOperationRead = operationsHandler.updateOperation(operationUpdate)
 
@@ -227,9 +227,8 @@ internal class OperationsHandlerTest {
       )
     Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
-    Mockito
-      .verify(operationService)
-      .writeStandardSyncOperation(
+    verify {
+      operationService.writeStandardSyncOperation(
         persistedOperation.withOperatorWebhook(
           persistedOperation.operatorWebhook.withExecutionUrl(
             String.format(
@@ -240,13 +239,12 @@ internal class OperationsHandlerTest {
           ),
         ),
       )
+    }
   }
 
   @Test
   fun testGetOperation() {
-    Mockito
-      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
-      .thenReturn(standardSyncOperation)
+    every { operationService.getStandardSyncOperation(standardSyncOperation.operationId) } returns standardSyncOperation
 
     val operationIdRequestBody = OperationIdRequestBody(operationId = standardSyncOperation.operationId)
     val actualOperationRead = operationsHandler.getOperation(operationIdRequestBody)
@@ -279,20 +277,13 @@ internal class OperationsHandlerTest {
   fun testListOperationsForConnection() {
     val connectionId = UUID.randomUUID()
 
-    Mockito
-      .`when`(connectionService.getStandardSync(connectionId))
-      .thenReturn(
-        StandardSync()
-          .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId)),
-      )
+    every { connectionService.getStandardSync(connectionId) } returns
+      StandardSync()
+        .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId))
 
-    Mockito
-      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
-      .thenReturn(standardSyncOperation)
+    every { operationService.getStandardSyncOperation(standardSyncOperation.operationId) } returns standardSyncOperation
 
-    Mockito
-      .`when`(operationService.listStandardSyncOperations())
-      .thenReturn(listOf(standardSyncOperation))
+    every { operationService.listStandardSyncOperations() } returns listOf(standardSyncOperation)
 
     val connectionIdRequestBody = ConnectionIdRequestBody(connectionId = connectionId)
     val actualOperationReadList = operationsHandler.listOperationsForConnection(connectionIdRequestBody)
@@ -304,11 +295,12 @@ internal class OperationsHandlerTest {
   fun testDeleteOperation() {
     val operationIdRequestBody = OperationIdRequestBody(operationId = standardSyncOperation.operationId)
 
-    val spiedOperationsHandler = Mockito.spy(operationsHandler)
+    val spiedOperationsHandler = spyk(operationsHandler)
+    every { operationService.deleteStandardSyncOperation(any()) } just Runs
 
     spiedOperationsHandler.deleteOperation(operationIdRequestBody)
 
-    Mockito.verify(operationService).deleteStandardSyncOperation(standardSyncOperation.operationId)
+    verify { operationService.deleteStandardSyncOperation(standardSyncOperation.operationId) }
   }
 
   @Test
@@ -322,32 +314,33 @@ internal class OperationsHandlerTest {
       StandardSync()
         .withConnectionId(syncConnectionId)
         .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId, operationId, remainingOperationId))
-    Mockito.`when`(connectionService.listStandardSyncs()).thenReturn(
+    every { connectionService.listStandardSyncs() } returns
       listOf<StandardSync>(
         sync,
         StandardSync()
           .withConnectionId(otherConnectionId)
           .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId)),
-      ),
-    )
+      )
     // removing an operation builds its read, which needs the schema-required fields (operatorType, name, ...)
     val operation = Jsons.clone(standardSyncOperation).withOperationId(operationId)
     val remainingOperation = Jsons.clone(standardSyncOperation).withOperationId(remainingOperationId)
-    Mockito.`when`(operationService.getStandardSyncOperation(operationId)).thenReturn(operation)
-    Mockito.`when`(operationService.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation)
-    Mockito
-      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
-      .thenReturn(standardSyncOperation)
+    every { operationService.getStandardSyncOperation(operationId) } returns operation
+    every { operationService.getStandardSyncOperation(remainingOperationId) } returns remainingOperation
+    every { operationService.getStandardSyncOperation(standardSyncOperation.operationId) } returns standardSyncOperation
+
+    every { operationService.writeStandardSyncOperation(any()) } just Runs
+    every { operationService.updateConnectionOperationIds(any(), any()) } just Runs
+    every { connectionService.listStandardSyncsUsingOperation(any()) } returns emptyList()
 
     // first, test that a remaining operation results in proper call
     operationsHandler.deleteOperationsForConnection(sync, toDelete)
-    Mockito.verify(operationService).writeStandardSyncOperation(operation.withTombstone(true))
-    Mockito.verify(operationService).updateConnectionOperationIds(syncConnectionId, mutableSetOf<UUID>(remainingOperationId))
+    verify { operationService.writeStandardSyncOperation(operation.withTombstone(true)) }
+    verify { operationService.updateConnectionOperationIds(syncConnectionId, mutableSetOf<UUID>(remainingOperationId)) }
 
     // next, test that removing all operations results in proper call
     toDelete.add(remainingOperationId)
     operationsHandler.deleteOperationsForConnection(sync, toDelete)
-    Mockito.verify(operationService).updateConnectionOperationIds(syncConnectionId, mutableSetOf())
+    verify { operationService.updateConnectionOperationIds(syncConnectionId, mutableSetOf()) }
   }
 
   @Test
@@ -407,7 +400,7 @@ internal class OperationsHandlerTest {
             .withExecutionUrl(urlToCheck)
             .withExecutionBody(EXECUTION_BODY),
         ).withTombstone(false)
-    Mockito.`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(persistedOperation)
+    every { operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID) } returns persistedOperation
 
     val operationIdRequestBody = OperationIdRequestBody(operationId = WEBHOOK_OPERATION_ID)
     operationsHandler.getOperation(operationIdRequestBody)

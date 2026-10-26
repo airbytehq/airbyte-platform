@@ -40,13 +40,13 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class StatePersistenceTest : BaseConfigDatabaseTest() {
@@ -63,13 +63,13 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
 
     statePersistence = StatePersistence(database, ConnectionServiceJooqImpl(database))
 
-    val featureFlagClient = Mockito.mock(TestClient::class.java)
-    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
-    val connectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
-    val metricClient = Mockito.mock(MetricClient::class.java)
-    val actorPaginationServiceHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     val organizationService: OrganizationService = OrganizationServiceJooqImpl(database)
     organizationService.writeOrganization(MockData.defaultOrganization())
@@ -84,12 +84,12 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
 
-    connectionService = Mockito.mock(ConnectionService::class.java)
+    connectionService = mockk<ConnectionService>(relaxed = true)
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         connectionService!!,
         ActorDefinitionServiceJooqImpl(database),
-        Mockito.mock(ScopedConfigurationService::class.java),
+        mockk<ScopedConfigurationService>(relaxed = true),
         connectionTimelineEventService,
       )
     connectionService = ConnectionServiceJooqImpl(database)
