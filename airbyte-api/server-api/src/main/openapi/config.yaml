@@ -6788,6 +6788,7 @@ paths:
         - organization
       operationId: deleteOrganization
       requestBody:
+        required: true
         content:
           application/json:
             schema:

@@ -167,6 +167,7 @@ internal class WorkspacesHandlerTest {
     Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(any())).thenReturn(0L)
 
     workspace = generateWorkspace()
+    Mockito.`when`(organizationService.getActiveOrganization(ORGANIZATION_ID)).thenReturn(Optional.of(generateOrganization(null)))
   }
 
   private fun getWorkspacesHandler(airbyteEdition: AirbyteEdition): WorkspacesHandler =

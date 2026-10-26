@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.ResourceType
+import io.airbyte.api.problems.model.generated.ProblemResourceData
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.server.generated.models.ListOrganizationSummariesRequestBody
 import io.airbyte.api.server.generated.models.ListOrganizationSummariesResponse
 import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
@@ -119,6 +122,12 @@ open class OrganizationsHandler(
 
     organizationPaymentConfigService.saveDefaultPaymentConfig(organization.organizationId)
     return buildOrganizationRead(organization)
+  }
+
+  fun deleteOrganization(organizationId: UUID) {
+    if (!organizationService.softDeleteOrganization(organizationId)) {
+      throw ResourceNotFoundProblem(ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION))
+    }
   }
 
   fun updateOrganization(request: OrganizationUpdateRequestBody): OrganizationRead {
