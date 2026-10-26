@@ -6,6 +6,9 @@ interface GroupLabelProps {
   formField: FormConditionItem | FormObjectArrayItem;
 }
 
+export const getGroupLabelText = (formField: FormConditionItem | FormObjectArrayItem) =>
+  `${formField.title || formField.fieldKey}`;
+
 export const GroupLabel: React.FC<GroupLabelProps> = ({ formField }) => {
-  return <PropertyLabel property={formField} label={`${formField.title || formField.fieldKey}`} optional={false} />;
+  return <PropertyLabel property={formField} label={getGroupLabelText(formField)} optional={false} />;
 };

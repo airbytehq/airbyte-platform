@@ -1,0 +1,73 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.segmentedControl {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  width: 100%;
+
+  &__segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: variables.$form-input-height;
+    padding: variables.$spacing-sm variables.$spacing-md;
+    font-size: variables.$font-size-lg;
+    line-height: 1.2;
+    color: colors.$dark-blue;
+    text-align: center;
+    overflow-wrap: anywhere;
+    background-color: colors.$foreground;
+    border: variables.$border-thin solid colors.$grey-200;
+    cursor: pointer;
+    user-select: none;
+
+    &:not(:first-child) {
+      margin-left: -#{variables.$border-thin};
+    }
+
+    &:first-child {
+      border-top-left-radius: variables.$border-radius-sm;
+      border-bottom-left-radius: variables.$border-radius-sm;
+    }
+
+    &:last-child {
+      border-top-right-radius: variables.$border-radius-sm;
+      border-bottom-right-radius: variables.$border-radius-sm;
+    }
+
+    &[data-hover]:not([data-checked], [data-disabled]) {
+      background-color: colors.$grey-30;
+    }
+
+    &[data-checked] {
+      z-index: 1;
+      color: colors.$blue;
+      background-color: colors.$blue-50;
+      border-color: colors.$blue-400;
+      cursor: default;
+    }
+
+    &[data-disabled] {
+      color: colors.$grey-300;
+      background-color: colors.$grey-50;
+      cursor: not-allowed;
+
+      &[data-checked] {
+        background-color: colors.$blue-30;
+        border-color: colors.$blue-200;
+      }
+    }
+
+    &[data-focus] {
+      outline: variables.$border-thick solid colors.$blue-900;
+      outline-offset: -#{variables.$border-thick};
+    }
+  }
+
+  &--error &__segment:not([data-checked]) {
+    border-color: colors.$red-100;
+  }
+}
