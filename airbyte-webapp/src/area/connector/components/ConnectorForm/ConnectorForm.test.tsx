@@ -9,7 +9,7 @@ import { useFormContext } from "react-hook-form";
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { ConnectorForm } from "area/connector/components/ConnectorForm";
+import { ConnectorForm, ConnectorFormProps } from "area/connector/components/ConnectorForm";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
@@ -308,12 +308,14 @@ describe("Connector form", () => {
     specificationOverride,
     features,
     formAutomation,
+    renderFooter = () => <button type="submit">Submit</button>,
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
     features?: FeatureItem[];
     formAutomation?: React.ReactNode;
+    renderFooter?: ConnectorFormProps["renderFooter"];
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
@@ -324,7 +326,7 @@ describe("Connector form", () => {
           result = values;
         }}
         isEditMode={Boolean(formValuesOverride)}
-        renderFooter={() => <button type="submit">Submit</button>}
+        renderFooter={renderFooter}
         formAutomation={formAutomation}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
@@ -381,6 +383,176 @@ describe("Connector form", () => {
     await renderForm({ formAutomation: <FormAutomationProbe /> });
 
     expect(screen.getByTestId("form-automation")).toHaveTextContent("source:test-name");
+  });
+
+  describe("empty required fields", () => {
+    const renderFooter: ConnectorFormProps["renderFooter"] = ({ emptyRequiredFields }) => (
+      <>
+        <button type="submit" disabled={emptyRequiredFields.length > 0}>
+          Submit
+        </button>
+        <output data-testid="empty-required-fields">{emptyRequiredFields.join(" | ")}</output>
+      </>
+    );
+    const emptyRequiredFields = () => screen.getByTestId("empty-required-fields");
+
+    it("lists an empty required field until it has a value, even if the value breaks its pattern", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["host"],
+            properties: { host: { type: "string", title: "Host", pattern: "^[a-z]+$" }, port: { type: "integer" } },
+          },
+        },
+      });
+      const hostInput = getInputByName(container, "connectionConfiguration.host")!;
+
+      expect(emptyRequiredFields()).toHaveTextContent("Host");
+      expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+
+      await userEvent.type(hostInput, "123");
+      await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+      expect(emptyRequiredFields()).toBeEmptyDOMElement();
+
+      await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+      expect(await screen.findByText("The value must match the pattern ^[a-z]+$")).toBeInTheDocument();
+      expect(result).toBeUndefined();
+
+      await userEvent.clear(hostInput);
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent("Host"));
+      expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    });
+
+    it("lists only the required fields of the selected oneOf option", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["auth"],
+            properties: {
+              auth: {
+                type: "object",
+                title: "Authentication",
+                oneOf: [
+                  {
+                    title: "Option A",
+                    required: ["a_key"],
+                    properties: {
+                      mode: { type: "string", const: "a", default: "a" },
+                      a_key: { type: "string", title: "A key" },
+                    },
+                  },
+                  {
+                    title: "Option B",
+                    required: ["b_key"],
+                    properties: {
+                      mode: { type: "string", const: "b", default: "b" },
+                      b_key: { type: "string", title: "B key" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^A key$/);
+
+      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^B key$/));
+    });
+
+    it("lists a field that two oneOf options share by the title in the selected option", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["auth"],
+            properties: {
+              auth: {
+                type: "object",
+                title: "Authentication",
+                oneOf: [
+                  {
+                    title: "Option A",
+                    required: ["key"],
+                    properties: {
+                      mode: { type: "string", const: "a", default: "a" },
+                      key: { type: "string", title: "API key" },
+                    },
+                  },
+                  {
+                    title: "Option B",
+                    required: ["key"],
+                    properties: {
+                      mode: { type: "string", const: "b", default: "b" },
+                      key: { type: "string", title: "Access token" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^Access token$/));
+    });
+
+    it("lists an empty required field of a nested object by its own title", async () => {
+      await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["database"],
+            properties: {
+              database: {
+                type: "object",
+                title: "Database",
+                required: ["host"],
+                properties: { host: { type: "string", title: "Database host" } },
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^Database host$/);
+    });
+
+    it("lists an empty required field of array items once, however many items lack it", async () => {
+      await renderForm({
+        renderFooter,
+        formValuesOverride: { items: [{ price: 1 }, {}] },
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                title: "Items",
+                items: {
+                  type: "object",
+                  required: ["name"],
+                  properties: { name: { type: "string", title: "Item name" }, price: { type: "integer" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^Item name$/);
+    });
   });
 
   describe("should display json schema specs", () => {
@@ -1201,6 +1373,7 @@ describe("Connector form", () => {
         disableOAuth?: boolean;
         formValuesOverride?: Record<string, unknown>;
         specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
+        renderFooter?: ConnectorFormProps["renderFooter"];
       } = {}
     ) {
       return renderForm({
@@ -1297,6 +1470,25 @@ describe("Connector form", () => {
       expect(result?.connectionConfiguration).toEqual({
         credentials: { access_token: "mytoken", option_title: "OAuth Credentials" },
       });
+    });
+
+    it("lists the empty fields that OAuth fills as one entry that asks the user to authenticate", async () => {
+      (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
+        completeDestinationOAuth: jest.fn(),
+        completeSourceOAuth: () =>
+          Promise.resolve({ request_succeeded: true, auth_payload: { access_token: "mytoken" } }),
+      });
+      const container = await renderNewOAuthForm({
+        renderFooter: ({ emptyRequiredFields }) => (
+          <output data-testid="empty-required-fields">{emptyRequiredFields.join(" | ")}</output>
+        ),
+      });
+
+      expect(screen.getByTestId("empty-required-fields")).toHaveTextContent(/^Authenticate your account$/);
+
+      await executeOAuthFlow(container);
+
+      await waitFor(() => expect(screen.getByTestId("empty-required-fields")).toBeEmptyDOMElement());
     });
 
     it("should render reauthenticate message if there are form values already", async () => {
