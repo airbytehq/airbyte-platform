@@ -462,7 +462,7 @@ describe("Connector form", () => {
 
       expect(emptyRequiredFields()).toHaveTextContent(/^A key$/);
 
-      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+      await selectSegmentedOption(container, "connectionConfiguration.auth", "Option B");
 
       await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^B key$/));
     });
@@ -502,7 +502,7 @@ describe("Connector form", () => {
         },
       });
 
-      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+      await selectSegmentedOption(container, "connectionConfiguration.auth", "Option B");
 
       await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^Access token$/));
     });
