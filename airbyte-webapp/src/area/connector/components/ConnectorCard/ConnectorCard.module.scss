@@ -5,12 +5,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: variables.$spacing-2xl 0;
-}
-
-.loadingMessage {
-  margin-top: variables.$spacing-md;
-  margin-left: variables.$spacing-lg;
+  padding: calc(variables.$spacing-2xl * 4) 0;
 }
 
 .header:not(:empty) {

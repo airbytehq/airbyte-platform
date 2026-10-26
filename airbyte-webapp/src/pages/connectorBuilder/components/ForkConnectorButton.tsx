@@ -92,9 +92,11 @@ const EditBuilderProjectButton = ({
 export const ForkConnectorButton = ({
   sourceDefinition,
   iconOnly = false,
+  disabled = false,
 }: {
   sourceDefinition: SourceDefinitionRead;
   iconOnly?: boolean;
+  disabled?: boolean;
 }) => {
   const createLink = useCurrentWorkspaceLink();
   const { data: builderProjectIdResponse } = useGetBuilderProjectIdByDefinitionId(sourceDefinition?.sourceDefinitionId);
@@ -120,6 +122,18 @@ export const ForkConnectorButton = ({
   }
 
   if (builderProjectId && builderProjectWorkspaceId) {
+    if (disabled) {
+      return (
+        <Tooltip
+          control={<InnerButton action="edit" iconOnly={iconOnly} disabled />}
+          placement="bottom"
+          cursor="not-allowed"
+        >
+          <ActionTooltipContent action="edit" iconOnly={iconOnly} name={sourceDefinition.name} />
+        </Tooltip>
+      );
+    }
+
     return (
       <EditBuilderProjectButton
         builderProjectId={builderProjectId}
@@ -133,8 +147,17 @@ export const ForkConnectorButton = ({
   if (isBuilderCompatible(sourceDefinition)) {
     return (
       <Tooltip
-        control={<InnerButton action="fork" iconOnly={iconOnly} onClick={forkAndOpenInBuilder} isLoading={isForking} />}
+        control={
+          <InnerButton
+            action="fork"
+            iconOnly={iconOnly}
+            onClick={forkAndOpenInBuilder}
+            isLoading={isForking}
+            disabled={disabled}
+          />
+        }
         placement="bottom"
+        cursor={disabled ? "not-allowed" : undefined}
       >
         <ActionTooltipContent action="fork" iconOnly={iconOnly} name={sourceDefinition.name} />
       </Tooltip>

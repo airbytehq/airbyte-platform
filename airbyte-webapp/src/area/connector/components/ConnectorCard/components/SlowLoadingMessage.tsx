@@ -2,17 +2,18 @@ import React, { useEffect, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ExternalLink } from "components/ui/Link";
+import { Text } from "components/ui/Text";
 
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
-interface ShowLoadingMessageProps {
+interface SlowLoadingMessageProps {
   connector?: string;
 }
 
 const TIMEOUT_MS = 10000;
 
-const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) => {
+const SlowLoadingMessage: React.FC<SlowLoadingMessageProps> = ({ connector }) => {
   const [longLoading, setLongLoading] = useState(false);
   const isCloudApp = useIsCloudApp();
   useEffect(() => {
@@ -22,17 +23,17 @@ const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) =>
   }, [connector]);
 
   return longLoading ? (
-    <FormattedMessage
-      id="form.tooLong"
-      values={{
-        lnk: (...lnk: React.ReactNode[]) => (
-          <ExternalLink href={isCloudApp ? links.supportPortal : links.technicalSupport}>{lnk}</ExternalLink>
-        ),
-      }}
-    />
-  ) : (
-    <FormattedMessage id="form.loadingConfiguration" values={{ connector }} />
-  );
+    <Text align="center">
+      <FormattedMessage
+        id="form.tooLong"
+        values={{
+          lnk: (...lnk: React.ReactNode[]) => (
+            <ExternalLink href={isCloudApp ? links.supportPortal : links.technicalSupport}>{lnk}</ExternalLink>
+          ),
+        }}
+      />
+    </Text>
+  ) : null;
 };
 
-export default ShowLoadingMessage;
+export default SlowLoadingMessage;

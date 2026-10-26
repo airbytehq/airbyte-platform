@@ -6,10 +6,10 @@ const LazyInviteUsersButton = lazy(() =>
   import("cloud/views/users/InviteUsersButton").then(({ InviteUsersButton }) => ({ default: InviteUsersButton }))
 );
 
-export const CloudInviteUsersButton: React.FC = () => {
+export const CloudInviteUsersButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   return useIsCloudApp() ? (
     <Suspense fallback={null}>
-      <LazyInviteUsersButton />
+      <LazyInviteUsersButton disabled={disabled} />
     </Suspense>
   ) : null;
 };

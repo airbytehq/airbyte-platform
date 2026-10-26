@@ -63,6 +63,18 @@ describe("InviteUsersButton", () => {
     expect(screen.queryByRole("button", { name: "Invite users" })).not.toBeInTheDocument();
   });
 
+  it("disables the button when asked and keeps its tooltip", async () => {
+    mockShowInviteUsers(true);
+
+    render(<InviteUsersButton disabled />, { wrapper: TestWrapper });
+
+    const button = screen.getByRole("button", { name: "Invite users" });
+    expect(button).toBeDisabled();
+
+    await userEvent.hover(button.parentElement as HTMLElement);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Invite users");
+  });
+
   it("opens the add-member modal for the current workspace on click", async () => {
     const mockOpenModal = jest.fn();
     jest.spyOn(ModalService, "useModalService").mockImplementation(() => ({

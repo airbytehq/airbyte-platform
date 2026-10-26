@@ -7,7 +7,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import styles from "./InviteUsersButton.module.scss";
 import { useInviteUsers } from "../useInviteUsers";
 
-export const InviteUsersButton: React.FC = () => {
+export const InviteUsersButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { formatMessage } = useIntl();
   const { showInviteUsers, openInviteUsersModal } = useInviteUsers();
 
@@ -25,10 +25,12 @@ export const InviteUsersButton: React.FC = () => {
           iconSize="sm"
           aria-label={formatMessage({ id: "inviteUsersHint.cta" })}
           onClick={openInviteUsersModal}
+          disabled={disabled}
           type="button"
         />
       }
       placement="bottom"
+      cursor={disabled ? "not-allowed" : undefined}
     >
       <FormattedMessage id="inviteUsersHint.cta" />
     </Tooltip>

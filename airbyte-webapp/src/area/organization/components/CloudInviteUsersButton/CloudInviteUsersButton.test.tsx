@@ -6,7 +6,11 @@ import { CloudInviteUsersButton } from "./CloudInviteUsersButton";
 
 jest.mock("core/utils/app", () => ({ useIsCloudApp: jest.fn() }));
 jest.mock("cloud/views/users/InviteUsersButton", () => ({
-  InviteUsersButton: () => <button type="button">Invite users</button>,
+  InviteUsersButton: ({ disabled }: { disabled?: boolean }) => (
+    <button type="button" disabled={disabled}>
+      Invite users
+    </button>
+  ),
 }));
 
 describe("CloudInviteUsersButton", () => {
@@ -16,6 +20,14 @@ describe("CloudInviteUsersButton", () => {
     render(<CloudInviteUsersButton />);
 
     expect(await screen.findByRole("button", { name: "Invite users" })).toBeInTheDocument();
+  });
+
+  it("passes disabled to the invite button", async () => {
+    jest.mocked(useIsCloudApp).mockReturnValue(true);
+
+    render(<CloudInviteUsersButton disabled />);
+
+    expect(await screen.findByRole("button", { name: "Invite users" })).toBeDisabled();
   });
 
   it("shows nothing outside Cloud", () => {

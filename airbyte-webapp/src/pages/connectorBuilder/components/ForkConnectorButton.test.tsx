@@ -5,6 +5,7 @@ import { render } from "test-utils";
 import { mockSourceDefinition } from "test-utils/mock-data/mockSource";
 
 import { useGetBuilderProjectIdByDefinitionId } from "core/api";
+import { BuilderProjectForDefinitionResponse } from "core/api/types/AirbyteClient";
 import { useGeneratedIntent } from "core/utils/rbac";
 
 import { ForkConnectorButton } from "./ForkConnectorButton";
@@ -25,7 +26,7 @@ jest.mock("core/utils/rbac", () => ({
 const manifestOnlySourceDefinition = { ...mockSourceDefinition, language: "manifest-only" };
 const builderProject = { builderProjectId: "builder-project-id", workspaceId: "builder-project-workspace-id" };
 
-const mockBuilderProject = (data: typeof builderProject | undefined) =>
+const mockBuilderProject = (data: BuilderProjectForDefinitionResponse | undefined) =>
   jest
     .mocked(useGetBuilderProjectIdByDefinitionId)
     .mockReturnValue({ data } as ReturnType<typeof useGetBuilderProjectIdByDefinitionId>);
@@ -94,6 +95,40 @@ describe("ForkConnectorButton for a connector with an existing Builder project",
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       `This custom connector belongs to workspace "${builderProject.workspaceId}", which you do not have access to`
     );
+  });
+});
+
+describe("ForkConnectorButton when disabled", () => {
+  it("disables the fork button for a connector the Connector Builder can fork and keeps its tooltip", async () => {
+    await render(<ForkConnectorButton sourceDefinition={manifestOnlySourceDefinition} iconOnly disabled />);
+
+    const button = screen.getByRole("button", { name: "Fork in Connector Builder" });
+    expect(button).toBeDisabled();
+
+    await userEvent.hover(button.parentElement as HTMLElement);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Fork in Connector Builder");
+  });
+
+  it("disables the edit button without a link to the Builder project and keeps its tooltip", async () => {
+    mockBuilderProject(builderProject);
+
+    await render(<ForkConnectorButton sourceDefinition={manifestOnlySourceDefinition} iconOnly disabled />);
+
+    const button = screen.getByRole("button", { name: "Edit in Builder" });
+    expect(button).toBeDisabled();
+    expect(button.closest("a")).toBeNull();
+
+    await userEvent.hover(button.parentElement as HTMLElement);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Edit in Builder");
+  });
+
+  it("disables the fork button when the Builder project has no workspace", async () => {
+    mockBuilderProject({ builderProjectId: builderProject.builderProjectId, workspaceId: null });
+
+    await render(<ForkConnectorButton sourceDefinition={manifestOnlySourceDefinition} iconOnly disabled />);
+
+    expect(screen.getByRole("button", { name: "Fork in Connector Builder" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Edit in Builder" })).not.toBeInTheDocument();
   });
 });
 

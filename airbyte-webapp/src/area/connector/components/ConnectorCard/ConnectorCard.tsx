@@ -7,9 +7,9 @@ import { useLocalStorage } from "react-use";
 import { Box } from "components/ui/Box";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
+import { LogoAnimation } from "components/ui/LoadingPage/LogoAnimation";
 import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
-import { Spinner } from "components/ui/Spinner";
 
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
@@ -30,7 +30,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { ConnectorCardHeader } from "./components/ConnectorCardHeader";
 import { Controls } from "./components/Controls";
-import ShowLoadingMessage from "./components/ShowLoadingMessage";
+import SlowLoadingMessage from "./components/SlowLoadingMessage";
 import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
@@ -273,6 +273,10 @@ export const ConnectorCard = <T extends ConnectorT>({
     return { name: selectedConnectorDefinition.name };
   }, [isEditMode, connector, selectedConnectorDefinition.name, selectedConnectorDefinitionSpecification]);
 
+  if (props.isLoading) {
+    return <ConnectorCardLoading connectorDefinition={selectedConnectorDefinition} showHeader={!isEditMode} />;
+  }
+
   return (
     <ConnectorForm
       canEdit={canEditConnector && (isConnectorEntitled || !connector)}
@@ -282,14 +286,6 @@ export const ConnectorCard = <T extends ConnectorT>({
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
           <WarningMessage supportLevel={supportLevel} />
-          {props.isLoading && (
-            <div className={styles.loaderContainer}>
-              <Spinner />
-              <div className={styles.loadingMessage}>
-                <ShowLoadingMessage connector={selectedConnectorDefinition.name} />
-              </div>
-            </div>
-          )}
           {fetchingConnectorError && (
             <Message
               type="error"
@@ -401,6 +397,26 @@ export const ConnectorCard = <T extends ConnectorT>({
         )
       }
     />
+  );
+};
+
+const ConnectorCardLoading = ({
+  connectorDefinition,
+  showHeader,
+}: {
+  connectorDefinition: ConnectorDefinition;
+  showHeader: boolean;
+}) => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <FlexContainer direction="column" gap="xl">
+      {showHeader && <ConnectorCardHeader connectorDefinition={connectorDefinition} actionsDisabled />}
+      <FlexContainer direction="column" alignItems="center" gap="lg" className={styles.loaderContainer} role="status">
+        <LogoAnimation title={formatMessage({ id: "ui.loading" })} />
+        <SlowLoadingMessage connector={connectorDefinition.name} />
+      </FlexContainer>
+    </FlexContainer>
   );
 };
 

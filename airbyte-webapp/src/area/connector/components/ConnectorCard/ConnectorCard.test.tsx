@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntlProvider } from "react-intl";
 
@@ -68,13 +68,19 @@ jest.mock("./components/Controls", () => ({
 jest.mock("area/connector/components/ConnectorIcon", () => ({ ConnectorIcon: () => null }));
 
 jest.mock("pages/connectorBuilder/components/ForkConnectorButton", () => ({
-  ForkConnectorButton: ({ iconOnly }: { iconOnly?: boolean }) => (
-    <button type="button">{iconOnly ? "Fork in Builder icon" : "Fork in Builder"}</button>
+  ForkConnectorButton: ({ iconOnly, disabled }: { iconOnly?: boolean; disabled?: boolean }) => (
+    <button type="button" disabled={disabled}>
+      {iconOnly ? "Fork in Builder icon" : "Fork in Builder"}
+    </button>
   ),
 }));
 
 jest.mock("area/organization/components/CloudInviteUsersButton", () => ({
-  CloudInviteUsersButton: () => <button type="button">Invite users</button>,
+  CloudInviteUsersButton: ({ disabled }: { disabled?: boolean }) => (
+    <button type="button" disabled={disabled}>
+      Invite users
+    </button>
+  ),
 }));
 
 jest.mock("core/api", () => ({
@@ -205,11 +211,13 @@ const renderCard = (props: React.ComponentProps<typeof ConnectorCard>) => {
     isSuccess: false,
   });
 
-  render(
-    <IntlProvider locale="en" messages={messages}>
-      <ConnectorCard {...props} />
-    </IntlProvider>
-  );
+  return render(<ConnectorCard {...props} />, {
+    wrapper: ({ children }) => (
+      <IntlProvider locale="en" messages={messages}>
+        {children}
+      </IntlProvider>
+    ),
+  });
 };
 
 describe("ConnectorCard header", () => {
@@ -249,5 +257,61 @@ describe("ConnectorCard header", () => {
     expect(screen.queryByRole("heading", { name: mockSourceDefinition.name })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Fork in Builder/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Invite users" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ConnectorCard while the spec loads", () => {
+  const loadingSourceCardProps = {
+    ...newSourceCardProps,
+    selectedConnectorDefinitionSpecification: undefined,
+    isLoading: true,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+    jest.useRealTimers();
+  });
+
+  it("shows the logo animation instead of the form", () => {
+    renderCard(loadingSourceCardProps);
+
+    expect(within(screen.getByRole("status")).getByTitle("Loading …")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit form" })).not.toBeInTheDocument();
+  });
+
+  it("shows the form once the spec loads", () => {
+    const { rerender } = renderCard(loadingSourceCardProps);
+
+    rerender(<ConnectorCard {...newSourceCardProps} />);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit form" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fork in Builder icon" })).toBeEnabled();
+  });
+
+  it("shows the header with its actions disabled", () => {
+    renderCard(loadingSourceCardProps);
+
+    expect(screen.getByRole("heading", { name: mockSourceDefinition.name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fork in Builder icon" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Invite users" })).toBeDisabled();
+  });
+
+  it("shows the slow-load support link only after the timeout", () => {
+    jest.useFakeTimers();
+    renderCard(loadingSourceCardProps);
+
+    expect(screen.queryByText(/Taking too long\?/)).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(10000);
+    });
+
+    expect(screen.getByText(/Taking too long\?/)).toHaveTextContent(/^Taking too long\? See here for support$/);
+    expect(screen.getByRole("link", { name: "here" })).toBeInTheDocument();
   });
 });

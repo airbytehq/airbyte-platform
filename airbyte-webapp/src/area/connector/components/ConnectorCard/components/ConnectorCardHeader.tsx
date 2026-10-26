@@ -13,9 +13,10 @@ import styles from "./ConnectorCardHeader.module.scss";
 
 interface ConnectorCardHeaderProps {
   connectorDefinition: ConnectorDefinition;
+  actionsDisabled?: boolean;
 }
 
-export const ConnectorCardHeader: React.FC<ConnectorCardHeaderProps> = ({ connectorDefinition }) => (
+export const ConnectorCardHeader: React.FC<ConnectorCardHeaderProps> = ({ connectorDefinition, actionsDisabled }) => (
   <FlexContainer alignItems="center" justifyContent="space-between">
     <FlexContainer alignItems="center" gap="md">
       <ConnectorIcon icon={connectorDefinition.icon} className={styles.icon} />
@@ -25,9 +26,9 @@ export const ConnectorCardHeader: React.FC<ConnectorCardHeaderProps> = ({ connec
     </FlexContainer>
     <FlexContainer alignItems="center" gap="sm">
       {isSourceDefinition(connectorDefinition) && (
-        <ForkConnectorButton sourceDefinition={connectorDefinition} iconOnly />
+        <ForkConnectorButton sourceDefinition={connectorDefinition} iconOnly disabled={actionsDisabled} />
       )}
-      <CloudInviteUsersButton />
+      <CloudInviteUsersButton disabled={actionsDisabled} />
     </FlexContainer>
   </FlexContainer>
 );
