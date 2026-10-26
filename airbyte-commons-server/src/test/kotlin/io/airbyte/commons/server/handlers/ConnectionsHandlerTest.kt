@@ -5763,6 +5763,100 @@ internal class ConnectionsHandlerTest {
         assertEquals(expectedStream1And2, connectionsHandler.getConnectionLastJobPerStream(apiReq))
       }
     }
+
+    @Test
+    fun testGetConnectionLastJobPerStreamWhenJobHasNoStartedAt() {
+      val connectionId = UUID.randomUUID()
+      val jobId = 1L
+      val streamName = "testStream"
+      val streamNamespace = "testNamespace"
+      val streamDescriptor =
+        StreamDescriptor()
+          .withName(streamName)
+          .withNamespace(streamNamespace)
+      val createdAt = Instant.now()
+      val updatedAt = createdAt.plusSeconds(10)
+      val bytesCommitted = 12345L
+      val recordsCommitted = 100L
+      val configType = ConfigType.SYNC
+      val jobStatus = JobStatus.SUCCEEDED
+      val job =
+        Job(
+          jobId,
+          configType,
+          connectionId.toString(),
+          JobConfig(),
+          mutableListOf(),
+          jobStatus,
+          null,
+          createdAt.toEpochMilli(),
+          updatedAt.toEpochMilli(),
+          true,
+        )
+      val jobList = listOf(job)
+      val jobRead =
+        JobRead(
+          id = job.id,
+          configId = connectionId.toString(),
+          configType = ApiJobConfigType.SYNC,
+          status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          aggregatedStats =
+            JobAggregatedStats(
+              bytesCommitted = bytesCommitted,
+              bytesEmitted = 0L,
+              recordsCommitted = recordsCommitted,
+              recordsEmitted = 0L,
+              recordsRejected = 0L,
+            ),
+          createdAt = job.createdAtInSecond,
+          updatedAt = job.updatedAtInSecond,
+          startedAt = null,
+          streamAggregatedStats =
+            listOf(
+              StreamStats(
+                streamName = streamName,
+                streamNamespace = streamNamespace,
+                bytesCommitted = bytesCommitted,
+                recordsCommitted = recordsCommitted,
+                bytesEmitted = 0L,
+                recordsEmitted = 0L,
+                recordsRejected = 0L,
+              ),
+            ),
+        )
+      val jobWithAttemptsRead = JobWithAttemptsRead(job = jobRead, attempts = emptyList())
+      val apiReq =
+        ConnectionLastJobPerStreamRequestBody(connectionId = connectionId)
+      val expectedItem =
+        ConnectionLastJobPerStreamReadItem(
+          streamName = streamName,
+          streamNamespace = streamNamespace,
+          jobId = jobId,
+          configType = JobConfigType.SYNC,
+          jobStatus = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          bytesCommitted = bytesCommitted,
+          recordsCommitted = recordsCommitted,
+          startedAt = null,
+          endedAt = updatedAt.toEpochMilli(),
+        )
+
+      whenever(streamStatusesService.getLastJobIdWithStatsByStream(connectionId))
+        .thenReturn(mapOf(streamDescriptor to jobId))
+
+      whenever(jobPersistence.listJobsLight(setOf(jobId))).thenReturn(jobList)
+
+      mockStatic(StatsAggregationHelper::class.java).use { mockStatsAggregationHelper ->
+        mockStatsAggregationHelper
+          .`when`<Any> {
+            getJobIdToJobWithAttemptsReadMap(
+              eq(jobList),
+              eq(jobPersistence),
+            )
+          }.thenReturn(mapOf(jobId to jobWithAttemptsRead))
+
+        assertEquals(listOf(expectedItem), connectionsHandler.getConnectionLastJobPerStream(apiReq))
+      }
+    }
   }
 
   private val scope = "abc"

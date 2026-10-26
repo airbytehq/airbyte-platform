@@ -17530,7 +17530,6 @@ components:
         - jobId
         - configType
         - jobStatus
-        - startedAt
         - endedAt
       properties:
         streamName:
@@ -17555,6 +17554,7 @@ components:
         startedAt:
           type: integer
           format: int64
+          description: Absent when the job has no recorded start time.
         endedAt:
           type: integer
           format: int64

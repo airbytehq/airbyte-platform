@@ -2269,7 +2269,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         jobId = jobRead.id,
         configType = jobRead.configType.convertTo<io.airbyte.api.server.generated.models.JobConfigType>(),
         jobStatus = jobRead.status.convertTo<io.airbyte.api.server.generated.models.JobStatus>(),
-        startedAt = jobRead.startedAt!!,
+        startedAt = jobRead.startedAt,
         endedAt = jobRead.updatedAt,
         bytesCommitted = statsForThisStream.map { obj: StreamStats -> obj.bytesCommitted }.orElse(null),
         recordsCommitted = statsForThisStream.map { obj: StreamStats -> obj.recordsCommitted }.orElse(null),
