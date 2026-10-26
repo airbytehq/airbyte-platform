@@ -21,14 +21,17 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.tracker.JobTracker
+import io.mockk.Runs
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import java.nio.file.Path
 import java.util.UUID
 
@@ -51,14 +54,14 @@ internal class JobCreationAndStatusUpdateHelperTest {
 
   @BeforeEach
   fun setup() {
-    mActorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    mConnectionService = Mockito.mock(ConnectionService::class.java)
-    mJobNotifier = Mockito.mock(JobNotifier::class.java)
-    mJobPersistence = Mockito.mock(JobPersistence::class.java)
-    mJobTracker = Mockito.mock(JobTracker::class.java)
-    dataWorkerUsageService = Mockito.mock(DataWorkerUsageService::class.java)
-    connectionTimelineEventHelper = Mockito.mock(ConnectionTimelineEventHelper::class.java)
-    metricClient = Mockito.mock(MetricClient::class.java)
+    mActorDefinitionService = mockk<ActorDefinitionService>()
+    mConnectionService = mockk<ConnectionService>()
+    mJobNotifier = mockk<JobNotifier>()
+    mJobPersistence = mockk<JobPersistence>()
+    mJobTracker = mockk<JobTracker>()
+    dataWorkerUsageService = mockk<DataWorkerUsageService>()
+    connectionTimelineEventHelper = mockk<ConnectionTimelineEventHelper>()
+    metricClient = mockk<MetricClient>(relaxed = true)
 
     helper =
       JobCreationAndStatusUpdateHelper(
@@ -140,113 +143,116 @@ internal class JobCreationAndStatusUpdateHelperTest {
     val runningJob = Fixtures.job(jobId1.toLong(), mutableListOf(failedAttempt, runningAttempt), JobStatus.RUNNING)
     val pendingJob = Fixtures.job(jobId2.toLong(), mutableListOf(), JobStatus.PENDING)
 
-    Mockito
-      .`when`(
-        mJobPersistence.listJobsForConnectionWithStatuses(
-          Fixtures.CONNECTION_ID,
-          Job.REPLICATION_TYPES,
-          JobStatus.NON_TERMINAL_STATUSES,
-        ),
-      ).thenReturn(listOf(runningJob, pendingJob))
-    Mockito.`when`(mJobPersistence.getJob(runningJob.id)).thenReturn(runningJob)
-    Mockito.`when`(mJobPersistence.getJob(pendingJob.id)).thenReturn(pendingJob)
-    Mockito.`when`(mConnectionService.getDataplaneGroupNameForConnection(anyOrNull())).thenReturn("us-west")
+    every {
+      mJobPersistence.listJobsForConnectionWithStatuses(
+        Fixtures.CONNECTION_ID,
+        Job.REPLICATION_TYPES,
+        JobStatus.NON_TERMINAL_STATUSES,
+      )
+    } returns listOf(runningJob, pendingJob)
+    every { mJobPersistence.getJob(runningJob.id) } returns runningJob
+    every { mJobPersistence.getJob(pendingJob.id) } returns pendingJob
+    every { mConnectionService.getDataplaneGroupNameForConnection(any()) } returns "us-west"
+    every { mActorDefinitionService.getActorDefinitionVersions(any()) } returns emptyList()
+    every { mJobPersistence.failAttempt(any(), any()) } just Runs
+    every { mJobPersistence.writeAttemptFailureSummary(any(), any(), any()) } just Runs
+    every { mJobPersistence.failJob(any()) } just Runs
+    every { mJobPersistence.getAttemptStats(any(), any()) } returns mockk()
+    every { dataWorkerUsageService.releaseReservedUsageForJob(any()) } just Runs
+    every { mJobNotifier.failJob(any(), any()) } just Runs
+    every { connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(any(), any(), any()) } just Runs
+    every { mJobTracker.trackSync(any(), any()) } just Runs
 
     helper.failNonTerminalJobs(Fixtures.CONNECTION_ID)
 
-    Mockito.verify(mJobPersistence).failJob(runningJob.id)
-    Mockito.verify(mJobPersistence).failJob(pendingJob.id)
-    Mockito.verify(mJobPersistence).getAttemptStats(runningJob.id, attemptNo1)
-    Mockito.verify(mJobPersistence).getAttemptStats(runningJob.id, attemptNo2)
-    Mockito.verify(mJobPersistence).failAttempt(runningJob.id, attemptNo2)
-    Mockito.verify(mJobPersistence).writeAttemptFailureSummary(
-      eq(runningJob.id),
-      eq(attemptNo2),
-      anyOrNull(),
-    )
-    Mockito.verify(mJobPersistence).getJob(runningJob.id)
-    Mockito.verify(mJobPersistence).getJob(pendingJob.id)
-    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(runningJob.id)
-    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(pendingJob.id)
-    Mockito
-      .verify(mJobNotifier)
-      .failJob(eq(runningJob), anyOrNull())
-    Mockito
-      .verify(mJobNotifier)
-      .failJob(eq(pendingJob), anyOrNull())
-    Mockito.verify(mJobTracker).trackSync(runningJob, JobTracker.JobState.FAILED)
-    Mockito.verify(mJobTracker).trackSync(pendingJob, JobTracker.JobState.FAILED)
-    Mockito
-      .verify(mJobPersistence)
-      .listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
-    Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker, dataWorkerUsageService)
+    verify { mJobPersistence.failJob(runningJob.id) }
+    verify { mJobPersistence.failJob(pendingJob.id) }
+    verify { mJobPersistence.getAttemptStats(runningJob.id, attemptNo1) }
+    verify { mJobPersistence.getAttemptStats(runningJob.id, attemptNo2) }
+    verify { mJobPersistence.failAttempt(runningJob.id, attemptNo2) }
+    verify {
+      mJobPersistence.writeAttemptFailureSummary(
+        runningJob.id,
+        attemptNo2,
+        any(),
+      )
+    }
+    verify { mJobPersistence.getJob(runningJob.id) }
+    verify { mJobPersistence.getJob(pendingJob.id) }
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(runningJob.id) }
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(pendingJob.id) }
+    verify { mJobNotifier.failJob(runningJob, any()) }
+    verify { mJobNotifier.failJob(pendingJob, any()) }
+    verify { mJobTracker.trackSync(runningJob, JobTracker.JobState.FAILED) }
+    verify { mJobTracker.trackSync(pendingJob, JobTracker.JobState.FAILED) }
+    verify { mJobPersistence.listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES) }
+    confirmVerified(mJobPersistence, mJobNotifier, mJobTracker, dataWorkerUsageService)
   }
 
   @Test
   fun testReportJobStart() {
     val jobId = 5L
-    val job = Mockito.mock(Job::class.java)
-    Mockito.`when`(mJobPersistence.getJob(jobId)).thenReturn(job)
+    val job = mockk<Job>()
+    every { mJobPersistence.getJob(jobId) } returns job
+    every { mJobTracker.trackSync(any(), any()) } just Runs
 
     helper.reportJobStart(jobId)
-    Mockito.verify(mJobTracker).trackSync(job, JobTracker.JobState.STARTED)
+    verify { mJobTracker.trackSync(job, JobTracker.JobState.STARTED) }
   }
 
   @Test
   fun testSetJobQueued() {
     val queuedJob = Fixtures.job(Fixtures.JOB_ID, mutableListOf(), JobStatus.QUEUED)
-    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(true)
-    Mockito.`when`(mJobPersistence.getJob(Fixtures.JOB_ID)).thenReturn(queuedJob)
+    every { mJobPersistence.queueJob(Fixtures.JOB_ID) } returns true
+    every { mJobPersistence.getJob(Fixtures.JOB_ID) } returns queuedJob
+    every { mJobNotifier.queuedJob(any()) } just Runs
 
     helper.setJobQueued(Fixtures.JOB_ID)
 
-    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
-    Mockito.verify(mJobPersistence).getJob(Fixtures.JOB_ID)
-    Mockito.verify(mJobNotifier).queuedJob(queuedJob)
+    verify { mJobPersistence.queueJob(Fixtures.JOB_ID) }
+    verify { mJobPersistence.getJob(Fixtures.JOB_ID) }
+    verify { mJobNotifier.queuedJob(queuedJob) }
   }
 
   @Test
   fun testSetJobQueuedSkipsNotificationForExistingQueuedJob() {
-    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(false)
+    every { mJobPersistence.queueJob(Fixtures.JOB_ID) } returns false
 
     helper.setJobQueued(Fixtures.JOB_ID)
 
-    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
-    Mockito.verify(mJobPersistence, Mockito.never()).getJob(Fixtures.JOB_ID)
-    Mockito.verify(mJobNotifier, Mockito.never()).queuedJob(anyOrNull())
+    verify { mJobPersistence.queueJob(Fixtures.JOB_ID) }
+    verify(exactly = 0) { mJobPersistence.getJob(Fixtures.JOB_ID) }
+    verify(exactly = 0) { mJobNotifier.queuedJob(any()) }
   }
 
   @Test
   fun testCancelQueuedJobReleasesReservedUsage() {
-    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(true)
+    every { mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID) } returns true
 
     helper.cancelQueuedJob(Fixtures.JOB_ID)
 
-    Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
-    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(Fixtures.JOB_ID)
+    verify { mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID) }
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(Fixtures.JOB_ID) }
   }
 
   @Test
   fun testCancelQueuedJobSkipsReleaseWhenJobWasNotQueued() {
-    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(false)
+    every { mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID) } returns false
 
     helper.cancelQueuedJob(Fixtures.JOB_ID)
 
-    Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
-    Mockito.verify(dataWorkerUsageService, Mockito.never()).releaseReservedUsageForJob(Fixtures.JOB_ID)
+    verify { mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID) }
+    verify(exactly = 0) { dataWorkerUsageService.releaseReservedUsageForJob(Fixtures.JOB_ID) }
   }
 
   @Test
   fun testCancelQueuedJobSwallowsReleaseFailure() {
-    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(true)
-    Mockito
-      .doThrow(RuntimeException("boom"))
-      .`when`(dataWorkerUsageService)
-      .releaseReservedUsageForJob(Fixtures.JOB_ID)
+    every { mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID) } returns true
+    every { dataWorkerUsageService.releaseReservedUsageForJob(Fixtures.JOB_ID) } throws RuntimeException("boom")
 
     helper.cancelQueuedJob(Fixtures.JOB_ID)
 
-    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(Fixtures.JOB_ID)
+    verify { dataWorkerUsageService.releaseReservedUsageForJob(Fixtures.JOB_ID) }
   }
 
   @Test
@@ -285,19 +291,17 @@ internal class JobCreationAndStatusUpdateHelperTest {
         true,
       )
 
-    Mockito
-      .`when`(
-        mActorDefinitionService.getActorDefinitionVersions(
-          listOf(
-            destinationDefVersionId,
-            sourceDefVersionId,
-          ),
-        ),
-      ).thenReturn(
+    every {
+      mActorDefinitionService.getActorDefinitionVersions(
         listOf(
-          ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
-          ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE),
+          destinationDefVersionId,
+          sourceDefVersionId,
         ),
+      )
+    } returns
+      listOf(
+        ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
+        ActorDefinitionVersion().withReleaseStage(ReleaseStage.GENERALLY_AVAILABLE),
       )
 
     val releaseStages = helper.getJobToReleaseStages(job)
@@ -331,17 +335,15 @@ internal class JobCreationAndStatusUpdateHelperTest {
         true,
       )
 
-    Mockito
-      .`when`(
-        mActorDefinitionService.getActorDefinitionVersions(
-          listOf(
-            destinationDefVersionId,
-          ),
-        ),
-      ).thenReturn(
+    every {
+      mActorDefinitionService.getActorDefinitionVersions(
         listOf(
-          ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
+          destinationDefVersionId,
         ),
+      )
+    } returns
+      listOf(
+        ActorDefinitionVersion().withReleaseStage(ReleaseStage.ALPHA),
       )
     val releaseStages = helper.getJobToReleaseStages(job)
 

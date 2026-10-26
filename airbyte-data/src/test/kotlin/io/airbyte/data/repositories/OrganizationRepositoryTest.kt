@@ -24,6 +24,10 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @MicronautTest
 class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
@@ -134,6 +138,96 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
     jooqDslContext.deleteFrom(Tables.SSO_CONFIG).execute()
     jooqDslContext.deleteFrom(Tables.WORKSPACE).execute()
     jooqDslContext.deleteFrom(Tables.ORGANIZATION).execute()
+  }
+
+  @Test
+  fun `soft delete changes only target active organization tombstone and timestamp`() {
+    val organizationId = createOrganization("Support deletion", isAgentic = true).id!!
+    val otherId = createOrganization("Other organization").id!!
+    val deletedId = createOrganization("Already deleted", tombstone = true).id!!
+    val workspace =
+      workspaceRepository.save(
+        Workspace(
+          name = "Preserved workspace",
+          slug = "preserved-workspace",
+          organizationId = organizationId,
+          dataplaneGroupId = UUID.randomUUID(),
+        ),
+      )
+    grantOrganizationPermission(UUID.randomUUID(), organizationId)
+    organizationRepository.updateSemanticSearchEnabledById(organizationId, true)
+    val oldTimestamp =
+      java.time.OffsetDateTime
+        .now()
+        .minusDays(1)
+    jooqDslContext
+      .update(Tables.ORGANIZATION)
+      .set(Tables.ORGANIZATION.UPDATED_AT, oldTimestamp)
+      .where(Tables.ORGANIZATION.ID.`in`(organizationId, otherId, deletedId))
+      .execute()
+    val before = jooqDslContext.selectFrom(Tables.ORGANIZATION).where(Tables.ORGANIZATION.ID.eq(organizationId)).fetchSingle()
+    val otherBefore = jooqDslContext.selectFrom(Tables.ORGANIZATION).where(Tables.ORGANIZATION.ID.eq(otherId)).fetchSingle()
+    val deletedBefore = jooqDslContext.selectFrom(Tables.ORGANIZATION).where(Tables.ORGANIZATION.ID.eq(deletedId)).fetchSingle()
+    val workspaceBefore = workspaceRepository.findById(workspace.id!!).get()
+    val permissionsBefore = jooqDslContext.selectFrom(Tables.PERMISSION).fetchMaps()
+
+    assertThat(organizationRepository.softDeleteById(organizationId)).isEqualTo(1L)
+
+    val after = jooqDslContext.selectFrom(Tables.ORGANIZATION).where(Tables.ORGANIZATION.ID.eq(organizationId)).fetchSingle()
+    assertThat(after.tombstone).isTrue()
+    assertThat(after.updatedAt).isAfter(before.updatedAt)
+    assertThat(after.intoMap() - setOf("tombstone", "updated_at")).isEqualTo(before.intoMap() - setOf("tombstone", "updated_at"))
+    assertThat(organizationRepository.findByIdAndTombstoneFalse(organizationId)).isEmpty
+    assertThat(workspaceRepository.findById(workspace.id!!).get()).usingRecursiveComparison().isEqualTo(workspaceBefore)
+    assertThat(jooqDslContext.selectFrom(Tables.PERMISSION).fetchMaps()).isEqualTo(permissionsBefore)
+
+    assertThat(organizationRepository.softDeleteById(organizationId)).isZero()
+    assertThat(organizationRepository.softDeleteById(deletedId)).isZero()
+    assertThat(organizationRepository.softDeleteById(UUID.randomUUID())).isZero()
+    assertThat(
+      jooqDslContext
+        .selectFrom(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(organizationId))
+        .fetchSingle()
+        .intoMap(),
+    ).isEqualTo(after.intoMap())
+    assertThat(
+      jooqDslContext
+        .selectFrom(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(otherId))
+        .fetchSingle()
+        .intoMap(),
+    ).isEqualTo(otherBefore.intoMap())
+    assertThat(
+      jooqDslContext
+        .selectFrom(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(deletedId))
+        .fetchSingle()
+        .intoMap(),
+    ).isEqualTo(deletedBefore.intoMap())
+  }
+
+  @Test
+  fun `concurrent soft deletes change an active organization only once`() {
+    val organizationId = createOrganization("Concurrent deletion").id!!
+    val executor = Executors.newFixedThreadPool(2)
+    val start = CountDownLatch(1)
+    try {
+      val results =
+        (1..2).map {
+          executor.submit(
+            Callable {
+              start.await()
+              organizationRepository.softDeleteById(organizationId)
+            },
+          )
+        }
+      start.countDown()
+      assertThat(results.map { it.get(10, TimeUnit.SECONDS) }).containsExactlyInAnyOrder(1L, 0L)
+      assertThat(organizationRepository.findById(organizationId).get().tombstone).isTrue()
+    } finally {
+      executor.shutdownNow()
+    }
   }
 
   @Test

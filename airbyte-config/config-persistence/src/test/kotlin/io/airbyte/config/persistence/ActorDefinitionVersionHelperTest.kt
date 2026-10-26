@@ -15,13 +15,15 @@ import io.airbyte.config.persistence.versionoverrides.ConfigurationDefinitionVer
 import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
@@ -32,20 +34,17 @@ internal class ActorDefinitionVersionHelperTest {
 
   @BeforeEach
   fun setup() {
-    mConfigOverrideProvider = Mockito.mock(ConfigurationDefinitionVersionOverrideProvider::class.java)
-    Mockito
-      .`when`(
-        mConfigOverrideProvider.getOverride(
-          org.mockito.kotlin.any<UUID>(),
-          org.mockito.kotlin.any<UUID>(),
-          org.mockito.kotlin.any<UUID>(),
-        ),
-      ).thenReturn(Optional.empty())
+    mConfigOverrideProvider = mockk<ConfigurationDefinitionVersionOverrideProvider>()
+    every {
+      mConfigOverrideProvider.getOverride(
+        any<UUID>(),
+        any<UUID>(),
+        any<UUID>(),
+      )
+    } returns Optional.empty()
 
-    actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(DEFAULT_VERSION_ID))
-      .thenReturn(DEFAULT_VERSION)
+    actorDefinitionService = mockk<ActorDefinitionService>()
+    every { actorDefinitionService.getActorDefinitionVersion(DEFAULT_VERSION_ID) } returns DEFAULT_VERSION
     actorDefinitionVersionHelper = ActorDefinitionVersionHelper(actorDefinitionService, mConfigOverrideProvider)
   }
 
@@ -65,19 +64,17 @@ internal class ActorDefinitionVersionHelperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testGetSourceVersionWithConfigOverride(isOverrideApplied: Boolean) {
-    Mockito
-      .`when`(
-        mConfigOverrideProvider.getOverride(
-          ACTOR_DEFINITION_ID,
-          WORKSPACE_ID,
-          ACTOR_ID,
-        ),
-      ).thenReturn(
-        Optional.of(
-          ActorDefinitionVersionWithOverrideStatus(
-            OVERRIDDEN_VERSION,
-            isOverrideApplied,
-          ),
+    every {
+      mConfigOverrideProvider.getOverride(
+        ACTOR_DEFINITION_ID,
+        WORKSPACE_ID,
+        ACTOR_ID,
+      )
+    } returns
+      Optional.of(
+        ActorDefinitionVersionWithOverrideStatus(
+          OVERRIDDEN_VERSION,
+          isOverrideApplied,
         ),
       )
 
@@ -91,7 +88,7 @@ internal class ActorDefinitionVersionHelperTest {
     Assertions.assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion)
     Assertions.assertEquals(isOverrideApplied, versionWithOverrideStatus.isOverrideApplied)
 
-    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
+    verify { mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID) }
   }
 
   @Test
@@ -107,14 +104,13 @@ internal class ActorDefinitionVersionHelperTest {
 
   @Test
   fun testGetSourceVersionForWorkspaceWithConfigOverride() {
-    Mockito
-      .`when`(
-        mConfigOverrideProvider.getOverride(
-          ACTOR_DEFINITION_ID,
-          WORKSPACE_ID,
-          null,
-        ),
-      ).thenReturn(Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)))
+    every {
+      mConfigOverrideProvider.getOverride(
+        ACTOR_DEFINITION_ID,
+        WORKSPACE_ID,
+        null,
+      )
+    } returns Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true))
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -124,7 +120,7 @@ internal class ActorDefinitionVersionHelperTest {
     val actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID)
     Assertions.assertEquals(OVERRIDDEN_VERSION, actual)
 
-    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
+    verify { mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null) }
   }
 
   @Test
@@ -142,14 +138,13 @@ internal class ActorDefinitionVersionHelperTest {
 
   @Test
   fun testGetDestinationVersionWithConfigOverride() {
-    Mockito
-      .`when`(
-        mConfigOverrideProvider.getOverride(
-          ACTOR_DEFINITION_ID,
-          WORKSPACE_ID,
-          ACTOR_ID,
-        ),
-      ).thenReturn(Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)))
+    every {
+      mConfigOverrideProvider.getOverride(
+        ACTOR_DEFINITION_ID,
+        WORKSPACE_ID,
+        ACTOR_ID,
+      )
+    } returns Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true))
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -161,7 +156,7 @@ internal class ActorDefinitionVersionHelperTest {
     Assertions.assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion)
     Assertions.assertTrue(versionWithOverrideStatus.isOverrideApplied)
 
-    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
+    verify { mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID) }
   }
 
   @Test
@@ -177,14 +172,13 @@ internal class ActorDefinitionVersionHelperTest {
 
   @Test
   fun testGetDestinationVersionForWorkspaceWithConfigOverride() {
-    Mockito
-      .`when`(
-        mConfigOverrideProvider.getOverride(
-          ACTOR_DEFINITION_ID,
-          WORKSPACE_ID,
-          null,
-        ),
-      ).thenReturn(Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)))
+    every {
+      mConfigOverrideProvider.getOverride(
+        ACTOR_DEFINITION_ID,
+        WORKSPACE_ID,
+        null,
+      )
+    } returns Optional.of(ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true))
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -194,7 +188,7 @@ internal class ActorDefinitionVersionHelperTest {
     val actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID)
     Assertions.assertEquals(OVERRIDDEN_VERSION, actual)
 
-    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
+    verify { mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null) }
   }
 
   @Test
@@ -204,9 +198,7 @@ internal class ActorDefinitionVersionHelperTest {
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID)
 
-    Mockito.`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
-      DEFAULT_VERSION,
-    )
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID) } returns DEFAULT_VERSION
 
     val result = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID)
     Assertions.assertEquals(DEFAULT_VERSION, result)
@@ -219,9 +211,7 @@ internal class ActorDefinitionVersionHelperTest {
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID)
 
-    Mockito.`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
-      DEFAULT_VERSION,
-    )
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID) } returns DEFAULT_VERSION
 
     val result = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID)
     Assertions.assertEquals(DEFAULT_VERSION, result)

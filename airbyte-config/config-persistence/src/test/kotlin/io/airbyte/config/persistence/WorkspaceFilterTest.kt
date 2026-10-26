@@ -19,6 +19,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -35,11 +35,11 @@ internal class WorkspaceFilterTest : BaseConfigDatabaseTest() {
 
   @BeforeEach
   fun beforeEach() {
-    val featureFlagClient: FeatureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
-    val secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock<SecretsRepositoryWriter>(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
-    val metricClient = Mockito.mock<MetricClient>(MetricClient::class.java)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>(relaxed = true)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
 
     workspaceService =
       WorkspaceServiceJooqImpl(

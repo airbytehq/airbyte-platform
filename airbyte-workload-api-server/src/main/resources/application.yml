@@ -61,8 +61,13 @@ micronaut:
       access-logger:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
-        max-content-length: 52428800 # 50MB
-    max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
+        max-content-length: ${NETTY_AGGREGATOR_MAX_CONTENT_LENGTH:52428800} # 50MB
+    # Keep both limits in step with the aggregator above. Since Micronaut 4.5 the buffered-body limit
+    # (max-request-buffer-size) is separate from max-request-size; raising only one still gives 413.
+    # Internal clients post discovered catalogs, per-stream state and job outputs here, and 10MB was
+    # too small for wide schemas and large per-partition cursors (airbytehq/airbyte#4564).
+    max-request-size: ${MICRONAUT_SERVER_MAX_REQUEST_SIZE:52428800}
+    max-request-buffer-size: ${MICRONAUT_SERVER_MAX_REQUEST_BUFFER_SIZE:52428800}
 
 airbyte:
   dataplane-groups:

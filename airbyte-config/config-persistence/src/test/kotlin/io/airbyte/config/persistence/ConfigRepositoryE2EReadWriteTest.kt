@@ -90,6 +90,9 @@ import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
 import org.assertj.core.api.Assertions.assertThat
 import org.jooq.DSLContext
 import org.jooq.JSONB
@@ -101,15 +104,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
 import java.time.OffsetDateTime
 import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.stream.Collectors
-import org.mockito.Mockito.`when` as whenever
 
 /**
  * The tests in this class should be moved into separate test suites grouped by resource. Do NOT add
@@ -133,18 +133,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   fun setup() {
     truncateAllTables()
 
-    val featureFlagClient = mock(TestClient::class.java)
-    whenever(
-      featureFlagClient.stringVariation(org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages), org.mockito.kotlin.any<SourceDefinition>()),
-    ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns "3600"
 
-    val metricClient = mock(MetricClient::class.java)
-    val secretsRepositoryReader = mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = mock(SecretPersistenceConfigService::class.java)
-    val scopedConfigurationService = mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = mock(ConnectionTimelineEventService::class.java)
-    val actorPaginationServiceHelper = mock(ActorServicePaginationHelper::class.java)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     val organizationService = OrganizationServiceJooqImpl(database!!)
     val defaultOrg = defaultOrganization()
@@ -161,8 +159,8 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
 
-    connectionService = spy(ConnectionServiceJooqImpl(database!!))
-    actorDefinitionService = spy(ActorDefinitionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
+    actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         connectionService,
@@ -170,10 +168,10 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         scopedConfigurationService,
         connectionTimelineEventService,
       )
-    catalogService = spy(CatalogServiceJooqImpl(database!!))
+    catalogService = spyk(CatalogServiceJooqImpl(database!!))
 
     workspaceService =
-      spy(
+      spyk(
         WorkspaceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -185,7 +183,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       )
 
     oauthService =
-      spy(
+      spyk(
         OAuthServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -197,7 +195,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       )
 
     sourceService =
-      spy(
+      spyk(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -210,7 +208,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       )
 
     destinationService =
-      spy(
+      spyk(
         DestinationServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -221,7 +219,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         ),
       )
 
-    operationService = spy(OperationServiceJooqImpl(database!!))
+    operationService = spyk(OperationServiceJooqImpl(database!!))
 
     for (workspace in standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace!!)

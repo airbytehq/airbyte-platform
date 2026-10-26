@@ -72,6 +72,13 @@ import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.persistence.job.JobInTerminalStateException
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobRunningAttemptExistsException
+import io.mockk.Called
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -80,10 +87,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
@@ -107,17 +110,34 @@ internal class AttemptHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    jobConverter = Mockito.mock(JobConverter::class.java)
-    jobPersistence = Mockito.mock(JobPersistence::class.java)
-    statePersistence = Mockito.mock(StatePersistence::class.java)
-    path = Mockito.mock(Path::class.java)
-    helper = Mockito.mock(JobCreationAndStatusUpdateHelper::class.java)
-    ffClient = Mockito.mock(TestClient::class.java)
-    generationBumper = Mockito.mock(GenerationBumper::class.java)
-    connectionService = Mockito.mock(ConnectionService::class.java)
-    destinationService = Mockito.mock(DestinationService::class.java)
-    actorDefinitionVersionHelper = Mockito.mock(ActorDefinitionVersionHelper::class.java)
-    streamAttemptMetadataService = Mockito.mock(StreamAttemptMetadataService::class.java)
+    jobConverter = mockk<JobConverter>()
+    jobPersistence = mockk<JobPersistence>()
+    statePersistence = mockk<StatePersistence>()
+    path = mockk<Path>()
+    helper = mockk<JobCreationAndStatusUpdateHelper>()
+    ffClient = mockk<TestClient>()
+    generationBumper = mockk<GenerationBumper>()
+    connectionService = mockk<ConnectionService>()
+    destinationService = mockk<DestinationService>()
+    actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    streamAttemptMetadataService = mockk<StreamAttemptMetadataService>()
+
+    every { helper.traceFailures(any()) } just Runs
+    every { helper.emitJobToReleaseStagesMetric(any(), any()) } just Runs
+    every { helper.emitAttemptCompletedEventIfAttemptPresent(any()) } just Runs
+    every { helper.trackFailures(any()) } just Runs
+    every { helper.emitAttemptCreatedEvent(any(), any()) } just Runs
+    every { generationBumper.updateGenerationForStreams(any(), any(), any(), any()) } just Runs
+    every { statePersistence.bulkDelete(any(), any()) } just Runs
+    every { streamAttemptMetadataService.upsertStreamAttemptMetadata(any(), any(), any()) } just Runs
+    every { jobPersistence.failAttempt(any(), any()) } just Runs
+    every { jobPersistence.writeOutput(any(), any(), any()) } just Runs
+    every { jobPersistence.writeAttemptFailureSummary(any(), any(), any()) } just Runs
+    every { jobPersistence.writeAttemptSyncConfig(any(), any(), any()) } just Runs
+    every {
+      jobPersistence.writeStats(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } just Runs
+    every { destinationService.getDestinationDefinitionFromDestination(any()) } returns StandardDestinationDefinition()
 
     handler =
       AttemptHandler(
@@ -144,7 +164,7 @@ internal class AttemptHandlerTest {
         JOB_ID,
         ConfigType.SYNC,
         connId.toString(),
-        Mockito.mock(JobConfig::class.java),
+        mockk<JobConfig>(),
         mutableListOf(),
         JobStatus.RUNNING,
         1001L,
@@ -152,16 +172,14 @@ internal class AttemptHandlerTest {
         1002L,
         true,
       )
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
-    Mockito
-      .`when`(jobPersistence.createAttempt(eq(JOB_ID), anyOrNull()))
-      .thenThrow(JobRunningAttemptExistsException(JOB_ID, connId.toString(), 2))
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { path.resolve(any<String>()) } returns path
+    every { jobPersistence.createAttempt(JOB_ID, any()) } throws JobRunningAttemptExistsException(JOB_ID, connId.toString(), 2)
 
     // Conflict, not idempotent success: the job already has an in-flight attempt.
     Assertions.assertThrows(ConflictException::class.java) { handler.createNewAttemptNumber(JOB_ID) }
-    Mockito.verifyNoInteractions(generationBumper)
-    Mockito.verifyNoInteractions(connectionService)
+    verify { generationBumper wasNot Called }
+    verify { connectionService wasNot Called }
   }
 
   @Test
@@ -172,7 +190,7 @@ internal class AttemptHandlerTest {
         JOB_ID,
         ConfigType.SYNC,
         connId.toString(),
-        Mockito.mock(JobConfig::class.java),
+        mockk<JobConfig>(),
         mutableListOf(),
         JobStatus.SUCCEEDED,
         1001L,
@@ -180,21 +198,19 @@ internal class AttemptHandlerTest {
         1002L,
         true,
       )
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
-    Mockito
-      .`when`(jobPersistence.createAttempt(eq(JOB_ID), anyOrNull()))
-      .thenThrow(JobInTerminalStateException(JOB_ID, connId.toString(), JobStatus.SUCCEEDED))
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { path.resolve(any<String>()) } returns path
+    every { jobPersistence.createAttempt(JOB_ID, any()) } throws JobInTerminalStateException(JOB_ID, connId.toString(), JobStatus.SUCCEEDED)
 
     Assertions.assertThrows(ConflictException::class.java) { handler.createNewAttemptNumber(JOB_ID) }
-    Mockito.verifyNoInteractions(generationBumper)
+    verify { generationBumper wasNot Called }
   }
 
   @Test
   fun testInternalHandlerSetsAttemptSyncConfig() {
-    val attemptNumberCapture = argumentCaptor<Int>()
-    val jobIdCapture = argumentCaptor<Long>()
-    val attemptSyncConfigCapture = argumentCaptor<AttemptSyncConfig>()
+    val attemptNumberCapture = slot<Int>()
+    val jobIdCapture = slot<Long>()
+    val attemptSyncConfigCapture = slot<AttemptSyncConfig>()
 
     val sourceConfig = jsonNode(mapOf("source_key" to "source_val"))
     val destinationConfig = jsonNode(mapOf("destination_key" to "destination_val"))
@@ -222,15 +238,13 @@ internal class AttemptHandlerTest {
 
     Assertions.assertTrue(handler.saveSyncConfig(requestBody).succeeded)
 
-    Mockito
-      .verify(jobPersistence)
-      .writeAttemptSyncConfig(jobIdCapture.capture(), attemptNumberCapture.capture(), attemptSyncConfigCapture.capture())
+    verify { jobPersistence.writeAttemptSyncConfig(capture(jobIdCapture), capture(attemptNumberCapture), capture(attemptSyncConfigCapture)) }
 
     val expectedAttemptSyncConfig = apiPojoConverters.attemptSyncConfigToInternal(attemptSyncConfig)
 
-    Assertions.assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.firstValue)
-    Assertions.assertEquals(JOB_ID, jobIdCapture.firstValue)
-    Assertions.assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.firstValue)
+    Assertions.assertEquals(ATTEMPT_NUMBER, attemptNumberCapture.captured)
+    Assertions.assertEquals(JOB_ID, jobIdCapture.captured)
+    Assertions.assertEquals(expectedAttemptSyncConfig, attemptSyncConfigCapture.captured)
   }
 
   @ParameterizedTest
@@ -239,8 +253,8 @@ internal class AttemptHandlerTest {
     val attemptNumber = 0
     val connId = UUID.randomUUID()
 
-    val mConfig = Mockito.mock(JobConfig::class.java)
-    Mockito.`when`(mConfig.getConfigType()).thenReturn(ConfigType.SYNC)
+    val mConfig = mockk<JobConfig>()
+    every { mConfig.getConfigType() } returns ConfigType.SYNC
 
     val job =
       Job(
@@ -256,9 +270,9 @@ internal class AttemptHandlerTest {
         true,
       )
 
-    val mSyncConfig = Mockito.mock(JobSyncConfig::class.java)
-    Mockito.`when`(mConfig.getSync()).thenReturn(mSyncConfig)
-    Mockito.`when`(mSyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID())
+    val mSyncConfig = mockk<JobSyncConfig>()
+    every { mConfig.getSync() } returns mSyncConfig
+    every { mSyncConfig.getWorkspaceId() } returns UUID.randomUUID()
 
     val mCatalog =
       ConfiguredAirbyteCatalog().withStreams(
@@ -270,66 +284,57 @@ internal class AttemptHandlerTest {
           ),
         ),
       )
-    Mockito.`when`(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
+    every { mSyncConfig.getConfiguredAirbyteCatalog() } returns mCatalog
 
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { path.resolve(any<String>()) } returns path
 
     val expectedRoot = TemporalUtils.getJobRoot(path, JOB_ID.toString(), ATTEMPT_NUMBER.toLong())
     val expectedLogPath: Path = expectedRoot.resolve(DEFAULT_LOG_FILENAME)
 
-    Mockito
-      .`when`(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
-      .thenReturn(attemptNumber)
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          anyOrNull<Flag<Boolean>>(),
-          anyOrNull<Context>(),
-        ),
-      ).thenReturn(true)
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
-          anyOrNull<Context>(),
-        ),
-      ).thenReturn(enableRfr)
+    every { jobPersistence.createAttempt(JOB_ID, expectedLogPath) } returns attemptNumber
+    every {
+      ffClient.boolVariation(
+        any<Flag<Boolean>>(),
+        any<Context>(),
+      )
+    } returns true
+    every {
+      ffClient.boolVariation(
+        eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
+        any<Context>(),
+      )
+    } returns enableRfr
     val stateWrapper = StateWrapper().withStateType(StateType.STREAM)
     if (enableRfr) {
-      Mockito.`when`(statePersistence.getCurrentState(connId)).thenReturn(Optional.of<StateWrapper>(stateWrapper))
+      every { statePersistence.getCurrentState(connId) } returns Optional.of<StateWrapper>(stateWrapper)
     }
     val destinationId = UUID.randomUUID()
-    Mockito
-      .`when`(connectionService.getStandardSync(connId))
-      .thenReturn(StandardSync().withDestinationId(destinationId))
-    Mockito
-      .`when`(destinationService.getDestinationConnection(destinationId))
-      .thenReturn(DestinationConnection().withWorkspaceId(WORKSPACE_ID))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersion(
-          anyOrNull<StandardDestinationDefinition>(),
-          anyOrNull<UUID>(),
-          anyOrNull<UUID>(),
-        ),
-      ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(enableRfr))
+    every { connectionService.getStandardSync(connId) } returns StandardSync().withDestinationId(destinationId)
+    every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(WORKSPACE_ID)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(
+        any<StandardDestinationDefinition>(),
+        any<UUID>(),
+        any<UUID>(),
+      )
+    } returns ActorDefinitionVersion().withSupportsRefreshes(enableRfr)
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
       .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
     if (enableRfr) {
-      Mockito.verify(generationBumper).updateGenerationForStreams(
-        connId,
-        JOB_ID,
-        mutableListOf<StreamRefresh>(),
-        setOf(
-          StreamDescriptor().withName("rfrStream"),
-        ),
-      )
-      Mockito
-        .verify(statePersistence)
-        .bulkDelete(connId, setOf(StreamDescriptor().withName("rfrStream")))
+      verify {
+        generationBumper.updateGenerationForStreams(
+          connId,
+          JOB_ID,
+          mutableListOf<StreamRefresh>(),
+          setOf(
+            StreamDescriptor().withName("rfrStream"),
+          ),
+        )
+      }
+      verify { statePersistence.bulkDelete(connId, setOf(StreamDescriptor().withName("rfrStream"))) }
     }
   }
 
@@ -337,7 +342,7 @@ internal class AttemptHandlerTest {
   fun createAttemptNumberForClear() {
     val attemptNumber = 0
     val connId = UUID.randomUUID()
-    val mResetConfig = Mockito.mock(JobResetConnectionConfig::class.java)
+    val mResetConfig = mockk<JobResetConnectionConfig>()
     val config =
       JobConfig()
         .withConfigType(ConfigType.CLEAR)
@@ -357,7 +362,7 @@ internal class AttemptHandlerTest {
         true,
       )
 
-    Mockito.`when`(mResetConfig.getWorkspaceId()).thenReturn(UUID.randomUUID())
+    every { mResetConfig.getWorkspaceId() } returns UUID.randomUUID()
 
     val mCatalog =
       ConfiguredAirbyteCatalog(
@@ -369,59 +374,50 @@ internal class AttemptHandlerTest {
           ),
         ),
       )
-    Mockito.`when`(mResetConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
-    Mockito.`when`(mResetConfig.getResetSourceConfiguration()).thenReturn(
+    every { mResetConfig.getConfiguredAirbyteCatalog() } returns mCatalog
+    every { mResetConfig.getResetSourceConfiguration() } returns
       ResetSourceConfiguration().withStreamsToReset(
         listOf<StreamDescriptor?>(StreamDescriptor().withName("rfrStream")),
-      ),
-    )
+      )
 
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { path.resolve(any<String>()) } returns path
 
     val expectedRoot = TemporalUtils.getJobRoot(path, JOB_ID.toString(), ATTEMPT_NUMBER.toLong())
     val expectedLogPath: Path = expectedRoot.resolve(DEFAULT_LOG_FILENAME)
 
-    Mockito
-      .`when`(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
-      .thenReturn(attemptNumber)
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          anyOrNull<Flag<Boolean>>(),
-          anyOrNull<Context>(),
-        ),
-      ).thenReturn(true)
+    every { jobPersistence.createAttempt(JOB_ID, expectedLogPath) } returns attemptNumber
+    every {
+      ffClient.boolVariation(
+        any<Flag<Boolean>>(),
+        any<Context>(),
+      )
+    } returns true
     val destinationId = UUID.randomUUID()
-    Mockito
-      .`when`(connectionService.getStandardSync(connId))
-      .thenReturn(StandardSync().withDestinationId(destinationId))
-    Mockito
-      .`when`(destinationService.getDestinationConnection(destinationId))
-      .thenReturn(DestinationConnection().withWorkspaceId(WORKSPACE_ID))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersion(
-          anyOrNull<StandardDestinationDefinition>(),
-          anyOrNull<UUID>(),
-          anyOrNull<UUID>(),
-        ),
-      ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(true))
+    every { connectionService.getStandardSync(connId) } returns StandardSync().withDestinationId(destinationId)
+    every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(WORKSPACE_ID)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(
+        any<StandardDestinationDefinition>(),
+        any<UUID>(),
+        any<UUID>(),
+      )
+    } returns ActorDefinitionVersion().withSupportsRefreshes(true)
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
       .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
-    Mockito.verify(generationBumper).updateGenerationForStreams(
-      connId,
-      JOB_ID,
-      mutableListOf<StreamRefresh>(),
-      setOf(
-        StreamDescriptor().withName("rfrStream"),
-      ),
-    )
-    Mockito
-      .verify(statePersistence)
-      .bulkDelete(connId, setOf(StreamDescriptor().withName("rfrStream")))
+    verify {
+      generationBumper.updateGenerationForStreams(
+        connId,
+        JOB_ID,
+        mutableListOf<StreamRefresh>(),
+        setOf(
+          StreamDescriptor().withName("rfrStream"),
+        ),
+      )
+    }
+    verify { statePersistence.bulkDelete(connId, setOf(StreamDescriptor().withName("rfrStream"))) }
   }
 
   @ParameterizedTest
@@ -429,8 +425,8 @@ internal class AttemptHandlerTest {
   fun createAttemptNumberForRefresh(attemptNumber: Int) {
     val connId = UUID.randomUUID()
 
-    val mConfig = Mockito.mock(JobConfig::class.java)
-    Mockito.`when`(mConfig.getConfigType()).thenReturn(ConfigType.REFRESH)
+    val mConfig = mockk<JobConfig>()
+    every { mConfig.getConfigType() } returns ConfigType.REFRESH
 
     val job =
       Job(
@@ -446,9 +442,10 @@ internal class AttemptHandlerTest {
         true,
       )
 
-    val mRefreshConfig = Mockito.mock(RefreshConfig::class.java)
-    Mockito.`when`(mConfig.getRefresh()).thenReturn(mRefreshConfig)
-    Mockito.`when`(mRefreshConfig.getWorkspaceId()).thenReturn(UUID.randomUUID())
+    val mRefreshConfig = mockk<RefreshConfig>()
+    every { mConfig.getRefresh() } returns mRefreshConfig
+    every { mRefreshConfig.getWorkspaceId() } returns UUID.randomUUID()
+    every { mRefreshConfig.getStreamsToRefresh() } returns emptyList()
 
     val mCatalog =
       ConfiguredAirbyteCatalog(
@@ -465,79 +462,74 @@ internal class AttemptHandlerTest {
           ),
         ),
       )
-    Mockito.`when`(mRefreshConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
+    every { mRefreshConfig.getConfiguredAirbyteCatalog() } returns mCatalog
 
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { path.resolve(any<String>()) } returns path
 
     val expectedRoot = TemporalUtils.getJobRoot(path, JOB_ID.toString(), ATTEMPT_NUMBER.toLong())
     val expectedLogPath: Path = expectedRoot.resolve(DEFAULT_LOG_FILENAME)
 
-    Mockito
-      .`when`(jobPersistence.createAttempt(JOB_ID, expectedLogPath))
-      .thenReturn(attemptNumber)
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          anyOrNull<Flag<Boolean>>(),
-          anyOrNull<Context>(),
-        ),
-      ).thenReturn(true)
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
-          anyOrNull<Context>(),
-        ),
-      ).thenReturn(true)
+    every { jobPersistence.createAttempt(JOB_ID, expectedLogPath) } returns attemptNumber
+    every {
+      ffClient.boolVariation(
+        any<Flag<Boolean>>(),
+        any<Context>(),
+      )
+    } returns true
+    every {
+      ffClient.boolVariation(
+        eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
+        any<Context>(),
+      )
+    } returns true
     val destinationId = UUID.randomUUID()
-    Mockito
-      .`when`(connectionService.getStandardSync(connId))
-      .thenReturn(StandardSync().withDestinationId(destinationId))
-    Mockito
-      .`when`(destinationService.getDestinationConnection(destinationId))
-      .thenReturn(DestinationConnection().withWorkspaceId(WORKSPACE_ID))
-    Mockito
-      .`when`(
-        actorDefinitionVersionHelper.getDestinationVersion(
-          anyOrNull<StandardDestinationDefinition>(),
-          anyOrNull<UUID>(),
-          anyOrNull<UUID>(),
-        ),
-      ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(true))
+    every { connectionService.getStandardSync(connId) } returns StandardSync().withDestinationId(destinationId)
+    every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(WORKSPACE_ID)
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(
+        any<StandardDestinationDefinition>(),
+        any<UUID>(),
+        any<UUID>(),
+      )
+    } returns ActorDefinitionVersion().withSupportsRefreshes(true)
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
       .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
     if (attemptNumber == 0) {
-      Mockito.verify(generationBumper).updateGenerationForStreams(
-        connId,
-        JOB_ID,
-        mutableListOf<StreamRefresh>(),
-        setOf(
-          StreamDescriptor().withName("rfrStream"),
-          StreamDescriptor().withName("nonRfrStream"),
-        ),
-      )
-      Mockito.verify(statePersistence).bulkDelete(
-        connId,
-        setOf(
-          StreamDescriptor().withName("rfrStream"),
-          StreamDescriptor().withName("nonRfrStream"),
-        ),
-      )
+      verify {
+        generationBumper.updateGenerationForStreams(
+          connId,
+          JOB_ID,
+          mutableListOf<StreamRefresh>(),
+          setOf(
+            StreamDescriptor().withName("rfrStream"),
+            StreamDescriptor().withName("nonRfrStream"),
+          ),
+        )
+      }
+      verify {
+        statePersistence.bulkDelete(
+          connId,
+          setOf(
+            StreamDescriptor().withName("rfrStream"),
+            StreamDescriptor().withName("nonRfrStream"),
+          ),
+        )
+      }
     } else {
-      Mockito.verify(generationBumper).updateGenerationForStreams(
-        connId,
-        JOB_ID,
-        mutableListOf<StreamRefresh>(),
-        setOf(
-          StreamDescriptor().withName("nonRfrStream"),
-        ),
-      )
-      Mockito
-        .verify(statePersistence)
-        .bulkDelete(connId, setOf(StreamDescriptor().withName("nonRfrStream")))
+      verify {
+        generationBumper.updateGenerationForStreams(
+          connId,
+          JOB_ID,
+          mutableListOf<StreamRefresh>(),
+          setOf(
+            StreamDescriptor().withName("nonRfrStream"),
+          ),
+        )
+      }
+      verify { statePersistence.bulkDelete(connId, setOf(StreamDescriptor().withName("nonRfrStream"))) }
     }
   }
 
@@ -546,10 +538,10 @@ internal class AttemptHandlerTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun getFullRefreshStreamsShouldOnlyReturnFullRefreshStreams(enableResumableFullRefresh: Boolean) {
-      val mJobConfig = Mockito.mock(JobConfig::class.java)
+      val mJobConfig = mockk<JobConfig>()
 
-      val mSyncConfig = Mockito.mock(JobSyncConfig::class.java)
-      Mockito.`when`(mJobConfig.getSync()).thenReturn(mSyncConfig)
+      val mSyncConfig = mockk<JobSyncConfig>()
+      every { mJobConfig.getSync() } returns mSyncConfig
 
       val mCatalog =
         ConfiguredAirbyteCatalog(
@@ -576,7 +568,7 @@ internal class AttemptHandlerTest {
             ),
           ),
         )
-      Mockito.`when`(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
+      every { mSyncConfig.getConfiguredAirbyteCatalog() } returns mCatalog
 
       val streams = handler.getFullRefreshStreamsToClear(mCatalog, enableResumableFullRefresh)
       val exp =
@@ -596,8 +588,8 @@ internal class AttemptHandlerTest {
     ) {
       val connId = UUID.randomUUID()
 
-      val mConfig = Mockito.mock(JobConfig::class.java)
-      Mockito.`when`(mConfig.getConfigType()).thenReturn(ConfigType.SYNC)
+      val mConfig = mockk<JobConfig>()
+      every { mConfig.getConfigType() } returns ConfigType.SYNC
 
       val job =
         Job(
@@ -613,27 +605,25 @@ internal class AttemptHandlerTest {
           true,
         )
 
-      val mSyncConfig = Mockito.mock(JobSyncConfig::class.java)
-      Mockito.`when`(mConfig.getSync()).thenReturn(mSyncConfig)
-      Mockito.`when`(mSyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID())
+      val mSyncConfig = mockk<JobSyncConfig>()
+      every { mConfig.getSync() } returns mSyncConfig
+      every { mSyncConfig.getWorkspaceId() } returns UUID.randomUUID()
 
-      Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
+      every { jobPersistence.getJob(JOB_ID) } returns job
 
-      Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
-      Mockito
-        .`when`(
-          ffClient.boolVariation(
-            anyOrNull<Flag<Boolean>>(),
-            anyOrNull<Context>(),
-          ),
-        ).thenReturn(true)
-      Mockito
-        .`when`(
-          ffClient.boolVariation(
-            eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
-            anyOrNull<Context>(),
-          ),
-        ).thenReturn(enableResumableFullRefresh)
+      every { path.resolve(any<String>()) } returns path
+      every {
+        ffClient.boolVariation(
+          any<Flag<Boolean>>(),
+          any<Context>(),
+        )
+      } returns true
+      every {
+        ffClient.boolVariation(
+          eq<EnableResumableFullRefresh>(EnableResumableFullRefresh),
+          any<Context>(),
+        )
+      } returns enableResumableFullRefresh
       val expectedRoot = TemporalUtils.getJobRoot(path, JOB_ID.toString(), ATTEMPT_NUMBER.toLong())
       val expectedLogPath: Path = expectedRoot.resolve(DEFAULT_LOG_FILENAME)
 
@@ -662,35 +652,30 @@ internal class AttemptHandlerTest {
             ),
           ),
         )
-      Mockito.`when`(mSyncConfig.getConfiguredAirbyteCatalog()).thenReturn(mCatalog)
+      every { mSyncConfig.getConfiguredAirbyteCatalog() } returns mCatalog
 
-      Mockito.`when`(jobPersistence.createAttempt(JOB_ID, expectedLogPath)).thenReturn(attemptNumber)
+      every { jobPersistence.createAttempt(JOB_ID, expectedLogPath) } returns attemptNumber
 
       val destinationId = UUID.randomUUID()
-      Mockito
-        .`when`(connectionService.getStandardSync(connId))
-        .thenReturn(StandardSync().withDestinationId(destinationId))
-      Mockito
-        .`when`(destinationService.getDestinationConnection(destinationId))
-        .thenReturn(DestinationConnection().withWorkspaceId(WORKSPACE_ID))
-      Mockito
-        .`when`(
-          actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull<StandardDestinationDefinition>(),
-            anyOrNull<UUID>(),
-            anyOrNull<UUID>(),
-          ),
-        ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(true))
+      every { connectionService.getStandardSync(connId) } returns StandardSync().withDestinationId(destinationId)
+      every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(WORKSPACE_ID)
+      every {
+        actorDefinitionVersionHelper.getDestinationVersion(
+          any<StandardDestinationDefinition>(),
+          any<UUID>(),
+          any<UUID>(),
+        )
+      } returns ActorDefinitionVersion().withSupportsRefreshes(true)
 
       val output = handler.createNewAttemptNumber(JOB_ID)
       org.assertj.core.api.Assertions
         .assertThat(output.attemptNumber)
         .isEqualTo(attemptNumber)
 
-      val captor1 = argumentCaptor<UUID>()
-      val captor2 = argumentCaptor<MutableSet<StreamDescriptor>>()
-      Mockito.verify(statePersistence).bulkDelete(captor1.capture(), captor2.capture())
-      Assertions.assertEquals(connId, captor1.firstValue)
+      val captor1 = slot<UUID>()
+      val captor2 = slot<MutableSet<StreamDescriptor>>()
+      verify { statePersistence.bulkDelete(capture(captor1), capture(captor2)) }
+      Assertions.assertEquals(connId, captor1.captured)
       if (enableResumableFullRefresh) {
         val nonResumableFullRefresh =
           if (attemptNumber == 0) {
@@ -701,14 +686,12 @@ internal class AttemptHandlerTest {
           } else {
             setOf(StreamDescriptor().withName("full").withNamespace("name"))
           }
-        Assertions.assertEquals(nonResumableFullRefresh, captor2.firstValue)
-        Mockito
-          .verify(generationBumper)
-          .updateGenerationForStreams(connId, JOB_ID, mutableListOf<StreamRefresh>(), nonResumableFullRefresh)
+        Assertions.assertEquals(nonResumableFullRefresh, captor2.captured)
+        verify { generationBumper.updateGenerationForStreams(connId, JOB_ID, mutableListOf<StreamRefresh>(), nonResumableFullRefresh) }
       } else {
         Assertions.assertEquals(
           setOf(StreamDescriptor().withName("full"), StreamDescriptor().withName("full").withNamespace("name")),
-          captor2.firstValue,
+          captor2.captured,
         )
       }
     }
@@ -716,14 +699,10 @@ internal class AttemptHandlerTest {
 
   @Test
   fun createAttemptNumberWithUnknownJobId() {
-    val job = Mockito.mock(Job::class.java)
-    Mockito
-      .`when`(job.getAttemptsCount())
-      .thenReturn(ATTEMPT_NUMBER)
+    val job = mockk<Job>()
+    every { job.getAttemptsCount() } returns ATTEMPT_NUMBER
 
-    Mockito
-      .`when`(jobPersistence.getJob(JOB_ID))
-      .thenAnswer { throw RuntimeException("unknown jobId $JOB_ID") }
+    every { jobPersistence.getJob(JOB_ID) } throws RuntimeException("unknown jobId $JOB_ID")
 
     org.assertj.core.api.Assertions
       .assertThatThrownBy { handler.createNewAttemptNumber(JOB_ID) }
@@ -732,9 +711,7 @@ internal class AttemptHandlerTest {
 
   @Test
   fun getAttemptThrowsNotFound() {
-    Mockito.`when`(jobPersistence.getAttemptForJob(anyOrNull(), anyOrNull())).thenReturn(
-      Optional.empty<Attempt>(),
-    )
+    every { jobPersistence.getAttemptForJob(any(), any()) } returns Optional.empty<Attempt>()
 
     Assertions.assertThrows(
       IdNotFoundKnownException::class.java,
@@ -743,9 +720,7 @@ internal class AttemptHandlerTest {
 
   @Test
   fun getAttemptCombinedStatsThrowsNotFound() {
-    Mockito
-      .`when`(jobPersistence.getAttemptCombinedStats(anyOrNull(), anyOrNull()))
-      .thenReturn(null)
+    every { jobPersistence.getAttemptCombinedStats(any(), any()) } returns null
 
     Assertions.assertThrows(
       IdNotFoundKnownException::class.java,
@@ -762,9 +737,7 @@ internal class AttemptHandlerTest {
     stats.setEstimatedRecords(123L)
     stats.setEstimatedBytes(123L)
 
-    Mockito
-      .`when`(jobPersistence.getAttemptCombinedStats(anyOrNull(), anyOrNull()))
-      .thenReturn(stats)
+    every { jobPersistence.getAttemptCombinedStats(any(), any()) } returns stats
 
     val result = handler.getAttemptCombinedStats(1L, 2)
     Assertions.assertEquals(stats.recordsEmitted, result.recordsEmitted)
@@ -778,29 +751,32 @@ internal class AttemptHandlerTest {
 
   @Test
   fun failAttemptSyncSummaryOutputPresent() {
+    every { jobPersistence.getJob(JOB_ID) } returns mockk()
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, standardSyncOutput)
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER)
-    Mockito.verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput)
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary)
+    verify { jobPersistence.failAttempt(JOB_ID, ATTEMPT_NUMBER) }
+    verify { jobPersistence.writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput) }
+    verify { jobPersistence.writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary) }
   }
 
   @Test
   fun failAttemptSyncSummaryOutputNotPresent() {
+    every { jobPersistence.getJob(JOB_ID) } returns mockk()
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, null)
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER)
-    Mockito.verify(jobPersistence, Mockito.never()).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput)
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary)
+    verify { jobPersistence.failAttempt(JOB_ID, ATTEMPT_NUMBER) }
+    verify(exactly = 0) { jobPersistence.writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput) }
+    verify { jobPersistence.writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, failureSummary) }
   }
 
   @Test
   fun failAttemptSyncSummaryNotPresent() {
+    every { jobPersistence.getJob(JOB_ID) } returns mockk()
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, null, standardSyncOutput)
 
-    Mockito.verify(jobPersistence).failAttempt(JOB_ID, ATTEMPT_NUMBER)
-    Mockito.verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput)
-    Mockito.verify(jobPersistence).writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, null)
+    verify { jobPersistence.failAttempt(JOB_ID, ATTEMPT_NUMBER) }
+    verify { jobPersistence.writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput) }
+    verify { jobPersistence.writeAttemptFailureSummary(JOB_ID, ATTEMPT_NUMBER, null) }
   }
 
   @ParameterizedTest
@@ -851,16 +827,18 @@ internal class AttemptHandlerTest {
             ),
         ),
       )
-    Mockito.verify(streamAttemptMetadataService).upsertStreamAttemptMetadata(
-      jobId,
-      attemptNumber.toLong(),
-      listOf(
-        io.airbyte.data.services
-          .StreamAttemptMetadata("s1", null, false, true),
-        io.airbyte.data.services
-          .StreamAttemptMetadata("s2", "ns", true, false),
-      ),
-    )
+    verify {
+      streamAttemptMetadataService.upsertStreamAttemptMetadata(
+        jobId,
+        attemptNumber.toLong(),
+        listOf(
+          io.airbyte.data.services
+            .StreamAttemptMetadata("s1", null, false, true),
+          io.airbyte.data.services
+            .StreamAttemptMetadata("s2", "ns", true, false),
+        ),
+      )
+    }
     Assertions.assertEquals(InternalOperationResult(succeeded = true), result)
   }
 
@@ -869,11 +847,7 @@ internal class AttemptHandlerTest {
     val jobId = 123L
     val attemptNumber = 1
 
-    Mockito.doAnswer { throw RuntimeException("oops") }.`when`(streamAttemptMetadataService).upsertStreamAttemptMetadata(
-      anyOrNull(),
-      anyOrNull(),
-      anyOrNull(),
-    )
+    every { streamAttemptMetadataService.upsertStreamAttemptMetadata(any(), any(), any()) } throws RuntimeException("oops")
 
     val result =
       handler.saveStreamMetadata(
@@ -896,13 +870,12 @@ internal class AttemptHandlerTest {
     supportsRefresh: Boolean,
     expectedStreamsToClear: Set<StreamDescriptor>,
   ) {
-    Mockito
-      .`when`(
-        ffClient.boolVariation(
-          eq(EnableResumableFullRefresh),
-          anyOrNull(),
-        ),
-      ).thenReturn(true)
+    every {
+      ffClient.boolVariation(
+        EnableResumableFullRefresh,
+        any(),
+      )
+    } returns true
     val configuredCatalog =
       ConfiguredAirbyteCatalog(
         listOf(
@@ -934,7 +907,7 @@ internal class AttemptHandlerTest {
     } else {
       handler.updateGenerationAndStateForSubsequentAttempts(job, supportsRefresh)
     }
-    Mockito.verify(statePersistence).bulkDelete(connectionId, expectedStreamsToClear)
+    verify { statePersistence.bulkDelete(connectionId, expectedStreamsToClear) }
   }
 
   @Test
@@ -982,19 +955,21 @@ internal class AttemptHandlerTest {
 
     handler.saveStats(saveStatsRequest)
 
-    Mockito.verify(jobPersistence).writeStats(
-      jobId = JOB_ID,
-      attemptNumber = ATTEMPT_NUMBER,
-      estimatedRecords = attemptStats.estimatedRecords,
-      estimatedBytes = attemptStats.estimatedBytes,
-      bytesEmitted = attemptStats.bytesEmitted,
-      recordsEmitted = attemptStats.recordsEmitted,
-      recordsCommitted = attemptStats.recordsCommitted,
-      recordsRejected = attemptStats.recordsRejected,
-      bytesCommitted = attemptStats.bytesCommitted,
-      connectionId = CONNECTION_ID,
-      streamStats = listOf(expectedStreamSyncStats),
-    )
+    verify {
+      jobPersistence.writeStats(
+        jobId = JOB_ID,
+        attemptNumber = ATTEMPT_NUMBER,
+        estimatedRecords = attemptStats.estimatedRecords,
+        estimatedBytes = attemptStats.estimatedBytes,
+        bytesEmitted = attemptStats.bytesEmitted,
+        recordsEmitted = attemptStats.recordsEmitted,
+        recordsCommitted = attemptStats.recordsCommitted,
+        recordsRejected = attemptStats.recordsRejected,
+        bytesCommitted = attemptStats.bytesCommitted,
+        connectionId = CONNECTION_ID,
+        streamStats = listOf(expectedStreamSyncStats),
+      )
+    }
   }
 
   companion object {

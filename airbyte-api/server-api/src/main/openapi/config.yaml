@@ -6788,6 +6788,7 @@ paths:
         - organization
       operationId: deleteOrganization
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -17530,7 +17531,6 @@ components:
         - jobId
         - configType
         - jobStatus
-        - startedAt
         - endedAt
       properties:
         streamName:
@@ -17555,6 +17555,7 @@ components:
         startedAt:
           type: integer
           format: int64
+          description: Absent when the job has no recorded start time.
         endedAt:
           type: integer
           format: int64

@@ -6,11 +6,14 @@ package io.airbyte.commons.server.support
 
 import io.micronaut.context.event.BeanCreatedEvent
 import io.micronaut.http.server.netty.NettyServerCustomizer
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 
 /**
  * Test suite for the [AuthNettyServerCustomizer] class.
@@ -22,7 +25,7 @@ internal class AuthNettyServerCustomizerTest {
 
   @BeforeEach
   fun setup() {
-    authorizationServerHandler = Mockito.mock(AuthorizationServerHandler::class.java)
+    authorizationServerHandler = mockk()
     customizer =
       AuthNettyServerCustomizer(
         authorizationServerHandler,
@@ -35,18 +38,14 @@ internal class AuthNettyServerCustomizerTest {
 
   @Test
   fun testCustomizerRegisteredOnCreation() {
-    val event: BeanCreatedEvent<NettyServerCustomizer.Registry> =
-      Mockito.mock(
-        BeanCreatedEvent::class.java,
-      ) as BeanCreatedEvent<NettyServerCustomizer.Registry>
-    val registry = Mockito.mock(NettyServerCustomizer.Registry::class.java)
-    Mockito.`when`(event.bean).thenReturn(registry)
+    val event: BeanCreatedEvent<NettyServerCustomizer.Registry> = mockk()
+    val registry: NettyServerCustomizer.Registry = mockk()
+    every { event.bean } returns registry
+    every { registry.register(any()) } just Runs
 
     val result = customizer.onCreated(event)
     Assertions.assertEquals(registry, result)
-    Mockito
-      .verify(registry, Mockito.times(1))
-      .register(ArgumentMatchers.any(NettyServerCustomizer::class.java))
+    verify(exactly = 1) { registry.register(any<NettyServerCustomizer>()) }
   }
 
   companion object {

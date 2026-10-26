@@ -75,6 +75,9 @@ interface OrganizationService {
 
   fun writeOrganization(organization: Organization)
 
+  /** Returns false when no active organization has this ID. */
+  fun softDeleteOrganization(organizationId: UUID): Boolean
+
   fun setOrganizationAgenticStatus(
     organizationId: UUID,
     isAgentic: Boolean,

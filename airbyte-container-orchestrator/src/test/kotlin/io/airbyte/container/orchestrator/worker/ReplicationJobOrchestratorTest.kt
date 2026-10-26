@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
@@ -82,11 +81,6 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationOutput> {
         every { additionalProperties } returns emptyMap()
         every { getReplicationAttemptSummary() } returns replicationAttemptSummary
-        every { state } returns
-          mockk {
-            every { additionalProperties } returns emptyMap()
-            every { state } returns Jsons.deserialize("{}")
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =
@@ -197,11 +191,6 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationOutput> {
         every { additionalProperties } returns emptyMap()
         every { getReplicationAttemptSummary() } returns replicationAttemptSummary
-        every { state } returns
-          mockk {
-            every { additionalProperties } returns emptyMap()
-            every { state } returns Jsons.deserialize("{}")
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =
@@ -316,11 +305,6 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationOutput> {
         every { additionalProperties } returns emptyMap()
         every { getReplicationAttemptSummary() } returns replicationAttemptSummary
-        every { state } returns
-          mockk {
-            every { additionalProperties } returns emptyMap()
-            every { state } returns Jsons.deserialize("{}")
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =
@@ -435,11 +419,6 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationOutput> {
         every { additionalProperties } returns emptyMap()
         every { getReplicationAttemptSummary() } returns replicationAttemptSummary
-        every { state } returns
-          mockk {
-            every { additionalProperties } returns emptyMap()
-            every { state } returns Jsons.deserialize("{}")
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =

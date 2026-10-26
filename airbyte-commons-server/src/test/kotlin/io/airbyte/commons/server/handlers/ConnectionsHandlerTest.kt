@@ -103,7 +103,6 @@ import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper
-import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME
 import io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME
@@ -222,6 +221,16 @@ import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.Called
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.slot
+import io.mockk.spyk
+import io.mockk.unmockkStatic
+import io.mockk.verify
 import org.junit.Assert
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -239,21 +248,6 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.mockStatic
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.doNothing
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.doThrow
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
-import org.mockito.kotlin.whenever
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.ZoneId
@@ -454,50 +448,50 @@ internal class ConnectionsHandlerTest {
         .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
         .withBreakingChange(false)
 
-    jobPersistence = mock()
-    streamRefreshesHandler = mock()
-    catalogService = mock()
-    uuidGenerator = mock()
-    workspaceHelper = mock()
-    trackingClient = mock()
-    eventRunner = mock()
-    connectionHelper = mock()
-    actorDefinitionVersionHelper = mock()
-    actorDefinitionVersionUpdater = mock()
-    connectorDefinitionSpecificationHandler = mock()
-    jsonSchemaValidator = mock()
-    secretsProcessor = mock()
-    configurationUpdate = mock()
-    oAuthConfigSupplier = mock()
-    destinationService = mock()
-    connectionService = mock()
-    secretsRepositoryReader = mock()
-    sourceService = mock()
-    workspaceService = mock()
-    secretPersistenceService = mock()
-    actorDefinitionHandlerHelper = mock()
-    streamStatusesService = mock()
-    connectionTimelineEventService = mock()
-    connectionTimelineEventHelper = mock()
-    statePersistence = mock()
-    mapperSecretHelper = mock()
-    licenseEntitlementChecker = mock()
-    connectorConfigEntitlementService = mock()
-    contextBuilder = mock()
-    featureFlagClient = mock()
-    entitlementService = mock()
-    metricClient = mock()
-    secretsRepositoryWriter = mock()
-    secretStorageService = mock()
-    secretReferenceService = mock()
-    currentUserService = mock()
-    job = mock()
-    streamGenerationRepository = mock()
-    catalogGenerationSetter = mock()
-    catalogValidator = mock()
-    notificationHelper = mock()
-    destinationCatalogGenerator = mock()
-    fieldGenerator = mock()
+    jobPersistence = mockk(relaxUnitFun = true)
+    streamRefreshesHandler = mockk(relaxUnitFun = true)
+    catalogService = mockk(relaxUnitFun = true)
+    uuidGenerator = mockk(relaxUnitFun = true)
+    workspaceHelper = mockk(relaxUnitFun = true)
+    trackingClient = mockk(relaxUnitFun = true)
+    eventRunner = mockk(relaxUnitFun = true)
+    connectionHelper = mockk(relaxUnitFun = true)
+    actorDefinitionVersionHelper = mockk(relaxUnitFun = true)
+    actorDefinitionVersionUpdater = mockk(relaxUnitFun = true)
+    connectorDefinitionSpecificationHandler = mockk(relaxUnitFun = true)
+    jsonSchemaValidator = mockk(relaxUnitFun = true)
+    secretsProcessor = mockk(relaxUnitFun = true)
+    configurationUpdate = mockk(relaxUnitFun = true)
+    oAuthConfigSupplier = mockk(relaxUnitFun = true)
+    destinationService = mockk(relaxUnitFun = true)
+    connectionService = mockk(relaxUnitFun = true)
+    secretsRepositoryReader = mockk(relaxUnitFun = true)
+    sourceService = mockk(relaxUnitFun = true)
+    workspaceService = mockk(relaxUnitFun = true)
+    secretPersistenceService = mockk(relaxUnitFun = true)
+    actorDefinitionHandlerHelper = mockk(relaxUnitFun = true)
+    streamStatusesService = mockk(relaxUnitFun = true)
+    connectionTimelineEventService = mockk(relaxUnitFun = true)
+    connectionTimelineEventHelper = mockk(relaxUnitFun = true)
+    statePersistence = mockk(relaxUnitFun = true)
+    mapperSecretHelper = mockk(relaxUnitFun = true)
+    licenseEntitlementChecker = mockk(relaxUnitFun = true)
+    connectorConfigEntitlementService = mockk(relaxUnitFun = true)
+    contextBuilder = mockk(relaxUnitFun = true)
+    featureFlagClient = mockk()
+    entitlementService = mockk(relaxUnitFun = true)
+    metricClient = mockk(relaxUnitFun = true)
+    secretsRepositoryWriter = mockk(relaxUnitFun = true)
+    secretStorageService = mockk(relaxUnitFun = true)
+    secretReferenceService = mockk(relaxUnitFun = true)
+    currentUserService = mockk(relaxUnitFun = true)
+    job = mockk()
+    streamGenerationRepository = mockk(relaxUnitFun = true)
+    catalogGenerationSetter = mockk(relaxUnitFun = true)
+    catalogValidator = mockk(relaxUnitFun = true)
+    notificationHelper = mockk(relaxUnitFun = true)
+    destinationCatalogGenerator = mockk(relaxUnitFun = true)
+    fieldGenerator = mockk(relaxUnitFun = true)
     catalogMergeHelper =
       io.airbyte.commons.server.handlers.helpers
         .CatalogMergeHelper(fieldGenerator)
@@ -620,18 +614,27 @@ internal class ConnectionsHandlerTest {
         apiPojoConverters,
       )
 
-    whenever(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId)
-    whenever(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId)
-    whenever(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId)
-    whenever(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(otherOperationId)).thenReturn(workspaceId)
-    whenever(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(organizationId)
+    every { workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId) } returns workspaceId
+    every { workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId) } returns workspaceId
+    every { workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId) } returns workspaceId
+    every { workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(otherOperationId) } returns workspaceId
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
 
-    whenever(destinationCatalogGenerator.generateDestinationCatalog(anyOrNull()))
-      .thenReturn(CatalogGenerationResult(ConfiguredAirbyteCatalog(), emptyMap()))
+    every { destinationCatalogGenerator.generateDestinationCatalog(any()) } returns CatalogGenerationResult(ConfiguredAirbyteCatalog(), emptyMap())
 
-    whenever(mapperSecretHelper.maskMapperSecrets(anyOrNull())).thenAnswer { it.getArgument(0) }
-    whenever(mapperSecretHelper.createAndReplaceMapperSecrets(anyOrNull(), anyOrNull())).thenAnswer { it.getArgument(1) }
-    whenever(mapperSecretHelper.updateAndReplaceMapperSecrets(anyOrNull(), anyOrNull(), anyOrNull())).thenAnswer { it.getArgument(2) }
+    every { jobPersistence.getLastSyncJob(any()) } returns Optional.empty()
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
+    every { catalogValidator.fieldCount(any(), any()) } returns null
+    every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+    every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+    every { licenseEntitlementChecker.checkEntitlement(any(), any(), any()) } returns false
+    every { actorDefinitionHandlerHelper.getVersionBreakingChanges(any()) } returns Optional.empty()
+    every { catalogService.getMostRecentSourceActorCatalog(any()) } returns Optional.empty()
+    every { metricClient.count(any(), any(), *anyVararg()) } returns null
+
+    every { mapperSecretHelper.maskMapperSecrets(any()) } answers { firstArg() }
+    every { mapperSecretHelper.createAndReplaceMapperSecrets(any(), any()) } answers { secondArg() }
+    every { mapperSecretHelper.updateAndReplaceMapperSecrets(any(), any(), any()) } answers { thirdArg() }
   }
 
   @Test
@@ -649,21 +652,21 @@ internal class ConnectionsHandlerTest {
         ),
       )
 
-    whenever(connectionTimelineEventService.listEventsForJob(jobId)).thenReturn(mockEvents)
+    every { connectionTimelineEventService.listEventsForJob(jobId) } returns mockEvents
 
     val result = connectionsHandler.listConnectionEventsForJob(jobId)
 
     assertNotNull(result)
     assertEquals(1, result.events.size)
     assertEquals(connectionId, result.events[0].connectionId)
-    verify(connectionTimelineEventService).listEventsForJob(jobId)
+    verify { connectionTimelineEventService.listEventsForJob(jobId) }
   }
 
   @Nested
   internal inner class UnMockedConnectionHelper {
     @BeforeEach
     fun setUp() {
-      whenever(uuidGenerator.get()).thenReturn(standardSync.connectionId)
+      every { uuidGenerator.get() } returns standardSync.connectionId
       val sourceDefinition =
         StandardSourceDefinition()
           .withName(sourceTest)
@@ -672,27 +675,19 @@ internal class ConnectionsHandlerTest {
         StandardDestinationDefinition()
           .withName(destinationTest)
           .withDestinationDefinitionId(UUID.randomUUID())
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
-      whenever(sourceService.getSourceDefinitionFromConnection(standardSync.connectionId)).thenReturn(
-        sourceDefinition,
-      )
-      whenever(destinationService.getDestinationDefinitionFromConnection(standardSync.connectionId))
-        .thenReturn(
-          destinationDefinition,
-        )
-      whenever(sourceService.getSourceConnection(source.sourceId))
-        .thenReturn(source)
-      whenever(destinationService.getDestinationConnection(destination.destinationId))
-        .thenReturn(destination)
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
-      whenever(jobPersistence.getLastReplicationJob(connectionId)).thenReturn(Optional.of<Job>(job))
-      whenever(jobPersistence.getFirstReplicationJob(connectionId)).thenReturn(Optional.of<Job>(job))
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { sourceService.getSourceDefinitionFromConnection(standardSync.connectionId) } returns sourceDefinition
+      every { destinationService.getDestinationDefinitionFromConnection(standardSync.connectionId) } returns destinationDefinition
+      every { sourceService.getSourceConnection(source.sourceId) } returns source
+      every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+      every { connectionService.getStandardSync(connectionId) } returns standardSync
+      every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of<Job>(job)
+      every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of<Job>(job)
     }
 
     @Test
     fun testGetConnection() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val actualConnectionRead = connectionsHandler.getConnection(standardSync.connectionId)
 
@@ -703,9 +698,8 @@ internal class ConnectionsHandlerTest {
     fun testGetConnectionForJob() {
       val jobId = 456L
 
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
-      whenever(jobPersistence.getJob(jobId)).thenReturn(
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { jobPersistence.getJob(jobId) } returns
         Job(
           jobId,
           ConfigType.SYNC,
@@ -717,19 +711,17 @@ internal class ConnectionsHandlerTest {
           0,
           0,
           true,
-        ),
-      )
+        )
       val generations = listOf(Generation("name", null, 1))
-      whenever(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId))
-        .thenReturn(generations)
-      whenever(
+      every { streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId) } returns generations
+      every {
         catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.catalog,
           jobId,
           mutableListOf(),
           generations,
-        ),
-      ).thenReturn(standardSync.catalog)
+        )
+      } returns standardSync.catalog
 
       val actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.connectionId, jobId)
 
@@ -751,9 +743,8 @@ internal class ConnectionsHandlerTest {
         JobConfig()
           .withRefresh(RefreshConfig().withStreamsToRefresh(refreshStreamDescriptors))
 
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
-      whenever(jobPersistence.getJob(jobId)).thenReturn(
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { jobPersistence.getJob(jobId) } returns
         Job(
           jobId,
           ConfigType.REFRESH,
@@ -765,19 +756,17 @@ internal class ConnectionsHandlerTest {
           0,
           0,
           true,
-        ),
-      )
+        )
       val generations = listOf(Generation("name", null, 1))
-      whenever(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId))
-        .thenReturn(generations)
-      whenever(
+      every { streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId) } returns generations
+      every {
         catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.catalog,
           jobId,
           refreshStreamDescriptors,
           generations,
-        ),
-      ).thenReturn(standardSync.catalog)
+        )
+      } returns standardSync.catalog
 
       val actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.connectionId, jobId)
 
@@ -799,9 +788,8 @@ internal class ConnectionsHandlerTest {
             ),
           )
 
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
-      whenever(jobPersistence.getJob(jobId)).thenReturn(
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { jobPersistence.getJob(jobId) } returns
         Job(
           jobId,
           ConfigType.RESET_CONNECTION,
@@ -813,19 +801,17 @@ internal class ConnectionsHandlerTest {
           0,
           0,
           true,
-        ),
-      )
+        )
       val generations = listOf(Generation("name", null, 1))
-      whenever(streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId))
-        .thenReturn(generations)
-      whenever(
+      every { streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(standardSync.connectionId) } returns generations
+      every {
         catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
           standardSync.catalog,
           jobId,
           clearedStreamDescriptors.toSet(),
           generations,
-        ),
-      ).thenReturn(standardSync.catalog)
+        )
+      } returns standardSync.catalog
 
       val actualConnectionRead = connectionsHandler.getConnectionForJob(standardSync.connectionId, jobId)
 
@@ -834,12 +820,10 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testListConnectionsForWorkspace() {
-      whenever(connectionService.listWorkspaceStandardSyncs(source.workspaceId, false))
-        .thenReturn(listOf(standardSync, standardSyncLocked))
-      whenever(connectionService.listWorkspaceStandardSyncs(source.workspaceId, true))
-        .thenReturn(listOf(standardSync, standardSyncDeleted, standardSyncLocked))
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
+      every { connectionService.listWorkspaceStandardSyncs(source.workspaceId, false) } returns listOf(standardSync, standardSyncLocked)
+      every { connectionService.listWorkspaceStandardSyncs(source.workspaceId, true) } returns
+        listOf(standardSync, standardSyncDeleted, standardSyncLocked)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val workspaceIdRequestBody = WorkspaceIdRequestBody(workspaceId = source.workspaceId)
       val actualConnectionReadList = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)
@@ -859,12 +843,9 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testListConnections() {
-      whenever(connectionService.listStandardSyncs())
-        .thenReturn(listOf(standardSync))
-      whenever(sourceService.getSourceConnection(source.sourceId))
-        .thenReturn(source)
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
+      every { connectionService.listStandardSyncs() } returns listOf(standardSync)
+      every { sourceService.getSourceConnection(source.sourceId) } returns source
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val actualConnectionReadList = connectionsHandler.listConnections()
 
@@ -876,22 +857,22 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testListConnectionsByActorDefinition() {
-      whenever(
+      every {
         connectionService.listConnectionsByActorDefinitionIdAndType(
           sourceDefinitionId,
           ActorType.SOURCE.value(),
           false,
           true,
-        ),
-      ).thenReturn(listOf(standardSync))
-      whenever(
+        )
+      } returns listOf(standardSync)
+      every {
         connectionService.listConnectionsByActorDefinitionIdAndType(
           destinationDefinitionId,
           ActorType.DESTINATION.value(),
           false,
           true,
-        ),
-      ).thenReturn(listOf(standardSync2))
+        )
+      } returns listOf(standardSync2)
 
       val connectionReadListForSourceDefinitionId =
         connectionsHandler.listConnectionsForActorDefinition(
@@ -948,44 +929,38 @@ internal class ConnectionsHandlerTest {
         StandardDestinationDefinition()
           .withName(destinationTest)
           .withDestinationDefinitionId(UUID.randomUUID())
-      val sourceVersion: ActorDefinitionVersion = mock(ActorDefinitionVersion::class.java)
-      val destinationVersion: ActorDefinitionVersion = mock(ActorDefinitionVersion::class.java)
+      val sourceVersion = ActorDefinitionVersion()
+      val destinationVersion = ActorDefinitionVersion()
 
       // real actor rows always have a configuration and createdAt, and the Kotlin read models require both
       source.withConfiguration(jsonNode(mapOf<String, String>())).withCreatedAt(1L)
       destination.withCreatedAt(1L)
 
-      whenever(connectionService.listStandardSyncs())
-        .thenReturn(listOf(standardSync, standardSync2))
-      whenever(sourceService.getSourceConnection(source.sourceId))
-        .thenReturn(source)
-      whenever(destinationService.getDestinationConnection(destination.destinationId))
-        .thenReturn(destination)
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSync)
-      whenever(connectionService.getStandardSync(standardSync2.connectionId))
-        .thenReturn(standardSync2)
-      whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-        .thenReturn(sourceDefinition)
-      whenever(
+      every { connectionService.listStandardSyncs() } returns listOf(standardSync, standardSync2)
+      every { sourceService.getSourceConnection(source.sourceId) } returns source
+      every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { connectionService.getStandardSync(standardSync2.connectionId) } returns standardSync2
+      every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+      every {
         destinationService.getStandardDestinationDefinition(
           destination.destinationDefinitionId,
-        ),
-      ).thenReturn(destinationDefinition)
-      whenever(
+        )
+      } returns destinationDefinition
+      every {
         actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
           sourceDefinition,
           source.workspaceId,
           source.sourceId,
-        ),
-      ).thenReturn(ActorDefinitionVersionWithOverrideStatus(sourceVersion, false))
-      whenever(
+        )
+      } returns ActorDefinitionVersionWithOverrideStatus(sourceVersion, false)
+      every {
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
           destinationDefinition,
           destination.workspaceId,
           destination.destinationId,
-        ),
-      ).thenReturn(ActorDefinitionVersionWithOverrideStatus(destinationVersion, false))
+        )
+      } returns ActorDefinitionVersionWithOverrideStatus(destinationVersion, false)
 
       var connectionSearch = ConnectionSearch(namespaceDefinition = NamespaceDefinitionType.SOURCE)
       var actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
@@ -1098,22 +1073,18 @@ internal class ConnectionsHandlerTest {
     fun testDeleteConnection() {
       connectionsHandler.deleteConnection(connectionId)
 
-      verify(connectionHelper).deleteConnection(connectionId)
-      verify(streamRefreshesHandler).deleteRefreshesForConnection(connectionId)
+      verify { connectionHelper.deleteConnection(connectionId) }
+      verify { streamRefreshesHandler.deleteRefreshesForConnection(connectionId) }
     }
 
     @Test
     fun failOnUnmatchedWorkspacesInCreate() {
-      whenever(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(standardSync.sourceId))
-        .thenReturn(UUID.randomUUID())
-      whenever(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(standardSync.destinationId))
-        .thenReturn(UUID.randomUUID())
-      whenever(sourceService.getSourceConnection(source.sourceId))
-        .thenReturn(source)
-      whenever(destinationService.getDestinationConnection(destination.destinationId))
-        .thenReturn(destination)
+      every { workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(standardSync.sourceId) } returns UUID.randomUUID()
+      every { workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(standardSync.destinationId) } returns UUID.randomUUID()
+      every { sourceService.getSourceConnection(source.sourceId) } returns source
+      every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
 
-      whenever(uuidGenerator.get()).thenReturn(standardSync.connectionId)
+      every { uuidGenerator.get() } returns standardSync.connectionId
       val sourceDefinition =
         StandardSourceDefinition()
           .withName(sourceTest)
@@ -1122,11 +1093,9 @@ internal class ConnectionsHandlerTest {
         StandardDestinationDefinition()
           .withName(destinationTest)
           .withDestinationDefinitionId(UUID.randomUUID())
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
-      whenever(sourceService.getSourceDefinitionFromConnection(standardSync.connectionId))
-        .thenReturn(sourceDefinition)
-      whenever(destinationService.getDestinationDefinitionFromConnection(standardSync.connectionId))
-        .thenReturn(destinationDefinition)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+      every { sourceService.getSourceDefinitionFromConnection(standardSync.connectionId) } returns sourceDefinition
+      every { destinationService.getDestinationDefinitionFromConnection(standardSync.connectionId) } returns destinationDefinition
 
       val catalog = generateBasicApiCatalog()
 
@@ -1313,28 +1282,28 @@ internal class ConnectionsHandlerTest {
       @BeforeEach
       fun setup() {
         // for create calls
-        whenever(workspaceHelper.getWorkspaceForDestinationId(standardSync.destinationId)).thenReturn(workspaceId)
+        every { workspaceHelper.getWorkspaceForDestinationId(standardSync.destinationId) } returns workspaceId
         // for update calls
-        whenever(workspaceHelper.getWorkspaceForConnectionId(standardSync.connectionId)).thenReturn(workspaceId)
-        whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(organizationId)
-        val sourceVersion = mock(ActorDefinitionVersion::class.java)
-        val destinationVersion = mock(ActorDefinitionVersion::class.java)
-        whenever(sourceVersion.supportsFileTransfer).thenReturn(false)
-        whenever(destinationVersion.supportsFileTransfer).thenReturn(false)
-        whenever(
+        every { workspaceHelper.getWorkspaceForConnectionId(standardSync.connectionId) } returns workspaceId
+        every { workspaceHelper.getOrganizationForWorkspace(any()) } returns organizationId
+        val sourceVersion = mockk<ActorDefinitionVersion>()
+        val destinationVersion = mockk<ActorDefinitionVersion>()
+        every { sourceVersion.supportsFileTransfer } returns false
+        every { destinationVersion.supportsFileTransfer } returns false
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(sourceVersion)
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns sourceVersion
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(destinationVersion)
+            any(),
+            any(),
+            any(),
+          )
+        } returns destinationVersion
       }
 
       private fun buildConnectionCreateRequest(
@@ -1373,7 +1342,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
@@ -1383,10 +1352,12 @@ internal class ConnectionsHandlerTest {
 
         assertEquals(expectedConnectionRead, actualConnectionRead)
 
-        verify(connectionService).writeStandardSync(
-          standardSync
-            .withNotifySchemaChangesByEmail(null),
-        )
+        verify {
+          connectionService.writeStandardSync(
+            standardSync
+              .withNotifySchemaChangesByEmail(null),
+          )
+        }
 
         // Use new schedule schema, verify that we get the same results.
         val connectionCreateWithScheduleData =
@@ -1422,7 +1393,7 @@ internal class ConnectionsHandlerTest {
         val problem =
           assertThrows(ResourceNotFoundProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
         assertEquals("Source ${connectionCreate.sourceId} has been deleted.", problem.problem.getDetail())
-        verify(connectionService, never()).writeStandardSync(anyOrNull())
+        verify(exactly = 0) { connectionService.writeStandardSync(any()) }
       }
 
       @Test
@@ -1434,7 +1405,7 @@ internal class ConnectionsHandlerTest {
         val problem =
           assertThrows(ResourceNotFoundProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
         assertEquals("Destination ${connectionCreate.destinationId} has been deleted.", problem.problem.getDetail())
-        verify(connectionService, never()).writeStandardSync(anyOrNull())
+        verify(exactly = 0) { connectionService.writeStandardSync(any()) }
       }
 
       @ParameterizedTest
@@ -1445,19 +1416,17 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
-        doThrow(LicenseEntitlementProblem())
-          .`when`(licenseEntitlementChecker)
-          .ensureEntitled(anyOrNull(), eq(entitlement), anyOrNull())
+        every { licenseEntitlementChecker.ensureEntitled(any(), entitlement, any()) } throws LicenseEntitlementProblem()
 
         assertThrows(
           LicenseEntitlementProblem::class.java,
         ) { connectionsHandler.createConnection(connectionCreate) }
 
-        verifyNoInteractions(connectionService)
+        verify { connectionService wasNot Called }
       }
 
       @Test
@@ -1478,19 +1447,18 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog).copy(onDemandEnabled = true)
 
-        doAnswer { throw LicenseEntitlementProblem() }
-          .whenever(entitlementService)
-          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+        every { entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement) } throws
+          LicenseEntitlementProblem()
 
         assertThrows(
           LicenseEntitlementProblem::class.java,
         ) { connectionsHandler.createConnection(connectionCreate) }
 
-        verifyNoInteractions(connectionService)
+        verify { connectionService wasNot Called }
       }
 
       @Test
@@ -1500,17 +1468,14 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog).copy(onDemandEnabled = true)
 
-        doNothing()
-          .whenever(entitlementService)
-          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+        every { entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement) } just Runs
 
         // Mock getStandardSync to return a sync with onDemandEnabled=true after write
-        whenever(connectionService.getStandardSync(standardSync.connectionId))
-          .thenReturn(standardSync.withOnDemandEnabled(true))
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync.withOnDemandEnabled(true)
 
         val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
 
@@ -1524,7 +1489,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog).copy(enableIndexing = true)
 
@@ -1532,7 +1497,7 @@ internal class ConnectionsHandlerTest {
           ApiNotImplementedInOssProblem::class.java,
         ) { connectionsHandler.createConnection(connectionCreate) }
 
-        verifyNoInteractions(connectionService)
+        verify { connectionService wasNot Called }
       }
 
       @Test
@@ -1542,12 +1507,11 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog).copy(enableIndexing = false)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId))
-          .thenReturn(standardSync.withEnableIndexing(false))
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync.withEnableIndexing(false)
 
         val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
 
@@ -1561,12 +1525,11 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog).copy(enableIndexing = null)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId))
-          .thenReturn(standardSync.withEnableIndexing(false))
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync.withEnableIndexing(false)
 
         val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
 
@@ -1578,7 +1541,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         // Only select one of the two fields.
         val catalogWithSelectedFields =
@@ -1596,7 +1559,7 @@ internal class ConnectionsHandlerTest {
 
         standardSync.withFieldSelectionData(FieldSelectionData().withAdditionalProperty(streamSelectionData, true))
 
-        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null))
+        verify { connectionService.writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null)) }
       }
 
       @Test
@@ -1604,7 +1567,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val catalog =
           generateBasicApiCatalog().withFirstConfig {
@@ -1623,7 +1586,7 @@ internal class ConnectionsHandlerTest {
           .streams
           .first()
           .mappers = listOf(createHashingMapper(FIELD_NAME))
-        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null))
+        verify { connectionService.writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null)) }
       }
 
       @Test
@@ -1631,10 +1594,10 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val newMapperId = UUID.randomUUID()
-        whenever(uuidGenerator.get()).thenReturn(connectionId, newMapperId)
+        every { uuidGenerator.get() } returnsMany listOf(connectionId, newMapperId)
         val hashingMapper: MapperConfig = createHashingMapper(FIELD_NAME, newMapperId)
 
         val catalog =
@@ -1662,7 +1625,7 @@ internal class ConnectionsHandlerTest {
           .streams
           .first()
           .mappers = listOf(hashingMapper)
-        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null))
+        verify { connectionService.writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null)) }
       }
 
       @Test
@@ -1670,7 +1633,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val catalog = generateBasicApiCatalog()
 
@@ -1685,7 +1648,7 @@ internal class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead)
 
         standardSync.withDestinationCatalogId(destinationCatalogId)
-        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null))
+        verify { connectionService.writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null)) }
       }
 
       @ParameterizedTest
@@ -1704,7 +1667,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val catalog =
           generateBasicApiCatalog()
@@ -1713,24 +1676,20 @@ internal class ConnectionsHandlerTest {
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
-        whenever(
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles),
-        )
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles)
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles),
-        )
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles)
 
         if (sourceSupportsFiles && destinationSupportsFiles && streamSupportsFiles) {
           // everything supports file transfers, so the connection should be created successfully
@@ -1755,21 +1714,20 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-          .thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val catalog = generateBasicApiCatalog()
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
         val streamName = "stream-name"
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             catalogConverter.toConfiguredInternal(
               catalog,
             ),
-          ),
-        ).thenReturn(
+          )
+        } returns
           CatalogGenerationResult(
             ConfiguredAirbyteCatalog(),
             mapOf(
@@ -1786,8 +1744,7 @@ internal class ConnectionsHandlerTest {
                   } to MapperError(MapperErrorType.INVALID_MAPPER_CONFIG, "error message"),
                 ),
             ),
-          ),
-        )
+          )
 
         val exception: MapperValidationProblem =
           assertThrows(
@@ -1809,7 +1766,7 @@ internal class ConnectionsHandlerTest {
         val workspace =
           StandardWorkspace()
             .withWorkspaceId(workspaceId)
-        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
         val fullRefreshCatalogWithSelectedFields =
           generateApiCatalogWithTwoFields().withFirstConfig {
@@ -1836,7 +1793,7 @@ internal class ConnectionsHandlerTest {
           .withSyncMode(SyncMode.FULL_REFRESH)
           .withCursorField(null)
 
-        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null))
+        verify { connectionService.writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null)) }
       }
 
       @Test
@@ -1892,7 +1849,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testValidateConnectionCreateSourceAndDestinationInDifferenceWorkspace() {
-        whenever(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(UUID.randomUUID())
+        every { workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId) } returns UUID.randomUUID()
 
         val connectionCreate =
           ConnectionCreate(sourceId = standardSync.sourceId, destinationId = standardSync.destinationId, status = ConnectionStatus.ACTIVE)
@@ -1904,8 +1861,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testCreateConnectionWithConflictingStreamsThrows() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog()
 
@@ -1932,12 +1888,12 @@ internal class ConnectionsHandlerTest {
               .withPrefix(standardSync.prefix),
           )
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mockDestinationStreamData)
+            any(),
+            any(),
+          )
+        } returns mockDestinationStreamData
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
@@ -1948,17 +1904,16 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testCreateConnectionWithNoConflictingStreamSucceeds() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog()
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mutableListOf())
+            any(),
+            any(),
+          )
+        } returns mutableListOf()
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
@@ -1967,8 +1922,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testCreateConnectionWithConflictingStreamButUnselected() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog().withFirstConfig { it.copy(selected = false) }
 
@@ -1995,12 +1949,12 @@ internal class ConnectionsHandlerTest {
               .withPrefix(standardSync.prefix),
           )
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mockDestinationStreamData)
+            any(),
+            any(),
+          )
+        } returns mockDestinationStreamData
 
         val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
 
@@ -2009,7 +1963,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testValidateConnectionCreateOperationInDifferentWorkspace() {
-        whenever(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(UUID.randomUUID())
+        every { workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId) } returns UUID.randomUUID()
 
         val connectionCreate =
           ConnectionCreate(
@@ -2029,10 +1983,9 @@ internal class ConnectionsHandlerTest {
         val sourceIdBad = UUID.randomUUID()
         val destinationIdBad = UUID.randomUUID()
 
-        whenever(sourceService.getSourceConnection(sourceIdBad))
-          .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceIdBad) }
-        whenever(destinationService.getDestinationConnection(destinationIdBad))
-          .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.DESTINATION_CONNECTION, destinationIdBad) }
+        every { sourceService.getSourceConnection(sourceIdBad) } throws ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceIdBad)
+        every { destinationService.getDestinationConnection(destinationIdBad) } throws
+          ConfigNotFoundException(ConfigNotFoundType.DESTINATION_CONNECTION, destinationIdBad)
 
         val catalog = generateBasicApiCatalog()
 
@@ -2078,14 +2031,12 @@ internal class ConnectionsHandlerTest {
       fun throwsBadRequestExceptionOnCatalogSizeValidationError() {
         val catalog = generateBasicApiCatalog()
         val request = buildConnectionCreateRequest(standardSync, catalog)
-        whenever(
+        every {
           catalogValidator.fieldCount(
-            eq(catalog),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ValidationError("bad catalog"),
-        )
+            catalog,
+            any(),
+          )
+        } returns ValidationError("bad catalog")
 
         assertThrows(
           BadRequestException::class.java,
@@ -2113,32 +2064,27 @@ internal class ConnectionsHandlerTest {
         var connectionCreate = buildConnectionCreateRequest(standardSync, catalogForCreate)
         if (hasDestinationCatalog) {
           connectionCreate = connectionCreate.copy(destinationCatalogId = destinationCatalogIdInCreate)
-          whenever(catalogService.getActorCatalogById(destinationCatalogIdInCreate!!))
-            .thenReturn(ActorCatalog().withId(destinationCatalogIdInCreate).withCatalog(emptyObject()))
-          whenever(connectionService.getStandardSync(standardSync.connectionId))
-            .thenReturn(clone(standardSync).withDestinationCatalogId(destinationCatalogIdInCreate))
+          every { catalogService.getActorCatalogById(destinationCatalogIdInCreate!!) } returns
+            ActorCatalog().withId(destinationCatalogIdInCreate).withCatalog(emptyObject())
+          every { connectionService.getStandardSync(standardSync.connectionId) } returns
+            clone(standardSync).withDestinationCatalogId(destinationCatalogIdInCreate)
         }
 
-        whenever(featureFlagClient.boolVariation(EnableDestinationCatalogValidation, Workspace(workspaceId)))
-          .thenReturn(featureFlagEnabled)
-        whenever(
+        every { featureFlagClient.boolVariation(EnableDestinationCatalogValidation, Workspace(workspaceId)) } returns featureFlagEnabled
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsDataActivation(false),
-        )
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsDataActivation(false)
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation),
-        )
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation)
 
         if (shouldSucceed) {
           // Connection should be created successfully
@@ -2168,9 +2114,9 @@ internal class ConnectionsHandlerTest {
       @BeforeEach
       fun setup() {
         val connection3Id = UUID.randomUUID()
-        whenever(workspaceHelper.getWorkspaceForDestinationId(anyOrNull())).thenReturn(workspaceId)
-        whenever(workspaceHelper.getWorkspaceForConnectionId(standardSync.connectionId)).thenReturn(workspaceId)
-        whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(organizationId)
+        every { workspaceHelper.getWorkspaceForDestinationId(any()) } returns workspaceId
+        every { workspaceHelper.getWorkspaceForConnectionId(standardSync.connectionId) } returns workspaceId
+        every { workspaceHelper.getOrganizationForWorkspace(any()) } returns organizationId
 
         complexConfiguredCatalog =
           ConfiguredAirbyteCatalog()
@@ -2207,31 +2153,30 @@ internal class ConnectionsHandlerTest {
             .withNotifySchemaChanges(false)
             .withNotifySchemaChangesByEmail(true)
             .withBreakingChange(false)
-        whenever(connectionService.getStandardSync(moreComplexCatalogSync!!.connectionId))
-          .thenReturn(moreComplexCatalogSync)
-        whenever(workspaceHelper.getWorkspaceForConnectionId(connection3Id)).thenReturn(workspaceId)
-        whenever(sourceService.getSourceDefinitionFromConnection(connection3Id))
-          .thenReturn(StandardSourceDefinition().withName("source").withSourceDefinitionId(UUID.randomUUID()))
-        whenever(destinationService.getDestinationDefinitionFromConnection(connection3Id))
-          .thenReturn(StandardDestinationDefinition().withName("destination").withDestinationDefinitionId(UUID.randomUUID()))
-        val sourceVersion = mock(ActorDefinitionVersion::class.java)
-        val destinationVersion = mock(ActorDefinitionVersion::class.java)
-        whenever(sourceVersion.supportsFileTransfer).thenReturn(false)
-        whenever(destinationVersion.supportsFileTransfer).thenReturn(false)
-        whenever(
+        every { connectionService.getStandardSync(moreComplexCatalogSync!!.connectionId) } returns moreComplexCatalogSync!!
+        every { workspaceHelper.getWorkspaceForConnectionId(connection3Id) } returns workspaceId
+        every { sourceService.getSourceDefinitionFromConnection(connection3Id) } returns
+          StandardSourceDefinition().withName("source").withSourceDefinitionId(UUID.randomUUID())
+        every { destinationService.getDestinationDefinitionFromConnection(connection3Id) } returns
+          StandardDestinationDefinition().withName("destination").withDestinationDefinitionId(UUID.randomUUID())
+        val sourceVersion = mockk<ActorDefinitionVersion>()
+        val destinationVersion = mockk<ActorDefinitionVersion>()
+        every { sourceVersion.supportsFileTransfer } returns false
+        every { destinationVersion.supportsFileTransfer } returns false
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(sourceVersion)
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns sourceVersion
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(destinationVersion)
+            any(),
+            any(),
+            any(),
+          )
+        } returns destinationVersion
       }
 
       private fun buildConfiguredStream(name: String): ConfiguredAirbyteStream =
@@ -2268,7 +2213,7 @@ internal class ConnectionsHandlerTest {
           clone(
             standardSync,
           ).withStatus(StandardSync.Status.LOCKED).withStatusReason(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(lockedSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns lockedSync
 
         val connectionUpdate = ConnectionUpdate(connectionId = standardSync.connectionId, name = "newName")
 
@@ -2286,13 +2231,13 @@ internal class ConnectionsHandlerTest {
           generateExpectedConnectionRead(standardSync).copy(name = "newName")
         val expectedPersistedSync = clone(standardSync).withName("newName")
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2313,13 +2258,13 @@ internal class ConnectionsHandlerTest {
             .withScheduleData(null)
             .withManual(true)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2342,9 +2287,7 @@ internal class ConnectionsHandlerTest {
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalog)
 
-        doThrow(LicenseEntitlementProblem())
-          .`when`(licenseEntitlementChecker)
-          .ensureEntitled(anyOrNull(), eq(entitlement), anyOrNull())
+        every { licenseEntitlementChecker.ensureEntitled(any(), entitlement, any()) } throws LicenseEntitlementProblem()
 
         assertThrows(
           LicenseEntitlementProblem::class.java,
@@ -2356,9 +2299,8 @@ internal class ConnectionsHandlerTest {
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, onDemandEnabled = true)
 
-        doAnswer { throw LicenseEntitlementProblem() }
-          .whenever(entitlementService)
-          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+        every { entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement) } throws
+          LicenseEntitlementProblem()
 
         assertThrows(
           LicenseEntitlementProblem::class.java,
@@ -2370,9 +2312,7 @@ internal class ConnectionsHandlerTest {
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, onDemandEnabled = true)
 
-        doNothing()
-          .whenever(entitlementService)
-          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+        every { entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement) } just Runs
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
@@ -2416,8 +2356,8 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testUpdateConnectionPatchScheduleToCron() {
-        whenever(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(UUID.randomUUID())
-        whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(organizationId)
+        every { workspaceHelper.getWorkspaceForSourceId(any()) } returns UUID.randomUUID()
+        every { workspaceHelper.getOrganizationForWorkspace(any()) } returns organizationId
 
         val cronScheduleData =
           ConnectionScheduleData(
@@ -2443,19 +2383,19 @@ internal class ConnectionsHandlerTest {
             .withScheduleData(ScheduleData().withCron(Cron().withCronExpression(cronExpression).withCronTimeZone(cronTimezoneUtc)))
             .withManual(false)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
-        whenever(
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+        every {
           entitlementService.checkEntitlement(
             OrganizationId(organizationId),
             FasterSyncFrequencyEntitlement,
-          ),
-        ).thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
+          )
+        } returns EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null)
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2491,13 +2431,13 @@ internal class ConnectionsHandlerTest {
             .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.DAYS).withUnits(10L)))
             .withManual(false)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2528,13 +2468,13 @@ internal class ConnectionsHandlerTest {
             .withCatalog(expectedPersistedCatalog)
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate))
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2569,13 +2509,13 @@ internal class ConnectionsHandlerTest {
             .withCatalog(expectedPersistedCatalog)
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate))
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2594,13 +2534,13 @@ internal class ConnectionsHandlerTest {
           clone(standardSync)
             .withDestinationCatalogId(newDestinationCatalogId)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @ParameterizedTest
@@ -2624,24 +2564,20 @@ internal class ConnectionsHandlerTest {
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalogForUpdate)
 
-        whenever(
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles),
-        )
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles)
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles),
-        )
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles)
 
         if (sourceSupportsFiles && destinationSupportsFiles && streamSupportsFiles) {
           // everything supports file transfers, so the connection should be created successfully
@@ -2671,15 +2607,14 @@ internal class ConnectionsHandlerTest {
 
         val streamName = "stream-name"
         val mapperId = UUID.randomUUID()
-        whenever(connectionService.getStandardSync(standardSync.connectionId))
-          .thenReturn(standardSync)
-        whenever(
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             catalogConverter.toConfiguredInternal(
               catalogForUpdate,
             ),
-          ),
-        ).thenReturn(
+          )
+        } returns
           CatalogGenerationResult(
             ConfiguredAirbyteCatalog(),
             mapOf(
@@ -2696,8 +2631,7 @@ internal class ConnectionsHandlerTest {
                   } to MapperError(MapperErrorType.INVALID_MAPPER_CONFIG, "error"),
                 ),
             ),
-          ),
-        )
+          )
 
         val exception: MapperValidationProblem =
           assertThrows(
@@ -2755,13 +2689,13 @@ internal class ConnectionsHandlerTest {
           clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2804,13 +2738,13 @@ internal class ConnectionsHandlerTest {
           clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2837,13 +2771,13 @@ internal class ConnectionsHandlerTest {
             .withCatalog(expectedPersistedCatalog)
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate))
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2896,7 +2830,7 @@ internal class ConnectionsHandlerTest {
             .withSourceCatalogId(newSourceCatalogId)
             .withOperationIds(listOf<UUID?>(operationId, otherOperationId))
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
@@ -2927,8 +2861,8 @@ internal class ConnectionsHandlerTest {
           )
 
         assertEquals(expectedConnectionRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
@@ -2958,19 +2892,18 @@ internal class ConnectionsHandlerTest {
           clone(standardSync)
             .withTags(listOf(configTag1, configTag2, configTag3))
 
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 
         assertEquals(expectedRead, actualConnectionRead)
-        verify(connectionService).writeStandardSync(expectedPersistedSync)
-        verify(eventRunner).update(connectionUpdate.connectionId)
+        verify { connectionService.writeStandardSync(expectedPersistedSync) }
+        verify { eventRunner.update(connectionUpdate.connectionId) }
       }
 
       @Test
       fun testUpdateConnectionWithConflictingStreamsThrows() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog()
 
@@ -2997,12 +2930,12 @@ internal class ConnectionsHandlerTest {
               .withPrefix(standardSync.prefix),
           )
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mockDestinationStreamData)
+            any(),
+            any(),
+          )
+        } returns mockDestinationStreamData
 
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalog)
@@ -3013,17 +2946,16 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testUpdateConnectionWithNoConflictingStreamSucceeds() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog()
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mutableListOf())
+            any(),
+            any(),
+          )
+        } returns mutableListOf()
 
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalog)
@@ -3039,8 +2971,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testUpdateConnectionWithConflictingStreamButUnselected() {
-        whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
-          .thenReturn(true)
+        every { featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)) } returns true
 
         val catalog = generateBasicApiCatalog().withFirstConfig { it.copy(selected = false) }
 
@@ -3067,12 +2998,12 @@ internal class ConnectionsHandlerTest {
               .withPrefix(standardSync.prefix),
           )
 
-        whenever(
+        every {
           connectionService.listStreamsForDestination(
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(mockDestinationStreamData)
+            any(),
+            any(),
+          )
+        } returns mockDestinationStreamData
 
         val connectionUpdate =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalog)
@@ -3088,8 +3019,8 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testValidateConnectionUpdateOperationInDifferentWorkspace() {
-        whenever(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(UUID.randomUUID())
-        whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+        every { workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId) } returns UUID.randomUUID()
+        every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
         val connectionUpdate =
           ConnectionUpdate(
@@ -3108,14 +3039,12 @@ internal class ConnectionsHandlerTest {
         val catalog = generateBasicApiCatalog()
         val request =
           ConnectionUpdate(connectionId = standardSync.connectionId, syncCatalog = catalog, name = "newName")
-        whenever(
+        every {
           catalogValidator.fieldCount(
-            eq(catalog),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ValidationError("bad catalog"),
-        )
+            catalog,
+            any(),
+          )
+        } returns ValidationError("bad catalog")
 
         assertThrows(
           BadRequestException::class.java,
@@ -3144,11 +3073,11 @@ internal class ConnectionsHandlerTest {
           )
         val request =
           ConnectionUpdate(connectionId = moreComplexCatalogSync!!.connectionId, syncCatalog = catalog)
-        whenever(featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled, Workspace(workspaceId))).thenReturn(true)
+        every { featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled, Workspace(workspaceId)) } returns true
         connectionsHandler.updateConnection(request, null, false)
         val expectedStreams =
           setOf(StreamDescriptor().withName("user"), StreamDescriptor().withName("permission"))
-        verify(statePersistence).bulkDelete(moreComplexCatalogSync!!.connectionId, expectedStreams)
+        verify { statePersistence.bulkDelete(moreComplexCatalogSync!!.connectionId, expectedStreams) }
       }
 
       @ParameterizedTest
@@ -3177,34 +3106,30 @@ internal class ConnectionsHandlerTest {
             destinationCatalogId = destinationCatalogIdInUpdate,
           )
         if (hasDestinationCatalogInUpdate) {
-          whenever(catalogService.getActorCatalogById(destinationCatalogIdInUpdate!!))
-            .thenReturn(ActorCatalog().withId(destinationCatalogIdInUpdate).withCatalog(emptyObject()))
+          every { catalogService.getActorCatalogById(destinationCatalogIdInUpdate!!) } returns
+            ActorCatalog().withId(destinationCatalogIdInUpdate).withCatalog(emptyObject())
         }
 
-        whenever(
+        every {
           featureFlagClient.boolVariation(
-            eq(EnableDestinationCatalogValidation),
-            anyOrNull(),
-          ),
-        ).thenReturn(featureFlagEnabled)
-        whenever(
+            EnableDestinationCatalogValidation,
+            any(),
+          )
+        } returns featureFlagEnabled
+        every {
           actorDefinitionVersionHelper.getSourceVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsDataActivation(false),
-        )
-        whenever(
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsDataActivation(false)
+        every {
           actorDefinitionVersionHelper.getDestinationVersion(
-            anyOrNull(),
-            anyOrNull(),
-            anyOrNull(),
-          ),
-        ).thenReturn(
-          ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation),
-        )
+            any(),
+            any(),
+            any(),
+          )
+        } returns ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation)
 
         if (shouldSucceed) {
           // Connection should be updated successfully
@@ -3249,11 +3174,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         // Should not throw any exception
         assertDoesNotThrow {
@@ -3276,11 +3201,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         assertThrows(
           DestinationCatalogMissingObjectNameProblem::class.java,
@@ -3301,11 +3226,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         assertThrows(
           DestinationCatalogInvalidOperationProblem::class.java,
@@ -3348,11 +3273,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         assertThrows(
           DestinationCatalogMissingRequiredFieldProblem::class.java,
@@ -3394,11 +3319,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         assertThrows(
           DestinationCatalogInvalidAdditionalFieldProblem::class.java,
@@ -3430,11 +3355,11 @@ internal class ConnectionsHandlerTest {
 
         val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
 
-        whenever(
+        every {
           destinationCatalogGenerator.generateDestinationCatalog(
             configuredCatalog,
-          ),
-        ).thenReturn(generationResult)
+          )
+        } returns generationResult
 
         if (testCase.expectedException != null) {
           assertThrows(
@@ -3513,14 +3438,14 @@ internal class ConnectionsHandlerTest {
         val jobTwo =
           Job(2, ConfigType.REFRESH, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.FAILED, 0L, 0L, 0L, true)
 
-        whenever(
+        every {
           jobPersistence.listJobs(
             Job.SYNC_REPLICATION_TYPES,
             setOf(JobStatus.SUCCEEDED, JobStatus.FAILED),
             apiReq.connectionId.toString(),
             apiReq.numberOfJobs,
-          ),
-        ).thenReturn(listOf(jobOne, jobTwo))
+          )
+        } returns listOf(jobOne, jobTwo)
 
         val jobOneBytesCommitted = 12345L
         val jobOneBytesEmitted = 23456L
@@ -3535,56 +3460,55 @@ internal class ConnectionsHandlerTest {
         val jobTwoRecordsCommitted = 50L
         val jobTwoRecordsEmittted = 60L
         val jobTwoRecordsRejected = 10L
-        mockStatic(StatsAggregationHelper::class.java).use { mockStatsAggregationHelper ->
-          mockStatsAggregationHelper
-            .`when`<Any?> {
-              getJobIdToJobWithAttemptsReadMap(
-                anyOrNull(),
-                anyOrNull(),
-              )
-            }.thenReturn(
-              mapOf(
-                jobOneId to
-                  JobWithAttemptsRead(
-                    job =
-                      JobRead(
-                        id = jobOneId,
-                        configId = connectionId.toString(),
-                        status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
-                        createdAt = jobOneCreatedAt,
-                        updatedAt = jobOneUpdatedAt,
-                        configType = ApiJobConfigType.SYNC,
-                        aggregatedStats =
-                          JobAggregatedStats(
-                            bytesCommitted = jobOneBytesCommitted,
-                            bytesEmitted = jobOneBytesEmitted,
-                            recordsCommitted = jobOneRecordsCommitted,
-                            recordsEmitted = jobOneRecordsEmmitted,
-                            recordsRejected = 0L,
-                          ),
-                      ),
-                  ),
-                jobTwoId to
-                  JobWithAttemptsRead(
-                    job =
-                      JobRead(
-                        id = jobTwoId,
-                        configId = connectionId.toString(),
-                        status = io.airbyte.api.server.generated.models.JobStatus.FAILED,
-                        createdAt = jobTwoCreatedAt,
-                        updatedAt = jobTwoUpdatedAt,
-                        configType = ApiJobConfigType.SYNC,
-                        aggregatedStats =
-                          JobAggregatedStats(
-                            bytesCommitted = jobTwoBytesCommitted,
-                            bytesEmitted = jobTwoBytesEmmitted,
-                            recordsCommitted = jobTwoRecordsCommitted,
-                            recordsRejected = jobTwoRecordsRejected,
-                            recordsEmitted = jobTwoRecordsEmittted,
-                          ),
-                      ),
-                  ),
-              ),
+        mockkStatic(StatsAggregationHelper::class)
+        try {
+          every {
+            StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(
+              any(),
+              any(),
+            )
+          } returns
+            mapOf(
+              jobOneId to
+                JobWithAttemptsRead(
+                  job =
+                    JobRead(
+                      id = jobOneId,
+                      configId = connectionId.toString(),
+                      status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+                      createdAt = jobOneCreatedAt,
+                      updatedAt = jobOneUpdatedAt,
+                      configType = ApiJobConfigType.SYNC,
+                      aggregatedStats =
+                        JobAggregatedStats(
+                          bytesCommitted = jobOneBytesCommitted,
+                          bytesEmitted = jobOneBytesEmitted,
+                          recordsCommitted = jobOneRecordsCommitted,
+                          recordsEmitted = jobOneRecordsEmmitted,
+                          recordsRejected = 0L,
+                        ),
+                    ),
+                ),
+              jobTwoId to
+                JobWithAttemptsRead(
+                  job =
+                    JobRead(
+                      id = jobTwoId,
+                      configId = connectionId.toString(),
+                      status = io.airbyte.api.server.generated.models.JobStatus.FAILED,
+                      createdAt = jobTwoCreatedAt,
+                      updatedAt = jobTwoUpdatedAt,
+                      configType = ApiJobConfigType.SYNC,
+                      aggregatedStats =
+                        JobAggregatedStats(
+                          bytesCommitted = jobTwoBytesCommitted,
+                          bytesEmitted = jobTwoBytesEmmitted,
+                          recordsCommitted = jobTwoRecordsCommitted,
+                          recordsRejected = jobTwoRecordsRejected,
+                          recordsEmitted = jobTwoRecordsEmittted,
+                        ),
+                    ),
+                ),
             )
           val expected =
             listOf(
@@ -3614,6 +3538,8 @@ internal class ConnectionsHandlerTest {
               ),
             )
           assertEquals(expected, connectionsHandler.getConnectionDataHistory(apiReq))
+        } finally {
+          unmockkStatic(StatsAggregationHelper::class)
         }
       }
     }
@@ -3627,13 +3553,13 @@ internal class ConnectionsHandlerTest {
         val requestBody =
           ConnectionStreamHistoryRequestBody(connectionId = connectionId, timezone = timezoneLosAngeles)
 
-        whenever(
+        every {
           jobPersistence.listAttemptsForConnectionAfterTimestamp(
-            eq(connectionId),
-            eq(ConfigType.SYNC),
-            anyOrNull(),
-          ),
-        ).thenReturn(mutableListOf())
+            connectionId,
+            ConfigType.SYNC,
+            any(),
+          )
+        } returns mutableListOf()
 
         val actual =
           connectionsHandler.getConnectionStreamHistoryInternal(requestBody, Instant.ofEpochMilli(946684800000L))
@@ -3707,13 +3633,13 @@ internal class ConnectionsHandlerTest {
 
         val attempts = listOf(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3, attemptWithJobInfo4)
 
-        whenever(
+        every {
           jobPersistence.listAttemptsForConnectionAfterTimestamp(
-            eq(connectionId),
-            eq(ConfigType.SYNC),
-            anyOrNull(),
-          ),
-        ).thenReturn(attempts)
+            connectionId,
+            ConfigType.SYNC,
+            any(),
+          )
+        } returns attempts
 
         val requestBody =
           ConnectionStreamHistoryRequestBody(connectionId = connectionId, timezone = timezoneLosAngeles)
@@ -4371,7 +4297,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val failureSummary = AttemptFailureSummary()
@@ -4406,13 +4332,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(2L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       assertEquals(1, status.size)
@@ -4425,7 +4351,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_syncing() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4456,13 +4382,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4474,7 +4400,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_queued() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val jobs =
@@ -4492,13 +4418,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4510,7 +4436,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pendingWhenJobIsPending() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val jobs =
@@ -4528,13 +4454,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4547,8 +4473,7 @@ internal class ConnectionsHandlerTest {
     @Test
     fun testConnectionStatus_failed_breakingSchemaChange() {
       val standardSyncWithBreakingSchemaChange = clone(standardSync).withBreakingChange(true)
-      whenever(connectionService.getStandardSync(standardSync.connectionId))
-        .thenReturn(standardSyncWithBreakingSchemaChange)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSyncWithBreakingSchemaChange
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4567,13 +4492,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4585,7 +4510,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_failed_hasConfigError() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val failureSummary = AttemptFailureSummary()
@@ -4612,13 +4537,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4632,7 +4557,7 @@ internal class ConnectionsHandlerTest {
     @EnumSource(StandardSync.Status::class, names = ["INACTIVE", "DEPRECATED", "LOCKED"])
     fun testConnectionStatus_paused_if_not_active(status: StandardSync.Status) {
       val standardSyncPaused = clone(standardSync).withStatus(status)
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSyncPaused)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSyncPaused
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4651,13 +4576,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4669,17 +4594,17 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pending_nosyncs() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val jobs = listOf<Job>()
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4691,7 +4616,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pending_afterSuccessfulReset() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4711,13 +4636,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(1L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4729,7 +4654,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pending_afterFailedReset() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L)
@@ -4749,13 +4674,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(1L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4767,7 +4692,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pending_afterSuccessfulClear() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4787,13 +4712,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(1L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4805,7 +4730,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_pending_afterFailedClear() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L)
@@ -4825,13 +4750,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(1L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4843,7 +4768,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_incomplete_afterCancelledReset() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val resetAttempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L)
@@ -4875,13 +4800,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4893,7 +4818,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_incomplete_failed() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L)
@@ -4913,13 +4838,13 @@ internal class ConnectionsHandlerTest {
           ),
           Job(1L, ConfigType.SYNC, connectionId.toString(), JobConfig(), mutableListOf(), JobStatus.SUCCEEDED, 801L, 800L, 802L, true),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4931,7 +4856,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_incomplete_cancelled() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val failedAttempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, null, 0, 0, 0L)
@@ -4950,13 +4875,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -4968,7 +4893,7 @@ internal class ConnectionsHandlerTest {
 
     @Test
     fun testConnectionStatus_synced() {
-      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(standardSync.connectionId) } returns standardSync
 
       val connectionId = standardSync.connectionId
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
@@ -4987,13 +4912,13 @@ internal class ConnectionsHandlerTest {
             true,
           ),
         )
-      whenever(
+      every {
         jobPersistence.listJobsLight(
           Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
-        ),
-      ).thenReturn(jobs)
+        )
+      } returns jobs
       val req = ConnectionStatusesRequestBody(connectionIds = listOf(connectionId))
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status[0]
@@ -5055,37 +4980,40 @@ internal class ConnectionsHandlerTest {
         StandardSourceDefinition()
           .withSourceDefinitionId(UUID.randomUUID())
 
-      val sourceVersion = mock(ActorDefinitionVersion::class.java)
-      val destinationVersion = mock(ActorDefinitionVersion::class.java)
-      whenever(sourceVersion.supportsFileTransfer).thenReturn(false)
-      whenever(destinationVersion.supportsFileTransfer).thenReturn(false)
-      whenever(
+      val sourceVersion = mockk<ActorDefinitionVersion>()
+      val destinationVersion = mockk<ActorDefinitionVersion>()
+      every { sourceVersion.supportsFileTransfer } returns false
+      every { destinationVersion.supportsFileTransfer } returns false
+      every { sourceVersion.suggestedStreams } returns null
+      every { destinationVersion.suggestedStreams } returns null
+      every { workspaceHelper.getOrganizationForWorkspace(any()) } returns organizationId
+      every {
         actorDefinitionVersionHelper.getSourceVersion(
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(sourceVersion)
-      whenever(
+          any(),
+          any(),
+          any(),
+        )
+      } returns sourceVersion
+      every {
         actorDefinitionVersionHelper.getDestinationVersion(
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(destinationVersion)
+          any(),
+          any(),
+          any(),
+        )
+      } returns destinationVersion
 
-      whenever(catalogService.getActorCatalogById(sourceCatalogId)).thenReturn(actorCatalog)
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
-      whenever(sourceService.getSourceConnection(sourceId)).thenReturn(source)
-      whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(workspace)
-      whenever(destinationService.getDestinationDefinitionFromConnection(connectionId))
-        .thenReturn(destinationDefinition)
-      whenever(sourceService.getSourceDefinitionFromConnection(connectionId)).thenReturn(sourceDefinition)
-      whenever(
+      every { catalogService.getActorCatalogById(sourceCatalogId) } returns actorCatalog!!
+      every { connectionService.getStandardSync(connectionId) } returns standardSync!!
+      every { sourceService.getSourceConnection(sourceId) } returns source
+      every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+      every { destinationService.getDestinationDefinitionFromConnection(connectionId) } returns destinationDefinition
+      every { sourceService.getSourceDefinitionFromConnection(connectionId) } returns sourceDefinition
+      every { sourceService.getStandardSourceDefinition(any()) } returns sourceDefinition
+      every {
         connectorDefinitionSpecificationHandler.getDestinationSpecification(
           DestinationDefinitionIdWithWorkspaceId(destinationDefinitionId = destinationDefinitionId, workspaceId = workspaceId),
-        ),
-      ).thenReturn(
+        )
+      } returns
         DestinationDefinitionSpecificationRead(
           destinationDefinitionId = destinationDefinitionId,
           jobInfo =
@@ -5097,11 +5025,10 @@ internal class ConnectionsHandlerTest {
               succeeded = true,
             ),
           supportedDestinationSyncModes = listOf(KotlinDestinationSyncMode.OVERWRITE),
-        ),
-      )
-      whenever(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId)
-      whenever(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId)
-      whenever(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenReturn(workspaceId)
+        )
+      every { workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId) } returns workspaceId
+      every { workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId) } returns workspaceId
+      every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
     }
 
     @Test
@@ -5177,21 +5104,23 @@ internal class ConnectionsHandlerTest {
           )
 
       val expectedCatalog = ConfiguredAirbyteCatalog(streamsTmp)
-      val standardSyncArgumentCaptor = argumentCaptor<StandardSync>()
-      verify(connectionService).writeStandardSync(standardSyncArgumentCaptor.capture())
-      val actualStandardSync = standardSyncArgumentCaptor.firstValue
+      val standardSyncArgumentCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(standardSyncArgumentCaptor)) }
+      val actualStandardSync = standardSyncArgumentCaptor.captured
       assertEquals(clone(standardSync!!).withCatalog(expectedCatalog), actualStandardSync)
       // the notification function is being called with copy of the originalSync that does not contain the
       // updated catalog
       // This is ok as we only pass that object to get connectionId and connectionName
-      verify(notificationHelper).notifySchemaPropagated(
-        notificationSettings,
-        expectedDiff,
-        workspace,
-        apiPojoConverters.internalToConnectionRead(originalSync),
-        source,
-        email,
-      )
+      verify {
+        notificationHelper.notifySchemaPropagated(
+          notificationSettings,
+          expectedDiff,
+          workspace,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source,
+          email,
+        )
+      }
     }
 
     @Test
@@ -5245,20 +5174,22 @@ internal class ConnectionsHandlerTest {
             ),
         )
       assertEquals(expectedDiff, actualResult.propagatedDiff)
-      verify(notificationHelper).notifySchemaPropagated(
-        notificationSettings,
-        expectedDiff,
-        workspace,
-        apiPojoConverters.internalToConnectionRead(originalSync),
-        source,
-        email,
-      )
+      verify {
+        notificationHelper.notifySchemaPropagated(
+          notificationSettings,
+          expectedDiff,
+          workspace,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source,
+          email,
+        )
+      }
     }
 
     @Test
     fun testRemovedStreamIsAppliedWhenPropagatingColumnsOnly() {
       standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.PROPAGATE_COLUMNS
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(connectionId) } returns standardSync!!
 
       val request =
         ConnectionAutoPropagateSchemaChange(
@@ -5272,9 +5203,9 @@ internal class ConnectionsHandlerTest {
 
       val actualResult = connectionsHandler.applySchemaChange(request)
 
-      val standardSyncArgumentCaptor = argumentCaptor<StandardSync>()
-      verify(connectionService).writeStandardSync(standardSyncArgumentCaptor.capture())
-      val actualStandardSync = standardSyncArgumentCaptor.firstValue
+      val standardSyncArgumentCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(standardSyncArgumentCaptor)) }
+      val actualStandardSync = standardSyncArgumentCaptor.captured
       assertTrue(actualStandardSync.catalog.streams.isEmpty())
       assertEquals(sourceCatalogId, actualStandardSync.sourceCatalogId)
       assertEquals(1, actualResult.propagatedDiff!!.transforms.size)
@@ -5285,7 +5216,7 @@ internal class ConnectionsHandlerTest {
       // Override the non-breaking changes preference to ignore so that the changes are not
       // auto-propagated, but needs to be manually applied.
       standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.IGNORE
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(connectionId) } returns standardSync!!
       val originalSync = clone(standardSync!!)
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)
       val catalogWithDiff =
@@ -5334,15 +5265,17 @@ internal class ConnectionsHandlerTest {
             ),
         )
 
-      verify(notificationHelper).notifySchemaDiffToApply(
-        notificationSettings,
-        expectedDiff,
-        workspace,
-        apiPojoConverters.internalToConnectionRead(originalSync),
-        source,
-        email,
-        false,
-      )
+      verify {
+        notificationHelper.notifySchemaDiffToApply(
+          notificationSettings,
+          expectedDiff,
+          workspace,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source,
+          email,
+          false,
+        )
+      }
     }
 
     @Test
@@ -5350,7 +5283,7 @@ internal class ConnectionsHandlerTest {
       // Override the non-breaking changes preference to DISABLE so that the changes are not
       // auto-propagated, but needs to be manually applied.
       standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.DISABLE
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(connectionId) } returns standardSync!!
       val originalSync = clone(standardSync!!)
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)
       val catalogWithDiff =
@@ -5399,15 +5332,17 @@ internal class ConnectionsHandlerTest {
             ),
         )
 
-      verify(notificationHelper).notifySchemaDiffToApply(
-        notificationSettings,
-        expectedDiff,
-        workspace,
-        apiPojoConverters.internalToConnectionRead(originalSync),
-        source,
-        email,
-        true,
-      )
+      verify {
+        notificationHelper.notifySchemaDiffToApply(
+          notificationSettings,
+          expectedDiff,
+          workspace,
+          apiPojoConverters.internalToConnectionRead(originalSync),
+          source,
+          email,
+          true,
+        )
+      }
     }
 
     @Test
@@ -5420,7 +5355,7 @@ internal class ConnectionsHandlerTest {
           .withCatalog(jsonNode<io.airbyte.protocol.models.v0.AirbyteCatalog?>(catalogWithDiff))
           .withCatalogHash("")
           .withId(UUID.randomUUID())
-      whenever(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(discoveredCatalog)
+      every { catalogService.getActorCatalogById(discoveredCatalogId) } returns discoveredCatalog
 
       val expectedDiff =
         CatalogDiff(
@@ -5453,27 +5388,27 @@ internal class ConnectionsHandlerTest {
       assertEquals(expectedDiff, result.catalogDiff)
       assertEquals(false, result.breakingChange)
 
-      val syncCaptor = argumentCaptor<StandardSync>()
-      verify(connectionService).writeStandardSync(syncCaptor.capture())
-      val savedSync = syncCaptor.firstValue
+      val syncCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(syncCaptor)) }
+      val savedSync = syncCaptor.captured
       assertNotEquals(StandardSync.Status.INACTIVE, savedSync.status)
     }
 
     @Test
     fun diffCatalogADisablesForBreakingChange() {
-      val helper = mock(ApplySchemaChangeHelper::class.java)
+      val helper = mockk<ApplySchemaChangeHelper>()
       val field = ConnectionsHandler::class.java.getDeclaredField("applySchemaChangeHelper")
       field.setAccessible(true)
       field.set(connectionsHandler, helper)
 
-      whenever(helper.containsBreakingChange(anyOrNull())).thenReturn(true)
+      every { helper.containsBreakingChange(any()) } returns true
 
       val result = connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, sourceCatalogId)
       assertEquals(true, result.breakingChange)
 
-      val syncCaptor = argumentCaptor<StandardSync>()
-      verify(connectionService).writeStandardSync(syncCaptor.capture())
-      val savedSync = syncCaptor.firstValue
+      val syncCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(syncCaptor)) }
+      val savedSync = syncCaptor.captured
       assertEquals(StandardSync.Status.INACTIVE, savedSync.status)
     }
 
@@ -5481,7 +5416,7 @@ internal class ConnectionsHandlerTest {
     fun diffCatalogDisablesForNonBreakingChangeIfConfiguredSo() {
       // configure the sync to be disabled on non-breaking change
       standardSync = standardSync!!.withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.DISABLE)
-      whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
+      every { connectionService.getStandardSync(connectionId) } returns standardSync!!
 
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)
       val catalogWithDiff =
@@ -5491,15 +5426,15 @@ internal class ConnectionsHandlerTest {
           .withCatalog(jsonNode<io.airbyte.protocol.models.v0.AirbyteCatalog?>(catalogWithDiff))
           .withCatalogHash("")
           .withId(UUID.randomUUID())
-      whenever(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(discoveredCatalog)
+      every { catalogService.getActorCatalogById(discoveredCatalogId) } returns discoveredCatalog
 
       val result = connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId)
 
       assertEquals(false, result.breakingChange)
 
-      val syncCaptor = argumentCaptor<StandardSync>()
-      verify(connectionService).writeStandardSync(syncCaptor.capture())
-      val savedSync = syncCaptor.firstValue
+      val syncCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(syncCaptor)) }
+      val savedSync = syncCaptor.captured
       assertEquals(StandardSync.Status.INACTIVE, savedSync.status)
     }
 
@@ -5517,13 +5452,9 @@ internal class ConnectionsHandlerTest {
       val propagatedDiff = CatalogDiff(transforms = listOf(transform))
       val autoPropResult = ConnectionAutoPropagateResult(propagatedDiff = propagatedDiff)
 
-      val spiedConnectionsHandler = spy(connectionsHandler)
-      doReturn(diffResult)
-        .`when`(spiedConnectionsHandler)
-        .diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId)
-      doReturn(autoPropResult)
-        .`when`(spiedConnectionsHandler)
-        .applySchemaChange(connectionId, workspaceId, discoveredCatalogId, catalog, true)
+      val spiedConnectionsHandler = spyk(connectionsHandler)
+      every { spiedConnectionsHandler.diffCatalogAndConditionallyDisable(connectionId, discoveredCatalogId) } returns diffResult
+      every { spiedConnectionsHandler.applySchemaChange(connectionId, workspaceId, discoveredCatalogId, catalog, true) } returns autoPropResult
 
       val result = spiedConnectionsHandler.postprocessDiscoveredCatalog(connectionId, discoveredCatalogId)
 
@@ -5546,21 +5477,15 @@ internal class ConnectionsHandlerTest {
 
       val mostRecentCatalogId = UUID.randomUUID()
       val mostRecentCatalog = ActorCatalogWithUpdatedAt().withId(mostRecentCatalogId)
-      doReturn(Optional.of(mostRecentCatalog))
-        .`when`(catalogService)
-        .getMostRecentSourceActorCatalog(
-          sourceId,
-        )
+      every {
+        catalogService.getMostRecentSourceActorCatalog(sourceId)
+      } returns Optional.of(mostRecentCatalog)
 
-      val spiedConnectionsHandler = spy(connectionsHandler)
+      val spiedConnectionsHandler = spyk(connectionsHandler)
 
-      doReturn(diffResult)
-        .`when`(spiedConnectionsHandler)
-        .diffCatalogAndConditionallyDisable(connectionId, mostRecentCatalogId)
+      every { spiedConnectionsHandler.diffCatalogAndConditionallyDisable(connectionId, mostRecentCatalogId) } returns diffResult
 
-      doReturn(autoPropResult)
-        .`when`(spiedConnectionsHandler)
-        .applySchemaChange(connectionId, workspaceId, mostRecentCatalogId, catalog, true)
+      every { spiedConnectionsHandler.applySchemaChange(connectionId, workspaceId, mostRecentCatalogId, catalog, true) } returns autoPropResult
 
       val result = spiedConnectionsHandler.postprocessDiscoveredCatalog(connectionId, discoveredCatalogId)
 
@@ -5579,7 +5504,7 @@ internal class ConnectionsHandlerTest {
           .withDestinationDefinitionId(UUID.randomUUID())
           .withWorkspaceId(UUID.randomUUID())
           .withOrganizationId(UUID.randomUUID())
-      doReturn(context).`when`(contextBuilder).fromConnectionId(connectionId)
+      every { contextBuilder.fromConnectionId(connectionId) } returns context
       val result = connectionsHandler.getConnectionContext(connectionId)
       val expected = context.toServerApi()
       assertEquals(expected, result)
@@ -5740,27 +5665,122 @@ internal class ConnectionsHandlerTest {
           endedAt = updatedAt.toEpochMilli(),
         )
 
-      whenever(streamStatusesService.getLastJobIdWithStatsByStream(connectionId))
-        .thenReturn(
-          mapOf(
-            stream1Descriptor to jobId,
-            stream2Descriptor to jobId,
-          ),
+      every { streamStatusesService.getLastJobIdWithStatsByStream(connectionId) } returns
+        mapOf(
+          stream1Descriptor to jobId,
+          stream2Descriptor to jobId,
         )
 
-      whenever(jobPersistence.listJobsLight(setOf(jobId))).thenReturn(jobList)
+      every { jobPersistence.listJobsLight(setOf(jobId)) } returns jobList
 
-      mockStatic(StatsAggregationHelper::class.java).use { mockStatsAggregationHelper ->
-        mockStatsAggregationHelper
-          .`when`<Any> {
-            getJobIdToJobWithAttemptsReadMap(
-              eq(jobList),
-              eq(jobPersistence),
-            )
-          }.thenReturn(mapOf(jobId to jobWithAttemptsRead))
+      mockkStatic(StatsAggregationHelper::class)
+      try {
+        every {
+          StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(
+            jobList,
+            jobPersistence,
+          )
+        } returns mapOf(jobId to jobWithAttemptsRead)
 
         val expectedStream1And2 = listOf(stream1ReadItem, stream2ReadItem)
         assertEquals(expectedStream1And2, connectionsHandler.getConnectionLastJobPerStream(apiReq))
+      } finally {
+        unmockkStatic(StatsAggregationHelper::class)
+      }
+    }
+
+    @Test
+    fun testGetConnectionLastJobPerStreamWhenJobHasNoStartedAt() {
+      val connectionId = UUID.randomUUID()
+      val jobId = 1L
+      val streamName = "testStream"
+      val streamNamespace = "testNamespace"
+      val streamDescriptor =
+        StreamDescriptor()
+          .withName(streamName)
+          .withNamespace(streamNamespace)
+      val createdAt = Instant.now()
+      val updatedAt = createdAt.plusSeconds(10)
+      val bytesCommitted = 12345L
+      val recordsCommitted = 100L
+      val configType = ConfigType.SYNC
+      val jobStatus = JobStatus.SUCCEEDED
+      val job =
+        Job(
+          jobId,
+          configType,
+          connectionId.toString(),
+          JobConfig(),
+          mutableListOf(),
+          jobStatus,
+          null,
+          createdAt.toEpochMilli(),
+          updatedAt.toEpochMilli(),
+          true,
+        )
+      val jobList = listOf(job)
+      val jobRead =
+        JobRead(
+          id = job.id,
+          configId = connectionId.toString(),
+          configType = ApiJobConfigType.SYNC,
+          status = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          aggregatedStats =
+            JobAggregatedStats(
+              bytesCommitted = bytesCommitted,
+              bytesEmitted = 0L,
+              recordsCommitted = recordsCommitted,
+              recordsEmitted = 0L,
+              recordsRejected = 0L,
+            ),
+          createdAt = job.createdAtInSecond,
+          updatedAt = job.updatedAtInSecond,
+          startedAt = null,
+          streamAggregatedStats =
+            listOf(
+              StreamStats(
+                streamName = streamName,
+                streamNamespace = streamNamespace,
+                bytesCommitted = bytesCommitted,
+                recordsCommitted = recordsCommitted,
+                bytesEmitted = 0L,
+                recordsEmitted = 0L,
+                recordsRejected = 0L,
+              ),
+            ),
+        )
+      val jobWithAttemptsRead = JobWithAttemptsRead(job = jobRead, attempts = emptyList())
+      val apiReq =
+        ConnectionLastJobPerStreamRequestBody(connectionId = connectionId)
+      val expectedItem =
+        ConnectionLastJobPerStreamReadItem(
+          streamName = streamName,
+          streamNamespace = streamNamespace,
+          jobId = jobId,
+          configType = JobConfigType.SYNC,
+          jobStatus = io.airbyte.api.server.generated.models.JobStatus.SUCCEEDED,
+          bytesCommitted = bytesCommitted,
+          recordsCommitted = recordsCommitted,
+          startedAt = null,
+          endedAt = updatedAt.toEpochMilli(),
+        )
+
+      every { streamStatusesService.getLastJobIdWithStatsByStream(connectionId) } returns mapOf(streamDescriptor to jobId)
+
+      every { jobPersistence.listJobsLight(setOf(jobId)) } returns jobList
+
+      mockkStatic(StatsAggregationHelper::class)
+      try {
+        every {
+          StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(
+            jobList,
+            jobPersistence,
+          )
+        } returns mapOf(jobId to jobWithAttemptsRead)
+
+        assertEquals(listOf(expectedItem), connectionsHandler.getConnectionLastJobPerStream(apiReq))
+      } finally {
+        unmockkStatic(StatsAggregationHelper::class)
       }
     }
   }

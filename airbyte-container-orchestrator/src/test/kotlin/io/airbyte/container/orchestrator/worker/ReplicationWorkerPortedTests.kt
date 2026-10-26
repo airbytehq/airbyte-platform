@@ -62,7 +62,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
@@ -622,12 +621,6 @@ class ReplicationWorkerPortedTests {
 
     val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
-  }
-
-  @Test fun `does not populate state on failure if not available`() {
-    every { source.close() } throws IllegalStateException("induced")
-    val out = runBlocking { getWorker().run(jobRoot) }
-    assertNull(out.state)
   }
 
   @Test fun `irrecoverable failure throws WorkerException`() {

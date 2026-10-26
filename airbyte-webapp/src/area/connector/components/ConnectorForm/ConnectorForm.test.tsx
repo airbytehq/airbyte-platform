@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
+import { getAllByRole, getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
@@ -9,7 +9,7 @@ import { useFormContext } from "react-hook-form";
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { ConnectorForm } from "area/connector/components/ConnectorForm";
+import { ConnectorForm, ConnectorFormProps } from "area/connector/components/ConnectorForm";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
 import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
@@ -77,6 +77,25 @@ const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: s
   fireEvent.click(listBoxOption);
 };
 
+const selectSegmentedOption = async (container: HTMLElement, segmentedControlTestId: string, option: string) => {
+  const segmentedControl = getByTestId(container, segmentedControlTestId);
+  await userEvent.click(getByRole(segmentedControl, "radio", { name: option }));
+};
+
+const buildOneOfField = (optionCount: number, overrides: AirbyteJSONSchema = {}): AirbyteJSONSchema => ({
+  type: "object",
+  title: "Choice",
+  ...overrides,
+  oneOf: Array.from({ length: optionCount }, (_, index) => ({
+    title: `choice ${index}`,
+    required: [`field_${index}`],
+    properties: {
+      type: { type: "string", const: `type_${index}`, default: `type_${index}` },
+      [`field_${index}`]: { type: "string" },
+    },
+  })),
+});
+
 const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
   const priceList = getByTestId(container, "connectionConfiguration.priceList");
   let index = initialIndex;
@@ -101,7 +120,7 @@ const useAddPriceListItem = (container: HTMLElement, initialIndex = 0) => {
       expect(priceInput?.value).toEqual(price);
     });
 
-    selectDropdownOption(priceList, `connectionConfiguration.priceList.${index}.origin`, originType);
+    await selectSegmentedOption(priceList, `connectionConfiguration.priceList.${index}.origin`, originType);
 
     const originInput = priceList.querySelector(
       `input[name='connectionConfiguration.priceList.${index}.origin.${originType}']`
@@ -289,12 +308,14 @@ describe("Connector form", () => {
     specificationOverride,
     features,
     formAutomation,
+    renderFooter = () => <button type="submit">Submit</button>,
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
     propertiesOverride?: Record<string, AirbyteJSONSchema>;
     features?: FeatureItem[];
     formAutomation?: React.ReactNode;
+    renderFooter?: ConnectorFormProps["renderFooter"];
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
@@ -305,7 +326,7 @@ describe("Connector form", () => {
           result = values;
         }}
         isEditMode={Boolean(formValuesOverride)}
-        renderFooter={() => <button type="submit">Submit</button>}
+        renderFooter={renderFooter}
         formAutomation={formAutomation}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
@@ -364,6 +385,176 @@ describe("Connector form", () => {
     expect(screen.getByTestId("form-automation")).toHaveTextContent("source:test-name");
   });
 
+  describe("empty required fields", () => {
+    const renderFooter: ConnectorFormProps["renderFooter"] = ({ emptyRequiredFields }) => (
+      <>
+        <button type="submit" disabled={emptyRequiredFields.length > 0}>
+          Submit
+        </button>
+        <output data-testid="empty-required-fields">{emptyRequiredFields.join(" | ")}</output>
+      </>
+    );
+    const emptyRequiredFields = () => screen.getByTestId("empty-required-fields");
+
+    it("lists an empty required field until it has a value, even if the value breaks its pattern", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["host"],
+            properties: { host: { type: "string", title: "Host", pattern: "^[a-z]+$" }, port: { type: "integer" } },
+          },
+        },
+      });
+      const hostInput = getInputByName(container, "connectionConfiguration.host")!;
+
+      expect(emptyRequiredFields()).toHaveTextContent("Host");
+      expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+
+      await userEvent.type(hostInput, "123");
+      await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+      expect(emptyRequiredFields()).toBeEmptyDOMElement();
+
+      await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+      expect(await screen.findByText("The value must match the pattern ^[a-z]+$")).toBeInTheDocument();
+      expect(result).toBeUndefined();
+
+      await userEvent.clear(hostInput);
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent("Host"));
+      expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    });
+
+    it("lists only the required fields of the selected oneOf option", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["auth"],
+            properties: {
+              auth: {
+                type: "object",
+                title: "Authentication",
+                oneOf: [
+                  {
+                    title: "Option A",
+                    required: ["a_key"],
+                    properties: {
+                      mode: { type: "string", const: "a", default: "a" },
+                      a_key: { type: "string", title: "A key" },
+                    },
+                  },
+                  {
+                    title: "Option B",
+                    required: ["b_key"],
+                    properties: {
+                      mode: { type: "string", const: "b", default: "b" },
+                      b_key: { type: "string", title: "B key" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^A key$/);
+
+      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^B key$/));
+    });
+
+    it("lists a field that two oneOf options share by the title in the selected option", async () => {
+      const container = await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["auth"],
+            properties: {
+              auth: {
+                type: "object",
+                title: "Authentication",
+                oneOf: [
+                  {
+                    title: "Option A",
+                    required: ["key"],
+                    properties: {
+                      mode: { type: "string", const: "a", default: "a" },
+                      key: { type: "string", title: "API key" },
+                    },
+                  },
+                  {
+                    title: "Option B",
+                    required: ["key"],
+                    properties: {
+                      mode: { type: "string", const: "b", default: "b" },
+                      key: { type: "string", title: "Access token" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      selectDropdownOption(container, "connectionConfiguration.auth", "Option B");
+
+      await waitFor(() => expect(emptyRequiredFields()).toHaveTextContent(/^Access token$/));
+    });
+
+    it("lists an empty required field of a nested object by its own title", async () => {
+      await renderForm({
+        renderFooter,
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["database"],
+            properties: {
+              database: {
+                type: "object",
+                title: "Database",
+                required: ["host"],
+                properties: { host: { type: "string", title: "Database host" } },
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^Database host$/);
+    });
+
+    it("lists an empty required field of array items once, however many items lack it", async () => {
+      await renderForm({
+        renderFooter,
+        formValuesOverride: { items: [{ price: 1 }, {}] },
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                title: "Items",
+                items: {
+                  type: "object",
+                  required: ["name"],
+                  properties: { name: { type: "string", title: "Item name" }, price: { type: "integer" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      expect(emptyRequiredFields()).toHaveTextContent(/^Item name$/);
+    });
+  });
+
   describe("should display json schema specs", () => {
     let container: HTMLElement;
     beforeEach(async () => {
@@ -402,12 +593,11 @@ describe("Connector form", () => {
     });
 
     it("should display oneOf field", () => {
-      const credentials = container.querySelector(
-        "button[data-testid='connectionConfiguration.credentials-listbox-button']"
-      );
+      const credentials = screen.getByRole("radiogroup", { name: "credentials" });
       const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
-      expect(credentials).toBeInTheDocument();
-      expect(credentials?.getAttribute("aria-haspopup")).toEqual("listbox");
+      expect(credentials).toHaveAttribute("data-testid", "connectionConfiguration.credentials");
+      expect(getByRole(credentials, "radio", { name: "api key" })).toHaveAttribute("aria-checked", "true");
+      expect(getByRole(credentials, "radio", { name: "oauth" })).toHaveAttribute("aria-checked", "false");
       expect(apiKey).toBeInTheDocument();
     });
 
@@ -701,8 +891,8 @@ describe("Connector form", () => {
         },
       });
 
-      selectDropdownOption(container, "connectionConfiguration.condition", "option2");
-      selectDropdownOption(container, "connectionConfiguration.condition.nestedcondition", "nestedoption2");
+      await selectSegmentedOption(container, "connectionConfiguration.condition", "option2");
+      await selectSegmentedOption(container, "connectionConfiguration.condition.nestedcondition", "nestedoption2");
 
       const uri = container.querySelector(
         "input[name='connectionConfiguration.condition.nestedcondition.doublenestedinput']"
@@ -835,8 +1025,9 @@ describe("Connector form", () => {
       const apiKey = getInputByName(container, "connectionConfiguration.credentials.api_key");
       expect(apiKey).toBeInTheDocument();
 
-      selectDropdownOption(container, "connectionConfiguration.credentials", "oauth");
+      await selectSegmentedOption(container, "connectionConfiguration.credentials", "oauth");
 
+      expect(apiKey).not.toBeInTheDocument();
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       expect(uri).toBeInTheDocument();
 
@@ -853,7 +1044,7 @@ describe("Connector form", () => {
     it("should fill right values oneOf field", async () => {
       const container = await renderForm({ formValuesOverride: { ...filledForm, credentials: { type: "api" } } });
 
-      selectDropdownOption(container, "connectionConfiguration.credentials", "oauth");
+      await selectSegmentedOption(container, "connectionConfiguration.credentials", "oauth");
 
       const uri = getInputByName(container, "connectionConfiguration.credentials.redirect_uri");
       await userEvent.type(uri!, "test-uri");
@@ -915,6 +1106,215 @@ describe("Connector form", () => {
         ],
       });
     });
+
+    describe("oneOf control type", () => {
+      const unknownDisplayType = { display_type: "Dropdown" } as unknown as AirbyteJSONSchema;
+
+      it.each([2, 3, 4])("should render a oneOf with %i options as a segmented control", async (optionCount) => {
+        await renderForm({ propertiesOverride: { choice: buildOneOfField(optionCount) } });
+
+        const choice = screen.getByRole("radiogroup", { name: "Choice" });
+        expect(getAllByRole(choice, "radio")).toHaveLength(optionCount);
+        expect(screen.queryByTestId("connectionConfiguration.choice-listbox-button")).not.toBeInTheDocument();
+      });
+
+      it.each([1, 5])("should render a oneOf with %i options as a dropdown", async (optionCount) => {
+        await renderForm({ propertiesOverride: { choice: buildOneOfField(optionCount) } });
+
+        expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toHaveAttribute(
+          "aria-haspopup",
+          "listbox"
+        );
+        expect(screen.queryByRole("radiogroup", { name: "Choice" })).not.toBeInTheDocument();
+      });
+
+      it("should count only visible options when choosing the control", async () => {
+        const choice = buildOneOfField(5);
+        const [first, second, third, fourth, fifth] = choice.oneOf as AirbyteJSONSchema[];
+        await renderForm({
+          propertiesOverride: {
+            choice: {
+              ...choice,
+              oneOf: [first, second, third, { ...fourth, airbyte_hidden: true }, { ...fifth, airbyte_hidden: true }],
+            },
+          },
+        });
+
+        const segmentedControl = screen.getByRole("radiogroup", { name: "Choice" });
+        expect(getAllByRole(segmentedControl, "radio").map((radio) => radio.textContent)).toEqual([
+          "choice 0",
+          "choice 1",
+          "choice 2",
+        ]);
+      });
+
+      it("should render a oneOf whose options add no fields as a dropdown", async () => {
+        await renderForm({
+          propertiesOverride: {
+            choice: {
+              type: "object",
+              title: "Choice",
+              oneOf: [0, 1].map((index) => ({
+                title: `choice ${index}`,
+                properties: { type: { type: "string", const: `type_${index}`, default: `type_${index}` } },
+              })),
+            },
+          },
+        });
+
+        expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toBeInTheDocument();
+        expect(screen.queryByRole("radiogroup", { name: "Choice" })).not.toBeInTheDocument();
+      });
+
+      it.each([2, 5])("should keep a dropdown when display_type is dropdown with %i options", async (optionCount) => {
+        await renderForm({
+          propertiesOverride: { choice: buildOneOfField(optionCount, { display_type: "dropdown" }) },
+        });
+
+        expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toBeInTheDocument();
+        expect(screen.queryByRole("radiogroup", { name: "Choice" })).not.toBeInTheDocument();
+      });
+
+      it.each([2, 5])("should keep radio tiles when display_type is radio with %i options", async (optionCount) => {
+        await renderForm({
+          propertiesOverride: { choice: buildOneOfField(optionCount, { display_type: "radio" }) },
+        });
+
+        expect(screen.getByTestId("radio-option.0")).toHaveTextContent("choice 0");
+        expect(screen.getByTestId(`radio-option.${optionCount - 1}`)).toHaveTextContent(`choice ${optionCount - 1}`);
+        expect(screen.queryByRole("radiogroup", { name: "Choice" })).not.toBeInTheDocument();
+        expect(screen.queryByTestId("connectionConfiguration.choice-listbox-button")).not.toBeInTheDocument();
+      });
+
+      it("should ignore an unknown display_type and render 2 options as a segmented control", async () => {
+        await renderForm({ propertiesOverride: { choice: buildOneOfField(2, unknownDisplayType) } });
+
+        expect(screen.getByRole("radiogroup", { name: "Choice" })).toBeInTheDocument();
+      });
+
+      it("should ignore an unknown display_type and render 5 options as a dropdown", async () => {
+        await renderForm({ propertiesOverride: { choice: buildOneOfField(5, unknownDisplayType) } });
+
+        expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toBeInTheDocument();
+      });
+
+      it("should not let a read-only segmented control change the selection", async () => {
+        const container = await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "first" } },
+          propertiesOverride: { choice: buildOneOfField(2, { readOnly: true }) },
+        });
+        const choice = screen.getByRole("radiogroup", { name: "Choice" });
+        getAllByRole(choice, "radio").forEach((radio) => expect(radio).toHaveAttribute("aria-disabled", "true"));
+
+        await userEvent.click(getByRole(choice, "radio", { name: "choice 1" }));
+
+        expect(getByRole(choice, "radio", { name: "choice 0" })).toHaveAttribute("aria-checked", "true");
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toHaveValue("first");
+      });
+
+      it("should check no segment when the value matches no visible option", async () => {
+        await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_unknown" } },
+          propertiesOverride: { choice: buildOneOfField(2) },
+        });
+
+        const choice = screen.getByRole("radiogroup", { name: "Choice" });
+        getAllByRole(choice, "radio").forEach((radio) => expect(radio).toHaveAttribute("aria-checked", "false"));
+      });
+
+      it("should not mark the segmented control invalid when only a sub-field is invalid", async () => {
+        const container = await renderForm({ propertiesOverride: { choice: buildOneOfField(2) } });
+
+        await submitForm(container);
+
+        await waitFor(() =>
+          expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toHaveAttribute(
+            "aria-invalid",
+            "true"
+          )
+        );
+        expect(screen.getByRole("radiogroup", { name: "Choice" })).not.toHaveAttribute("aria-invalid");
+      });
+
+      it("should not mark the dropdown invalid when only a sub-field is invalid", async () => {
+        const container = await renderForm({ propertiesOverride: { choice: buildOneOfField(5) } });
+
+        await submitForm(container);
+
+        await waitFor(() =>
+          expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toHaveAttribute(
+            "aria-invalid",
+            "true"
+          )
+        );
+        expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).not.toHaveClass(
+          "listboxButton--error"
+        );
+      });
+
+      it("should switch options of a oneOf with 5 options through the dropdown", async () => {
+        const container = await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "first" } },
+          propertiesOverride: { choice: buildOneOfField(5) },
+        });
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toHaveValue("first");
+
+        selectDropdownOption(container, "connectionConfiguration.choice", "choice 4");
+
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).not.toBeInTheDocument();
+        await userEvent.type(getInputByName(container, "connectionConfiguration.choice.field_4")!, "fifth");
+        await submitForm(container);
+
+        expect(result?.connectionConfiguration).toEqual({
+          ...filledForm,
+          choice: { type: "type_4", field_4: "fifth" },
+        });
+      });
+
+      it("should swap the sub-fields and form values when switching segments", async () => {
+        const container = await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "first" } },
+          propertiesOverride: { choice: buildOneOfField(3) },
+        });
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toHaveValue("first");
+
+        await selectSegmentedOption(container, "connectionConfiguration.choice", "choice 2");
+
+        expect(screen.getByRole("radio", { name: "choice 0" })).toHaveAttribute("aria-checked", "false");
+        expect(screen.getByRole("radio", { name: "choice 2" })).toHaveAttribute("aria-checked", "true");
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).not.toBeInTheDocument();
+        await userEvent.type(getInputByName(container, "connectionConfiguration.choice.field_2")!, "third");
+        await submitForm(container);
+
+        expect(result?.connectionConfiguration).toEqual({
+          ...filledForm,
+          choice: { type: "type_2", field_2: "third" },
+        });
+      });
+
+      it("should select a segment with the arrow keys", async () => {
+        const container = await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "first" } },
+          propertiesOverride: { choice: buildOneOfField(3) },
+        });
+        const choice = screen.getByRole("radiogroup", { name: "Choice" });
+
+        await userEvent.click(getByRole(choice, "radio", { name: "choice 0" }));
+        await userEvent.keyboard("{ArrowRight}");
+
+        const secondSegment = getByRole(choice, "radio", { name: "choice 1" });
+        expect(secondSegment).toHaveFocus();
+        expect(secondSegment).toHaveAttribute("aria-checked", "true");
+        expect(getInputByName(container, "connectionConfiguration.choice.field_0")).not.toBeInTheDocument();
+        await userEvent.type(getInputByName(container, "connectionConfiguration.choice.field_1")!, "second");
+        await submitForm(container);
+
+        expect(result?.connectionConfiguration).toEqual({
+          ...filledForm,
+          choice: { type: "type_1", field_1: "second" },
+        });
+      });
+    });
   });
 
   describe("oauth flow", () => {
@@ -973,6 +1373,7 @@ describe("Connector form", () => {
         disableOAuth?: boolean;
         formValuesOverride?: Record<string, unknown>;
         specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
+        renderFooter?: ConnectorFormProps["renderFooter"];
       } = {}
     ) {
       return renderForm({
@@ -1071,6 +1472,25 @@ describe("Connector form", () => {
       });
     });
 
+    it("lists the empty fields that OAuth fills as one entry that asks the user to authenticate", async () => {
+      (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
+        completeDestinationOAuth: jest.fn(),
+        completeSourceOAuth: () =>
+          Promise.resolve({ request_succeeded: true, auth_payload: { access_token: "mytoken" } }),
+      });
+      const container = await renderNewOAuthForm({
+        renderFooter: ({ emptyRequiredFields }) => (
+          <output data-testid="empty-required-fields">{emptyRequiredFields.join(" | ")}</output>
+        ),
+      });
+
+      expect(screen.getByTestId("empty-required-fields")).toHaveTextContent(/^Authenticate your account$/);
+
+      await executeOAuthFlow(container);
+
+      await waitFor(() => expect(screen.getByTestId("empty-required-fields")).toBeEmptyDOMElement());
+    });
+
     it("should render reauthenticate message if there are form values already", async () => {
       const container = await renderNewOAuthForm({
         formValuesOverride: {
@@ -1084,7 +1504,7 @@ describe("Connector form", () => {
     it("should hide the oauth button when switching auth strategy", async () => {
       const container = await renderNewOAuthForm();
 
-      selectDropdownOption(container, "connectionConfiguration.credentials", "Personal Access Token");
+      await selectSegmentedOption(container, "connectionConfiguration.credentials", "Personal Access Token");
 
       expect(getOAuthButton(container)).not.toBeInTheDocument();
       expect(

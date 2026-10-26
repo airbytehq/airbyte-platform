@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.server.generated.models.AuthConfiguration
 import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
 import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
+import io.airbyte.api.server.generated.models.WorkspaceRead
 import io.airbyte.api.server.generated.models.WorkspaceUpdate
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
@@ -23,36 +24,29 @@ import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.mockito.Mock
-import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
-@ExtendWith(MockitoExtension::class)
 internal class InstanceConfigurationHandlerTest {
-  @Mock
-  private lateinit var mWorkspacePersistence: WorkspacePersistence
+  private val mWorkspacePersistence: WorkspacePersistence = mockk()
 
-  @Mock
-  private lateinit var mUserPersistence: UserPersistence
+  private val mUserPersistence: UserPersistence = mockk()
 
-  @Mock
-  private lateinit var mWorkspacesHandler: WorkspacesHandler
+  private val mWorkspacesHandler: WorkspacesHandler = mockk()
 
-  @Mock
-  private lateinit var mOrganizationService: OrganizationService
+  private val mOrganizationService: OrganizationService = mockk()
 
-  @Mock
-  private lateinit var mAuthConfigs: AuthConfigs
+  private val mAuthConfigs: AuthConfigs = mockk()
 
   private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
   private lateinit var instanceConfigurationHandler: InstanceConfigurationHandler
@@ -81,7 +75,7 @@ internal class InstanceConfigurationHandlerTest {
       stubDefaultAuthConfigs()
     }
 
-    whenever(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(isInitialSetupComplete)
+    every { mWorkspacePersistence.getInitialSetupComplete() } returns isInitialSetupComplete
     instanceConfigurationHandler = getInstanceConfigurationHandler()
 
     val expected =
@@ -127,7 +121,7 @@ internal class InstanceConfigurationHandlerTest {
     stubGetDefaultOrganization()
     stubDefaultAuthConfigs()
 
-    whenever(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true)
+    every { mWorkspacePersistence.getInitialSetupComplete() } returns true
 
     val handler =
       InstanceConfigurationHandler(
@@ -150,12 +144,14 @@ internal class InstanceConfigurationHandlerTest {
   @Test
   fun testSetupInstanceConfigurationAlreadySetup() {
     stubGetDefaultOrganization()
+    every { mOrganizationService.writeOrganization(any()) } just Runs
+    every { mUserPersistence.getDefaultUser() } returns Optional.empty()
 
-    whenever(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID)).thenReturn(
+    // already setup, should trigger an error
+    every { mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID) } returns
       StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
-        .withInitialSetupComplete(true),
-    ) // already setup, should trigger an error
+        .withInitialSetupComplete(true)
 
     instanceConfigurationHandler = getInstanceConfigurationHandler()
 
@@ -192,15 +188,14 @@ internal class InstanceConfigurationHandlerTest {
 
     // first time default workspace is fetched, initial setup complete is false.
     // second time is after the workspace is updated, so initial setup complete is true.
-    whenever(mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID))
-      .thenReturn(
+    every { mWorkspacePersistence.getDefaultWorkspaceForOrganization(ORGANIZATION_ID) } returnsMany
+      listOf(
         StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(false),
-      ).thenReturn(
         StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withInitialSetupComplete(true),
       )
-    whenever(mWorkspacePersistence.getInitialSetupComplete()).thenReturn(true)
-    whenever(mAuthConfigs.authMode).thenReturn(AuthMode.OIDC)
-    whenever(mAuthConfigs.keycloakConfig).thenReturn(keycloakConfiguration)
+    every { mWorkspacePersistence.getInitialSetupComplete() } returns true
+    every { mAuthConfigs.authMode } returns AuthMode.OIDC
+    every { mAuthConfigs.keycloakConfig } returns keycloakConfiguration
 
     instanceConfigurationHandler = getInstanceConfigurationHandler()
 
@@ -239,38 +234,42 @@ internal class InstanceConfigurationHandlerTest {
     val expectedEmailUpdate: String
     if (userWithEmailAlreadyExists) {
       expectedEmailUpdate = DEFAULT_USER_EMAIL // email should not be updated if it would conflict with an existing user
-      whenever(mUserPersistence.getUserByEmail(EMAIL)).thenReturn(Optional.of(User().withEmail(EMAIL)))
+      every { mUserPersistence.getUserByEmail(EMAIL) } returns Optional.of(User().withEmail(EMAIL))
     } else {
       expectedEmailUpdate = EMAIL
+      every { mUserPersistence.getUserByEmail(EMAIL) } returns Optional.empty()
     }
+    every { mUserPersistence.writeAuthenticatedUser(any()) } just Runs
+    every { mOrganizationService.writeOrganization(any()) } just Runs
+    every { mWorkspacesHandler.updateWorkspace(any()) } returns mockk<WorkspaceRead>()
 
     val actual = instanceConfigurationHandler.setupInstanceConfiguration(requestBody)
 
     Assertions.assertEquals(expected, actual)
 
     // verify the user was updated with the expected email and name from the request
-    verify(mUserPersistence).writeAuthenticatedUser(
-      eq(
+    verify {
+      mUserPersistence.writeAuthenticatedUser(
         AuthenticatedUser()
           .withUserId(USER_ID)
           .withEmail(expectedEmailUpdate)
           .withName(expectedUserName),
-      ),
-    )
+      )
+    }
 
     // verify the organization was updated with the name from the request
-    verify(mOrganizationService).writeOrganization(
-      eq(
+    verify {
+      mOrganizationService.writeOrganization(
         Organization()
           .withOrganizationId(ORGANIZATION_ID)
           .withName(expectedOrgName)
           .withEmail(EMAIL)
           .withUserId(USER_ID),
-      ),
-    )
+      )
+    }
 
-    verify(mWorkspacesHandler).updateWorkspace(
-      eq(
+    verify {
+      mWorkspacesHandler.updateWorkspace(
         WorkspaceUpdate(
           workspaceId = WORKSPACE_ID,
           email = EMAIL,
@@ -278,40 +277,38 @@ internal class InstanceConfigurationHandlerTest {
           anonymousDataCollection = true,
           initialSetupComplete = true,
         ),
-      ),
-    )
+      )
+    }
   }
 
   private fun stubGetDefaultUser() {
-    whenever(mUserPersistence.getDefaultUser()).thenReturn(
+    every { mUserPersistence.getDefaultUser() } returns
       Optional.of(
         AuthenticatedUser()
           .withUserId(USER_ID)
           .withName(DEFAULT_USER_NAME)
           .withEmail(DEFAULT_USER_EMAIL),
-      ),
-    )
+      )
   }
 
   private fun stubGetDefaultOrganization() {
-    whenever(mOrganizationService.getDefaultOrganization()).thenReturn(
+    every { mOrganizationService.getDefaultOrganization() } returns
       Optional.of(
         Organization()
           .withOrganizationId(ORGANIZATION_ID)
           .withName(DEFAULT_ORG_NAME)
           .withUserId(USER_ID)
           .withEmail(EMAIL),
-      ),
-    )
+      )
   }
 
   private fun stubDefaultAuthConfigs() {
-    whenever(mAuthConfigs.authMode).thenReturn(AuthMode.NONE)
+    every { mAuthConfigs.authMode } returns AuthMode.NONE
   }
 
   private fun stubOidcAuthConfigs() {
-    whenever(mAuthConfigs.authMode).thenReturn(AuthMode.OIDC)
-    whenever(mAuthConfigs.keycloakConfig).thenReturn(keycloakConfiguration)
+    every { mAuthConfigs.authMode } returns AuthMode.OIDC
+    every { mAuthConfigs.keycloakConfig } returns keycloakConfiguration
   }
 
   private fun getInstanceConfigurationHandler(): InstanceConfigurationHandler =

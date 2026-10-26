@@ -53,21 +53,26 @@ it("should build schema for simple case", () => {
   };
   const yupSchema = buildYupFormForJsonSchema(schema, jsonSchemaToFormBlock(schema), formatMessage);
 
-  const expectedSchema = yup.object().shape({
-    host: yup.string().trim().required("form.empty.error").transform(String),
-    port: yup
-      .number()
-      .min(0)
-      .max(65536)
-      .required("form.empty.error")
-      .transform((val) => (isNaN(val) ? undefined : val)),
-    user: yup.string().trim().required("form.empty.error").transform(String),
-    is_sandbox: yup.boolean(),
-    is_field_no_default: yup.boolean().required("form.empty.error"),
-    dbname: yup.string().trim().required("form.empty.error").transform(String),
-    password: yup.string().trim().transform(String),
-    reports: yup.array().of(yup.string().trim().transform(String)),
-  });
+  const expectedSchema = yup
+    .object()
+    .shape({
+      host: yup.string().trim().required("form.empty.error").transform(String).label("host"),
+      port: yup
+        .number()
+        .min(0)
+        .max(65536)
+        .required("form.empty.error")
+        .transform((val) => (isNaN(val) ? undefined : val))
+        .label("port"),
+      user: yup.string().trim().required("form.empty.error").transform(String).label("user"),
+      is_sandbox: yup.boolean().label("is_sandbox"),
+      is_field_no_default: yup.boolean().required("form.empty.error").label("is_field_no_default"),
+      dbname: yup.string().trim().required("form.empty.error").transform(String).label("dbname"),
+      password: yup.string().trim().transform(String).label("password"),
+      // Items of an array of plain values have no form block, so they get no label
+      reports: yup.array().of(yup.string().trim().transform(String)).label("reports"),
+    })
+    .label("Postgres Source Spec");
 
   expect(JSON.stringify(yupSchema)).toEqual(JSON.stringify(expectedSchema));
 });
@@ -127,25 +132,32 @@ it("should build correct mixed schema structure for conditional case", () => {
     formatMessage
   );
 
-  const expectedSchema = yup.object().shape({
-    start_date: yup.string().trim().required("form.empty.error").transform(String),
-    max_objects: yup.number().transform((x) => x),
-    credentials: yup
-      .object()
-      .shape({
-        type: yup.mixed(),
-        api_key: yup
-          .mixed()
-          // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
-          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-        redirect_uri: yup
-          .mixed()
-          .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
-          .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
-      })
-      .required("form.empty.error"),
-  });
+  const expectedSchema = yup
+    .object()
+    .shape({
+      start_date: yup.string().trim().required("form.empty.error").transform(String).label("start_date"),
+      max_objects: yup
+        .number()
+        .transform((x) => x)
+        .label("max_objects"),
+      credentials: yup
+        .object()
+        .shape({
+          type: yup.mixed(),
+          api_key: yup
+            .mixed()
+            // Using dummy callbacks for then and otherwise as this test only checks whether the yup schema is structured as expected, it's not asserting that it validates form values as expected.
+            .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+            .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+          redirect_uri: yup
+            .mixed()
+            .when("type", { is: "", then: (x) => x, otherwise: (x) => x })
+            .when("type", { is: "", then: (x) => x, otherwise: (x) => x }),
+        })
+        .required("form.empty.error")
+        .label("credentials"),
+    })
+    .label("");
 
   expect(JSON.parse(JSON.stringify(yupSchema))).toEqual(JSON.parse(JSON.stringify(expectedSchema)));
 });

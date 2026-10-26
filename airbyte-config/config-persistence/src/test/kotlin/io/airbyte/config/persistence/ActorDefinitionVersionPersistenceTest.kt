@@ -30,15 +30,15 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
 import java.util.UUID
-import org.mockito.Mockito.`when` as whenever
 
 /**
  * Tests for interacting with the actor_definition_version table.
@@ -52,19 +52,17 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   fun beforeEach() {
     truncateAllTables()
 
-    val featureFlagClient = mock(TestClient::class.java)
-    whenever(
-      featureFlagClient.stringVariation(org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages), org.mockito.kotlin.any<SourceDefinition>()),
-    ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns "3600"
 
-    val secretPersistenceConfigService = mock(SecretPersistenceConfigService::class.java)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
 
-    actorDefinitionService = spy(ActorDefinitionServiceJooqImpl(database!!))
-    val connectionService = mock(ConnectionService::class.java)
-    val scopedConfigurationService = mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = mock(ConnectionTimelineEventService::class.java)
-    val metricClient = mock(MetricClient::class.java)
-    val actorPaginationServiceHelper = mock(ActorServicePaginationHelper::class.java)
+    actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
+    val connectionService = mockk<ConnectionService>(relaxed = true)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
@@ -75,7 +73,7 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
       )
 
     sourceService =
-      spy(
+      spyk(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,

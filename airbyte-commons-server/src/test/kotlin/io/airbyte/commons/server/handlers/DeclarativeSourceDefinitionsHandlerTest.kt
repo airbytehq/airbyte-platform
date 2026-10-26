@@ -27,14 +27,15 @@ import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.whenever
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.stream.Stream
@@ -52,14 +53,19 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    declarativeManifestImageVersionService =
-      Mockito.mock(DeclarativeManifestImageVersionService::class.java)
-    connectorBuilderService = Mockito.mock(ConnectorBuilderService::class.java)
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
-    manifestInjector = Mockito.mock(DeclarativeSourceManifestInjector::class.java)
-    adaptedConnectorSpecification = Mockito.mock(ConnectorSpecification::class.java)
-    manifestConfigInjection = Mockito.mock(ActorDefinitionConfigInjection::class.java)
-    airbyteCompatibleConnectorsValidator = Mockito.mock(AirbyteCompatibleConnectorsValidator::class.java)
+    declarativeManifestImageVersionService = mockk<DeclarativeManifestImageVersionService>()
+    connectorBuilderService = mockk<ConnectorBuilderService>()
+    workspaceService = mockk<WorkspaceService>()
+    manifestInjector = mockk<DeclarativeSourceManifestInjector>()
+    adaptedConnectorSpecification = mockk<ConnectorSpecification>()
+    manifestConfigInjection = mockk<ActorDefinitionConfigInjection>()
+    airbyteCompatibleConnectorsValidator = mockk<AirbyteCompatibleConnectorsValidator>()
+
+    every { manifestInjector.addInjectedDeclarativeManifest(any()) } just Runs
+    every { connectorBuilderService.insertDeclarativeManifest(any()) } just Runs
+    every { connectorBuilderService.deleteManifestDraftForActorDefinition(any(), any()) } just Runs
+    every { connectorBuilderService.createDeclarativeManifestAsActiveVersion(any(), any(), any(), any(), any()) } just Runs
+    every { connectorBuilderService.setDeclarativeSourceActiveVersion(any(), any(), any(), any(), any(), any()) } just Runs
 
     handler =
       DeclarativeSourceDefinitionsHandler(
@@ -69,16 +75,16 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
         manifestInjector,
         airbyteCompatibleConnectorsValidator,
       )
-    whenever(
+    every {
       declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(
-        anyOrNull(),
-      ),
-    ).thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
+        any(),
+      )
+    } returns A_DECLARATIVE_MANIFEST_IMAGE_VERSION
   }
 
   @Test
   fun givenSourceNotAvailableInWorkspaceWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
-    whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
+    every { workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID) } returns false
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
       handler!!.createDeclarativeSourceDefinitionManifest(
         DeclarativeSourceDefinitionCreateManifestRequestBody(
@@ -94,11 +100,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   @Test
   fun givenNoDeclarativeManifestForSourceDefinitionIdWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(
-        Stream.of(),
-      )
+    every { connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID) } returns Stream.of()
 
     Assertions.assertThrows(
       SourceIsNotDeclarativeException::class.java,
@@ -117,9 +119,8 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   @Test
   fun givenVersionAlreadyExistsWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(listOf(DeclarativeManifest().withVersion(A_VERSION)).stream())
+    every { connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID) } returns
+      listOf(DeclarativeManifest().withVersion(A_VERSION)).stream()
 
     Assertions.assertThrows(
       ValueConflictKnownException::class.java,
@@ -139,20 +140,15 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   fun givenSetAsActiveWhenCreateDeclarativeSourceDefinitionManifestThenCreateDeclarativeManifest() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    Mockito
-      .`when`(
-        manifestInjector.getManifestConnectorInjections(
-          A_SOURCE_DEFINITION_ID,
-          A_MANIFEST,
-          null,
-        ),
-      ).thenReturn(
-        listOf(manifestConfigInjection),
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every {
+      manifestInjector.getManifestConnectorInjections(
+        A_SOURCE_DEFINITION_ID,
+        A_MANIFEST,
+        null,
       )
-    whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
+    } returns listOf(manifestConfigInjection)
+    every { manifestInjector.getCdkVersion(A_MANIFEST) } returns A_CDK_VERSION
 
     handler!!.createDeclarativeSourceDefinitionManifest(
       DeclarativeSourceDefinitionCreateManifestRequestBody(
@@ -163,22 +159,22 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito.verify(manifestInjector, Mockito.times(1)).addInjectedDeclarativeManifest(A_SPEC)
-    Mockito.verify(manifestInjector, Mockito.times(1)).getCdkVersion(A_MANIFEST)
-    Mockito.verify(connectorBuilderService, Mockito.times(1)).createDeclarativeManifestAsActiveVersion(
-      eq(
+    verify(exactly = 1) { manifestInjector.addInjectedDeclarativeManifest(A_SPEC) }
+    verify(exactly = 1) { manifestInjector.getCdkVersion(A_MANIFEST) }
+    verify(exactly = 1) {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         DeclarativeManifest()
           .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
           .withVersion(A_VERSION)
           .withDescription(A_DESCRIPTION)
           .withManifest(A_MANIFEST)
           .withSpec(A_SPEC),
-      ),
-      eq(listOf(manifestConfigInjection)),
-      eq(adaptedConnectorSpecification),
-      eq(AN_IMAGE_VERSION),
-      eq(false),
-    )
+        listOf(manifestConfigInjection),
+        adaptedConnectorSpecification,
+        AN_IMAGE_VERSION,
+        false,
+      )
+    }
   }
 
   @Test
@@ -195,32 +191,28 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito
-      .verify(connectorBuilderService, Mockito.times(1))
-      .insertDeclarativeManifest(
-        eq(
-          DeclarativeManifest()
-            .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-            .withVersion(A_VERSION)
-            .withDescription(A_DESCRIPTION)
-            .withManifest(A_MANIFEST)
-            .withSpec(A_SPEC),
-        ),
+    verify(exactly = 1) {
+      connectorBuilderService.insertDeclarativeManifest(
+        DeclarativeManifest()
+          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+          .withVersion(A_VERSION)
+          .withDescription(A_DESCRIPTION)
+          .withManifest(A_MANIFEST)
+          .withSpec(A_SPEC),
       )
+    }
 
-    Mockito
-      .verify(manifestInjector, Mockito.never())
-      .getCdkVersion(anyOrNull())
+    verify(exactly = 0) { manifestInjector.getCdkVersion(any()) }
 
-    Mockito
-      .verify(connectorBuilderService, Mockito.times(0))
-      .createDeclarativeManifestAsActiveVersion(
-        anyOrNull(),
-        anyOrNull(),
-        anyOrNull(),
-        anyOrNull(),
-        anyOrNull(),
+    verify(exactly = 0) {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
       )
+    }
   }
 
   @Test
@@ -237,15 +229,17 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito.verify(connectorBuilderService, Mockito.times(1)).deleteManifestDraftForActorDefinition(
-      A_SOURCE_DEFINITION_ID,
-      A_WORKSPACE_ID,
-    )
+    verify(exactly = 1) {
+      connectorBuilderService.deleteManifestDraftForActorDefinition(
+        A_SOURCE_DEFINITION_ID,
+        A_WORKSPACE_ID,
+      )
+    }
   }
 
   @Test
   fun givenSourceNotAvailableInWorkspaceWhenUpdateDeclarativeManifestVersionThenThrowException() {
-    whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
+    every { workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID) } returns false
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
         UpdateActiveManifestRequestBody(
@@ -260,11 +254,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   @Test
   fun givenNoDeclarativeManifestForSourceDefinitionIdWhenUpdateDeclarativeManifestVersionThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(
-        Stream.of(),
-      )
+    every { connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID) } returns Stream.of()
 
     Assertions.assertThrows(SourceIsNotDeclarativeException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
@@ -282,29 +272,22 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   fun testUpdateDeclarativeManifestVersionNoCdkVersion() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(
-        connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
-          A_SOURCE_DEFINITION_ID,
-          A_VERSION,
-        ),
-      ).thenReturn(
-        DeclarativeManifest()
-          .withVersion(A_VERSION)
-          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-          .withManifest(A_MANIFEST)
-          .withSpec(A_SPEC),
+    every {
+      connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
       )
-    Mockito
-      .`when`(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST))
-      .thenReturn(manifestConfigInjection)
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
-    Mockito
-      .`when`(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(0))
-      .thenAnswer { throw IllegalStateException("No declarative manifest image version found in database for major version 0") }
+    } returns
+      DeclarativeManifest()
+        .withVersion(A_VERSION)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withManifest(A_MANIFEST)
+        .withSpec(A_SPEC)
+    every { manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST) } returns manifestConfigInjection
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every { manifestInjector.getCdkVersion(A_MANIFEST) } returns A_CDK_VERSION
+    every { declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(0) } throws
+      IllegalStateException("No declarative manifest image version found in database for major version 0")
 
     Assertions.assertEquals(
       "No declarative manifest image version found in database for major version 0",
@@ -325,9 +308,8 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   fun givenNotFoundWhenUpdateDeclarativeManifestVersionThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(anyOrNull(), anyOrNull()))
-      .thenAnswer { throw ConfigNotFoundException("test", "test") }
+    every { connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(any(), any()) } throws
+      ConfigNotFoundException("test", "test")
 
     Assertions.assertThrows(ConfigNotFoundException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
@@ -342,43 +324,33 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
   @Test
   fun whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() {
-    Mockito
-      .`when`(
-        airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
-          eq(
-            AN_IMAGE_VERSION,
-          ),
-        ),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+    every {
+      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
+        AN_IMAGE_VERSION,
+      )
+    } returns ConnectorPlatformCompatibilityValidationResult(true, "")
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(
-        connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
-          A_SOURCE_DEFINITION_ID,
-          A_VERSION,
-        ),
-      ).thenReturn(
-        DeclarativeManifest()
-          .withVersion(A_VERSION)
-          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-          .withManifest(A_MANIFEST)
-          .withSpec(A_SPEC),
+    every {
+      connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
       )
-    Mockito
-      .`when`(
-        manifestInjector.getManifestConnectorInjections(
-          A_SOURCE_DEFINITION_ID,
-          A_MANIFEST,
-          null,
-        ),
-      ).thenReturn(
-        listOf(manifestConfigInjection),
+    } returns
+      DeclarativeManifest()
+        .withVersion(A_VERSION)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withManifest(A_MANIFEST)
+        .withSpec(A_SPEC)
+    every {
+      manifestInjector.getManifestConnectorInjections(
+        A_SOURCE_DEFINITION_ID,
+        A_MANIFEST,
+        null,
       )
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
+    } returns listOf(manifestConfigInjection)
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every { manifestInjector.getCdkVersion(A_MANIFEST) } returns A_CDK_VERSION
 
     handler!!.updateDeclarativeManifestVersion(
       UpdateActiveManifestRequestBody(
@@ -388,49 +360,42 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito.verify(manifestInjector, Mockito.times(1)).getCdkVersion(A_MANIFEST)
-    Mockito.verify(connectorBuilderService, Mockito.times(1)).setDeclarativeSourceActiveVersion(
-      A_SOURCE_DEFINITION_ID,
-      A_VERSION,
-      listOf(manifestConfigInjection),
-      adaptedConnectorSpecification,
-      AN_IMAGE_VERSION,
-      false,
-    )
+    verify(exactly = 1) { manifestInjector.getCdkVersion(A_MANIFEST) }
+    verify(exactly = 1) {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
+        listOf(manifestConfigInjection),
+        adaptedConnectorSpecification,
+        AN_IMAGE_VERSION,
+        false,
+      )
+    }
   }
 
   @Test
   fun updateShouldNotWorkIfValidationFails() {
-    Mockito
-      .`when`(
-        airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
-          eq(
-            AN_IMAGE_VERSION,
-          ),
-        ),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition"))
+    every {
+      airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
+        AN_IMAGE_VERSION,
+      )
+    } returns ConnectorPlatformCompatibilityValidationResult(false, "Can't update definition")
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(
-        connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
-          A_SOURCE_DEFINITION_ID,
-          A_VERSION,
-        ),
-      ).thenReturn(
-        DeclarativeManifest()
-          .withVersion(A_VERSION)
-          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-          .withManifest(A_MANIFEST)
-          .withSpec(A_SPEC),
+    every {
+      connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
       )
-    Mockito
-      .`when`(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST))
-      .thenReturn(manifestConfigInjection)
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
+    } returns
+      DeclarativeManifest()
+        .withVersion(A_VERSION)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withManifest(A_MANIFEST)
+        .withSpec(A_SPEC)
+    every { manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST) } returns manifestConfigInjection
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every { manifestInjector.getCdkVersion(A_MANIFEST) } returns A_CDK_VERSION
 
     Assertions.assertThrows(BadRequestProblem::class.java) {
       handler!!.updateDeclarativeManifestVersion(
@@ -441,15 +406,17 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
         ),
       )
     }
-    Mockito.verify(connectorBuilderService, Mockito.times(0)).setDeclarativeSourceActiveVersion(
-      A_SOURCE_DEFINITION_ID,
-      A_VERSION,
-      listOf(manifestConfigInjection),
-      adaptedConnectorSpecification,
-      AN_IMAGE_VERSION,
-      false,
-    )
-    Mockito.verify(manifestInjector, Mockito.times(1)).getCdkVersion(A_MANIFEST)
+    verify(exactly = 0) {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
+        listOf(manifestConfigInjection),
+        adaptedConnectorSpecification,
+        AN_IMAGE_VERSION,
+        false,
+      )
+    }
+    verify(exactly = 1) { manifestInjector.getCdkVersion(A_MANIFEST) }
   }
 
   @Test
@@ -462,12 +429,9 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     val manifest2 = DeclarativeManifest().withVersion(2L).withDescription("second version")
     val manifest3 = DeclarativeManifest().withVersion(3L).withDescription("third version")
 
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId))
-      .thenReturn(listOf(manifest1, manifest2, manifest3).stream())
-    Mockito
-      .`when`(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(sourceDefinitionId))
-      .thenReturn(manifest2)
+    every { connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId) } returns
+      listOf(manifest1, manifest2, manifest3).stream()
+    every { connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(sourceDefinitionId) } returns manifest2
 
     val response =
       handler!!.listManifestVersions(
@@ -492,8 +456,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   private fun givenSourceDefinitionAvailableInWorkspace() {
-    whenever(workspaceService.workspaceCanUseCustomDefinition(anyOrNull(), anyOrNull()))
-      .thenReturn(true)
+    every { workspaceService.workspaceCanUseCustomDefinition(any(), any()) } returns true
   }
 
   @Test
@@ -504,18 +467,15 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       )
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    Mockito
-      .`when`(
-        manifestInjector.getManifestConnectorInjections(
-          A_SOURCE_DEFINITION_ID,
-          fileUploaderManifest,
-          null,
-        ),
-      ).thenReturn(listOf(manifestConfigInjection))
-    whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every {
+      manifestInjector.getManifestConnectorInjections(
+        A_SOURCE_DEFINITION_ID,
+        fileUploaderManifest,
+        null,
+      )
+    } returns listOf(manifestConfigInjection)
+    every { manifestInjector.getCdkVersion(fileUploaderManifest) } returns A_CDK_VERSION
 
     handler!!.createDeclarativeSourceDefinitionManifest(
       DeclarativeSourceDefinitionCreateManifestRequestBody(
@@ -526,20 +486,20 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito.verify(connectorBuilderService, Mockito.times(1)).createDeclarativeManifestAsActiveVersion(
-      eq(
+    verify(exactly = 1) {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
         DeclarativeManifest()
           .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
           .withVersion(A_VERSION)
           .withDescription(A_DESCRIPTION)
           .withManifest(fileUploaderManifest)
           .withSpec(A_SPEC),
-      ),
-      eq(listOf(manifestConfigInjection)),
-      eq(adaptedConnectorSpecification),
-      eq(AN_IMAGE_VERSION),
-      eq(true),
-    )
+        listOf(manifestConfigInjection),
+        adaptedConnectorSpecification,
+        AN_IMAGE_VERSION,
+        true,
+      )
+    }
   }
 
   @Test
@@ -548,30 +508,20 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ObjectMapper().readTree(
         """{"streams": [{"type": "DeclarativeStream", "name": "file_stream", "file_uploader": {"type": "FileUploader"}}]}""",
       )
-    Mockito
-      .`when`(
-        airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(AN_IMAGE_VERSION)),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+    every { airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(AN_IMAGE_VERSION) } returns
+      ConnectorPlatformCompatibilityValidationResult(true, "")
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
-    Mockito
-      .`when`(
-        connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION),
-      ).thenReturn(
-        DeclarativeManifest()
-          .withVersion(A_VERSION)
-          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-          .withManifest(fileUploaderManifest)
-          .withSpec(A_SPEC),
-      )
-    Mockito
-      .`when`(
-        manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, fileUploaderManifest, null),
-      ).thenReturn(listOf(manifestConfigInjection))
-    Mockito
-      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
-      .thenReturn(adaptedConnectorSpecification)
-    whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
+    every { connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION) } returns
+      DeclarativeManifest()
+        .withVersion(A_VERSION)
+        .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withManifest(fileUploaderManifest)
+        .withSpec(A_SPEC)
+    every { manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, fileUploaderManifest, null) } returns
+      listOf(manifestConfigInjection)
+    every { manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC) } returns adaptedConnectorSpecification
+    every { manifestInjector.getCdkVersion(fileUploaderManifest) } returns A_CDK_VERSION
 
     handler!!.updateDeclarativeManifestVersion(
       UpdateActiveManifestRequestBody(
@@ -581,20 +531,21 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       ),
     )
 
-    Mockito.verify(connectorBuilderService, Mockito.times(1)).setDeclarativeSourceActiveVersion(
-      A_SOURCE_DEFINITION_ID,
-      A_VERSION,
-      listOf(manifestConfigInjection),
-      adaptedConnectorSpecification,
-      AN_IMAGE_VERSION,
-      true,
-    )
+    verify(exactly = 1) {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        A_SOURCE_DEFINITION_ID,
+        A_VERSION,
+        listOf(manifestConfigInjection),
+        adaptedConnectorSpecification,
+        AN_IMAGE_VERSION,
+        true,
+      )
+    }
   }
 
   private fun givenSourceIsDeclarative() {
-    Mockito
-      .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(listOf(DeclarativeManifest().withVersion(ANOTHER_VERSION)).stream())
+    every { connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID) } returns
+      listOf(DeclarativeManifest().withVersion(ANOTHER_VERSION)).stream()
   }
 
   companion object {

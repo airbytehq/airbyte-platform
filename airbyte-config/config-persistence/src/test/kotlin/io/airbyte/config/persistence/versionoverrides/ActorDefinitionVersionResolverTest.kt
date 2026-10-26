@@ -17,10 +17,14 @@ import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.Called
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
@@ -31,82 +35,64 @@ internal class ActorDefinitionVersionResolverTest {
 
   @BeforeEach
   fun setup() {
-    remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
-    actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
+    remoteDefinitionsProvider = mockk<RemoteDefinitionsProvider>()
+    actorDefinitionService = mockk<ActorDefinitionService>()
     actorDefinitionVersionResolver = ActorDefinitionVersionResolver(remoteDefinitionsProvider, actorDefinitionService)
   }
 
   @Test
   fun testResolveVersionFromDB() {
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))
-      .thenReturn(
-        Optional.of(ACTOR_DEFINITION_VERSION),
-      )
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(ACTOR_DEFINITION_VERSION)
 
     Assertions.assertEquals(
       Optional.of(ACTOR_DEFINITION_VERSION),
       actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG),
     )
 
-    Mockito.verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-    Mockito.verifyNoMoreInteractions(actorDefinitionService)
+    verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
+    confirmVerified(actorDefinitionService)
 
-    Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+    verify { remoteDefinitionsProvider wasNot Called }
   }
 
   @Test
   fun testResolveVersionFromRemoteIfNotInDB() {
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))
-      .thenReturn(
-        Optional.empty(),
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.empty()
+    every {
+      remoteDefinitionsProvider.getSourceDefinitionByVersion(
+        DOCKER_REPOSITORY,
+        DOCKER_IMAGE_TAG,
       )
-    Mockito
-      .`when`(
-        remoteDefinitionsProvider.getSourceDefinitionByVersion(
-          DOCKER_REPOSITORY,
-          DOCKER_IMAGE_TAG,
-        ),
-      ).thenReturn(
-        Optional.of(REGISTRY_DEF),
-      )
+    } returns Optional.of(REGISTRY_DEF)
 
     val actorDefinitionVersion: ActorDefinitionVersion =
       toActorDefinitionVersion(REGISTRY_DEF)
     val persistedAdv =
       clone(actorDefinitionVersion).withVersionId(UUID.randomUUID())
-    Mockito.`when`(actorDefinitionService.writeActorDefinitionVersion(actorDefinitionVersion)).thenReturn(persistedAdv)
+    every { actorDefinitionService.writeActorDefinitionVersion(actorDefinitionVersion) } returns persistedAdv
 
     val optResult: Optional<ActorDefinitionVersion> =
       actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)
     Assertions.assertTrue(optResult.isPresent)
     Assertions.assertEquals(persistedAdv, optResult.get())
 
-    Mockito.verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-    Mockito.verify(actorDefinitionService).writeActorDefinitionVersion(actorDefinitionVersion)
-    Mockito.verifyNoMoreInteractions(actorDefinitionService)
+    verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
+    verify { actorDefinitionService.writeActorDefinitionVersion(actorDefinitionVersion) }
+    confirmVerified(actorDefinitionService)
 
-    Mockito.verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)
-    Mockito.verifyNoMoreInteractions(remoteDefinitionsProvider)
+    verify { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG) }
+    confirmVerified(remoteDefinitionsProvider)
   }
 
   @Test
   fun testReturnsEmptyOptionalIfNoVersionFoundInDbOrRemote() {
-    Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))
-      .thenReturn(
-        Optional.empty(),
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.empty()
+    every {
+      remoteDefinitionsProvider.getSourceDefinitionByVersion(
+        DOCKER_REPOSITORY,
+        DOCKER_IMAGE_TAG,
       )
-    Mockito
-      .`when`(
-        remoteDefinitionsProvider.getSourceDefinitionByVersion(
-          DOCKER_REPOSITORY,
-          DOCKER_IMAGE_TAG,
-        ),
-      ).thenReturn(
-        Optional.empty(),
-      )
+    } returns Optional.empty()
 
     Assertions.assertTrue(
       actorDefinitionVersionResolver
@@ -114,11 +100,11 @@ internal class ActorDefinitionVersionResolverTest {
         .isEmpty,
     )
 
-    Mockito.verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-    Mockito.verifyNoMoreInteractions(actorDefinitionService)
+    verify { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) }
+    confirmVerified(actorDefinitionService)
 
-    Mockito.verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)
-    Mockito.verifyNoMoreInteractions(remoteDefinitionsProvider)
+    verify { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG) }
+    confirmVerified(remoteDefinitionsProvider)
   }
 
   companion object {

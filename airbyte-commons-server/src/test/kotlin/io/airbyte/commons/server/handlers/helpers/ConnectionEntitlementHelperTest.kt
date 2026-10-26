@@ -29,15 +29,17 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.OrganizationId
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import java.util.UUID
 
 /**
@@ -63,19 +65,20 @@ class ConnectionEntitlementHelperTest {
 
   @BeforeEach
   fun setUp() {
-    entitlementService = mock()
-    connectionService = mock()
-    sourceService = mock()
-    destinationService = mock()
+    entitlementService = mockk()
+    connectionService = mockk()
+    sourceService = mockk()
+    destinationService = mockk()
     cronExpressionHelper = CronExpressionHelper()
-    entitlementHelper = mock()
-    whenever(entitlementService.checkEntitlement(any(), any())).thenReturn(
+    entitlementHelper = mockk()
+    every { connectionService.writeStandardSync(any()) } just Runs
+    every { connectionService.updateConnectionStatus(any(), any(), any()) } just Runs
+    every { entitlementService.checkEntitlement(any(), any()) } returns
       EntitlementResult(
         featureId = "unknown-feature",
         isEntitled = false,
         reason = null,
-      ),
-    )
+      )
     connectionEntitlementHelper =
       ConnectionEntitlementHelper(connectionService, cronExpressionHelper, entitlementService, sourceService, destinationService, entitlementHelper)
   }
@@ -130,20 +133,18 @@ class ConnectionEntitlementHelperTest {
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
     val destEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + destinationDefinitionId)!!
 
-    whenever(entitlementService.checkEntitlement(organizationId, sourceEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, sourceEntitlement) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, destEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, destEntitlement) } returns
       EntitlementResult(
         featureId = destEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -163,20 +164,18 @@ class ConnectionEntitlementHelperTest {
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
     val destEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + destinationDefinitionId)!!
 
-    whenever(entitlementService.checkEntitlement(organizationId, sourceEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, sourceEntitlement) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, destEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, destEntitlement) } returns
       EntitlementResult(
         featureId = destEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -196,20 +195,18 @@ class ConnectionEntitlementHelperTest {
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
     val destEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + destinationDefinitionId)!!
 
-    whenever(entitlementService.checkEntitlement(organizationId, sourceEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, sourceEntitlement) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, destEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, destEntitlement) } returns
       EntitlementResult(
         featureId = destEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -229,20 +226,18 @@ class ConnectionEntitlementHelperTest {
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
     val destEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + destinationDefinitionId)!!
 
-    whenever(entitlementService.checkEntitlement(organizationId, sourceEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, sourceEntitlement) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, destEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, destEntitlement) } returns
       EntitlementResult(
         featureId = destEntitlement.featureId,
         isEntitled = false,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -262,20 +257,18 @@ class ConnectionEntitlementHelperTest {
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
     val destEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + destinationDefinitionId)!!
 
-    whenever(entitlementService.checkEntitlement(organizationId, sourceEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, sourceEntitlement) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = false,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, destEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, destEntitlement) } returns
       EntitlementResult(
         featureId = destEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -313,13 +306,12 @@ class ConnectionEntitlementHelperTest {
     val connection = createMockConnection(withMappers = true)
 
     // Entitled to connectors but not mappers
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled to mappers",
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -337,13 +329,12 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns true when field renaming mapper and entitled to mappers but not advanced mappers`() {
     val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.FIELD_RENAMING)
 
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -361,20 +352,18 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns false when field renaming mapper but not entitled to mappers`() {
     val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.FIELD_RENAMING)
 
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled to mappers",
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement) } returns
       EntitlementResult(
         featureId = AdvancedMappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -392,20 +381,18 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns false when advanced mapper and not entitled to advanced mappers`() {
     val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.HASHING)
 
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement) } returns
       EntitlementResult(
         featureId = AdvancedMappersEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled to advanced mappers",
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -423,20 +410,18 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns true when advanced mapper and entitled to both mappers entitlements`() {
     val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.HASHING)
 
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement) } returns
       EntitlementResult(
         featureId = AdvancedMappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -455,13 +440,12 @@ class ConnectionEntitlementHelperTest {
     val connection = createMockConnection(cronExpression = "0 */30 * * * ?")
 
     // Entitled to connectors but not faster sync
-    whenever(entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement) } returns
       EntitlementResult(
         featureId = FasterSyncFrequencyEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled to faster sync frequency",
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -479,13 +463,12 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns true when fifteen-minute entitlement covers sub-hour sync`() {
     val connection = createMockConnection(cronExpression = "0 */30 * * * ?")
 
-    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement) } returns
       EntitlementResult(
         featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -503,13 +486,12 @@ class ConnectionEntitlementHelperTest {
   fun `isEntitledToConnection returns false when sync is faster than fifteen minutes and only plus entitlement exists`() {
     val connection = createMockConnection(cronExpression = "0 */5 * * * ?")
 
-    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement) } returns
       EntitlementResult(
         featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     val result =
       connectionEntitlementHelper.isEntitledToConnection(
@@ -537,25 +519,26 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      lockedConnectionId,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
+    verify {
+      connectionService.updateConnectionStatus(
+        lockedConnectionId,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
   }
 
   @Test
@@ -572,31 +555,28 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin
-      .verify(entitlementService, org.mockito.kotlin.never())
-      .checkEntitlement(organizationId, FasterSyncFrequencyEntitlement)
-    org.mockito.kotlin
-      .verify(entitlementService, org.mockito.kotlin.never())
-      .checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      lockedConnectionId,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
+    verify(exactly = 0) { entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement) }
+    verify(exactly = 0) { entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement) }
+    verify {
+      connectionService.updateConnectionStatus(
+        lockedConnectionId,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
   }
 
   @Test
@@ -611,33 +591,33 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(sourceDefinitionId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(destinationDefinitionId)
-    whenever(entitlementService.checkEntitlement(eq(organizationId), any<Entitlement>())).thenReturn(
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns destinationDefinitionId
+    every { entitlementService.checkEntitlement(organizationId, any<Entitlement>()) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
+      )
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        any(),
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -647,18 +627,19 @@ class ConnectionEntitlementHelperTest {
       createMockConnection(connectionId = activeConnectionId)
         .withStatus(StandardSync.Status.ACTIVE)
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(activeConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(activeConnectionId)).thenReturn(activeConnection)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(activeConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(activeConnectionId) } returns activeConnection
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        any(),
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -698,56 +679,60 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId3)
         .withStatus(StandardSync.Status.ACTIVE)
 
-    val sourceDefinition1 = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition1 = mock<io.airbyte.config.StandardDestinationDefinition>()
-    val sourceDefinition2 = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition2 = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition1 = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition1 = mockk<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition2 = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition2 = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
     val sourceEntitlement = Entitlements.fromId(ConnectorEntitlement.PREFIX + sourceDefinitionId)!!
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedEntitledId, lockedNotEntitledId, activeId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedEntitledId, lockedNotEntitledId, activeId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
 
-    whenever(connectionService.getStandardSync(lockedEntitledId)).thenReturn(lockedEntitled)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId1)).thenReturn(sourceDefinition1)
-    whenever(sourceDefinition1.sourceDefinitionId).thenReturn(unknownSourceDefId1)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId1)).thenReturn(destDefinition1)
-    whenever(destDefinition1.destinationDefinitionId).thenReturn(unknownDestDefId1)
+    every { connectionService.getStandardSync(lockedEntitledId) } returns lockedEntitled
+    every { sourceService.getSourceDefinitionFromSource(sourceId1) } returns sourceDefinition1
+    every { sourceDefinition1.sourceDefinitionId } returns unknownSourceDefId1
+    every { destinationService.getDestinationDefinitionFromDestination(destId1) } returns destDefinition1
+    every { destDefinition1.destinationDefinitionId } returns unknownDestDefId1
 
-    whenever(connectionService.getStandardSync(lockedNotEntitledId)).thenReturn(lockedNotEntitled)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId2)).thenReturn(sourceDefinition2)
-    whenever(sourceDefinition2.sourceDefinitionId).thenReturn(sourceDefinitionId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId2)).thenReturn(destDefinition2)
-    whenever(destDefinition2.destinationDefinitionId).thenReturn(destinationDefinitionId)
-    whenever(entitlementService.checkEntitlement(eq(organizationId), any<Entitlement>())).thenReturn(
+    every { connectionService.getStandardSync(lockedNotEntitledId) } returns lockedNotEntitled
+    every { sourceService.getSourceDefinitionFromSource(sourceId2) } returns sourceDefinition2
+    every { sourceDefinition2.sourceDefinitionId } returns sourceDefinitionId
+    every { destinationService.getDestinationDefinitionFromDestination(destId2) } returns destDefinition2
+    every { destDefinition2.destinationDefinitionId } returns destinationDefinitionId
+    every { entitlementService.checkEntitlement(organizationId, any<Entitlement>()) } returns
       EntitlementResult(
         featureId = sourceEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
+      )
 
-    whenever(connectionService.getStandardSync(activeId)).thenReturn(active)
+    every { connectionService.getStandardSync(activeId) } returns active
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
     // Should only unlock the entitled locked connection
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      lockedEntitledId,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      eq(lockedNotEntitledId),
-      any(),
-      any(),
-    )
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      eq(activeId),
-      any(),
-      any(),
-    )
+    verify {
+      connectionService.updateConnectionStatus(
+        lockedEntitledId,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        lockedNotEntitledId,
+        any(),
+        any(),
+      )
+    }
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        activeId,
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -763,36 +748,36 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
     val unknownSourceDefId = UUID.randomUUID()
     val unknownDestDefId = UUID.randomUUID()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(connection1Id, connection2Id))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(connection1Id, connection2Id)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
 
     // First connection throws exception
-    whenever(connectionService.getStandardSync(connection1Id))
-      .thenThrow(RuntimeException("Database error"))
+    every { connectionService.getStandardSync(connection1Id) } throws RuntimeException("Database error")
 
     // Second connection processes successfully
-    whenever(connectionService.getStandardSync(connection2Id)).thenReturn(connection2)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.getStandardSync(connection2Id) } returns connection2
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     // Should not throw and should process connection2
     assertDoesNotThrow {
       connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
     }
 
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      connection2Id,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
+    verify {
+      connectionService.updateConnectionStatus(
+        connection2Id,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
   }
 
   @Test
@@ -809,43 +794,40 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(listOf(lockedConnectionId))
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns listOf(lockedConnectionId)
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
-    whenever(entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement) } returns
       EntitlementResult(
         featureId = FasterSyncFrequencyEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement) } returns
       EntitlementResult(
         featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin
-      .verify(connectionService, org.mockito.kotlin.never())
-      .writeStandardSync(any())
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 0) { connectionService.writeStandardSync(any()) }
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        any(),
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -862,30 +844,29 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(listOf(lockedConnectionId))
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns listOf(lockedConnectionId)
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    org.mockito.kotlin.verify(connectionService).writeStandardSync(
-      org.mockito.kotlin.check {
-        assertHourlySchedule(it, lockedConnectionId)
-      },
-    )
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      lockedConnectionId,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
+    val writtenConnection = slot<StandardSync>()
+    verify { connectionService.writeStandardSync(capture(writtenConnection)) }
+    assertHourlySchedule(writtenConnection.captured, lockedConnectionId)
+    verify {
+      connectionService.updateConnectionStatus(
+        lockedConnectionId,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
   }
 
   @Test
@@ -902,35 +883,35 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     // Not entitled to mappers
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled",
-      ),
-    )
+      )
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
     // Should not unlock because not entitled to mappers
-    org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 0) {
+      connectionService.updateConnectionStatus(
+        any(),
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -947,42 +928,41 @@ class ConnectionEntitlementHelperTest {
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
 
-    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
-    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+    val sourceDefinition = mockk<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mockk<io.airbyte.config.StandardDestinationDefinition>()
 
-    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
-      .thenReturn(listOf(lockedConnectionId))
-    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
-    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
-    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
-    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
-    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
-    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+    every { connectionService.listConnectionIdsForOrganization(organizationId.value) } returns listOf(lockedConnectionId)
+    every { entitlementHelper.findSubHourSyncIds(organizationId) } returns emptyList()
+    every { connectionService.getStandardSync(lockedConnectionId) } returns lockedConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceId) } returns sourceDefinition
+    every { sourceDefinition.sourceDefinitionId } returns unknownSourceDefId
+    every { destinationService.getDestinationDefinitionFromDestination(destId) } returns destDefinition
+    every { destDefinition.destinationDefinitionId } returns unknownDestDefId
 
     // Entitled to mappers
-    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+    every { entitlementService.checkEntitlement(organizationId, MappersEntitlement) } returns
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
-    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      )
+    every { entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement) } returns
       EntitlementResult(
         featureId = AdvancedMappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
-      ),
-    )
+      )
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
     // Should unlock because entitled to mappers
-    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
-      lockedConnectionId,
-      StandardSync.Status.INACTIVE,
-      null,
-    )
+    verify {
+      connectionService.updateConnectionStatus(
+        lockedConnectionId,
+        StandardSync.Status.INACTIVE,
+        null,
+      )
+    }
   }
 
   private fun createBasicScheduleConnection(

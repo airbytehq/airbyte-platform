@@ -31,12 +31,16 @@ import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
+import io.mockk.Called
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.mockito.Mockito
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
@@ -56,12 +60,12 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    mSourceService = Mockito.mock(SourceService::class.java)
-    mDestinationService = Mockito.mock(DestinationService::class.java)
-    mActorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
-    mActorDefinitionVersionResolver = Mockito.mock(ActorDefinitionVersionResolver::class.java)
-    mActorDefinitionVersionHelper = Mockito.mock(ActorDefinitionVersionHelper::class.java)
-    mActorDefinitionHandlerHelper = Mockito.mock(ActorDefinitionHandlerHelper::class.java)
+    mSourceService = mockk<SourceService>()
+    mDestinationService = mockk<DestinationService>()
+    mActorDefinitionService = mockk<ActorDefinitionService>()
+    mActorDefinitionVersionResolver = mockk<ActorDefinitionVersionResolver>()
+    mActorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    mActorDefinitionHandlerHelper = mockk<ActorDefinitionHandlerHelper>()
     actorDefinitionVersionHandler =
       ActorDefinitionVersionHandler(
         mSourceService!!,
@@ -98,20 +102,16 @@ internal class ActorDefinitionVersionHandlerTest {
         .withSourceId(sourceId)
         .withWorkspaceId(WORKSPACE_ID)
 
-    Mockito
-      .`when`(mSourceService!!.getSourceConnection(sourceId))
-      .thenReturn(sourceConnection)
-    Mockito
-      .`when`(mSourceService!!.getSourceDefinitionFromSource(sourceId))
-      .thenReturn(SOURCE_DEFINITION)
-    Mockito
-      .`when`(
-        mActorDefinitionVersionHelper!!.getSourceVersionWithOverrideStatus(
-          SOURCE_DEFINITION,
-          WORKSPACE_ID,
-          sourceId,
-        ),
-      ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
+    every { mSourceService!!.getSourceConnection(sourceId) } returns sourceConnection
+    every { mSourceService!!.getSourceDefinitionFromSource(sourceId) } returns SOURCE_DEFINITION
+    every {
+      mActorDefinitionVersionHelper!!.getSourceVersionWithOverrideStatus(
+        SOURCE_DEFINITION,
+        WORKSPACE_ID,
+        sourceId,
+      )
+    } returns ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied)
+    every { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) } returns Optional.empty()
 
     val sourceIdRequestBody = SourceIdRequestBody(sourceId = sourceId)
     val actorDefinitionVersionRead =
@@ -129,16 +129,14 @@ internal class ActorDefinitionVersionHandlerTest {
       )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
-    Mockito.verify<SourceService?>(mSourceService).getSourceConnection(sourceId)
-    Mockito.verify<SourceService?>(mSourceService).getSourceDefinitionFromSource(sourceId)
-    Mockito
-      .verify<ActorDefinitionVersionHelper?>(mActorDefinitionVersionHelper)
-      .getSourceVersionWithOverrideStatus(SOURCE_DEFINITION, WORKSPACE_ID, sourceId)
-    Mockito.verify<ActorDefinitionHandlerHelper?>(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion)
-    Mockito.verifyNoMoreInteractions(mSourceService)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionHandlerHelper)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionVersionHelper)
-    Mockito.verifyNoInteractions(mDestinationService)
+    verify { mSourceService!!.getSourceConnection(sourceId) }
+    verify { mSourceService!!.getSourceDefinitionFromSource(sourceId) }
+    verify { mActorDefinitionVersionHelper!!.getSourceVersionWithOverrideStatus(SOURCE_DEFINITION, WORKSPACE_ID, sourceId) }
+    verify { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) }
+    confirmVerified(mSourceService!!)
+    confirmVerified(mActorDefinitionHandlerHelper!!)
+    confirmVerified(mActorDefinitionVersionHelper!!)
+    verify { mDestinationService!! wasNot Called }
   }
 
   @ParameterizedTest
@@ -151,20 +149,16 @@ internal class ActorDefinitionVersionHandlerTest {
         .withDestinationId(destinationId)
         .withWorkspaceId(WORKSPACE_ID)
 
-    Mockito
-      .`when`(mDestinationService!!.getDestinationConnection(destinationId))
-      .thenReturn(destinationConnection)
-    Mockito
-      .`when`(mDestinationService!!.getDestinationDefinitionFromDestination(destinationId))
-      .thenReturn(DESTINATION_DEFINITION)
-    Mockito
-      .`when`(
-        mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(
-          DESTINATION_DEFINITION,
-          WORKSPACE_ID,
-          destinationId,
-        ),
-      ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
+    every { mDestinationService!!.getDestinationConnection(destinationId) } returns destinationConnection
+    every { mDestinationService!!.getDestinationDefinitionFromDestination(destinationId) } returns DESTINATION_DEFINITION
+    every {
+      mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(
+        DESTINATION_DEFINITION,
+        WORKSPACE_ID,
+        destinationId,
+      )
+    } returns ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied)
+    every { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) } returns Optional.empty()
 
     val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
     val actorDefinitionVersionRead =
@@ -182,15 +176,13 @@ internal class ActorDefinitionVersionHandlerTest {
       )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
-    Mockito.verify<DestinationService?>(mDestinationService).getDestinationConnection(destinationId)
-    Mockito.verify<DestinationService?>(mDestinationService).getDestinationDefinitionFromDestination(destinationId)
-    Mockito
-      .verify<ActorDefinitionVersionHelper?>(mActorDefinitionVersionHelper)
-      .getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId)
-    Mockito.verify<ActorDefinitionHandlerHelper?>(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion)
-    Mockito.verifyNoMoreInteractions(mDestinationService)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionHandlerHelper)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionVersionHelper)
+    verify { mDestinationService!!.getDestinationConnection(destinationId) }
+    verify { mDestinationService!!.getDestinationDefinitionFromDestination(destinationId) }
+    verify { mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId) }
+    verify { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) }
+    confirmVerified(mDestinationService!!)
+    confirmVerified(mActorDefinitionHandlerHelper!!)
+    confirmVerified(mActorDefinitionVersionHelper!!)
   }
 
   @ParameterizedTest
@@ -203,20 +195,16 @@ internal class ActorDefinitionVersionHandlerTest {
         .withDestinationId(destinationId)
         .withWorkspaceId(WORKSPACE_ID)
 
-    Mockito
-      .`when`(mDestinationService!!.getDestinationConnection(destinationId))
-      .thenReturn(destinationConnection)
-    Mockito
-      .`when`(mDestinationService!!.getDestinationDefinitionFromDestination(destinationId))
-      .thenReturn(DESTINATION_DEFINITION)
-    Mockito
-      .`when`(
-        mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(
-          DESTINATION_DEFINITION,
-          WORKSPACE_ID,
-          destinationId,
-        ),
-      ).thenReturn(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied))
+    every { mDestinationService!!.getDestinationConnection(destinationId) } returns destinationConnection
+    every { mDestinationService!!.getDestinationDefinitionFromDestination(destinationId) } returns DESTINATION_DEFINITION
+    every {
+      mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(
+        DESTINATION_DEFINITION,
+        WORKSPACE_ID,
+        destinationId,
+      )
+    } returns ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isVersionOverrideApplied)
+    every { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) } returns Optional.empty()
 
     val destinationIdRequestBody = DestinationIdRequestBody(destinationId = destinationId)
     val actorDefinitionVersionRead =
@@ -234,16 +222,14 @@ internal class ActorDefinitionVersionHandlerTest {
       )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
-    Mockito.verify<DestinationService?>(mDestinationService).getDestinationConnection(destinationId)
-    Mockito.verify<DestinationService?>(mDestinationService).getDestinationDefinitionFromDestination(destinationId)
-    Mockito
-      .verify<ActorDefinitionVersionHelper?>(mActorDefinitionVersionHelper)
-      .getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId)
-    Mockito.verify<ActorDefinitionHandlerHelper?>(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion)
-    Mockito.verifyNoMoreInteractions(mDestinationService)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionHandlerHelper)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionVersionHelper)
-    Mockito.verifyNoInteractions(mSourceService)
+    verify { mDestinationService!!.getDestinationConnection(destinationId) }
+    verify { mDestinationService!!.getDestinationDefinitionFromDestination(destinationId) }
+    verify { mActorDefinitionVersionHelper!!.getDestinationVersionWithOverrideStatus(DESTINATION_DEFINITION, WORKSPACE_ID, destinationId) }
+    verify { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) }
+    confirmVerified(mDestinationService!!)
+    confirmVerified(mActorDefinitionHandlerHelper!!)
+    confirmVerified(mActorDefinitionVersionHelper!!)
+    verify { mSourceService!! wasNot Called }
   }
 
   @Test
@@ -251,14 +237,7 @@ internal class ActorDefinitionVersionHandlerTest {
     val breakingChanges = ActorDefinitionVersionBreakingChanges(upcomingBreakingChanges = emptyList(), minUpgradeDeadline = LocalDate.of(2026, 1, 1))
 
     val actorDefinitionVersion = createActorDefinitionVersion().withSupportState(ActorDefinitionVersion.SupportState.DEPRECATED)
-    Mockito
-      .`when`(
-        mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(
-          actorDefinitionVersion,
-        ),
-      ).thenReturn(
-        Optional.of(breakingChanges),
-      )
+    every { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) } returns Optional.of(breakingChanges)
 
     val versionWithOverrideStatus =
       ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, false)
@@ -279,11 +258,11 @@ internal class ActorDefinitionVersionHandlerTest {
       )
 
     Assertions.assertEquals(expectedRead, actorDefinitionVersionRead)
-    Mockito.verify<ActorDefinitionHandlerHelper?>(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionHandlerHelper)
-    Mockito.verifyNoInteractions(mActorDefinitionVersionHelper)
-    Mockito.verifyNoInteractions(mSourceService)
-    Mockito.verifyNoInteractions(mDestinationService)
+    verify { mActorDefinitionHandlerHelper!!.getVersionBreakingChanges(actorDefinitionVersion) }
+    confirmVerified(mActorDefinitionHandlerHelper!!)
+    verify { mActorDefinitionVersionHelper!! wasNot Called }
+    verify { mSourceService!! wasNot Called }
+    verify { mDestinationService!! wasNot Called }
   }
 
   @Test
@@ -300,21 +279,17 @@ internal class ActorDefinitionVersionHandlerTest {
         supportDataActivation = false,
       )
 
-    Mockito
-      .`when`(mSourceService!!.getStandardSourceDefinition(actorDefinitionId))
-      .thenReturn(clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.versionId))
-    Mockito
-      .`when`(mActorDefinitionService!!.getActorDefinitionVersion(actorDefinitionVersion.versionId))
-      .thenReturn(actorDefinitionVersion)
-    Mockito
-      .`when`(
-        mActorDefinitionVersionResolver!!.resolveVersionForTag(
-          actorDefinitionId,
-          ActorType.SOURCE,
-          actorDefinitionVersion.dockerRepository,
-          actorDefinitionVersion.dockerImageTag,
-        ),
-      ).thenReturn(Optional.of<ActorDefinitionVersion>(actorDefinitionVersion))
+    every { mSourceService!!.getStandardSourceDefinition(actorDefinitionId) } returns
+      clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.versionId)
+    every { mActorDefinitionService!!.getActorDefinitionVersion(actorDefinitionVersion.versionId) } returns actorDefinitionVersion
+    every {
+      mActorDefinitionVersionResolver!!.resolveVersionForTag(
+        actorDefinitionId,
+        ActorType.SOURCE,
+        actorDefinitionVersion.dockerRepository,
+        actorDefinitionVersion.dockerImageTag,
+      )
+    } returns Optional.of<ActorDefinitionVersion>(actorDefinitionVersion)
 
     val resolvedActorDefinitionVersion =
       actorDefinitionVersionHandler!!.resolveActorDefinitionVersionByTag(
@@ -326,17 +301,19 @@ internal class ActorDefinitionVersionHandlerTest {
       )
 
     Assertions.assertEquals(resolveActorDefinitionVersionResponse, resolvedActorDefinitionVersion)
-    Mockito.verify<ActorDefinitionVersionResolver?>(mActorDefinitionVersionResolver).resolveVersionForTag(
-      actorDefinitionId,
-      ActorType.SOURCE,
-      actorDefinitionVersion.dockerRepository,
-      actorDefinitionVersion.dockerImageTag,
-    )
-    Mockito.verify<ActorDefinitionService?>(mActorDefinitionService).getActorDefinitionVersion(actorDefinitionVersion.versionId)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionVersionResolver)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionService)
-    Mockito.verifyNoInteractions(mActorDefinitionVersionHelper)
-    Mockito.verifyNoInteractions(mDestinationService)
+    verify {
+      mActorDefinitionVersionResolver!!.resolveVersionForTag(
+        actorDefinitionId,
+        ActorType.SOURCE,
+        actorDefinitionVersion.dockerRepository,
+        actorDefinitionVersion.dockerImageTag,
+      )
+    }
+    verify { mActorDefinitionService!!.getActorDefinitionVersion(actorDefinitionVersion.versionId) }
+    confirmVerified(mActorDefinitionVersionResolver!!)
+    confirmVerified(mActorDefinitionService!!)
+    verify { mActorDefinitionVersionHelper!! wasNot Called }
+    verify { mDestinationService!! wasNot Called }
   }
 
   @Test
@@ -346,22 +323,18 @@ internal class ActorDefinitionVersionHandlerTest {
     val dockerRepository = "airbyte/source-pg"
     val dockerImageTag = "1.0.2"
 
-    Mockito
-      .`when`(mSourceService!!.getStandardSourceDefinition(actorDefinitionId))
-      .thenReturn(clone(SOURCE_DEFINITION).withDefaultVersionId(defaultVersionId))
-    Mockito
-      .`when`(mActorDefinitionService!!.getActorDefinitionVersion(defaultVersionId))
-      .thenReturn(ActorDefinitionVersion().withDockerRepository(dockerRepository))
+    every { mSourceService!!.getStandardSourceDefinition(actorDefinitionId) } returns clone(SOURCE_DEFINITION).withDefaultVersionId(defaultVersionId)
+    every { mActorDefinitionService!!.getActorDefinitionVersion(defaultVersionId) } returns
+      ActorDefinitionVersion().withDockerRepository(dockerRepository)
 
-    Mockito
-      .`when`(
-        mActorDefinitionVersionResolver!!.resolveVersionForTag(
-          actorDefinitionId,
-          ActorType.SOURCE,
-          dockerRepository,
-          dockerImageTag,
-        ),
-      ).thenReturn(Optional.empty<ActorDefinitionVersion>())
+    every {
+      mActorDefinitionVersionResolver!!.resolveVersionForTag(
+        actorDefinitionId,
+        ActorType.SOURCE,
+        dockerRepository,
+        dockerImageTag,
+      )
+    } returns Optional.empty<ActorDefinitionVersion>()
 
     val resolveVersionRequestBody =
       ResolveActorDefinitionVersionRequestBody(
@@ -383,14 +356,12 @@ internal class ActorDefinitionVersionHandlerTest {
       ),
       exception.message,
     )
-    Mockito
-      .verify<ActorDefinitionVersionResolver?>(mActorDefinitionVersionResolver)
-      .resolveVersionForTag(actorDefinitionId, ActorType.SOURCE, dockerRepository, dockerImageTag)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionVersionResolver)
-    Mockito.verify<ActorDefinitionService?>(mActorDefinitionService).getActorDefinitionVersion(defaultVersionId)
-    Mockito.verifyNoMoreInteractions(mActorDefinitionService)
-    Mockito.verifyNoInteractions(mActorDefinitionVersionHelper)
-    Mockito.verifyNoInteractions(mDestinationService)
+    verify { mActorDefinitionVersionResolver!!.resolveVersionForTag(actorDefinitionId, ActorType.SOURCE, dockerRepository, dockerImageTag) }
+    confirmVerified(mActorDefinitionVersionResolver!!)
+    verify { mActorDefinitionService!!.getActorDefinitionVersion(defaultVersionId) }
+    confirmVerified(mActorDefinitionService!!)
+    verify { mActorDefinitionVersionHelper!! wasNot Called }
+    verify { mDestinationService!! wasNot Called }
   }
 
   companion object {

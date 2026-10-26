@@ -12,12 +12,11 @@ import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.OAuthFlowImplementation
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.mockk.every
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
@@ -62,9 +61,7 @@ class GitlabOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
             ),
           ),
         )
-    Mockito
-      .`when`(oauthService.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
-      .thenReturn(Optional.of(sourceOAuthParameter))
+    every { oauthService.getSourceOAuthParameterOptional(any(), any()) } returns Optional.of(sourceOAuthParameter)
     val url =
       flow.getSourceConsentUrl(
         workspaceId,

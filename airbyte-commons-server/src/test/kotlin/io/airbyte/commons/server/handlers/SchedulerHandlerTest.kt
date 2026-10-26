@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.server.generated.models.AirbyteStream
 import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
@@ -128,6 +127,12 @@ import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.mockk.Called
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
+import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -138,18 +143,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers.anyBoolean
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
-import org.mockito.kotlin.whenever
 import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
@@ -230,49 +223,49 @@ internal class SchedulerHandlerTest {
 
     jobResponse = SynchronousResponse(null, synchronousJobMetadata)
 
-    configurationUpdate = mock()
-    jsonSchemaValidator = mock()
-    synchronousSchedulerClient = mock()
-    actorDefinitionService = mock()
-    catalogService = mock()
-    connectionService = mock()
-    destinationService = mock()
-    sourceService = mock()
-    operationService = mock()
+    configurationUpdate = mockk(relaxUnitFun = true)
+    jsonSchemaValidator = mockk(relaxUnitFun = true)
+    synchronousSchedulerClient = mockk(relaxUnitFun = true)
+    actorDefinitionService = mockk(relaxUnitFun = true)
+    catalogService = mockk(relaxUnitFun = true)
+    connectionService = mockk(relaxUnitFun = true)
+    destinationService = mockk(relaxUnitFun = true)
+    sourceService = mockk(relaxUnitFun = true)
+    operationService = mockk(relaxUnitFun = true)
 
-    whenever(connectionService.getStandardSync(any())).thenReturn(StandardSync().withStatus(StandardSync.Status.ACTIVE))
-    whenever(destinationService.getStandardDestinationDefinition(any())).thenReturn(SOME_DESTINATION_DEFINITION)
-    whenever(destinationService.getDestinationDefinitionFromConnection(any())).thenReturn(SOME_DESTINATION_DEFINITION)
+    every { connectionService.getStandardSync(any()) } returns StandardSync().withStatus(StandardSync.Status.ACTIVE)
+    every { destinationService.getStandardDestinationDefinition(any()) } returns SOME_DESTINATION_DEFINITION
+    every { destinationService.getDestinationDefinitionFromConnection(any()) } returns SOME_DESTINATION_DEFINITION
 
-    secretsRepositoryWriter = mock()
-    jobPersistence = mock()
-    eventRunner = mock()
-    connectionsHandler = mock()
-    actorDefinitionVersionHelper = mock()
-    whenever(actorDefinitionVersionHelper.getDestinationVersion(any(), any())).thenReturn(SOME_ACTOR_DEFINITION)
+    secretsRepositoryWriter = mockk(relaxUnitFun = true)
+    jobPersistence = mockk(relaxUnitFun = true)
+    eventRunner = mockk(relaxUnitFun = true)
+    connectionsHandler = mockk(relaxUnitFun = true)
+    actorDefinitionVersionHelper = mockk(relaxUnitFun = true)
+    every { actorDefinitionVersionHelper.getDestinationVersion(any(), any()) } returns SOME_ACTOR_DEFINITION
 
-    streamResetPersistence = mock()
-    oAuthConfigSupplier = mock()
-    jobCreator = mock()
-    jobFactory = mock()
-    jobNotifier = mock()
-    jobTracker = mock()
-    logClientManager = mock()
-    logUtils = mock()
+    streamResetPersistence = mockk(relaxUnitFun = true)
+    oAuthConfigSupplier = mockk(relaxUnitFun = true)
+    jobCreator = mockk(relaxUnitFun = true)
+    jobFactory = mockk(relaxUnitFun = true)
+    jobNotifier = mockk(relaxUnitFun = true)
+    jobTracker = mockk(relaxUnitFun = true)
+    logClientManager = mockk(relaxUnitFun = true)
+    logUtils = mockk(relaxUnitFun = true)
 
-    whenever(logClientManager.getLogs(any())).thenReturn(LogEvents(emptyList(), "1"))
-    jobConverter = spy(JobConverter(logClientManager, logUtils))
+    every { logClientManager.getLogs(any()) } returns LogEvents(emptyList(), "1")
+    jobConverter = spyk(JobConverter(logClientManager, logUtils))
 
-    featureFlagClient = mock<TestClient>()
-    workspaceService = mock()
-    secretPersistenceService = mock()
-    metricClient = mock()
-    secretStorageService = mock()
+    featureFlagClient = mockk<TestClient>(relaxUnitFun = true)
+    workspaceService = mockk(relaxUnitFun = true)
+    secretPersistenceService = mockk(relaxUnitFun = true)
+    metricClient = mockk(relaxUnitFun = true)
+    secretStorageService = mockk(relaxUnitFun = true)
 
-    streamRefreshesHandler = mock()
-    whenever(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(ArrayList())
+    streamRefreshesHandler = mockk(relaxUnitFun = true)
+    every { streamRefreshesHandler.getRefreshesForConnection(any()) } returns ArrayList()
 
-    connectionTimelineEventHelper = mock()
+    connectionTimelineEventHelper = mockk(relaxUnitFun = true)
 
     secretSanitizer =
       SecretSanitizer(
@@ -284,7 +277,18 @@ internal class SchedulerHandlerTest {
         secretStorageService,
       )
 
-    dataWorkerUsageService = mock()
+    dataWorkerUsageService = mockk(relaxUnitFun = true)
+
+    every { jobPersistence.getJob(any()) } returns job
+    every { jobPersistence.listJobsForConnectionWithStatuses(any(), any(), any()) } returns emptyList()
+    every { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) } returns mockk()
+    every { logClientManager.getJobLogFile(any()) } returns emptyList()
+    every { catalogService.getActorCatalog(any(), any(), any()) } returns Optional.empty()
+    every { secretStorageService.getByWorkspaceId(any()) } returns null
+    every { secretPersistenceService.getPersistenceFromWorkspaceId(any()) } returns mockk()
+    every { streamResetPersistence.getStreamResets(any()) } returns emptyList()
+    every { actorDefinitionService.getActorDefinitionVersions(any()) } returns emptyList()
+    every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } answers { lastArg() }
 
     schedulerHandler =
       SchedulerHandler(
@@ -322,35 +326,27 @@ internal class SchedulerHandlerTest {
   @ValueSource(booleans = [true, false])
   @DisplayName("Test job creation")
   fun createJob(isScheduled: Boolean) {
-    whenever<Long?>(jobFactory.createSync(CONNECTION_ID, isScheduled))
-      .thenReturn(JOB_ID)
-    whenever<StandardSync?>(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(mock())
-    whenever<Job?>(jobPersistence.getJob(JOB_ID))
-      .thenReturn(job)
-    whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(sampleJobInfoRead(JOB_ID))
+    every { jobFactory.createSync(CONNECTION_ID, isScheduled) } returns JOB_ID
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns StandardSync()
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(JOB_ID)
 
     val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = isScheduled))
 
-    verify(jobFactory).createSync(CONNECTION_ID, isScheduled)
+    verify { jobFactory.createSync(CONNECTION_ID, isScheduled) }
     Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
 
   private fun stubSyncJobCreation() {
-    whenever<Long?>(jobFactory.createSync(CONNECTION_ID, true))
-      .thenReturn(JOB_ID)
-    whenever<StandardSync?>(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(mock())
-    whenever<Job?>(jobPersistence.getJob(JOB_ID))
-      .thenReturn(job)
-    whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(sampleJobInfoRead(JOB_ID))
+    every { jobFactory.createSync(CONNECTION_ID, true) } returns JOB_ID
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns StandardSync()
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(JOB_ID)
   }
 
   private fun stubWorkspaceForConnection(organizationId: UUID?) {
-    whenever(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withOrganizationId(organizationId))
+    every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withOrganizationId(organizationId)
   }
 
   @Test
@@ -359,12 +355,11 @@ internal class SchedulerHandlerTest {
     val organizationId = UUID.randomUUID()
     stubSyncJobCreation()
     stubWorkspaceForConnection(organizationId)
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenReturn(false)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } returns false
 
     schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(dataWorkerUsageService).insertUsageForCreatedJob(job)
+    verify { dataWorkerUsageService.insertUsageForCreatedJob(job) }
   }
 
   @Test
@@ -373,12 +368,11 @@ internal class SchedulerHandlerTest {
     val organizationId = UUID.randomUUID()
     stubSyncJobCreation()
     stubWorkspaceForConnection(organizationId)
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenReturn(true)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } returns true
 
     schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+    verify(exactly = 0) { dataWorkerUsageService.insertUsageForCreatedJob(any()) }
   }
 
   @Test
@@ -387,24 +381,22 @@ internal class SchedulerHandlerTest {
     val organizationId = UUID.randomUUID()
     stubSyncJobCreation()
     stubWorkspaceForConnection(organizationId)
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenThrow(RuntimeException("flag lookup failed"))
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } throws RuntimeException("flag lookup failed")
 
     schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+    verify(exactly = 0) { dataWorkerUsageService.insertUsageForCreatedJob(any()) }
   }
 
   @Test
   @DisplayName("Passive usage tracking is skipped when the workspace lookup fails")
   fun createJobSkipsPassiveUsageTrackingWhenWorkspaceLookupFails() {
     stubSyncJobCreation()
-    whenever(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
-      .thenThrow(RuntimeException("workspace lookup failed"))
+    every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false) } throws RuntimeException("workspace lookup failed")
 
     schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+    verify(exactly = 0) { dataWorkerUsageService.insertUsageForCreatedJob(any()) }
   }
 
   @Test
@@ -415,58 +407,53 @@ internal class SchedulerHandlerTest {
 
     schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
-    verifyNoInteractions(featureFlagClient)
+    verify(exactly = 0) { dataWorkerUsageService.insertUsageForCreatedJob(any()) }
+    verify { featureFlagClient wasNot Called }
   }
 
   @Test
   @DisplayName("Test refresh job creation")
   fun createRefreshJob() {
-    whenever<Long?>(
+    every {
       jobFactory.createRefresh(
-        eq(CONNECTION_ID),
+        CONNECTION_ID,
         any(),
-      ),
-    ).thenReturn(JOB_ID)
-    whenever<StandardSync?>(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(mock())
-    whenever<Job?>(jobPersistence.getJob(JOB_ID))
-      .thenReturn(job)
-    whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(sampleJobInfoRead(JOB_ID))
-    whenever(streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID))
-      .thenReturn(
-        listOf(
-          StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null, RefreshType.TRUNCATE),
-        ),
+      )
+    } returns JOB_ID
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns StandardSync()
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(JOB_ID)
+    every { streamRefreshesHandler.getRefreshesForConnection(CONNECTION_ID) } returns
+      listOf(
+        StreamRefresh(UUID.randomUUID(), CONNECTION_ID, "name", "namespace", null, RefreshType.TRUNCATE),
       )
 
     val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(jobFactory).createRefresh(eq(CONNECTION_ID), any())
+    verify { jobFactory.createRefresh(CONNECTION_ID, any()) }
     Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
 
   @Test
   @DisplayName("Test reset job creation")
   fun createResetJob() {
-    whenever<StandardSyncOperation?>(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(WEBHOOK_OPERATION)
+    every { operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID) } returns WEBHOOK_OPERATION
     val standardSync =
       StandardSync().withDestinationId(DESTINATION_ID).withOperationIds(listOf(WEBHOOK_OPERATION_ID)).withSourceId(SOURCE_ID)
-    whenever<StandardSync?>(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync)
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns standardSync
     val source =
       SourceConnection()
         .withSourceId(SOURCE_ID)
         .withWorkspaceId(WORKSPACE_ID)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-    whenever<SourceConnection?>(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(source)
+    every { sourceService.getSourceConnection(SOURCE_ID) } returns source
     val destination =
       DestinationConnection()
         .withDestinationId(DESTINATION_ID)
         .withWorkspaceId(WORKSPACE_ID)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withConfiguration(emptyObject())
-    whenever<DestinationConnection?>(destinationService.getDestinationConnection(DESTINATION_ID)).thenReturn(destination)
+    every { destinationService.getDestinationConnection(DESTINATION_ID) } returns destination
     val destinationDefinition = StandardDestinationDefinition()
     val destinationVersion = Version(DESTINATION_PROTOCOL_VERSION)
     val actorDefinitionVersion =
@@ -474,19 +461,18 @@ internal class SchedulerHandlerTest {
         .withDockerRepository(DOCKER_REPOSITORY)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withProtocolVersion(destinationVersion.serialize())
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         WORKSPACE_ID,
         DESTINATION_ID,
-      ),
-    ).thenReturn(actorDefinitionVersion)
-    whenever(destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
-      .thenReturn(destinationDefinition)
+      )
+    } returns actorDefinitionVersion
+    every { destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns destinationDefinition
     val streamsToReset = listOf(STREAM_DESCRIPTOR1, STREAM_DESCRIPTOR2)
-    whenever(streamResetPersistence.getStreamResets(CONNECTION_ID)).thenReturn(streamsToReset)
+    every { streamResetPersistence.getStreamResets(CONNECTION_ID) } returns streamsToReset
 
-    whenever(
+    every {
       jobCreator.createResetConnectionJob(
         destination,
         standardSync,
@@ -498,20 +484,17 @@ internal class SchedulerHandlerTest {
         mutableListOf(),
         streamsToReset,
         WORKSPACE_ID,
-      ),
-    ).thenReturn(Optional.of<Long>(JOB_ID))
+      )
+    } returns Optional.of<Long>(JOB_ID)
 
-    whenever<Job?>(jobPersistence.getJob(JOB_ID))
-      .thenReturn(job)
-    whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
-      .thenReturn(sampleJobInfoRead(JOB_ID))
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(JOB_ID)
 
     val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
 
-    verify(oAuthConfigSupplier).injectDestinationOAuthParameters(any(), any(), any(), any())
+    verify { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) }
 
-    verify(actorDefinitionVersionHelper)
-      .getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)
+    verify { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID) }
 
     Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
   }
@@ -524,36 +507,34 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever<SourceConnection?>(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(
+      )
+    } returns sourceVersion
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every {
       synchronousSchedulerClient.createSourceCheckConnectionJob(
         source,
         sourceVersion,
         false,
         null,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     schedulerHandler.checkSourceConnectionFromSourceId(request)
 
-    verify(sourceService).getSourceConnection(source.sourceId)
-    verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
+    verify { sourceService.getSourceConnection(source.sourceId) }
+    verify { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
   }
 
   @Test
@@ -570,33 +551,30 @@ internal class SchedulerHandlerTest {
     val sourceResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
     val destinationResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
 
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
-    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
-    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
-    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
-    whenever(
-      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
-    ).thenReturn(destinationVersion)
-    whenever(
-      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
-    ).thenReturn(destinationResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) } returns sourceVersion
+    every { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null) } returns sourceResponse
+    every { jobConverter.getSynchronousJobRead(sourceResponse) } returns emptySynchronousJobRead()
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every { destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId) } returns
+      destinationVersion
+    every { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) } returns destinationResponse
+    every { jobConverter.getSynchronousJobRead(destinationResponse) } returns emptySynchronousJobRead()
 
     schedulerHandler.checkSourceConnectionFromSourceId(sourceRequest)
     schedulerHandler.checkDestinationConnectionFromDestinationId(destinationRequest)
 
-    verify(jsonSchemaValidator, times(2)).ensure(CONNECTOR_SPECIFICATION.connectionSpecification, source.configuration)
-    val sourcePromotionOrder = org.mockito.Mockito.inOrder(synchronousSchedulerClient, sourceService)
-    sourcePromotionOrder.verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
-    sourcePromotionOrder.verify(sourceService).promoteSourceFromDraft(source.sourceId)
-    val destinationPromotionOrder = org.mockito.Mockito.inOrder(synchronousSchedulerClient, destinationService)
-    destinationPromotionOrder
-      .verify(synchronousSchedulerClient)
-      .createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
-    destinationPromotionOrder.verify(destinationService).promoteDestinationFromDraft(destination.destinationId)
+    verify(exactly = 2) { jsonSchemaValidator.ensure(CONNECTOR_SPECIFICATION.connectionSpecification, source.configuration) }
+    verifyOrder {
+      synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)
+      sourceService.promoteSourceFromDraft(source.sourceId)
+    }
+    verifyOrder {
+      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
+      destinationService.promoteDestinationFromDraft(destination.destinationId)
+    }
   }
 
   @Test
@@ -626,27 +604,24 @@ internal class SchedulerHandlerTest {
     val sourceResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
     val destinationResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
 
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
-    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
-    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
-    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
-    whenever(
-      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
-    ).thenReturn(destinationVersion)
-    whenever(
-      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
-    ).thenReturn(destinationResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) } returns sourceVersion
+    every { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null) } returns sourceResponse
+    every { jobConverter.getSynchronousJobRead(sourceResponse) } returns emptySynchronousJobRead()
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every { destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId) } returns
+      destinationVersion
+    every { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) } returns destinationResponse
+    every { jobConverter.getSynchronousJobRead(destinationResponse) } returns emptySynchronousJobRead()
 
     schedulerHandler.checkSourceConnectionFromSourceId(SourceIdRequestBody(sourceId = source.sourceId))
     schedulerHandler.checkDestinationConnectionFromDestinationId(DestinationIdRequestBody(destinationId = destination.destinationId))
 
-    verify(jsonSchemaValidator, times(2)).ensure(secretSpec.connectionSpecification, validationConfig)
-    verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
-    verify(synchronousSchedulerClient).createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
+    verify(exactly = 2) { jsonSchemaValidator.ensure(secretSpec.connectionSpecification, validationConfig) }
+    verify { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null) }
+    verify { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) }
   }
 
   @Test
@@ -661,26 +636,23 @@ internal class SchedulerHandlerTest {
     val sourceResponse = SynchronousResponse(failed, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
     val destinationResponse = SynchronousResponse(failed, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
 
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
-    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
-    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
-    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
-    whenever(
-      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
-    ).thenReturn(destinationVersion)
-    whenever(
-      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
-    ).thenReturn(destinationResponse)
-    doReturn(emptySynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) } returns sourceVersion
+    every { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null) } returns sourceResponse
+    every { jobConverter.getSynchronousJobRead(sourceResponse) } returns emptySynchronousJobRead()
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every { destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId) } returns
+      destinationVersion
+    every { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) } returns destinationResponse
+    every { jobConverter.getSynchronousJobRead(destinationResponse) } returns emptySynchronousJobRead()
 
     schedulerHandler.checkSourceConnectionFromSourceId(SourceIdRequestBody(sourceId = source.sourceId))
     schedulerHandler.checkDestinationConnectionFromDestinationId(DestinationIdRequestBody(destinationId = destination.destinationId))
 
-    verify(sourceService, never()).promoteSourceFromDraft(any())
-    verify(destinationService, never()).promoteDestinationFromDraft(any())
+    verify(exactly = 0) { sourceService.promoteSourceFromDraft(any()) }
+    verify(exactly = 0) { destinationService.promoteDestinationFromDraft(any()) }
   }
 
   @Test
@@ -711,21 +683,20 @@ internal class SchedulerHandlerTest {
             ),
           ),
         )
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         null,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val processed =
       processConfigSecrets(
@@ -733,25 +704,21 @@ internal class SchedulerHandlerTest {
         sourceVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(
-      secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()),
-    ).thenReturn(source.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns source.getConfiguration()
 
-    whenever(
+    every {
       synchronousSchedulerClient.createSourceCheckConnectionJob(
         source,
         sourceVersion,
         false,
         RESOURCE_REQUIREMENT,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig)
 
-    verify(synchronousSchedulerClient)
-      .createSourceCheckConnectionJob(source, sourceVersion, false, RESOURCE_REQUIREMENT)
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, null)
+    verify { synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, RESOURCE_REQUIREMENT) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null) }
   }
 
   @Test
@@ -762,43 +729,42 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withSpec(CONNECTOR_SPECIFICATION)
         .withProtocolVersion(DESTINATION_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(
+      )
+    } returns sourceVersion
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every {
       configurationUpdate.source(
         source.sourceId,
         source.name,
         sourceUpdate.connectionConfiguration,
-      ),
-    ).thenReturn(source)
+      )
+    } returns source
     val submittedSource =
       SourceConnection()
         .withSourceId(source.sourceId)
         .withSourceDefinitionId(source.sourceDefinitionId)
         .withConfiguration(source.getConfiguration())
         .withWorkspaceId(source.workspaceId)
-    whenever(
+    every {
       synchronousSchedulerClient.createSourceCheckConnectionJob(
         submittedSource,
         sourceVersion,
         false,
         null,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     val processed =
       processConfigSecrets(
@@ -806,17 +772,13 @@ internal class SchedulerHandlerTest {
         sourceVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()))
-      .thenReturn(source.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns source.getConfiguration()
 
     schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate)
 
-    verify(jsonSchemaValidator)
-      .ensure(CONNECTOR_SPECIFICATION.getConnectionSpecification(), source.getConfiguration())
-    verify(synchronousSchedulerClient)
-      .createSourceCheckConnectionJob(submittedSource, sourceVersion, false, null)
-    verify(actorDefinitionVersionHelper, times(2))
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
+    verify { jsonSchemaValidator.ensure(CONNECTOR_SPECIFICATION.getConnectionSpecification(), source.getConfiguration()) }
+    verify { synchronousSchedulerClient.createSourceCheckConnectionJob(submittedSource, sourceVersion, false, null) }
+    verify(exactly = 2) { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
   }
 
   @Test
@@ -827,37 +789,34 @@ internal class SchedulerHandlerTest {
     val destinationDefinition =
       StandardDestinationDefinition()
         .withDestinationDefinitionId(destination.destinationDefinitionId)
-    whenever<StandardDestinationDefinition?>(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId))
-      .thenReturn(destinationDefinition)
+    every { destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) } returns destinationDefinition
     val destinationVersion =
       ActorDefinitionVersion()
         .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withProtocolVersion(DESTINATION_PROTOCOL_VERSION)
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         destination.workspaceId,
         destination.destinationId,
-      ),
-    ).thenReturn(destinationVersion)
-    whenever<DestinationConnection?>(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
-    whenever(
+      )
+    } returns destinationVersion
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every {
       synchronousSchedulerClient.createDestinationCheckConnectionJob(
         destination,
         destinationVersion,
         false,
         null,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     schedulerHandler.checkDestinationConnectionFromDestinationId(request)
 
-    verify(destinationService).getDestinationConnection(destination.destinationId)
-    verify(actorDefinitionVersionHelper)
-      .getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId)
-    verify(synchronousSchedulerClient)
-      .createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
+    verify { destinationService.getDestinationConnection(destination.destinationId) }
+    verify { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId) }
+    verify { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) }
   }
 
   @Test
@@ -878,33 +837,33 @@ internal class SchedulerHandlerTest {
     val destinationDefinition =
       StandardDestinationDefinition()
         .withDestinationDefinitionId(destination.destinationDefinitionId)
-    whenever(
+    every {
       destinationService.getStandardDestinationDefinition(
         destination.destinationDefinitionId,
-      ),
-    ).thenReturn(destinationDefinition)
+      )
+    } returns destinationDefinition
     val destinationVersion =
       ActorDefinitionVersion()
         .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withProtocolVersion(DESTINATION_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         destination.workspaceId,
         null,
-      ),
-    ).thenReturn(destinationVersion)
+      )
+    } returns destinationVersion
 
-    whenever(
+    every {
       synchronousSchedulerClient.createDestinationCheckConnectionJob(
         destination,
         destinationVersion,
         false,
         null,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     val processed =
       processConfigSecrets(
@@ -912,15 +871,12 @@ internal class SchedulerHandlerTest {
         destinationVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()))
-      .thenReturn(destination.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns destination.getConfiguration()
 
     schedulerHandler.checkDestinationConnectionFromDestinationCreate(destinationCoreConfig)
 
-    verify(synchronousSchedulerClient)
-      .createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
-    verify(actorDefinitionVersionHelper)
-      .getDestinationVersion(eq(destinationDefinition), eq(destination.workspaceId), anyOrNull())
+    verify { synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null) }
+    verify { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, any()) }
   }
 
   @Test
@@ -941,57 +897,55 @@ internal class SchedulerHandlerTest {
             ),
           ),
         )
-    whenever(
+    every {
       destinationService.getStandardDestinationDefinition(
         destination.destinationDefinitionId,
-      ),
-    ).thenReturn(destinationDefinition)
+      )
+    } returns destinationDefinition
     val destinationVersion =
       ActorDefinitionVersion()
         .withDockerRepository(DESTINATION_DOCKER_REPO)
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withSpec(CONNECTOR_SPECIFICATION)
         .withProtocolVersion(DESTINATION_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         destination.workspaceId,
         destination.destinationId,
-      ),
-    ).thenReturn(destinationVersion)
-    whenever(destinationService.getDestinationConnection(destination.destinationId))
-      .thenReturn(destination)
-    whenever(
+      )
+    } returns destinationVersion
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every {
       synchronousSchedulerClient.createDestinationCheckConnectionJob(
         destination,
         destinationVersion,
         false,
         RESOURCE_REQUIREMENT,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
-    whenever(destinationService.getDestinationConnection(destination.destinationId))
-      .thenReturn(destination)
-    whenever(
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
+    every { destinationService.getDestinationConnection(destination.destinationId) } returns destination
+    every {
       configurationUpdate.destination(
         destination.destinationId,
         destination.name,
         destinationUpdate.connectionConfiguration,
-      ),
-    ).thenReturn(destination)
+      )
+    } returns destination
     val submittedDestination =
       DestinationConnection()
         .withDestinationId(destination.destinationId)
         .withDestinationDefinitionId(destination.destinationDefinitionId)
         .withConfiguration(destination.getConfiguration())
         .withWorkspaceId(destination.workspaceId)
-    whenever(
+    every {
       synchronousSchedulerClient.createDestinationCheckConnectionJob(
         submittedDestination,
         destinationVersion,
         false,
         RESOURCE_REQUIREMENT,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<StandardCheckConnectionOutput>)
+      )
+    } returns jobResponse as SynchronousResponse<StandardCheckConnectionOutput>
 
     val processed =
       processConfigSecrets(
@@ -999,22 +953,19 @@ internal class SchedulerHandlerTest {
         destinationVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(
-      secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()),
-    ).thenReturn(destination.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns destination.getConfiguration()
 
     schedulerHandler.checkDestinationConnectionFromDestinationIdForUpdate(destinationUpdate)
 
-    verify(jsonSchemaValidator)
-      .ensure(CONNECTOR_SPECIFICATION.getConnectionSpecification(), destination.getConfiguration())
-    verify(actorDefinitionVersionHelper, times(2))
-      .getDestinationVersion(
+    verify { jsonSchemaValidator.ensure(CONNECTOR_SPECIFICATION.getConnectionSpecification(), destination.getConfiguration()) }
+    verify(exactly = 2) {
+      actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         destination.workspaceId,
         destination.destinationId,
       )
-    verify(synchronousSchedulerClient)
-      .createDestinationCheckConnectionJob(submittedDestination, destinationVersion, false, RESOURCE_REQUIREMENT)
+    }
+    verify { synchronousSchedulerClient.createDestinationCheckConnectionJob(submittedDestination, destinationVersion, false, RESOURCE_REQUIREMENT) }
   }
 
   @ParameterizedTest
@@ -1093,21 +1044,20 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val processed =
       processConfigSecrets(
@@ -1115,18 +1065,16 @@ internal class SchedulerHandlerTest {
         sourceVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(
-      secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()),
-    ).thenReturn(source.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns source.getConfiguration()
 
-    whenever(
+    every {
       synchronousSchedulerClient.createSourceCheckConnectionJob(
         source,
         sourceVersion,
         false,
         null,
-      ),
-    ).thenReturn(checkResponse)
+      )
+    } returns checkResponse
 
     val checkConnectionRead = schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig)
     org.junit.jupiter.api.Assertions
@@ -1139,10 +1087,10 @@ internal class SchedulerHandlerTest {
     val request = SourceDiscoverSchemaRequestBody(sourceId = source.sourceId)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val metadata =
       SynchronousJobMetadata(
@@ -1162,12 +1110,11 @@ internal class SchedulerHandlerTest {
         .withCatalog(jsonNode<AirbyteCatalog?>(airbyteCatalog))
         .withCatalogHash("")
         .withId(UUID.randomUUID())
-    whenever(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog)
+    every { catalogService.getActorCatalogById(any()) } returns actorCatalog
 
     val connectionRead = connectionRead(sourceId = source.sourceId)
     val connectionReadList = ConnectionReadList(connections = listOf(connectionRead))
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(connectionReadList)
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns connectionReadList
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -1182,33 +1129,30 @@ internal class SchedulerHandlerTest {
             ),
           ),
         )
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(
-      catalogService.getActorCatalog(any(), any(), any()),
-    ).thenReturn(Optional.empty<ActorCatalog>())
-    whenever(
+      )
+    } returns sourceVersion
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every { catalogService.getActorCatalog(any(), any(), any()) } returns Optional.empty<ActorCatalog>()
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         RESOURCE_REQUIREMENT,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(discoverResponse)
+      )
+    } returns discoverResponse
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request)
 
@@ -1220,26 +1164,23 @@ internal class SchedulerHandlerTest {
       .assertNotNull(actual.jobInfo)
     org.junit.jupiter.api.Assertions
       .assertTrue(actual.jobInfo!!.succeeded)
-    verify(sourceService).getSourceConnection(source.sourceId)
-    verify(catalogService)
-      .getActorCatalog(eq(request.sourceId), eq(SOURCE_DOCKER_TAG), any())
+    verify { sourceService.getSourceConnection(source.sourceId) }
+    verify { catalogService.getActorCatalog(request.sourceId, SOURCE_DOCKER_TAG, any()) }
 
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
-    verify(synchronousSchedulerClient)
-      .createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH)
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
+    verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH) }
   }
 
   @Test
   fun `draft source cannot be discovered`() {
     val source = SourceHelpers.generateSource(UUID.randomUUID()).withIsDraft(true)
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
 
     assertThrows<ActorNotReadyProblem> {
       schedulerHandler.discoverSchemaForSourceFromSourceId(SourceDiscoverSchemaRequestBody(sourceId = source.sourceId))
     }
 
-    verifyNoInteractions(synchronousSchedulerClient)
+    verify { synchronousSchedulerClient wasNot Called }
   }
 
   @Test
@@ -1248,10 +1189,10 @@ internal class SchedulerHandlerTest {
     val request = SourceDiscoverSchemaRequestBody(sourceId = source.sourceId)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val thisCatalogId = UUID.randomUUID()
     val synchronousJobMetadata =
@@ -1271,24 +1212,21 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever(
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(ActorDefinitionVersion().withDockerRepository(SOURCE_DOCKER_REPO).withDockerImageTag(SOURCE_DOCKER_TAG))
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+      )
+    } returns ActorDefinitionVersion().withDockerRepository(SOURCE_DOCKER_REPO).withDockerImageTag(SOURCE_DOCKER_TAG)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
     val actorCatalog =
       ActorCatalog()
         .withCatalog(jsonNode<AirbyteCatalog?>(airbyteCatalog))
         .withCatalogHash("")
         .withId(thisCatalogId)
-    whenever(
-      catalogService.getActorCatalog(any(), any(), any()),
-    ).thenReturn(Optional.of(actorCatalog))
+    every { catalogService.getActorCatalog(any(), any(), any()) } returns Optional.of(actorCatalog)
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request)
 
@@ -1300,15 +1238,13 @@ internal class SchedulerHandlerTest {
       .assertEquals(actual.catalogId, discoverResponse.output)
     org.junit.jupiter.api.Assertions
       .assertTrue(actual.jobInfo!!.succeeded)
-    verify(sourceService).getSourceConnection(source.sourceId)
-    verify(catalogService)
-      .getActorCatalog(eq(request.sourceId), any(), any())
+    verify { sourceService.getSourceConnection(source.sourceId) }
+    verify { catalogService.getActorCatalog(request.sourceId, any(), any()) }
 
-    verify(catalogService, never()).writeActorCatalogWithFetchEvent(anyOrNull<AirbyteCatalog>(), anyOrNull(), anyOrNull(), anyOrNull())
+    verify(exactly = 0) { catalogService.writeActorCatalogWithFetchEvent(any<AirbyteCatalog>(), any(), any(), any()) }
 
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
-    verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), any(), any(), any())
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
+    verify(exactly = 0) { synchronousSchedulerClient.createDiscoverSchemaJob(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -1317,10 +1253,10 @@ internal class SchedulerHandlerTest {
     val request = SourceDiscoverSchemaRequestBody(sourceId = source.sourceId, disableCache = true)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val discoveredCatalogId = UUID.randomUUID()
     val synchronousJobMetadata =
@@ -1340,36 +1276,35 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+      )
+    } returns sourceVersion
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
     val actorCatalog =
       ActorCatalog()
         .withCatalog(jsonNode<AirbyteCatalog?>(airbyteCatalog))
         .withCatalogHash("")
         .withId(discoveredCatalogId)
-    whenever(catalogService.getActorCatalogById(discoveredCatalogId)).thenReturn(actorCatalog)
-    whenever(
+    every { catalogService.getActorCatalogById(discoveredCatalogId) } returns actorCatalog
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         null,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(discoverResponse)
+      )
+    } returns discoverResponse
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request)
 
@@ -1379,11 +1314,9 @@ internal class SchedulerHandlerTest {
       .assertNotNull(actual.jobInfo)
     org.junit.jupiter.api.Assertions
       .assertTrue(actual.jobInfo!!.succeeded)
-    verify(sourceService).getSourceConnection(source.sourceId)
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
-    verify(synchronousSchedulerClient)
-      .createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH)
+    verify { sourceService.getSourceConnection(source.sourceId) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
+    verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
   }
 
   @Test
@@ -1392,38 +1325,37 @@ internal class SchedulerHandlerTest {
     val request = SourceDiscoverSchemaRequestBody(sourceId = source.sourceId)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever<SourceConnection?>(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
-    whenever(
+      )
+    } returns sourceVersion
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         null,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<UUID>)
+      )
+    } returns jobResponse as SynchronousResponse<UUID>
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request)
 
@@ -1433,23 +1365,21 @@ internal class SchedulerHandlerTest {
       .assertNotNull(actual.jobInfo)
     org.junit.jupiter.api.Assertions
       .assertFalse(actual.jobInfo!!.succeeded)
-    verify(sourceService).getSourceConnection(source.sourceId)
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
-    verify(synchronousSchedulerClient)
-      .createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH)
+    verify { sourceService.getSourceConnection(source.sourceId) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
+    verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
   }
 
   @Test
   fun testDiscoverSchemaForSourceFromSourceIdDisabledWorkspace() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody(sourceId = source.sourceId)
-    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(true)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns true
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val e = assertThrows<NotFoundException> { schedulerHandler.discoverSchemaForSourceFromSourceId(request) }
     assertEquals("Cannot run discover on tombstoned workspace", e.message)
@@ -1469,10 +1399,10 @@ internal class SchedulerHandlerTest {
         workspaceId = source.workspaceId,
       )
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(true)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns true
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val e = assertThrows<NotFoundException> { schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig) }
     assertEquals("Cannot run discover on tombstoned workspace", e.message)
@@ -1487,10 +1417,10 @@ internal class SchedulerHandlerTest {
         .withWorkspaceId(SOURCE.workspaceId)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val synchronousJobMetadata =
       SynchronousJobMetadata(
@@ -1518,36 +1448,34 @@ internal class SchedulerHandlerTest {
         .withCatalog(jsonNode<AirbyteCatalog?>(airbyteCatalog))
         .withCatalogHash("")
         .withId(UUID.randomUUID())
-    whenever(catalogService.getActorCatalogById(any()))
-      .thenReturn(actorCatalog)
+    every { catalogService.getActorCatalogById(any()) } returns actorCatalog
 
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         null,
-      ),
-    ).thenReturn(sourceVersion)
-    whenever(
+      )
+    } returns sourceVersion
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         null,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(discoverResponse)
+      )
+    } returns discoverResponse
 
     val processed =
       processConfigSecrets(
@@ -1555,9 +1483,7 @@ internal class SchedulerHandlerTest {
         sourceVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever(
-      secretsRepositoryWriter.createEphemeralFromConfig(eq(processed), anyOrNull()),
-    ).thenReturn(source.getConfiguration())
+    every { secretsRepositoryWriter.createEphemeralFromConfig(processed, any()) } returns source.getConfiguration()
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig)
 
@@ -1569,10 +1495,8 @@ internal class SchedulerHandlerTest {
       .assertEquals(actual.catalogId, discoverResponse.output)
     org.junit.jupiter.api.Assertions
       .assertTrue(actual.jobInfo!!.succeeded)
-    verify(synchronousSchedulerClient)
-      .createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH)
-    verify(actorDefinitionVersionHelper)
-      .getSourceVersion(sourceDefinition, source.workspaceId, null)
+    verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null) }
   }
 
   @Test
@@ -1584,10 +1508,10 @@ internal class SchedulerHandlerTest {
         .withWorkspaceId(SOURCE.workspaceId)
 
     val mockWorkspace =
-      mock<StandardWorkspace>().also {
-        whenever(it.tombstone).thenReturn(false)
+      mockk<StandardWorkspace>().also {
+        every { it.tombstone } returns false
       }
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true) } returns mockWorkspace
 
     val sourceCoreConfig =
       SourceCoreConfig(
@@ -1599,25 +1523,23 @@ internal class SchedulerHandlerTest {
     val sourceDefinition =
       StandardSourceDefinition()
         .withSourceDefinitionId(source.sourceDefinitionId)
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
     val sourceVersion =
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    whenever<ActorDefinitionVersion?>(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null))
-      .thenReturn(sourceVersion)
-    whenever(
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null) } returns sourceVersion
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         null,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(jobResponse as SynchronousResponse<UUID>)
+      )
+    } returns jobResponse as SynchronousResponse<UUID>
 
     val processedSourceConfig =
       processConfigSecrets(
@@ -1625,14 +1547,12 @@ internal class SchedulerHandlerTest {
         sourceVersion.getSpec().getConnectionSpecification(),
         null,
       )
-    whenever<JsonNode?>(
+    every {
       secretsRepositoryWriter.createEphemeralFromConfig(
-        eq(
-          processedSourceConfig,
-        ),
-        anyOrNull(),
-      ),
-    ).thenReturn(source.getConfiguration())
+        processedSourceConfig,
+        any(),
+      )
+    } returns source.getConfiguration()
 
     val actual = schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig)
 
@@ -1642,8 +1562,7 @@ internal class SchedulerHandlerTest {
       .assertNotNull(actual.jobInfo)
     org.junit.jupiter.api.Assertions
       .assertFalse(actual.jobInfo!!.succeeded)
-    verify(synchronousSchedulerClient)
-      .createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH)
+    verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
   }
 
   @Test
@@ -1669,16 +1588,13 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever<ManualOperationResult?>(eventRunner.startNewManualSync(connectionId))
-      .thenReturn(manualOperationResult)
+    every { eventRunner.startNewManualSync(connectionId) } returns manualOperationResult
 
-    doReturn(sampleJobInfoRead())
-      .whenever(jobConverter)
-      .getJobInfoRead(anyOrNull())
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
 
     schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
 
-    verify(eventRunner).startNewManualSync(connectionId)
+    verify { eventRunner.startNewManualSync(connectionId) }
   }
 
   @Test
@@ -1692,11 +1608,10 @@ internal class SchedulerHandlerTest {
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
         .withStatus(StandardSync.Status.ACTIVE)
-    whenever(connectionService.getStandardSync(connectionId)).thenReturn(sync)
-    whenever(sourceService.getSourceConnection(sourceId)).thenReturn(SourceConnection().withSourceId(sourceId).withIsDraft(true))
-    whenever(destinationService.getDestinationConnection(destinationId)).thenReturn(
-      DestinationConnection().withDestinationId(destinationId).withIsDraft(false),
-    )
+    every { connectionService.getStandardSync(connectionId) } returns sync
+    every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withSourceId(sourceId).withIsDraft(true)
+    every { destinationService.getDestinationConnection(destinationId) } returns
+      DestinationConnection().withDestinationId(destinationId).withIsDraft(false)
 
     assertThrows<ActorNotReadyProblem> {
       schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
@@ -1711,7 +1626,7 @@ internal class SchedulerHandlerTest {
       schedulerHandler.createJob(JobCreate(connectionId = connectionId, isScheduled = false))
     }
 
-    verifyNoInteractions(eventRunner)
+    verify { eventRunner wasNot Called }
   }
 
   @Test
@@ -1721,21 +1636,15 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenReturn(false)
-    whenever(eventRunner.startNewManualSync(connectionId))
-      .thenReturn(manualOperationResult)
-    doReturn(job)
-      .whenever(jobPersistence)
-      .getJob(jobId)
-    doReturn(sampleJobInfoRead(jobId))
-      .whenever(jobConverter)
-      .getJobInfoRead(job)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } returns false
+    every { eventRunner.startNewManualSync(connectionId) } returns manualOperationResult
+    every { jobPersistence.getJob(jobId) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(jobId)
 
     schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId), organizationId)
 
-    verify(eventRunner).startNewManualSync(connectionId)
-    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
+    verify { eventRunner.startNewManualSync(connectionId) }
+    verify(exactly = 0) { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) }
   }
 
   @Test
@@ -1745,21 +1654,15 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenReturn(false)
-    whenever(eventRunner.startNewManualSyncAndWaitForJobId(connectionId))
-      .thenReturn(manualOperationResult)
-    doReturn(job)
-      .whenever(jobPersistence)
-      .getJob(jobId)
-    doReturn(sampleJobInfoRead(jobId))
-      .whenever(jobConverter)
-      .getJobInfoRead(job)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } returns false
+    every { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) } returns manualOperationResult
+    every { jobPersistence.getJob(jobId) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(jobId)
 
     val result = schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId), organizationId, returnAfterJobId = true)
 
-    verify(eventRunner).startNewManualSyncAndWaitForJobId(connectionId)
-    verify(eventRunner, never()).startNewManualSync(connectionId)
+    verify { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) }
+    verify(exactly = 0) { eventRunner.startNewManualSync(connectionId) }
     Assertions.assertThat(result.job.id).isEqualTo(jobId)
   }
 
@@ -1770,21 +1673,15 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenReturn(true)
-    whenever(eventRunner.startNewManualSyncAndWaitForJobId(connectionId))
-      .thenReturn(manualOperationResult)
-    doReturn(job)
-      .whenever(jobPersistence)
-      .getJob(jobId)
-    doReturn(sampleJobInfoRead(jobId))
-      .whenever(jobConverter)
-      .getJobInfoRead(job)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } returns true
+    every { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) } returns manualOperationResult
+    every { jobPersistence.getJob(jobId) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(jobId)
 
     val result = schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId), organizationId)
 
-    verify(eventRunner).startNewManualSyncAndWaitForJobId(connectionId)
-    verify(eventRunner, never()).startNewManualSync(connectionId)
+    verify { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) }
+    verify(exactly = 0) { eventRunner.startNewManualSync(connectionId) }
     Assertions.assertThat(result.job.id).isEqualTo(jobId)
   }
 
@@ -1794,20 +1691,15 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever(eventRunner.startNewManualSync(connectionId))
-      .thenReturn(manualOperationResult)
-    doReturn(job)
-      .whenever(jobPersistence)
-      .getJob(jobId)
-    doReturn(sampleJobInfoRead(jobId))
-      .whenever(jobConverter)
-      .getJobInfoRead(job)
+    every { eventRunner.startNewManualSync(connectionId) } returns manualOperationResult
+    every { jobPersistence.getJob(jobId) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(jobId)
 
     schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
 
-    verify(eventRunner).startNewManualSync(connectionId)
-    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
-    verifyNoInteractions(featureFlagClient)
+    verify { eventRunner.startNewManualSync(connectionId) }
+    verify(exactly = 0) { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) }
+    verify { featureFlagClient wasNot Called }
   }
 
   @Test
@@ -1817,21 +1709,15 @@ internal class SchedulerHandlerTest {
     val jobId = 123L
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
-    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
-      .thenThrow(RuntimeException("flag lookup failed"))
-    whenever(eventRunner.startNewManualSync(connectionId))
-      .thenReturn(manualOperationResult)
-    doReturn(job)
-      .whenever(jobPersistence)
-      .getJob(jobId)
-    doReturn(sampleJobInfoRead(jobId))
-      .whenever(jobConverter)
-      .getJobInfoRead(job)
+    every { featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)) } throws RuntimeException("flag lookup failed")
+    every { eventRunner.startNewManualSync(connectionId) } returns manualOperationResult
+    every { jobPersistence.getJob(jobId) } returns job
+    every { jobConverter.getJobInfoRead(job) } returns sampleJobInfoRead(jobId)
 
     schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId), organizationId)
 
-    verify(eventRunner).startNewManualSync(connectionId)
-    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
+    verify { eventRunner.startNewManualSync(connectionId) }
+    verify(exactly = 0) { eventRunner.startNewManualSyncAndWaitForJobId(connectionId) }
   }
 
   @Test
@@ -1840,8 +1726,7 @@ internal class SchedulerHandlerTest {
 
     val manualOperationResult = ManualOperationResult("another sync running", null, ErrorCode.WORKFLOW_RUNNING)
 
-    whenever<ManualOperationResult?>(eventRunner.startNewManualSync(connectionId))
-      .thenReturn(manualOperationResult)
+    every { eventRunner.startNewManualSync(connectionId) } returns manualOperationResult
 
     org.junit.jupiter.api.Assertions.assertThrows(
       ValueConflictKnownException::class.java,
@@ -1851,8 +1736,7 @@ internal class SchedulerHandlerTest {
   @Test
   fun disabledSyncThrows() {
     val connectionId = UUID.randomUUID()
-    whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
-      .thenReturn(StandardSync().withStatus(StandardSync.Status.INACTIVE))
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withStatus(StandardSync.Status.INACTIVE)
     org.junit.jupiter.api.Assertions.assertThrows(
       IllegalStateException::class.java,
     ) {
@@ -1865,8 +1749,7 @@ internal class SchedulerHandlerTest {
   @Test
   fun deprecatedSyncThrows() {
     val connectionId = UUID.randomUUID()
-    whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
-      .thenReturn(StandardSync().withStatus(StandardSync.Status.DEPRECATED))
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withStatus(StandardSync.Status.DEPRECATED)
     org.junit.jupiter.api.Assertions.assertThrows(
       IllegalStateException::class.java,
     ) {
@@ -1879,8 +1762,7 @@ internal class SchedulerHandlerTest {
   @Test
   fun lockedSyncThrows() {
     val connectionId = UUID.randomUUID()
-    whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
-      .thenReturn(StandardSync().withStatus(StandardSync.Status.LOCKED))
+    every { connectionService.getStandardSync(connectionId) } returns StandardSync().withStatus(StandardSync.Status.LOCKED)
     org.junit.jupiter.api.Assertions.assertThrows(
       IllegalStateException::class.java,
     ) {
@@ -1898,19 +1780,15 @@ internal class SchedulerHandlerTest {
     val manualOperationResult = ManualOperationResult(null, jobId, null)
 
     val streamDescriptors = listOf(STREAM_DESCRIPTOR)
-    whenever(connectionService.getAllStreamsForConnection(connectionId))
-      .thenReturn(streamDescriptors)
+    every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
 
-    whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
-      .thenReturn(manualOperationResult)
+    every { eventRunner.resetConnection(connectionId, streamDescriptors) } returns manualOperationResult
 
-    doReturn(sampleJobInfoRead())
-      .whenever(jobConverter)
-      .getJobInfoRead(anyOrNull())
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
 
     schedulerHandler.resetConnection(ConnectionIdRequestBody(connectionId = connectionId))
 
-    verify(eventRunner).resetConnection(connectionId, streamDescriptors)
+    verify { eventRunner.resetConnection(connectionId, streamDescriptors) }
   }
 
   @Test
@@ -1928,17 +1806,14 @@ internal class SchedulerHandlerTest {
         streams = listOf(ConnectionStream(streamName = streamName, streamNamespace = streamNamespace)),
       )
 
-    whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
-      .thenReturn(manualOperationResult)
+    every { eventRunner.resetConnection(connectionId, streamDescriptors) } returns manualOperationResult
 
-    doReturn(sampleJobInfoRead())
-      .whenever(jobConverter)
-      .getJobInfoRead(anyOrNull())
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
 
     schedulerHandler
       .resetConnectionStream(connectionStreamRequestBody)
 
-    verify(eventRunner).resetConnection(connectionId, streamDescriptors)
+    verify { eventRunner.resetConnection(connectionId, streamDescriptors) }
   }
 
   @Test
@@ -1956,36 +1831,31 @@ internal class SchedulerHandlerTest {
         streams = emptyList(),
       )
 
-    whenever(connectionService.getAllStreamsForConnection(connectionId))
-      .thenReturn(streamDescriptors)
-    whenever<ManualOperationResult?>(eventRunner.resetConnection(connectionId, streamDescriptors))
-      .thenReturn(manualOperationResult)
+    every { connectionService.getAllStreamsForConnection(connectionId) } returns streamDescriptors
+    every { eventRunner.resetConnection(connectionId, streamDescriptors) } returns manualOperationResult
 
-    doReturn(sampleJobInfoRead())
-      .whenever(jobConverter)
-      .getJobInfoRead(anyOrNull())
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
 
     schedulerHandler
       .resetConnectionStream(connectionStreamRequestBody)
 
-    verify(eventRunner).resetConnection(connectionId, streamDescriptors)
+    verify { eventRunner.resetConnection(connectionId, streamDescriptors) }
   }
 
   @Test
   fun testCancelJob() {
-    whenever<Job?>(jobPersistence.getJob(JOB_ID)).thenReturn(job)
+    every { jobPersistence.getJob(JOB_ID) } returns job
 
     val manualOperationResult = ManualOperationResult(null, JOB_ID, null)
 
-    whenever<ManualOperationResult?>(eventRunner.startNewCancellation(SCOPE))
-      .thenReturn(manualOperationResult)
+    every { eventRunner.startNewCancellation(SCOPE) } returns manualOperationResult
     val jobInfo =
       sampleJobInfoRead(JOB_ID, createdAt = 123L, updatedAt = 321L)
-    doReturn(jobInfo).whenever(jobConverter).getJobInfoRead(any())
+    every { jobConverter.getJobInfoRead(any()) } returns jobInfo
 
     schedulerHandler.cancelJob(JobIdRequestBody(id = JOB_ID))
 
-    verify(eventRunner).startNewCancellation(SCOPE)
+    verify { eventRunner.startNewCancellation(SCOPE) }
   }
 
   @Test
@@ -1999,13 +1869,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockNewStreamDiff()
@@ -2029,17 +1899,15 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(CONNECTION)))
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns ConnectionReadList(connections = listOf(CONNECTION))
     val request =
       SourceAutoPropagateChange(sourceId = source.sourceId, workspaceId = workspaceId, catalogId = discoveredSourceId, catalog = catalogWithDiff)
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -2053,13 +1921,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockUpdateStreamDiff()
@@ -2077,17 +1945,15 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(CONNECTION)))
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns ConnectionReadList(connections = listOf(CONNECTION))
     val request =
       SourceAutoPropagateChange(sourceId = source.sourceId, workspaceId = workspaceId, catalogId = discoveredSourceId, catalog = catalogWithDiff)
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -2101,13 +1967,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockRemoveStreamDiff()
@@ -2120,17 +1986,15 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(CONNECTION)))
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns ConnectionReadList(connections = listOf(CONNECTION))
     val request =
       SourceAutoPropagateChange(sourceId = source.sourceId, workspaceId = workspaceId, catalogId = discoveredSourceId, catalog = catalogWithDiff)
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -2145,13 +2009,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockUpdateAndAddStreamDiff()
     mockSourceForDiscoverJob(source, sourceDefinition)
@@ -2171,11 +2035,9 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(CONNECTION)))
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns ConnectionReadList(connections = listOf(CONNECTION))
     val request =
       SourceAutoPropagateChange(
         sourceId = source.sourceId,
@@ -2186,7 +2048,7 @@ internal class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -2199,13 +2061,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockConnectionForDiscoverJobWithAutopropagation(source, sourceVersion, NonBreakingChangesPreference.IGNORE)
@@ -2220,15 +2082,14 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever<StandardWorkspace?>(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
     val request =
       SourceAutoPropagateChange(sourceId = source.sourceId, workspaceId = workspaceId, catalogId = discoveredSourceId, catalog = catalogWithDiff)
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler, times(0))
-      .updateConnection(any<ConnectionUpdate>(), any<String>(), anyBoolean())
+    verify(exactly = 0) { connectionsHandler.updateConnection(any<ConnectionUpdate>(), any<String>(), any()) }
   }
 
   @Test
@@ -2270,10 +2131,9 @@ internal class SchedulerHandlerTest {
       )
 
     val notificationSettings = NotificationSettings().withSendOnConnectionUpdate(NotificationItem())
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(workspaceId).withNotificationSettings(notificationSettings))
-    whenever(sourceService.getSourceConnection(sourceId))
-      .thenReturn(SourceConnection().withSourceId(sourceId))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withNotificationSettings(notificationSettings)
+    every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withSourceId(sourceId)
     val connectionRead =
       connectionRead(
         connectionId = connectionId,
@@ -2281,10 +2141,8 @@ internal class SchedulerHandlerTest {
         syncCatalog = configuredCatalog,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_COLUMNS,
       )
-    whenever(connectionsHandler.listConnectionsForSource(sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(connectionRead)))
-    whenever(connectionsHandler.getConnectionAirbyteCatalog(connectionId))
-      .thenReturn(Optional.of(oldCatalog))
+    every { connectionsHandler.listConnectionsForSource(sourceId, false) } returns ConnectionReadList(connections = listOf(connectionRead))
+    every { connectionsHandler.getConnectionAirbyteCatalog(connectionId) } returns Optional.of(oldCatalog)
 
     val diff =
       CatalogDiff(
@@ -2298,15 +2156,13 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(diff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns diff
 
-    val spySchedulerHandler = spy(schedulerHandler)
+    val spySchedulerHandler = spyk(schedulerHandler)
     val request =
       SourceAutoPropagateChange(sourceId = sourceId, workspaceId = workspaceId, catalogId = catalogId, catalog = newCatalog)
     spySchedulerHandler.applySchemaChangeForSource(request)
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -2319,13 +2175,13 @@ internal class SchedulerHandlerTest {
     val sourceVersion =
       ActorDefinitionVersion()
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(sourceVersion)
+      )
+    } returns sourceVersion
 
     val discoveredSourceId = mockSuccessfulDiscoverJob(source, sourceVersion)
     mockEmptyDiff()
@@ -2337,37 +2193,33 @@ internal class SchedulerHandlerTest {
 
     val workspaceId = source.workspaceId
     val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
-      .thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
 
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(ConnectionReadList(connections = listOf(CONNECTION)))
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns ConnectionReadList(connections = listOf(CONNECTION))
     val request =
       SourceAutoPropagateChange(sourceId = source.sourceId, workspaceId = workspaceId, catalogId = discoveredSourceId, catalog = discoveredCatalog)
 
     schedulerHandler.applySchemaChangeForSource(request)
 
-    verify(connectionsHandler).applySchemaChange(any(), any(), any(), any(), anyBoolean())
+    verify { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) }
   }
 
   private fun mockSourceForDiscoverJob(
     source: SourceConnection,
     sourceDefinition: StandardSourceDefinition,
   ) {
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(source.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever<ActorDefinitionVersion?>(
+    every { sourceService.getStandardSourceDefinition(source.sourceDefinitionId) } returns sourceDefinition
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
         source.sourceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       ActorDefinitionVersion()
         .withDockerRepository(SOURCE_DOCKER_REPO)
-        .withDockerImageTag(SOURCE_DOCKER_TAG),
-    )
-    whenever<SourceConnection?>(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+        .withDockerImageTag(SOURCE_DOCKER_TAG)
+    every { sourceService.getSourceConnection(source.sourceId) } returns source
   }
 
   private fun mockSuccessfulDiscoverJob(
@@ -2397,16 +2249,16 @@ internal class SchedulerHandlerTest {
         .withCatalogHash("")
         .withId(newSourceCatalogId)
 
-    whenever(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog)
-    whenever(
+    every { catalogService.getActorCatalogById(any()) } returns actorCatalog
+    every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,
         sourceVersion,
         false,
         null,
         WorkloadPriority.HIGH,
-      ),
-    ).thenReturn(discoverResponse)
+      )
+    } returns discoverResponse
     return newSourceCatalogId
   }
 
@@ -2423,8 +2275,7 @@ internal class SchedulerHandlerTest {
         nonBreakingChangesPreference = nonBreakingChangesPreference,
       )
     val connectionReadList = ConnectionReadList(connections = listOf(connectionRead))
-    whenever(connectionsHandler.listConnectionsForSource(source.sourceId, false))
-      .thenReturn(connectionReadList)
+    every { connectionsHandler.listConnectionsForSource(source.sourceId, false) } returns connectionReadList
     val catalogDiff =
       CatalogDiff(
         transforms =
@@ -2437,9 +2288,7 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(catalogDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
     return connectionRead
   }
 
@@ -2456,9 +2305,7 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(catalogDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
   }
 
   private fun mockRemoveStreamDiff() {
@@ -2474,9 +2321,7 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(catalogDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
   }
 
   private fun mockUpdateStreamDiff() {
@@ -2505,9 +2350,7 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(catalogDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
   }
 
   private fun mockUpdateAndAddStreamDiff() {
@@ -2542,16 +2385,12 @@ internal class SchedulerHandlerTest {
             ),
           ),
       )
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(catalogDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns catalogDiff
   }
 
   private fun mockEmptyDiff() {
     val emptyDiff = CatalogDiff(transforms = emptyList())
-    whenever(
-      connectionsHandler.getDiff(any(), any(), any(), any()),
-    ).thenReturn(emptyDiff)
+    every { connectionsHandler.getDiff(any(), any(), any(), any()) } returns emptyDiff
   }
 
   companion object {
@@ -2660,7 +2499,7 @@ internal class SchedulerHandlerTest {
           ).withDocumentationUrl(URI.create("unused")),
       )
 
-    val WEBHOOK_OPERATION: StandardSyncOperation? =
+    val WEBHOOK_OPERATION: StandardSyncOperation =
       StandardSyncOperation()
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
         .withOperatorWebhook(OperatorWebhook())

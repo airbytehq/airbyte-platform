@@ -33,6 +33,11 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.micronaut.http.uri.UriBuilder
+import io.mockk.Called
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -40,10 +45,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
 import java.net.URI
 import java.time.LocalDate
 import java.util.Optional
@@ -59,13 +60,13 @@ internal class ActorDefinitionHandlerHelperTest {
 
   @BeforeEach
   fun setUp() {
-    val compatibleConnectorsValidator = Mockito.mock(AirbyteCompatibleConnectorsValidator::class.java)
-    Mockito.`when`(compatibleConnectorsValidator.validate(any(), any())).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, null))
-    synchronousSchedulerClient = Mockito.mock(SynchronousSchedulerClient::class.java)
+    val compatibleConnectorsValidator = mockk<AirbyteCompatibleConnectorsValidator>()
+    every { compatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
+    synchronousSchedulerClient = mockk<SynchronousSchedulerClient>()
     val protocolVersionRange = AirbyteProtocolVersionRange(Version("0.0.0"), Version("0.3.0"))
-    actorDefinitionVersionResolver = Mockito.mock(ActorDefinitionVersionResolver::class.java)
-    remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
-    actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
+    actorDefinitionVersionResolver = mockk<ActorDefinitionVersionResolver>()
+    remoteDefinitionsProvider = mockk<RemoteDefinitionsProvider>()
+    actorDefinitionService = mockk<ActorDefinitionService>()
     actorDefinitionHandlerHelper =
       ActorDefinitionHandlerHelper(
         synchronousSchedulerClient,
@@ -83,20 +84,18 @@ internal class ActorDefinitionHandlerHelperTest {
     @Test
     @DisplayName("The ActorDefinitionVersion created fromCreate should always be custom")
     fun testDefaultDefinitionVersionFromCreate() {
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            getDockerImageForTag(
-              DOCKER_IMAGE_TAG,
-            ),
-            true,
-            WORKSPACE_ID,
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          getDockerImageForTag(
+            DOCKER_IMAGE_TAG,
           ),
-        ).thenReturn(
-          SynchronousResponse(
-            ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION),
-            mock(ConfigType.GET_SPEC),
-          ),
+          true,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION),
+          mock(ConfigType.GET_SPEC),
         )
 
       val expectedNewVersion =
@@ -118,32 +117,29 @@ internal class ActorDefinitionHandlerHelperTest {
           DOCUMENTATION_URL,
           WORKSPACE_ID,
         )
-      Mockito
-        .verify(synchronousSchedulerClient)
-        .createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID)
+      verify { synchronousSchedulerClient.createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID) }
       Assertions.assertEquals(expectedNewVersion, newVersion)
 
-      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient)
-      Mockito.verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider)
+      confirmVerified(synchronousSchedulerClient)
+      verify { actorDefinitionVersionResolver wasNot Called }
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @Test
     @DisplayName("Creating an ActorDefinitionVersion from create with an invalid protocol version should throw an exception")
     fun testDefaultDefinitionVersionFromCreateInvalidProtocolVersionThrows() {
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            getDockerImageForTag(
-              DOCKER_IMAGE_TAG,
-            ),
-            true,
-            WORKSPACE_ID,
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          getDockerImageForTag(
+            DOCKER_IMAGE_TAG,
           ),
-        ).thenReturn(
-          SynchronousResponse(
-            ConnectorSpecification().withProtocolVersion(INVALID_PROTOCOL_VERSION),
-            mock(ConfigType.GET_SPEC),
-          ),
+          true,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          ConnectorSpecification().withProtocolVersion(INVALID_PROTOCOL_VERSION),
+          mock(ConfigType.GET_SPEC),
         )
 
       Assertions.assertThrows(
@@ -156,12 +152,11 @@ internal class ActorDefinitionHandlerHelperTest {
           WORKSPACE_ID,
         )
       }
-      Mockito
-        .verify(synchronousSchedulerClient)
-        .createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID)
+      verify { synchronousSchedulerClient.createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID) }
 
-      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient)
-      Mockito.verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider)
+      confirmVerified(synchronousSchedulerClient)
+      verify { actorDefinitionVersionResolver wasNot Called }
+      verify { remoteDefinitionsProvider wasNot Called }
     }
   }
 
@@ -170,15 +165,14 @@ internal class ActorDefinitionHandlerHelperTest {
     @BeforeEach
     fun setUp() {
       // default version resolver to not have the new version already
-      Mockito
-        .`when`(
-          actorDefinitionVersionResolver.resolveVersionForTag(
-            eq(actorDefinitionVersion.getActorDefinitionId()),
-            eq(ActorType.SOURCE),
-            eq(actorDefinitionVersion.getDockerRepository()),
-            anyOrNull(),
-          ),
-        ).thenReturn(Optional.empty())
+      every {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          actorDefinitionVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          actorDefinitionVersion.getDockerRepository(),
+          any(),
+        )
+      } returns Optional.empty()
     }
 
     @ParameterizedTest
@@ -192,18 +186,16 @@ internal class ActorDefinitionHandlerHelperTest {
       val newSpec =
         ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new")
 
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            newDockerImage,
-            isCustomConnector,
-            WORKSPACE_ID,
-          ),
-        ).thenReturn(
-          SynchronousResponse(
-            newSpec,
-            mock(ConfigType.GET_SPEC),
-          ),
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          newDockerImage,
+          isCustomConnector,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          newSpec,
+          mock(ConfigType.GET_SPEC),
         )
 
       val newVersion =
@@ -215,20 +207,22 @@ internal class ActorDefinitionHandlerHelperTest {
           WORKSPACE_ID,
         )
 
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        newDockerImageTag,
-      )
-      Mockito.verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      }
+      verify { synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID) }
 
       Assertions.assertNotEquals(previousDefaultVersion, newVersion)
       Assertions.assertEquals(newSpec, newVersion.getSpec())
       Assertions.assertEquals(newValidProtocolVersion, newVersion.getProtocolVersion())
 
-      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
-      Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+      confirmVerified(synchronousSchedulerClient, actorDefinitionVersionResolver)
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @ParameterizedTest
@@ -238,15 +232,14 @@ internal class ActorDefinitionHandlerHelperTest {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
       val newDockerImageTag = previousDefaultVersion.getDockerImageTag()
 
-      Mockito
-        .`when`(
-          actorDefinitionVersionResolver.resolveVersionForTag(
-            previousDefaultVersion.getActorDefinitionId(),
-            ActorType.SOURCE,
-            previousDefaultVersion.getDockerRepository(),
-            newDockerImageTag,
-          ),
-        ).thenReturn(Optional.of(previousDefaultVersion))
+      every {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      } returns Optional.of(previousDefaultVersion)
 
       val newVersion =
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
@@ -257,17 +250,20 @@ internal class ActorDefinitionHandlerHelperTest {
           WORKSPACE_ID,
         )
 
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        newDockerImageTag,
-      )
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      }
 
       Assertions.assertEquals(previousDefaultVersion, newVersion)
 
-      Mockito.verifyNoMoreInteractions(actorDefinitionVersionResolver)
-      Mockito.verifyNoInteractions(synchronousSchedulerClient, remoteDefinitionsProvider)
+      confirmVerified(actorDefinitionVersionResolver)
+      verify { synchronousSchedulerClient wasNot Called }
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @ParameterizedTest
@@ -281,18 +277,16 @@ internal class ActorDefinitionHandlerHelperTest {
 
       val newSpec =
         ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new")
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            newDockerImage,
-            isCustomConnector,
-            WORKSPACE_ID,
-          ),
-        ).thenReturn(
-          SynchronousResponse(
-            newSpec,
-            mock(ConfigType.GET_SPEC),
-          ),
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          newDockerImage,
+          isCustomConnector,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          newSpec,
+          mock(ConfigType.GET_SPEC),
         )
 
       val newVersion =
@@ -303,19 +297,21 @@ internal class ActorDefinitionHandlerHelperTest {
           isCustomConnector,
           WORKSPACE_ID,
         )
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        newDockerImageTag,
-      )
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      }
 
       Assertions.assertEquals(previousDefaultVersion.getDockerImageTag(), newVersion.getDockerImageTag())
       Assertions.assertNotEquals(previousDefaultVersion, newVersion)
-      Mockito.verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)
+      verify { synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID) }
 
-      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
-      Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+      confirmVerified(synchronousSchedulerClient, actorDefinitionVersionResolver)
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @ParameterizedTest
@@ -325,18 +321,16 @@ internal class ActorDefinitionHandlerHelperTest {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
       val newDockerImageTag = "newTag"
       val newDockerImage = getDockerImageForTag(newDockerImageTag)
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            newDockerImage,
-            isCustomConnector,
-            WORKSPACE_ID,
-          ),
-        ).thenReturn(
-          SynchronousResponse(
-            ConnectorSpecification().withProtocolVersion(INVALID_PROTOCOL_VERSION),
-            mock(ConfigType.GET_SPEC),
-          ),
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          newDockerImage,
+          isCustomConnector,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          ConnectorSpecification().withProtocolVersion(INVALID_PROTOCOL_VERSION),
+          mock(ConfigType.GET_SPEC),
         )
 
       Assertions.assertThrows(
@@ -350,16 +344,18 @@ internal class ActorDefinitionHandlerHelperTest {
           WORKSPACE_ID,
         )
       }
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        newDockerImageTag,
-      )
-      Mockito.verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      }
+      verify { synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID) }
 
-      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
-      Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+      confirmVerified(synchronousSchedulerClient, actorDefinitionVersionResolver)
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @ParameterizedTest
@@ -374,15 +370,14 @@ internal class ActorDefinitionHandlerHelperTest {
           .withDockerImageTag(newDockerImageTag)
           .withSpec(ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "existing"))
 
-      Mockito
-        .`when`(
-          actorDefinitionVersionResolver.resolveVersionForTag(
-            ACTOR_DEFINITION_ID,
-            ActorType.SOURCE,
-            DOCKER_REPOSITORY,
-            newDockerImageTag,
-          ),
-        ).thenReturn(Optional.of(oldExistingADV))
+      every {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          ACTOR_DEFINITION_ID,
+          ActorType.SOURCE,
+          DOCKER_REPOSITORY,
+          newDockerImageTag,
+        )
+      } returns Optional.of(oldExistingADV)
 
       val newVersion =
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
@@ -392,17 +387,20 @@ internal class ActorDefinitionHandlerHelperTest {
           isCustomConnector,
           WORKSPACE_ID,
         )
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        newDockerImageTag,
-      )
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          newDockerImageTag,
+        )
+      }
 
       Assertions.assertEquals(oldExistingADV, newVersion)
 
-      Mockito.verifyNoMoreInteractions(actorDefinitionVersionResolver)
-      Mockito.verifyNoInteractions(synchronousSchedulerClient, remoteDefinitionsProvider)
+      confirmVerified(actorDefinitionVersionResolver)
+      verify { synchronousSchedulerClient wasNot Called }
+      verify { remoteDefinitionsProvider wasNot Called }
     }
 
     @ParameterizedTest
@@ -414,33 +412,30 @@ internal class ActorDefinitionHandlerHelperTest {
 
       val newSpec =
         ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "new")
-      Mockito
-        .`when`(
-          synchronousSchedulerClient.createGetSpecJob(
-            dockerImage,
-            isCustomConnector,
-            WORKSPACE_ID,
-          ),
-        ).thenReturn(
-          SynchronousResponse(
-            newSpec,
-            mock(ConfigType.GET_SPEC),
-          ),
+      every {
+        synchronousSchedulerClient.createGetSpecJob(
+          dockerImage,
+          isCustomConnector,
+          WORKSPACE_ID,
+        )
+      } returns
+        SynchronousResponse(
+          newSpec,
+          mock(ConfigType.GET_SPEC),
         )
 
       val oldExistingADV =
         clone(actorDefinitionVersion)
           .withSpec(ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "existing"))
 
-      Mockito
-        .`when`(
-          actorDefinitionVersionResolver.resolveVersionForTag(
-            ACTOR_DEFINITION_ID,
-            ActorType.SOURCE,
-            DOCKER_REPOSITORY,
-            DEV,
-          ),
-        ).thenReturn(Optional.of(oldExistingADV))
+      every {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          ACTOR_DEFINITION_ID,
+          ActorType.SOURCE,
+          DOCKER_REPOSITORY,
+          DEV,
+        )
+      } returns Optional.of(oldExistingADV)
 
       val newVersion =
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
@@ -450,18 +445,20 @@ internal class ActorDefinitionHandlerHelperTest {
           isCustomConnector,
           WORKSPACE_ID,
         )
-      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
-        previousDefaultVersion.getActorDefinitionId(),
-        ActorType.SOURCE,
-        previousDefaultVersion.getDockerRepository(),
-        DEV,
-      )
-      Mockito.verify(synchronousSchedulerClient).createGetSpecJob(dockerImage, isCustomConnector, WORKSPACE_ID)
+      verify {
+        actorDefinitionVersionResolver.resolveVersionForTag(
+          previousDefaultVersion.getActorDefinitionId(),
+          ActorType.SOURCE,
+          previousDefaultVersion.getDockerRepository(),
+          DEV,
+        )
+      }
+      verify { synchronousSchedulerClient.createGetSpecJob(dockerImage, isCustomConnector, WORKSPACE_ID) }
 
       Assertions.assertEquals(oldExistingADV.withSpec(newSpec), newVersion)
 
-      Mockito.verifyNoMoreInteractions(actorDefinitionVersionResolver, synchronousSchedulerClient)
-      Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+      confirmVerified(actorDefinitionVersionResolver, synchronousSchedulerClient)
+      verify { remoteDefinitionsProvider wasNot Called }
     }
   }
 
@@ -481,13 +478,12 @@ internal class ActorDefinitionHandlerHelperTest {
         clone(connectorRegistrySourceDefinition)
           .withReleases(ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges))
 
-      Mockito
-        .`when`(
-          remoteDefinitionsProvider.getSourceDefinitionByVersion(
-            DOCKER_REPOSITORY,
-            LATEST,
-          ),
-        ).thenReturn(Optional.of(sourceDefWithBreakingChanges))
+      every {
+        remoteDefinitionsProvider.getSourceDefinitionByVersion(
+          DOCKER_REPOSITORY,
+          LATEST,
+        )
+      } returns Optional.of(sourceDefWithBreakingChanges)
 
       val breakingChanges: List<ActorDefinitionBreakingChange> =
         actorDefinitionHandlerHelper.getBreakingChanges(
@@ -496,10 +492,11 @@ internal class ActorDefinitionHandlerHelperTest {
         )
       Assertions.assertEquals(toActorDefinitionBreakingChanges(sourceDefWithBreakingChanges), breakingChanges)
 
-      Mockito.verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST)
+      verify { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST) }
 
-      Mockito.verifyNoMoreInteractions(remoteDefinitionsProvider)
-      Mockito.verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
+      confirmVerified(remoteDefinitionsProvider)
+      verify { synchronousSchedulerClient wasNot Called }
+      verify { actorDefinitionVersionResolver wasNot Called }
     }
   }
 
@@ -524,12 +521,11 @@ internal class ActorDefinitionHandlerHelperTest {
             .withMessage("This is another breaking change"),
         )
 
-      Mockito
-        .`when`(
-          actorDefinitionService.listBreakingChangesForActorDefinitionVersion(
-            actorDefinitionVersion,
-          ),
-        ).thenReturn(breakingChangeList as MutableList<ActorDefinitionBreakingChange>)
+      every {
+        actorDefinitionService.listBreakingChangesForActorDefinitionVersion(
+          actorDefinitionVersion,
+        )
+      } returns breakingChangeList as MutableList<ActorDefinitionBreakingChange>
 
       val expected =
         ActorDefinitionVersionBreakingChanges(
@@ -563,12 +559,11 @@ internal class ActorDefinitionHandlerHelperTest {
 
     @Test
     fun testGetVersionBreakingChangesNoBreakingChanges() {
-      Mockito
-        .`when`(
-          actorDefinitionService.listBreakingChangesForActorDefinitionVersion(
-            actorDefinitionVersion,
-          ),
-        ).thenReturn(mutableListOf())
+      every {
+        actorDefinitionService.listBreakingChangesForActorDefinitionVersion(
+          actorDefinitionVersion,
+        )
+      } returns mutableListOf()
 
       val actual: Optional<ActorDefinitionVersionBreakingChanges> =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(
@@ -580,13 +575,12 @@ internal class ActorDefinitionHandlerHelperTest {
 
   @Test
   fun testGetNoBreakingChangesAvailable() {
-    Mockito
-      .`when`(
-        remoteDefinitionsProvider.getSourceDefinitionByVersion(
-          DOCKER_REPOSITORY,
-          LATEST,
-        ),
-      ).thenReturn(Optional.of(connectorRegistrySourceDefinition))
+    every {
+      remoteDefinitionsProvider.getSourceDefinitionByVersion(
+        DOCKER_REPOSITORY,
+        LATEST,
+      )
+    } returns Optional.of(connectorRegistrySourceDefinition)
 
     val breakingChanges: List<ActorDefinitionBreakingChange> =
       actorDefinitionHandlerHelper.getBreakingChanges(
@@ -595,34 +589,34 @@ internal class ActorDefinitionHandlerHelperTest {
       )
     Assertions.assertEquals(toActorDefinitionBreakingChanges(connectorRegistrySourceDefinition), breakingChanges)
 
-    Mockito.verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST)
+    verify { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST) }
 
-    Mockito.verifyNoMoreInteractions(remoteDefinitionsProvider)
-    Mockito.verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
+    confirmVerified(remoteDefinitionsProvider)
+    verify { synchronousSchedulerClient wasNot Called }
+    verify { actorDefinitionVersionResolver wasNot Called }
   }
 
   @Test
   fun testGetBreakingChangesIfDefinitionNotFound() {
-    Mockito
-      .`when`(
-        remoteDefinitionsProvider.getSourceDefinitionByVersion(
-          DOCKER_REPOSITORY,
-          DOCKER_IMAGE_TAG,
-        ),
-      ).thenReturn(
-        Optional.empty(),
+    every {
+      remoteDefinitionsProvider.getSourceDefinitionByVersion(
+        DOCKER_REPOSITORY,
+        DOCKER_IMAGE_TAG,
       )
+    } returns Optional.empty()
+    every { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST) } returns Optional.empty()
 
     val breakingChanges: List<ActorDefinitionBreakingChange?> =
       actorDefinitionHandlerHelper.getBreakingChanges(
         actorDefinitionVersion,
         ActorType.SOURCE,
       )
-    Mockito.verify(remoteDefinitionsProvider).getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST)
+    verify { remoteDefinitionsProvider.getSourceDefinitionByVersion(DOCKER_REPOSITORY, LATEST) }
     Assertions.assertEquals(mutableListOf<ActorDefinitionBreakingChange>(), breakingChanges)
 
-    Mockito.verifyNoMoreInteractions(remoteDefinitionsProvider)
-    Mockito.verifyNoInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
+    confirmVerified(remoteDefinitionsProvider)
+    verify { synchronousSchedulerClient wasNot Called }
+    verify { actorDefinitionVersionResolver wasNot Called }
   }
 
   private fun getDockerImageForTag(dockerImageTag: String?): String = String.format("%s:%s", DOCKER_REPOSITORY, dockerImageTag)

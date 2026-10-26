@@ -14,7 +14,6 @@ dependencies {
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
-  testImplementation(libs.mockito.core)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
 }

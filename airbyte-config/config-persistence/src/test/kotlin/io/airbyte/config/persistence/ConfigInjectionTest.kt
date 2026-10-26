@@ -37,10 +37,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
@@ -54,8 +54,8 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
     truncateAllTables()
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
-    val secretPersistenceConfigService: SecretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>(relaxed = true)
+    val secretPersistenceConfigService: SecretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
     val organizationService: OrganizationService = OrganizationServiceJooqImpl(database)
     organizationService.writeOrganization(
       Organization()
@@ -73,11 +73,11 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
     val connectionService: ConnectionService = ConnectionServiceJooqImpl(database)
-    val scopedConfigurationService: ScopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+    val scopedConfigurationService: ScopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
     val actorDefinitionService: ActorDefinitionService = ActorDefinitionServiceJooqImpl(database)
-    val connectionTimelineEventService: ConnectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
-    val metricClient: MetricClient = Mockito.mock(MetricClient::class.java)
-    val actorServicePaginationHelper: ActorServicePaginationHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
+    val connectionTimelineEventService: ConnectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient: MetricClient = mockk<MetricClient>(relaxed = true)
+    val actorServicePaginationHelper: ActorServicePaginationHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     connectorBuilderService = ConnectorBuilderServiceJooqImpl(database)
     sourceService =

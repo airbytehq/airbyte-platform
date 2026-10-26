@@ -33,11 +33,8 @@ dependencies {
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
 
-  testImplementation(libs.hamcrest.all)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.bundles.flyway)
-  testImplementation(libs.mockito.inline)
-  testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

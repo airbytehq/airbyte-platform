@@ -5,10 +5,14 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.problems.ResourceType
 import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
@@ -79,6 +83,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
+import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -373,6 +378,8 @@ class WorkspacesHandler
       val workspaceId = workspaceIdRequestBody.workspaceId
       val includeTombstone = workspaceIdRequestBody.includeTombstone ?: false
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone)
+      ensureActiveWorkspaceOrganization(workspace, includeTombstone)
+
       val result = domainToApiModel(workspace)
       if (ffClient.boolVariation(HydrateLimits, Workspace(workspaceId))) {
         val limits = limitsProvider.getLimitForWorkspace(workspaceId)
@@ -395,6 +402,7 @@ class WorkspacesHandler
     fun getWorkspaceBySlug(slugRequestBody: SlugRequestBody): WorkspaceRead {
       // for now we assume there is one workspace and it has a default uuid.
       val workspace = workspaceService.getWorkspaceBySlug(slugRequestBody.slug, false)
+      ensureActiveWorkspaceOrganization(workspace, false)
       return domainToApiModel(workspace)
     }
 
@@ -404,7 +412,27 @@ class WorkspacesHandler
     ): WorkspaceRead {
       val workspace =
         workspaceService.getStandardWorkspaceFromConnection(connectionIdRequestBody.connectionId, includeTombstone)
+      ensureActiveWorkspaceOrganization(workspace, includeTombstone)
       return domainToApiModel(workspace)
+    }
+
+    private fun ensureActiveWorkspaceOrganization(
+      workspace: StandardWorkspace,
+      includeTombstone: Boolean,
+    ) {
+      if (includeTombstone) return
+
+      val organization =
+        try {
+          organizationService.getActiveOrganization(workspace.organizationId)
+        } catch (e: IOException) {
+          throw UnexpectedProblem().apply { initCause(e) }
+        }
+      if (organization.isEmpty) {
+        throw ResourceNotFoundProblem(
+          ProblemResourceData().resourceId(workspace.workspaceId.toString()).resourceType(ResourceType.WORKSPACE),
+        )
+      }
     }
 
     fun listWorkspacesInOrganization(request: ListWorkspacesInOrganizationRequestBody): WorkspaceReadList {

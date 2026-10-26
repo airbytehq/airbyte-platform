@@ -21,10 +21,12 @@ import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ConfigurationUpdateTest {
@@ -36,10 +38,10 @@ internal class ConfigurationUpdateTest {
 
   @BeforeEach
   fun setup() {
-    secretsProcessor = Mockito.mock(JsonSecretsProcessor::class.java)
-    actorDefinitionVersionHelper = Mockito.mock(ActorDefinitionVersionHelper::class.java)
-    sourceService = Mockito.mock(SourceService::class.java)
-    destinationService = Mockito.mock(DestinationService::class.java)
+    secretsProcessor = mockk<JsonSecretsProcessor>()
+    actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>()
 
     configurationUpdate =
       ConfigurationUpdate(
@@ -51,42 +53,34 @@ internal class ConfigurationUpdateTest {
 
   @Test
   fun testSourceUpdate() {
-    Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION)
-    Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
-    Mockito.`when`(actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1)).thenReturn(
-      DEFINITION_VERSION,
-    )
-    Mockito.`when`(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION)
+    every { sourceService.getSourceConnection(UUID1) } returns ORIGINAL_SOURCE_CONNECTION
+    every { sourceService.getStandardSourceDefinition(UUID2) } returns SOURCE_DEFINITION
+    every { actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1) } returns DEFINITION_VERSION
+    every { secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC) } returns NEW_CONFIGURATION
 
     val actual = configurationUpdate.source(UUID1, ORIGINAL_SOURCE_CONNECTION.getName(), NEW_CONFIGURATION)
 
     Assertions.assertEquals(NEW_SOURCE_CONNECTION, actual)
-    Mockito.verify<ActorDefinitionVersionHelper?>(actorDefinitionVersionHelper).getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1)
+    verify { actorDefinitionVersionHelper.getSourceVersion(SOURCE_DEFINITION, WORKSPACE_ID, UUID1) }
   }
 
   @Test
   fun testDestinationUpdate() {
-    Mockito.`when`(destinationService.getDestinationConnection(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION)
-    Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(UUID2))
-      .thenReturn(DESTINATION_DEFINITION)
-    Mockito
-      .`when`(actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1))
-      .thenReturn(
-        DEFINITION_VERSION,
-      )
-    Mockito.`when`(secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC)).thenReturn(NEW_CONFIGURATION)
+    every { destinationService.getDestinationConnection(UUID1) } returns ORIGINAL_DESTINATION_CONNECTION
+    every { destinationService.getStandardDestinationDefinition(UUID2) } returns DESTINATION_DEFINITION
+    every { actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1) } returns DEFINITION_VERSION
+    every { secretsProcessor.copySecrets(ORIGINAL_CONFIGURATION, NEW_CONFIGURATION, SPEC) } returns NEW_CONFIGURATION
 
     val actual = configurationUpdate.destination(UUID1, ORIGINAL_DESTINATION_CONNECTION.getName(), NEW_CONFIGURATION)
 
     Assertions.assertEquals(NEW_DESTINATION_CONNECTION, actual)
-    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1)
+    verify { actorDefinitionVersionHelper.getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1) }
   }
 
   @Test
   fun testPartialUpdateSourceNoUpdate() {
-    Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
-    Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
+    every { sourceService.getSourceConnection(UUID1) } returns clone(ORIGINAL_SOURCE_CONNECTION)
+    every { sourceService.getStandardSourceDefinition(UUID2) } returns SOURCE_DEFINITION
 
     // Test updating nothing
     val noUpdate = configurationUpdate.partialSource(UUID1, null, null)
@@ -95,8 +89,8 @@ internal class ConfigurationUpdateTest {
 
   @Test
   fun testPartialUpdateSourceName() {
-    Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
-    Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
+    every { sourceService.getSourceConnection(UUID1) } returns clone(ORIGINAL_SOURCE_CONNECTION)
+    every { sourceService.getStandardSourceDefinition(UUID2) } returns SOURCE_DEFINITION
 
     // Test only giving a name
     val updatedName = configurationUpdate.partialSource(UUID1, "TEST", null)
@@ -105,8 +99,8 @@ internal class ConfigurationUpdateTest {
 
   @Test
   fun testPartialUpdateSourceConfig() {
-    Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
-    Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
+    every { sourceService.getSourceConnection(UUID1) } returns clone(ORIGINAL_SOURCE_CONNECTION)
+    every { sourceService.getStandardSourceDefinition(UUID2) } returns SOURCE_DEFINITION
 
     // Test updating only configuration
     val updatedConfiguration = configurationUpdate.partialSource(UUID1, null, NEW_CONFIGURATION)
@@ -115,12 +109,8 @@ internal class ConfigurationUpdateTest {
 
   @Test
   fun testPartialUpdateSourcePartialConfig() {
-    Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(
-      clone(ORIGINAL_SOURCE_CONNECTION),
-    )
-    Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(
-      SOURCE_DEFINITION,
-    )
+    every { sourceService.getSourceConnection(UUID1) } returns clone(ORIGINAL_SOURCE_CONNECTION)
+    every { sourceService.getStandardSourceDefinition(UUID2) } returns SOURCE_DEFINITION
 
     // Test partial configuration update
     val partialConfig = jsonNode(mapOf(JdbcUtils.PASSWORD_KEY to "123"))
@@ -162,7 +152,7 @@ internal class ConfigurationUpdateTest {
         ),
       )
     private val SOURCE_DEFINITION = StandardSourceDefinition()
-    private val DEFINITION_VERSION: ActorDefinitionVersion? =
+    private val DEFINITION_VERSION: ActorDefinitionVersion =
       ActorDefinitionVersion()
         .withDockerRepository(IMAGE_REPOSITORY)
         .withDockerImageTag(IMAGE_TAG)

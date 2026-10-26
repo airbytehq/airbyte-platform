@@ -19,6 +19,15 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
 
   @Query(
     """
+    UPDATE organization
+    SET tombstone = true, updated_at = NOW()
+    WHERE id = :organizationId AND tombstone = false
+    """,
+  )
+  fun softDeleteById(organizationId: UUID): Long
+
+  @Query(
+    """
     SELECT semantic_search_enabled FROM organization
     WHERE id = :organizationId AND tombstone = false
     """,

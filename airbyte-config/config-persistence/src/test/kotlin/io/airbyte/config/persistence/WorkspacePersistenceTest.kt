@@ -47,6 +47,8 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
+import io.mockk.spyk
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -55,7 +57,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -79,16 +80,16 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
   @BeforeEach
   fun setup() {
-    featureFlagClient = Mockito.mock(TestClient::class.java)
-    secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
+    featureFlagClient = mockk<TestClient>(relaxed = true)
+    secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
     dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database!!)
     organizationService = OrganizationServiceJooqImpl(database!!)
-    connectionService = Mockito.spy(ConnectionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
 
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
     val actorDefinitionService: ActorDefinitionService = ActorDefinitionServiceJooqImpl(database!!)
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
@@ -97,11 +98,11 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
         scopedConfigurationService,
         connectionTimelineEventService,
       )
-    val metricClient = Mockito.mock(MetricClient::class.java)
-    val actorPaginationServiceHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     sourceService =
-      Mockito.spy(
+      spyk(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -113,7 +114,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
         ),
       )
     destinationService =
-      Mockito.spy(
+      spyk(
         DestinationServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -178,7 +179,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     )
 
     workspaceService =
-      Mockito.spy(
+      spyk(
         WorkspaceServiceJooqImpl(
           database!!,
           featureFlagClient,

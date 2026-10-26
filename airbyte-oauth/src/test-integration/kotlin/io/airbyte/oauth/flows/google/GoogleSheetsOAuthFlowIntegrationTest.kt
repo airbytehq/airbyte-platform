@@ -15,13 +15,13 @@ import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
@@ -42,7 +42,7 @@ class GoogleSheetsOAuthFlowIntegrationTest {
   @BeforeEach
   fun setup() {
     check(Files.exists(CREDENTIALS_PATH)) { "Must provide path to a oauth credentials file." }
-    oAuthService = Mockito.mock(OAuthService::class.java)
+    oAuthService = mockk<OAuthService>()
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
     googleSheetsOAuthFlow = GoogleSheetsOAuthFlow(httpClient)
 
@@ -81,9 +81,7 @@ class GoogleSheetsOAuthFlowIntegrationTest {
             ),
           ),
         )
-    Mockito
-      .`when`(oAuthService.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
-      .thenReturn(Optional.of(sourceOAuthParameter))
+    every { oAuthService.getSourceOAuthParameterOptional(any(), any()) } returns Optional.of(sourceOAuthParameter)
     val url =
       googleSheetsOAuthFlow.getSourceConsentUrl(
         workspaceId,

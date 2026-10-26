@@ -127,6 +127,8 @@ class OrganizationServiceJooqImpl(
     }
   }
 
+  override fun softDeleteOrganization(organizationId: UUID): Boolean = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
   @Throws(IOException::class)
   override fun setOrganizationAgenticStatus(
     organizationId: UUID,

@@ -80,17 +80,16 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.MockedStatic
-import org.mockito.Mockito
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.whenever
 import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
@@ -122,19 +121,20 @@ internal class JobHistoryHandlerTest {
   fun setUp() {
     testJobAttempt = createAttempt(0, JOB_ID, CREATED_AT, AttemptStatus.SUCCEEDED)
 
-    connectionService = Mockito.mock(ConnectionServiceJooqImpl::class.java)
-    sourceHandler = Mockito.mock(SourceHandler::class.java)
-    destinationHandler = Mockito.mock(DestinationHandler::class.java)
-    jobPersistence = Mockito.mock(JobPersistence::class.java)
-    logClientManager = Mockito.mock(LogClientManager::class.java)
-    logUtils = Mockito.mock(LogUtils::class.java)
-    featureFlagClient = Mockito.mock(TestClient::class.java)
-    temporalClient = Mockito.mock(TemporalClient::class.java)
+    connectionService = mockk<ConnectionServiceJooqImpl>()
+    sourceHandler = mockk<SourceHandler>()
+    destinationHandler = mockk<DestinationHandler>()
+    jobPersistence = mockk<JobPersistence>()
+    logClientManager = mockk<LogClientManager>()
+    logUtils = mockk<LogUtils>()
+    featureFlagClient = mockk<TestClient>()
+    temporalClient = mockk<TemporalClient>()
+    every { logClientManager.getJobLogFile(any()) } returns emptyList()
     jobConverter = JobConverter(logClientManager, logUtils)
-    sourceDefinitionsHandler = Mockito.mock(SourceDefinitionsHandler::class.java)
-    destinationDefinitionsHandler = Mockito.mock(DestinationDefinitionsHandler::class.java)
-    airbyteVersion = Mockito.mock(AirbyteVersion::class.java)
-    jobService = Mockito.mock(JobService::class.java)
+    sourceDefinitionsHandler = mockk<SourceDefinitionsHandler>()
+    destinationDefinitionsHandler = mockk<DestinationDefinitionsHandler>()
+    airbyteVersion = mockk<AirbyteVersion>()
+    jobService = mockk<JobService>()
     jobHistoryHandler =
       JobHistoryHandler(
         jobPersistence,
@@ -158,7 +158,7 @@ internal class JobHistoryHandlerTest {
     @Test
     @DisplayName("Should return jobs with/without attempts in descending order")
     fun testListJobs() {
-      whenever(featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS))).thenReturn(true)
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns true
 
       val successfulJobAttempt2 = createAttempt(1, JOB_ID, CREATED_AT, AttemptStatus.SUCCEEDED)
       val successfulJob =
@@ -194,43 +194,40 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      whenever(
+      every {
         jobService.listJobs(
-          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
-          eq(JOB_CONFIG_ID),
-          eq(pageSize),
-          eq(rowOffset),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(listOf(latestJobNoAttempt, successfulJob))
+          setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>()),
+          JOB_CONFIG_ID,
+          pageSize,
+          rowOffset,
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      } returns listOf(latestJobNoAttempt, successfulJob)
 
-      whenever(
+      every {
         jobPersistence.getJobCount(
-          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
-          eq(JOB_CONFIG_ID),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(2L)
+          setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>()),
+          JOB_CONFIG_ID,
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      } returns 2L
 
-      whenever(
-        jobPersistence.getAttemptStats(listOf(200L, 100L)),
-      ).thenReturn(
+      every { jobPersistence.getAttemptStats(listOf(200L, 100L)) } returns
         mapOf(
           JobAttemptPair(100, 0) to FIRST_ATTEMPT_STATS,
           JobAttemptPair(100, 1) to SECOND_ATTEMPT_STATS,
           JobAttemptPair(jobId2, 0) to FIRST_ATTEMPT_STATS,
-        ),
-      )
+        )
 
       val requestBody =
         JobListRequestBody(
@@ -312,7 +309,7 @@ internal class JobHistoryHandlerTest {
     @Test
     @DisplayName("Should return jobs in descending order regardless of type")
     fun testListJobsFor() {
-      whenever(featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS))).thenReturn(true)
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns true
 
       val firstJob =
         Job(
@@ -371,43 +368,40 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      whenever(
+      every {
         jobService.listJobs(
-          eq(configTypes),
-          eq(JOB_CONFIG_ID),
-          eq(pageSize),
-          eq(rowOffset),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(listOf(latestJob, secondJob, firstJob))
+          configTypes,
+          JOB_CONFIG_ID,
+          pageSize,
+          rowOffset,
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      } returns listOf(latestJob, secondJob, firstJob)
 
-      whenever(
+      every {
         jobPersistence.getJobCount(
-          eq(configTypes),
-          eq(JOB_CONFIG_ID),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(3L)
+          configTypes,
+          JOB_CONFIG_ID,
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      } returns 3L
 
-      whenever(
-        jobPersistence.getAttemptStats(listOf(300L, 200L, 100L)),
-      ).thenReturn(
+      every { jobPersistence.getAttemptStats(listOf(300L, 200L, 100L)) } returns
         mapOf(
           JobAttemptPair(100, 0) to FIRST_ATTEMPT_STATS,
           JobAttemptPair(secondJobId, 0) to FIRST_ATTEMPT_STATS,
           JobAttemptPair(latestJobId, 0) to FIRST_ATTEMPT_STATS,
-        ),
-      )
+        )
 
       val requestBody =
         JobListRequestBody(
@@ -495,9 +489,7 @@ internal class JobHistoryHandlerTest {
     @Test
     @DisplayName("Should return jobs including specified job id")
     fun testListJobsIncludingJobId() {
-      whenever(
-        featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)),
-      ).thenReturn(true)
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns true
 
       val successfulJob =
         Job(
@@ -532,35 +524,32 @@ internal class JobHistoryHandlerTest {
           true,
         )
 
-      whenever(
+      every {
         jobPersistence.listJobsIncludingId(
           setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>()),
           JOB_CONFIG_ID,
           jobId2,
           pageSize,
-        ),
-      ).thenReturn(listOf(latestJobNoAttempt, successfulJob))
+        )
+      } returns listOf(latestJobNoAttempt, successfulJob)
 
-      whenever(
+      every {
         jobPersistence.getJobCount(
-          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
-          eq(JOB_CONFIG_ID),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-          anyOrNull(),
-        ),
-      ).thenReturn(2L)
+          setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>()),
+          JOB_CONFIG_ID,
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      } returns 2L
 
-      whenever(
-        jobPersistence.getAttemptStats(listOf(200L, 100L)),
-      ).thenReturn(
+      every { jobPersistence.getAttemptStats(listOf(200L, 100L)) } returns
         mapOf(
           JobAttemptPair(100, 0) to FIRST_ATTEMPT_STATS,
           JobAttemptPair(jobId2, 0) to FIRST_ATTEMPT_STATS,
-        ),
-      )
+        )
 
       val requestBody =
         JobListRequestBody(
@@ -655,8 +644,8 @@ internal class JobHistoryHandlerTest {
         true,
       )
 
-    whenever(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    whenever(logClientManager.getLogs(anyOrNull())).thenReturn(LogEvents(emptyList(), "1"))
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { logClientManager.getLogs(any()) } returns LogEvents(emptyList(), "1")
 
     val jobInfoActual = jobHistoryHandler.getJobInfo(JOB_ID)
 
@@ -682,7 +671,7 @@ internal class JobHistoryHandlerTest {
         CREATED_AT,
         true,
       )
-    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
+    every { jobPersistence.getJob(JOB_ID) } returns job
 
     val requestBody = JobIdRequestBody(id = JOB_ID)
     val jobInfoLightActual = jobHistoryHandler.getJobInfoLight(requestBody)
@@ -726,16 +715,16 @@ internal class JobHistoryHandlerTest {
     val standardSync = ConnectionHelpers.generateSyncWithSourceId(source.sourceId)
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
 
-    whenever(connectionService.getStandardSync(UUID.fromString(job.scope))).thenReturn(standardSync)
-    whenever(sourceHandler.getSource(SourceIdRequestBody(sourceId = connectionRead.sourceId))).thenReturn(sourceRead)
-    whenever(destinationHandler.getDestination(DestinationIdRequestBody(destinationId = connectionRead.destinationId))).thenReturn(destinationRead)
-    whenever(jobPersistence.getJob(JOB_ID)).thenReturn(job)
-    whenever(jobPersistence.getAttemptStats(anyOrNull(), anyOrNull())).thenReturn(FIRST_ATTEMPT_STATS)
-    whenever(logClientManager.getLogs(anyOrNull())).thenReturn(LogEvents(emptyList(), "1"))
-    whenever(sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true)).thenReturn(SOURCE_DEFINITION_API)
-    whenever(destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true))
-      .thenReturn(DESTINATION_DEFINITION_API)
-    whenever(airbyteVersion.serialize()).thenReturn(AIRBYTE_VERSION)
+    every { connectionService.getStandardSync(UUID.fromString(job.scope)) } returns standardSync
+    every { sourceHandler.getSource(SourceIdRequestBody(sourceId = connectionRead.sourceId)) } returns sourceRead
+    every { destinationHandler.getDestination(DestinationIdRequestBody(destinationId = connectionRead.destinationId)) } returns destinationRead
+    every { jobPersistence.getJob(JOB_ID) } returns job
+    every { jobPersistence.getAttemptStats(any(), any()) } returns FIRST_ATTEMPT_STATS
+    every { logClientManager.getLogs(any()) } returns LogEvents(emptyList(), "1")
+    every { sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true) } returns SOURCE_DEFINITION_API
+    every { destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true) } returns DESTINATION_DEFINITION_API
+    every { airbyteVersion.serialize() } returns AIRBYTE_VERSION
+    every { temporalClient.getWorkflowState(UUID.fromString(job.scope)) } returns null
 
     val jobDebugInfoActual = jobHistoryHandler.getJobDebugInfo(JOB_ID)
 
@@ -792,14 +781,13 @@ internal class JobHistoryHandlerTest {
         true,
       )
 
-    Mockito
-      .`when`(
-        jobPersistence.listJobsForConnectionWithStatuses(
-          connectionId,
-          Job.Companion.SYNC_REPLICATION_TYPES,
-          JobStatus.NON_TERMINAL_STATUSES,
-        ),
-      ).thenReturn(listOf(newerRunningJob, olderRunningJob))
+    every {
+      jobPersistence.listJobsForConnectionWithStatuses(
+        connectionId,
+        Job.Companion.SYNC_REPLICATION_TYPES,
+        JobStatus.NON_TERMINAL_STATUSES,
+      )
+    } returns listOf(newerRunningJob, olderRunningJob)
 
     val expectedJob: Optional<JobRead> = Optional.of<JobRead?>(getJobRead(newerRunningJob))
     val actualJob: Optional<JobRead> = jobHistoryHandler.getLatestRunningSyncJob(connectionId)
@@ -812,14 +800,13 @@ internal class JobHistoryHandlerTest {
   fun testGetLatestRunningSyncJobWhenNone() {
     val connectionId = UUID.randomUUID()
 
-    Mockito
-      .`when`(
-        jobPersistence.listJobsForConnectionWithStatuses(
-          connectionId,
-          Job.Companion.SYNC_REPLICATION_TYPES,
-          JobStatus.NON_TERMINAL_STATUSES,
-        ),
-      ).thenReturn(mutableListOf())
+    every {
+      jobPersistence.listJobsForConnectionWithStatuses(
+        connectionId,
+        Job.Companion.SYNC_REPLICATION_TYPES,
+        JobStatus.NON_TERMINAL_STATUSES,
+      )
+    } returns mutableListOf()
 
     val actual: Optional<JobRead> = jobHistoryHandler.getLatestRunningSyncJob(connectionId)
 
@@ -835,6 +822,9 @@ internal class JobHistoryHandlerTest {
       val connectionId = UUID.randomUUID()
 
       val request = ConnectionIdRequestBody(connectionId = connectionId)
+      every { jobPersistence.getRunningJobForConnection(connectionId) } returns emptyList()
+      every { jobPersistence.getAttemptStats(any<List<Long>>()) } returns emptyMap()
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns false
 
       val expectedSyncProgress =
         ConnectionSyncProgressRead(
@@ -909,7 +899,9 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
-      Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
+      every { jobPersistence.getRunningJobForConnection(connectionId) } returns listOf(firstJob)
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns false
+      every { jobPersistence.getAttemptStats(any<List<Long>>()) } returns emptyMap()
 
       val expected =
         ConnectionSyncProgressRead(
@@ -1027,7 +1019,9 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
-      Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
+      every { jobPersistence.getRunningJobForConnection(connectionId) } returns listOf(firstJob)
+      every { featureFlagClient.boolVariation(HydrateAggregatedStats, Workspace(ANONYMOUS)) } returns false
+      every { jobPersistence.getAttemptStats(any<List<Long>>()) } returns emptyMap()
 
       val expected =
         ConnectionSyncProgressRead(
@@ -1107,9 +1101,10 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead(job = jobRead, attempts = listOf(toAttemptRead(testJobAttempt)))
 
-      Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
-      Mockito.mockStatic(JobConverter::class.java).use { mockedConverter ->
-        mockedConverter.`when`<Any?>(MockedStatic.Verification { getJobWithAttemptsRead(firstJob) }).thenReturn(firstJobWithAttemptRead)
+      every { jobPersistence.getRunningJobForConnection(connectionId) } returns listOf(firstJob)
+      mockkObject(JobConverter.Companion)
+      try {
+        every { getJobWithAttemptsRead(firstJob) } returns firstJobWithAttemptRead
         val expected =
           ConnectionSyncProgressRead(
             connectionId = connectionId,
@@ -1128,6 +1123,8 @@ internal class JobHistoryHandlerTest {
 
         val actual = jobHistoryHandler.getConnectionSyncProgress(request)
         Assertions.assertEquals(expected, actual)
+      } finally {
+        unmockkObject(JobConverter.Companion)
       }
     }
   }
@@ -1155,7 +1152,7 @@ internal class JobHistoryHandlerTest {
         true,
       )
 
-    Mockito.`when`(jobPersistence.getLastSyncJob(connectionId)).thenReturn(Optional.of<Job>(newerFailedJob))
+    every { jobPersistence.getLastSyncJob(connectionId) } returns Optional.of<Job>(newerFailedJob)
 
     val expectedJob: Optional<JobRead> = Optional.of<JobRead?>(getJobRead(newerFailedJob))
     val actualJob: Optional<JobRead> = jobHistoryHandler.getLatestSyncJob(connectionId)
@@ -1173,28 +1170,22 @@ internal class JobHistoryHandlerTest {
   @Test
   @DisplayName("Should test to ensure that JobInfoReadWithoutLogs includes the bytes and records committed")
   fun testGetJobInfoWithoutLogs() {
-    Mockito
-      .`when`(jobPersistence.getJob(JOB_ID))
-      .thenReturn(
-        Job(
-          JOB_ID,
-          JOB_CONFIG.configType,
-          JOB_CONFIG_ID,
-          JOB_CONFIG,
-          listOf(testJobAttempt),
-          JOB_STATUS,
-          null,
-          CREATED_AT,
-          CREATED_AT,
-          true,
-        ),
+    every { jobPersistence.getJob(JOB_ID) } returns
+      Job(
+        JOB_ID,
+        JOB_CONFIG.configType,
+        JOB_CONFIG_ID,
+        JOB_CONFIG,
+        listOf(testJobAttempt),
+        JOB_STATUS,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
       )
-    Mockito
-      .`when`(jobPersistence.getAttemptStats(listOf(JOB_ID)))
-      .thenReturn(
-        mapOf(
-          JobAttemptPair(JOB_ID, testJobAttempt.attemptNumber) to FIRST_ATTEMPT_STATS,
-        ),
+    every { jobPersistence.getAttemptStats(listOf(JOB_ID)) } returns
+      mapOf(
+        JobAttemptPair(JOB_ID, testJobAttempt.attemptNumber) to FIRST_ATTEMPT_STATS,
       )
 
     val resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(JOB_ID)

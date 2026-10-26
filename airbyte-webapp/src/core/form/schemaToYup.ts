@@ -15,19 +15,24 @@ import { FormBuildError } from "./FormBuildError";
  * Every property is walked through recursively in case it is condition | object | array.
  *
  * @param jsonSchema
- * @param formField The corresponding {@link FormBlock} to the given schema
+ * @param formField The corresponding {@link FormBlock} to the given schema. Undefined for the items of an array of
+ *   plain values, which have no form block of their own.
  * @param parentSchema used in recursive schema building as required fields can be described in parentSchema
  * @param propertyKey used in recursive schema building for building path for uiConfig
  * @param propertyPath constructs path of property
  */
 export const buildYupFormForJsonSchema = (
   jsonSchema: AirbyteJSONSchema,
-  formField: FormBlock,
+  formField: FormBlock | undefined,
   formatMessage: (message: MessageDescriptor, values?: Record<string, string | number>) => string,
   parentSchema?: AirbyteJSONSchema,
   propertyKey?: string,
   propertyPath: string | undefined = propertyKey
 ): yup.AnySchema => {
+  // Validation errors carry the label as `params.label`, so callers can name the field the user sees.
+  const withFieldLabel = <T extends yup.AnySchema>(fieldSchema: T): T =>
+    formField ? fieldSchema.label(formField.title ?? formField.fieldKey) : fieldSchema;
+
   let schema:
     | yup.NumberSchema
     | yup.StringSchema
@@ -127,12 +132,12 @@ export const buildYupFormForJsonSchema = (
 
     // If the field is hidden, the user cannot select a value for it, so don't make it required
     // If the field is not required, it's OK to not have a value for it as well
-    if (formField.airbyte_hidden || !formField.isRequired) {
-      return oneOfSchema;
+    if (conditionFormField.airbyte_hidden || !conditionFormField.isRequired) {
+      return withFieldLabel(oneOfSchema);
     }
 
     // Otherwise require that all oneOfs have an option selected, as the user has no way to unselect an option.
-    return oneOfSchema.required(formatMessage({ id: "form.empty.error" }));
+    return withFieldLabel(oneOfSchema.required(formatMessage({ id: "form.empty.error" })));
   }
 
   switch (jsonSchema.type) {
@@ -231,5 +236,5 @@ export const buildYupFormForJsonSchema = (
     }
   }
 
-  return schema || yup.mixed();
+  return withFieldLabel(schema || yup.mixed());
 };

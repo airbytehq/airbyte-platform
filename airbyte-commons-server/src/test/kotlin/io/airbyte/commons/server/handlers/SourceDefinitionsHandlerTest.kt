@@ -58,19 +58,18 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.Runs
+import io.mockk.confirmVerified
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoMoreInteractions
-import org.mockito.kotlin.whenever
 import java.net.URI
 import java.time.LocalDate
 import java.util.Date
@@ -108,24 +107,24 @@ internal class SourceDefinitionsHandlerTest {
 
   @BeforeEach
   fun setUp() {
-    actorDefinitionService = mock()
-    uuidSupplier = mock()
-    actorDefinitionHandlerHelper = mock()
-    remoteDefinitionsProvider = mock()
-    sourceHandler = mock()
-    supportStateUpdater = mock()
+    actorDefinitionService = mockk()
+    uuidSupplier = mockk()
+    actorDefinitionHandlerHelper = mockk()
+    remoteDefinitionsProvider = mockk()
+    sourceHandler = mockk()
+    supportStateUpdater = mockk()
     workspaceId = UUID.randomUUID()
     organizationId = UUID.randomUUID()
     sourceDefinition = generateSourceDefinition()
     sourceDefinitionVersion = generateVersionFromSourceDefinition(sourceDefinition)
     sourceDefinitionWithOptionals = generateSourceDefinitionWithOptionals()
     sourceDefinitionVersionWithOptionals = generateSourceDefinitionVersionWithOptionals(sourceDefinitionWithOptionals)
-    featureFlagClient = mock<TestClient>()
-    actorDefinitionVersionHelper = mock()
-    airbyteCompatibleConnectorsValidator = mock()
-    licenseEntitlementChecker = mock()
-    sourceService = mock()
-    workspaceService = mock()
+    featureFlagClient = mockk<TestClient>()
+    actorDefinitionVersionHelper = mockk()
+    airbyteCompatibleConnectorsValidator = mockk()
+    licenseEntitlementChecker = mockk()
+    sourceService = mockk()
+    workspaceService = mockk()
 
     sourceDefinitionsHandler =
       SourceDefinitionsHandler(
@@ -143,6 +142,15 @@ internal class SourceDefinitionsHandlerTest {
         licenseEntitlementChecker,
         apiPojoConverters,
       )
+
+    every { actorDefinitionService.writeActorDefinitionWorkspaceGrant(any(), any(), any()) } just Runs
+    every { actorDefinitionService.deleteActorDefinitionWorkspaceGrant(any(), any(), any()) } just Runs
+    every { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) } just Runs
+    every { sourceService.writeCustomConnectorMetadata(any(), any(), any(), any()) } just Runs
+    every { sourceService.writeConnectorMetadata(any(), any(), any()) } just Runs
+    every { sourceService.updateStandardSourceDefinition(any()) } just Runs
+    every { sourceHandler.deleteSource(any<SourceRead>()) } just Runs
+    every { supportStateUpdater.updateSupportStatesForSourceDefinition(any()) } just Runs
   }
 
   private fun generateSourceDefinition(): StandardSourceDefinition =
@@ -218,23 +226,21 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(sourceService.listStandardSourceDefinitions(false))
-      .thenReturn(listOf(sourceDefinition, sourceDefinition2, sourceDefinitionWithOptionals))
-    whenever(
+    every { sourceService.listStandardSourceDefinitions(false) } returns listOf(sourceDefinition, sourceDefinition2, sourceDefinitionWithOptionals)
+    every {
       actorDefinitionService.getActorDefinitionVersions(
         listOf(
           sourceDefinition.defaultVersionId,
           sourceDefinition2.defaultVersionId,
           sourceDefinitionWithOptionals.defaultVersionId,
         ),
-      ),
-    ).thenReturn(
+      )
+    } returns
       listOf(
         sourceDefinitionVersion,
         sourceDefinitionVersion2,
         sourceDefinitionVersionWithOptionals,
-      ),
-    )
+      )
 
     val expectedSourceDefinitionRead1 =
       SourceDefinitionRead(
@@ -341,42 +347,38 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       featureFlagClient.boolVariation(
-        eq(HideActorDefinitionFromList),
+        HideActorDefinitionFromList,
         any(),
-      ),
-    ).thenReturn(false)
-    whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf(sourceDefinition))
-    whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf(sourceDefinition2))
-    whenever(
+      )
+    } returns false
+    every { sourceService.listPublicSourceDefinitions(false) } returns listOf(sourceDefinition)
+    every { sourceService.listGrantedSourceDefinitions(workspaceId, false) } returns listOf(sourceDefinition2)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           sourceDefinition,
           sourceDefinition2,
         ),
         workspaceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
         sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
-      ),
-    )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
+      )
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
       StandardWorkspace().withOrganizationId(
         UUID.randomUUID(),
-      ),
-    )
-    whenever(
+      )
+    every {
       licenseEntitlementChecker.checkEntitlements(
         any(),
-        eq(Entitlement.SOURCE_CONNECTOR),
-        eq(listOf(sourceDefinition.sourceDefinitionId)),
-      ),
-    ).thenReturn(mapOf(sourceDefinition.sourceDefinitionId to true))
+        Entitlement.SOURCE_CONNECTOR,
+        listOf(sourceDefinition.sourceDefinitionId),
+      )
+    } returns mapOf(sourceDefinition.sourceDefinitionId to true)
 
     val expectedSourceDefinitionRead1 =
       SourceDefinitionRead(
@@ -446,59 +448,52 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       featureFlagClient.boolVariation(
-        eq(HideActorDefinitionFromList),
+        HideActorDefinitionFromList,
         any(),
-      ),
-    ).thenReturn(false)
-    whenever(
+      )
+    } returns false
+    every {
       featureFlagClient.boolVariation(
         HideActorDefinitionFromList,
         Multi(listOf(SourceDefinition(hiddenSourceDefinition.sourceDefinitionId), Workspace(workspaceId))),
-      ),
-    ).thenReturn(true)
+      )
+    } returns true
 
-    whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf(hiddenSourceDefinition, sourceDefinition))
-    whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf(sourceDefinition2))
-    whenever(
+    every { sourceService.listPublicSourceDefinitions(false) } returns listOf(hiddenSourceDefinition, sourceDefinition)
+    every { sourceService.listGrantedSourceDefinitions(workspaceId, false) } returns listOf(sourceDefinition2)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           sourceDefinition,
           sourceDefinition2,
         ),
         workspaceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
         sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
-      ),
-    )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
+      )
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
       StandardWorkspace().withOrganizationId(
         UUID.randomUUID(),
-      ),
-    )
-    whenever(
+      )
+    every {
       licenseEntitlementChecker.checkEntitlements(
         any(),
-        eq(Entitlement.SOURCE_CONNECTOR),
-        eq(
-          listOf(
-            hiddenSourceDefinition.sourceDefinitionId,
-            sourceDefinition.sourceDefinitionId,
-          ),
+        Entitlement.SOURCE_CONNECTOR,
+        listOf(
+          hiddenSourceDefinition.sourceDefinitionId,
+          sourceDefinition.sourceDefinitionId,
         ),
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinition.sourceDefinitionId to true,
         hiddenSourceDefinition.sourceDefinitionId to true,
-      ),
-    )
+      )
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
@@ -521,53 +516,46 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       featureFlagClient.boolVariation(
-        eq(HideActorDefinitionFromList),
+        HideActorDefinitionFromList,
         any(),
-      ),
-    ).thenReturn(false)
-    whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf(unentitledSourceDefinition, sourceDefinition))
-    whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf(sourceDefinition2))
-    whenever(
+      )
+    } returns false
+    every { sourceService.listPublicSourceDefinitions(false) } returns listOf(unentitledSourceDefinition, sourceDefinition)
+    every { sourceService.listGrantedSourceDefinitions(workspaceId, false) } returns listOf(sourceDefinition2)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           sourceDefinition,
           sourceDefinition2,
         ),
         workspaceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
         sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
-      ),
-    )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
+      )
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
       StandardWorkspace().withOrganizationId(
         UUID.randomUUID(),
-      ),
-    )
+      )
 
-    whenever(
+    every {
       licenseEntitlementChecker.checkEntitlements(
         any(),
-        eq(Entitlement.SOURCE_CONNECTOR),
-        eq(
-          listOf(
-            unentitledSourceDefinition.sourceDefinitionId,
-            sourceDefinition.sourceDefinitionId,
-          ),
+        Entitlement.SOURCE_CONNECTOR,
+        listOf(
+          unentitledSourceDefinition.sourceDefinitionId,
+          sourceDefinition.sourceDefinitionId,
         ),
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinition.sourceDefinitionId to true,
         unentitledSourceDefinition.sourceDefinitionId to false,
-      ),
-    )
+      )
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
@@ -589,25 +577,24 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       sourceService.listGrantableSourceDefinitions(
         workspaceId,
         false,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinition to false,
         sourceDefinition2 to true,
-      ).entries.toList(),
-    )
-    whenever(
+      ).entries.toList()
+    every {
       actorDefinitionService.getActorDefinitionVersions(
         listOf(
           sourceDefinition.defaultVersionId,
           sourceDefinition2.defaultVersionId,
         ),
-      ),
-    ).thenReturn(listOf(sourceDefinitionVersion, sourceDefinitionVersion2))
+      )
+    } returns listOf(sourceDefinitionVersion, sourceDefinitionVersion2)
 
     val expectedSourceDefinitionRead1 =
       SourceDefinitionRead(
@@ -681,10 +668,8 @@ internal class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinition should return the right source")
   fun testGetSourceDefinition() {
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true) } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
     val expectedSourceDefinitionRead =
       SourceDefinitionRead(
@@ -721,8 +706,7 @@ internal class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should throw an exception for a missing grant")
   fun testGetDefinitionWithoutGrantForWorkspace() {
-    whenever(workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId))
-      .thenReturn(false)
+    every { workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId) } returns false
 
     val sourceDefinitionIdWithWorkspaceId =
       SourceDefinitionIdWithWorkspaceId(
@@ -738,15 +722,13 @@ internal class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForScope should throw an exception for a missing grant")
   fun testGetDefinitionWithoutGrantForScope() {
-    whenever(
+    every {
       actorDefinitionService.scopeCanUseDefinition(
         sourceDefinition.sourceDefinitionId,
         workspaceId,
         ScopeType.WORKSPACE.value(),
-      ),
-    ).thenReturn(
-      false,
-    )
+      )
+    } returns false
     val actorDefinitionIdWithScopeForWorkspace =
       ActorDefinitionIdWithScope(
         actorDefinitionId = sourceDefinition.sourceDefinitionId,
@@ -757,15 +739,13 @@ internal class SourceDefinitionsHandlerTest {
       IdNotFoundKnownException::class.java,
     ) { sourceDefinitionsHandler.getSourceDefinitionForScope(actorDefinitionIdWithScopeForWorkspace) }
 
-    whenever(
+    every {
       actorDefinitionService.scopeCanUseDefinition(
         sourceDefinition.sourceDefinitionId,
         organizationId,
         ScopeType.ORGANIZATION.value(),
-      ),
-    ).thenReturn(
-      false,
-    )
+      )
+    } returns false
     val actorDefinitionIdWithScopeForOrganization =
       ActorDefinitionIdWithScope(
         actorDefinitionId = sourceDefinition.sourceDefinitionId,
@@ -780,12 +760,9 @@ internal class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should return the source definition if the grant exists")
   fun testGetDefinitionWithGrantForWorkspace() {
-    whenever(workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId))
-      .thenReturn(true)
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+    every { workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId) } returns true
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true) } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
     val expectedSourceDefinitionRead =
       SourceDefinitionRead(
@@ -829,26 +806,22 @@ internal class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForScope should return the source definition if the grant exists")
   fun testGetDefinitionWithGrantForScope() {
-    whenever(
+    every {
       actorDefinitionService.scopeCanUseDefinition(
         sourceDefinition.sourceDefinitionId,
         workspaceId,
         ScopeType.WORKSPACE.value(),
-      ),
-    ).thenReturn(true)
-    whenever(
+      )
+    } returns true
+    every {
       actorDefinitionService.scopeCanUseDefinition(
         sourceDefinition.sourceDefinitionId,
         organizationId,
         ScopeType.ORGANIZATION.value(),
-      ),
-    ).thenReturn(
-      true,
-    )
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+      )
+    } returns true
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true) } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
     val expectedSourceDefinitionRead =
       SourceDefinitionRead(
@@ -909,7 +882,7 @@ internal class SourceDefinitionsHandlerTest {
     val newSourceDefinition = generateSourceDefinition()
     val sourceDefinitionVersion = generateCustomVersionFromSourceDefinition(sourceDefinition)
 
-    whenever<UUID?>(uuidSupplier.get()).thenReturn(newSourceDefinition.sourceDefinitionId)
+    every { uuidSupplier.get() } returns newSourceDefinition.sourceDefinitionId
 
     val create =
       SourceDefinitionCreate(
@@ -931,14 +904,14 @@ internal class SourceDefinitionsHandlerTest {
     val customCreate =
       CustomSourceDefinitionCreate(sourceDefinition = create, workspaceId = workspaceId)
 
-    whenever(
+    every {
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
         create.dockerRepository,
         create.dockerImageTag,
         create.documentationUrl,
         workspaceId,
-      ),
-    ).thenReturn(sourceDefinitionVersion)
+      )
+    } returns sourceDefinitionVersion
 
     val expectedRead =
       SourceDefinitionRead(
@@ -966,23 +939,27 @@ internal class SourceDefinitionsHandlerTest {
     val actualRead = sourceDefinitionsHandler.createCustomSourceDefinition(customCreate)
 
     Assertions.assertEquals(expectedRead, actualRead)
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    verify(sourceService).writeCustomConnectorMetadata(
-      newSourceDefinition
-        .withCustom(true)
-        .withDefaultVersionId(null)
-        .withIconUrl(null),
-      sourceDefinitionVersion,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) {
+      sourceService.writeCustomConnectorMetadata(
+        newSourceDefinition
+          .withCustom(true)
+          .withDefaultVersionId(null)
+          .withIconUrl(null),
+        sourceDefinitionVersion,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
 
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -991,7 +968,7 @@ internal class SourceDefinitionsHandlerTest {
     val newSourceDefinition = generateSourceDefinition()
     val sourceDefinitionVersion = generateCustomVersionFromSourceDefinition(sourceDefinition)
 
-    whenever<UUID?>(uuidSupplier.get()).thenReturn(newSourceDefinition.sourceDefinitionId)
+    every { uuidSupplier.get() } returns newSourceDefinition.sourceDefinitionId
 
     val create =
       SourceDefinitionCreate(
@@ -1018,14 +995,14 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId = null,
       ) // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
 
-    whenever(
+    every {
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
         create.dockerRepository,
         create.dockerImageTag,
         create.documentationUrl,
         workspaceId,
-      ),
-    ).thenReturn(sourceDefinitionVersion)
+      )
+    } returns sourceDefinitionVersion
 
     val expectedRead =
       SourceDefinitionRead(
@@ -1054,21 +1031,25 @@ internal class SourceDefinitionsHandlerTest {
       sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForWorkspace)
 
     Assertions.assertEquals(expectedRead, actualRead)
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    verify(sourceService).writeCustomConnectorMetadata(
-      newSourceDefinition
-        .withCustom(true)
-        .withDefaultVersionId(null)
-        .withIconUrl(null),
-      sourceDefinitionVersion,
-      workspaceId,
-      ScopeType.WORKSPACE,
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) {
+      sourceService.writeCustomConnectorMetadata(
+        newSourceDefinition
+          .withCustom(true)
+          .withDefaultVersionId(null)
+          .withIconUrl(null),
+        sourceDefinitionVersion,
+        workspaceId,
+        ScopeType.WORKSPACE,
+      )
+    }
 
     // TODO: custom connectors for organizations are not currently supported. Jobs currently require an
     // explicit workspace ID to resolve a dataplane group where the job should run. We can uncomment
@@ -1097,7 +1078,7 @@ internal class SourceDefinitionsHandlerTest {
     // null);
     // verify(sourceService).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
     // sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1131,45 +1112,49 @@ internal class SourceDefinitionsHandlerTest {
     val customCreate =
       CustomSourceDefinitionCreate(sourceDefinition = create, workspaceId = workspaceId)
 
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
         create.dockerRepository,
         create.dockerImageTag,
         create.documentationUrl,
         workspaceId,
-      ),
-    ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
+      )
+    } throws UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0"))
 
-    whenever<UUID?>(uuidSupplier.get()).thenReturn(UUID.randomUUID())
+    every { uuidSupplier.get() } returns UUID.randomUUID()
     Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
     ) { sourceDefinitionsHandler.createCustomSourceDefinition(customCreate) }
 
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.dockerRepository,
-      create.dockerImageTag,
-      create.documentationUrl,
-      workspaceId,
-    )
-    verify(sourceService, never()).writeCustomConnectorMetadata(
-      any(),
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+        create.dockerRepository,
+        create.dockerImageTag,
+        create.documentationUrl,
+        workspaceId,
+      )
+    }
+    verify(exactly = 0) {
+      sourceService.writeCustomConnectorMetadata(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
 
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
   fun testUpdateSource() {
-    whenever(
+    every {
       airbyteCompatibleConnectorsValidator.validate(
         any(),
         any(),
-      ),
-    ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+      )
+    } returns ConnectorPlatformCompatibilityValidationResult(true, "")
 
     val newDockerImageTag = "averydifferenttag"
     val updatedSource =
@@ -1182,30 +1167,31 @@ internal class SourceDefinitionsHandlerTest {
     val persistedUpdatedSource =
       clone<StandardSourceDefinition>(updatedSource).withDefaultVersionId(updatedSourceDefVersion.versionId)
 
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(sourceDefinition) // Call at the beginning of the method
-      .thenReturn(persistedUpdatedSource) // Call after we've persisted
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId) } returnsMany
+      listOf(
+        sourceDefinition, // Call at the beginning of the method
+        persistedUpdatedSource, // Call after we've persisted
+      )
 
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
-    whenever(
+    every {
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
         sourceDefinitionVersion,
         ActorType.SOURCE,
         newDockerImageTag,
         sourceDefinition.custom,
         workspaceId,
-      ),
-    ).thenReturn(updatedSourceDefVersion)
+      )
+    } returns updatedSourceDefVersion
 
     val breakingChanges = generateBreakingChangesFromSourceDefinition(updatedSource)
-    whenever(
+    every {
       actorDefinitionHandlerHelper.getBreakingChanges(
         updatedSourceDefVersion,
         ActorType.SOURCE,
-      ),
-    ).thenReturn(breakingChanges)
+      )
+    } returns breakingChanges
 
     val sourceRead =
       sourceDefinitionsHandler.updateSourceDefinition(
@@ -1243,18 +1229,20 @@ internal class SourceDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedSourceDefinitionRead, sourceRead)
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
-      sourceDefinitionVersion,
-      ActorType.SOURCE,
-      newDockerImageTag,
-      sourceDefinition.custom,
-      workspaceId,
-    )
-    verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE)
-    verify(sourceService).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges)
-    verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource)
-    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater)
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        sourceDefinitionVersion,
+        ActorType.SOURCE,
+        newDockerImageTag,
+        sourceDefinition.custom,
+        workspaceId,
+      )
+    }
+    verify(exactly = 1) { actorDefinitionHandlerHelper.getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE) }
+    verify(exactly = 1) { sourceService.writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges) }
+    verify(exactly = 1) { supportStateUpdater.updateSupportStatesForSourceDefinition(persistedUpdatedSource) }
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper, supportStateUpdater)
   }
 
   @Test
@@ -1296,19 +1284,15 @@ internal class SourceDefinitionsHandlerTest {
     ),
   )
   fun testOutOfProtocolRangeUpdateSource() {
-    whenever<ConnectorPlatformCompatibilityValidationResult?>(
-      airbyteCompatibleConnectorsValidator.validate(any(), any()),
-    ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
-    whenever<StandardSourceDefinition?>(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever<StandardSourceDefinition?>(
+    every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, "")
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId) } returns sourceDefinition
+    every {
       sourceService.getStandardSourceDefinition(
         sourceDefinition.sourceDefinitionId,
         true,
-      ),
-    ).thenReturn(sourceDefinition)
-    whenever<ActorDefinitionVersion?>(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+      )
+    } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
     val currentSource =
       sourceDefinitionsHandler
         .getSourceDefinition(sourceDefinition.sourceDefinitionId, true)
@@ -1316,15 +1300,15 @@ internal class SourceDefinitionsHandlerTest {
     val newDockerImageTag = "averydifferenttagforprotocolversion"
     Assertions.assertNotEquals(newDockerImageTag, currentTag)
 
-    whenever<ActorDefinitionVersion?>(
+    every {
       actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
         sourceDefinitionVersion,
         ActorType.SOURCE,
         newDockerImageTag,
         sourceDefinition.custom,
         workspaceId,
-      ),
-    ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
+      )
+    } throws UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0"))
 
     Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
@@ -1338,21 +1322,25 @@ internal class SourceDefinitionsHandlerTest {
       )
     }
 
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
-      sourceDefinitionVersion,
-      ActorType.SOURCE,
-      newDockerImageTag,
-      sourceDefinition.custom,
-      workspaceId,
-    )
-    verify(sourceService, never()).writeConnectorMetadata(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 1) {
+      actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+        sourceDefinitionVersion,
+        ActorType.SOURCE,
+        newDockerImageTag,
+        sourceDefinition.custom,
+        workspaceId,
+      )
+    }
+    verify(exactly = 0) {
+      sourceService.writeConnectorMetadata(
+        any(),
+        any(),
+        any(),
+      )
+    }
 
-    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1363,21 +1351,20 @@ internal class SourceDefinitionsHandlerTest {
     ),
   )
   fun testUnsupportedAirbyteVersionUpdateSource() {
-    whenever(
+    every {
       actorDefinitionHandlerHelper.validateVersionSupport(
         any(),
-        eq("12.4.0"),
-        eq(ActorType.SOURCE),
-      ),
-    ).thenAnswer { throw BadRequestProblem() }
-    whenever(
+        "12.4.0",
+        ActorType.SOURCE,
+      )
+    } throws BadRequestProblem()
+    every {
       sourceService.getStandardSourceDefinition(
         sourceDefinition.sourceDefinitionId,
         true,
-      ),
-    ).thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+      )
+    } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
     val currentSource = sourceDefinitionsHandler.getSourceDefinition(sourceDefinition.sourceDefinitionId, true)
     val currentTag = currentSource.dockerImageTag
     val newDockerImageTag = "12.4.0"
@@ -1392,14 +1379,16 @@ internal class SourceDefinitionsHandlerTest {
         ),
       )
     }
-    verify(sourceService, never()).writeConnectorMetadata(
-      any(),
-      any(),
-      any(),
-    )
+    verify(exactly = 0) {
+      sourceService.writeConnectorMetadata(
+        any(),
+        any(),
+        any(),
+      )
+    }
 
-    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
-    verifyNoMoreInteractions(actorDefinitionHandlerHelper)
+    verify(exactly = 1) { actorDefinitionHandlerHelper.validateVersionSupport(any(), any(), any()) }
+    confirmVerified(actorDefinitionHandlerHelper)
   }
 
   @Test
@@ -1417,26 +1406,23 @@ internal class SourceDefinitionsHandlerTest {
         createdAt = 1L,
       )
 
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever(sourceHandler.listSourcesForSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(SourceReadList(sources = listOf(newSourceDefinition)))
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId) } returns sourceDefinition
+    every { sourceHandler.listSourcesForSourceDefinition(sourceDefinition.sourceDefinitionId) } returns
+      SourceReadList(sources = listOf(newSourceDefinition))
 
     Assertions.assertFalse(sourceDefinition.tombstone)
 
     sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinition.sourceDefinitionId)
 
-    verify(sourceHandler).deleteSource(newSourceDefinition)
-    verify(sourceService).updateStandardSourceDefinition(updatedSourceDefinition)
+    verify(exactly = 1) { sourceHandler.deleteSource(newSourceDefinition) }
+    verify(exactly = 1) { sourceService.updateStandardSourceDefinition(updatedSourceDefinition) }
   }
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create a workspace grant")
   fun testGrantSourceDefinitionToWorkspace() {
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId) } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
     val expectedSourceDefinitionRead =
       SourceDefinitionRead(
@@ -1477,17 +1463,16 @@ internal class SourceDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead)
-    verify(actorDefinitionService)
-      .writeActorDefinitionWorkspaceGrant(sourceDefinition.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
+    verify(exactly = 1) {
+      actorDefinitionService.writeActorDefinitionWorkspaceGrant(sourceDefinition.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
+    }
   }
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create an organization grant")
   fun testGrantSourceDefinitionToOrganization() {
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId))
-      .thenReturn(sourceDefinitionVersion)
+    every { sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId) } returns sourceDefinition
+    every { actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId) } returns sourceDefinitionVersion
 
     val expectedSourceDefinitionRead =
       SourceDefinitionRead(
@@ -1528,11 +1513,13 @@ internal class SourceDefinitionsHandlerTest {
       )
 
     Assertions.assertEquals(expectedPrivateSourceDefinitionRead, actualPrivateSourceDefinitionRead)
-    verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(
-      sourceDefinition.sourceDefinitionId,
-      organizationId,
-      ScopeType.ORGANIZATION,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.writeActorDefinitionWorkspaceGrant(
+        sourceDefinition.sourceDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION,
+      )
+    }
   }
 
   @Test
@@ -1545,8 +1532,9 @@ internal class SourceDefinitionsHandlerTest {
         scopeType = KotlinScopeType.WORKSPACE,
       ),
     )
-    verify(actorDefinitionService)
-      .deleteActorDefinitionWorkspaceGrant(sourceDefinition.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
+    verify(exactly = 1) {
+      actorDefinitionService.deleteActorDefinitionWorkspaceGrant(sourceDefinition.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
+    }
 
     sourceDefinitionsHandler.revokeSourceDefinition(
       ActorDefinitionIdWithScope(
@@ -1555,11 +1543,13 @@ internal class SourceDefinitionsHandlerTest {
         scopeType = KotlinScopeType.ORGANIZATION,
       ),
     )
-    verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
-      sourceDefinition.sourceDefinitionId,
-      organizationId,
-      ScopeType.ORGANIZATION,
-    )
+    verify(exactly = 1) {
+      actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
+        sourceDefinition.sourceDefinitionId,
+        organizationId,
+        ScopeType.ORGANIZATION,
+      )
+    }
   }
 
   @Test
@@ -1584,11 +1574,10 @@ internal class SourceDefinitionsHandlerTest {
         .withReleaseDate(todayDateString)
         .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
         .withLanguage("python")
-    whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(
+    every { remoteDefinitionsProvider.getSourceDefinitions() } returns
       mutableListOf(
         registrySourceDefinition!!,
-      ),
-    )
+      )
 
     val expectedRead =
       sourceDefinitionsHandler.buildSourceDefinitionRead(
@@ -1624,9 +1613,7 @@ internal class SourceDefinitionsHandlerTest {
           .withReleaseDate(todayDateString)
           .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
           .withLanguage("python")
-      whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(
-        mutableListOf(registrySourceDefinition!!),
-      )
+      every { remoteDefinitionsProvider.getSourceDefinitions() } returns mutableListOf(registrySourceDefinition!!)
 
       val sourceDefinitionReadList = sourceDefinitionsHandler.listLatestSourceDefinitions().sourceDefinitions
       Assertions.assertEquals(1, sourceDefinitionReadList.size)
@@ -1644,10 +1631,7 @@ internal class SourceDefinitionsHandlerTest {
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
     fun testHttpTimeout() {
-      whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenAnswer {
-        throw
-        RuntimeException()
-      }
+      every { remoteDefinitionsProvider.getSourceDefinitions() } throws RuntimeException()
       Assertions.assertEquals(0, sourceDefinitionsHandler.listLatestSourceDefinitions().sourceDefinitions.size)
     }
   }
@@ -1658,42 +1642,38 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       featureFlagClient.boolVariation(
-        eq(HideActorDefinitionFromList),
+        HideActorDefinitionFromList,
         any(),
-      ),
-    ).thenReturn(false)
-    whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf(sourceDefinition))
-    whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf(sourceDefinition2))
-    whenever(
+      )
+    } returns false
+    every { sourceService.listPublicSourceDefinitions(false) } returns listOf(sourceDefinition)
+    every { sourceService.listGrantedSourceDefinitions(workspaceId, false) } returns listOf(sourceDefinition2)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           sourceDefinition,
           sourceDefinition2,
         ),
         workspaceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
         sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
-      ),
-    )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
+      )
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
       StandardWorkspace().withOrganizationId(
         UUID.randomUUID(),
-      ),
-    )
-    whenever(
+      )
+    every {
       licenseEntitlementChecker.checkEntitlements(
         any(),
-        eq(Entitlement.SOURCE_CONNECTOR),
-        eq(listOf(sourceDefinition.sourceDefinitionId)),
-      ),
-    ).thenReturn(mapOf(sourceDefinition.sourceDefinitionId to true))
+        Entitlement.SOURCE_CONNECTOR,
+        listOf(sourceDefinition.sourceDefinitionId),
+      )
+    } returns mapOf(sourceDefinition.sourceDefinitionId to true)
 
     val expectedSourceDefinitionRead1 =
       SourceDefinitionRead(
@@ -1763,17 +1743,15 @@ internal class SourceDefinitionsHandlerTest {
     val usedSourceDefinition = generateSourceDefinition()
     val usedSourceDefinitionVersion = generateVersionFromSourceDefinition(usedSourceDefinition)
 
-    whenever(sourceService.listSourceDefinitionsForWorkspace(workspaceId, false)).thenReturn(
-      listOf(usedSourceDefinition),
-    )
-    whenever(
+    every { sourceService.listSourceDefinitionsForWorkspace(workspaceId, false) } returns listOf(usedSourceDefinition)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           usedSourceDefinition,
         ),
         workspaceId,
-      ),
-    ).thenReturn(mapOf(usedSourceDefinitionVersion.actorDefinitionId to usedSourceDefinitionVersion))
+      )
+    } returns mapOf(usedSourceDefinitionVersion.actorDefinitionId to usedSourceDefinitionVersion)
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler
@@ -1795,42 +1773,38 @@ internal class SourceDefinitionsHandlerTest {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
 
-    whenever(
+    every {
       featureFlagClient.boolVariation(
-        eq(HideActorDefinitionFromList),
+        HideActorDefinitionFromList,
         any(),
-      ),
-    ).thenReturn(false)
-    whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf(sourceDefinition))
-    whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf(sourceDefinition2))
-    whenever(
+      )
+    } returns false
+    every { sourceService.listPublicSourceDefinitions(false) } returns listOf(sourceDefinition)
+    every { sourceService.listGrantedSourceDefinitions(workspaceId, false) } returns listOf(sourceDefinition2)
+    every {
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
           sourceDefinition,
           sourceDefinition2,
         ),
         workspaceId,
-      ),
-    ).thenReturn(
+      )
+    } returns
       mapOf(
         sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
         sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
-      ),
-    )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
+      )
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns
       StandardWorkspace().withOrganizationId(
         UUID.randomUUID(),
-      ),
-    )
-    whenever(
+      )
+    every {
       licenseEntitlementChecker.checkEntitlements(
         any(),
-        eq(Entitlement.SOURCE_CONNECTOR),
-        eq(listOf(sourceDefinition.sourceDefinitionId)),
-      ),
-    ).thenReturn(mapOf(sourceDefinition.sourceDefinitionId to true))
+        Entitlement.SOURCE_CONNECTOR,
+        listOf(sourceDefinition.sourceDefinitionId),
+      )
+    } returns mapOf(sourceDefinition.sourceDefinitionId to true)
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler

@@ -159,6 +159,8 @@ class OrganizationServiceDataImpl(
     }
   }
 
+  override fun softDeleteOrganization(organizationId: UUID): Boolean = organizationRepository.softDeleteById(organizationId) == 1L
+
   override fun setOrganizationAgenticStatus(
     organizationId: UUID,
     isAgentic: Boolean,

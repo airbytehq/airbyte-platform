@@ -56,6 +56,8 @@ import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -63,8 +65,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
@@ -274,8 +274,10 @@ internal class JobConverterTest {
 
     @BeforeEach
     fun setUp() {
-      logClientManager = Mockito.mock(LogClientManager::class.java)
-      logUtils = Mockito.mock(LogUtils::class.java)
+      logClientManager = mockk<LogClientManager>()
+      logUtils = mockk<LogUtils>()
+      every { logClientManager.getJobLogFile(any()) } returns emptyList()
+      every { logUtils.convertThrowableToStackTrace(any()) } returns null
       jobConverter = JobConverter(logClientManager, logUtils)
       val attempt =
         Attempt(
@@ -308,9 +310,7 @@ internal class JobConverterTest {
 
     @Test
     fun testGetJobInfoRead() {
-      Mockito
-        .`when`(logClientManager.getLogs(ArgumentMatchers.any<Path?>()))
-        .thenReturn(LogEvents(mutableListOf(), "1"))
+      every { logClientManager.getLogs(any<Path>()) } returns LogEvents(mutableListOf(), "1")
       Assertions.assertEquals(jobInfoUnstructuredLogs, jobConverter.getJobInfoRead(job!!))
     }
 
@@ -336,9 +336,8 @@ internal class JobConverterTest {
     @Test
     fun testGetJobWithAttemptsReadStructuredLogs() {
       val logEventVersion = "1"
-      Mockito.`when`(logClientManager.getLogs(ArgumentMatchers.any<Path?>())).thenReturn(
-        LogEvents(listOf(LogEvent(System.currentTimeMillis(), "message", "INFO", LogSource.PLATFORM, null, null)), logEventVersion),
-      )
+      every { logClientManager.getLogs(any<Path>()) } returns
+        LogEvents(listOf(LogEvent(System.currentTimeMillis(), "message", "INFO", LogSource.PLATFORM, null, null)), logEventVersion)
       val jobInfoRead = jobConverter.getJobInfoRead(job!!)
       Assertions.assertEquals(LogFormatType.STRUCTURED, jobInfoRead.attempts.first().logType)
       val logs = jobInfoRead.attempts.first().logs as AttemptLogs
@@ -458,8 +457,9 @@ internal class JobConverterTest {
 
     @BeforeEach
     fun setUp() {
-      logClientManager = Mockito.mock(LogClientManager::class.java)
-      jobConverter = JobConverter(logClientManager, Mockito.mock())
+      logClientManager = mockk<LogClientManager>()
+      every { logClientManager.getJobLogFile(any()) } returns emptyList()
+      jobConverter = JobConverter(logClientManager, mockk())
       metadata =
         SynchronousJobMetadata(
           jobId,
@@ -476,9 +476,7 @@ internal class JobConverterTest {
 
     @Test
     fun testSynchronousJobRead() {
-      Mockito
-        .`when`(logClientManager.getLogs(ArgumentMatchers.any<Path?>()))
-        .thenReturn(LogEvents(mutableListOf(), "1"))
+      every { logClientManager.getLogs(any<Path>()) } returns LogEvents(mutableListOf(), "1")
       Assertions.assertEquals(synchronousJobInfoUnstructuredLogs, jobConverter.getSynchronousJobRead(metadata!!))
     }
   }

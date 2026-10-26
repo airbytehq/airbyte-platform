@@ -29,30 +29,29 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.whenever
 import java.util.UUID
 
 internal class ConnectionSchedulerHelperTest {
   private var connectionScheduleHelper: ConnectionScheduleHelper? = null
   private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf()))
   private val cronExpressionHelper = CronExpressionHelper()
-  val entitlementService: EntitlementService = Mockito.mock(EntitlementService::class.java)
+  val entitlementService: EntitlementService = mockk<EntitlementService>()
 
   @BeforeEach
   fun setup() {
-    val workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
-    Mockito.`when`(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(WORKSPACE_ID)
-    Mockito.`when`(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID)
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
-    whenever(entitlementService.checkEntitlement(any(), any())).thenReturn(EntitlementResult("unknown-feature", false, null))
+    val workspaceHelper = mockk<WorkspaceHelper>()
+    every { workspaceHelper.getWorkspaceForSourceId(any()) } returns WORKSPACE_ID
+    every { workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID) } returns ORGANIZATION_ID
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
+    every { entitlementService.checkEntitlement(any(), any()) } returns EntitlementResult("unknown-feature", false, null)
     connectionScheduleHelper =
       ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper)
   }
@@ -96,9 +95,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testPopulateSyncScheduleFromCron() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -121,9 +119,8 @@ internal class ConnectionSchedulerHelperTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testScheduleValidation(hasEntitlement: Boolean) {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, hasEntitlement, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, hasEntitlement, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     Assertions.assertThrows(JsonValidationException::class.java) {
@@ -747,13 +744,12 @@ internal class ConnectionSchedulerHelperTest {
       try {
         val actual = StandardSync().withSourceId(UUID.randomUUID())
 
-        Mockito
-          .`when`(
-            entitlementService.checkEntitlement(
-              TEST_ORG_ID,
-              FasterSyncFrequencyEntitlement,
-            ),
-          ).thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
+        every {
+          entitlementService.checkEntitlement(
+            TEST_ORG_ID,
+            FasterSyncFrequencyEntitlement,
+          )
+        } returns EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null)
 
         // NOTE: this method call is the one that parses the given timezone string
         // and will throw an exception if it isn't supported. This method is called
@@ -786,9 +782,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testBasicScheduleSubHourWithEntitlement() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -810,9 +805,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testBasicScheduleSubHourWithoutEntitlement() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     Assertions.assertThrows(BasicScheduleValidationUnderOneHourNotAllowedProblem::class.java) {
@@ -832,9 +826,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testBasicScheduleOneHourOrMoreWithoutEntitlement() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null)
 
     // Test 60 minutes (exactly 1 hour) - should work without entitlement
     val actual1 = StandardSync().withSourceId(UUID.randomUUID())
@@ -884,9 +877,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testBasicScheduleSubHourWithFifteenMinuteEntitlement() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -906,9 +898,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testBasicScheduleBelowFifteenMinutesWithFifteenMinuteEntitlement() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     Assertions.assertThrows(BasicScheduleValidationUnderOneHourNotAllowedProblem::class.java) {
@@ -928,9 +919,8 @@ internal class ConnectionSchedulerHelperTest {
 
   @Test
   fun testCronScheduleBelowFifteenMinutesWithFifteenMinuteEntitlementFails() {
-    Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
-      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null)
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     Assertions.assertThrows(io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem::class.java) {

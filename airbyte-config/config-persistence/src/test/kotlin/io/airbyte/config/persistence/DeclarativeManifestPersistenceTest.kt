@@ -33,14 +33,14 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
 import org.jooq.exception.DataAccessException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.Mockito.mock
 import java.util.UUID
-import org.mockito.Mockito.`when` as whenever
 
 internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var connectorBuilderService: ConnectorBuilderService
@@ -52,19 +52,17 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   fun beforeEach() {
     truncateAllTables()
 
-    val featureFlagClient = mock<TestClient>()
-    whenever(
-      featureFlagClient.stringVariation(org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages), org.mockito.kotlin.any<SourceDefinition>()),
-    ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns "3600"
 
-    val secretsRepositoryReader = mock<SecretsRepositoryReader>()
-    val secretsRepositoryWriter = mock<SecretsRepositoryWriter>()
-    val secretPersistenceConfigService = mock<SecretPersistenceConfigService>()
+    val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
 
-    val connectionService = mock<ConnectionService>()
-    val scopedConfigurationService = mock<ScopedConfigurationService>()
+    val connectionService = mockk<ConnectionService>(relaxed = true)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
     val organizationService = OrganizationServiceJooqImpl(database)
-    val connectionTimelineEventService = mock<ConnectionTimelineEventService>()
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
 
     actorDefinitionService = ActorDefinitionServiceJooqImpl(database)
 
@@ -76,12 +74,11 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         connectionTimelineEventService,
       )
 
-    val metricClient = mock<MetricClient>()
-    val dataplaneGroupService = mock<DataplaneGroupService>()
-    val actorPaginationServiceHelper = mock<ActorServicePaginationHelper>()
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val dataplaneGroupService = mockk<DataplaneGroupService>(relaxed = true)
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
-    whenever(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(org.mockito.kotlin.any(), org.mockito.kotlin.any()))
-      .thenReturn(DataplaneGroup().withId(UUID.randomUUID()))
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()) } returns DataplaneGroup().withId(UUID.randomUUID())
 
     sourceService =
       SourceServiceJooqImpl(

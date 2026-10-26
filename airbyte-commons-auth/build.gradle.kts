@@ -29,7 +29,6 @@ dependencies {
 
 
   testImplementation(libs.bundles.micronaut.test)
-  testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
   testImplementation(libs.reactor.test)
 }

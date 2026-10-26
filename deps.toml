@@ -38,8 +38,6 @@ micronaut-security = "4.17.1"
 micronaut-test = "4.10.3"
 micronaut-tracing = "7.2.0"
 moshi = "1.15.0"
-mockito = "5.23.0"
-mockito-kotlin = "5.4.0"
 okhttp3 = "5.3.2"
 otel-api = "1.56.0"
 picocli = "4.7.6"
@@ -100,7 +98,6 @@ grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc_
 
 kohsuke-github-api = { module = "org.kohsuke:github-api", version = "1.330" }
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
-hamcrest-all = { module = "org.hamcrest:hamcrest-all", version = "1.3" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 http-client = { module = "org.apache.httpcomponents:httpclient", version = "4.5.13" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "fasterxml_version" }
@@ -151,10 +148,6 @@ logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback"
 micrometer-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version.ref = "micrometer" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
-mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-mockito-inline = { module = "org.mockito:mockito-inline", version = "5.2.0" }
-mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
-mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 mockk = { module = "io.mockk:mockk", version = "1.14.9" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
@@ -263,7 +256,7 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", versio
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 flyway = ["flyway-core", "flyway-postgresql"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat-yml", "jackson-dataformat-xml", "jackson-datatype", "jackson-jdk-datatype", "jackson-kotlin"]
-junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
+junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
@@ -285,7 +278,6 @@ micronaut-kotlin = ["micronaut-kotlin-extension-functions", "micronaut-kotlin-ru
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-otlp", "micronaut-micrometer-registry-statsd"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]
 micronaut-test-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin"]
-mockito-inline = ["mockito-inline", "byte-buddy"]
 pmd = ["pmd-ant", "pmd-core", "pmd-java"]
 retrofit = ["retrofit", "retrofit-jackson"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver", "azure-key-vault", "azure-identity"]

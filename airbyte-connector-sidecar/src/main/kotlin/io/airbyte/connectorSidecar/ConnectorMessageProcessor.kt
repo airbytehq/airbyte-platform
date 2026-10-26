@@ -39,6 +39,7 @@ import io.airbyte.workers.models.SidecarInput.OperationType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Singleton
+import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
 import java.io.InputStream
 import java.util.Optional
@@ -109,8 +110,13 @@ class ConnectorMessageProcessor(
     } catch (e: IOException) {
       val errorMessage: String = String.format("Lost connection to the connector")
       throw WorkerException(errorMessage, e)
+    } catch (e: ClientException) {
+      // The platform API refused the result. 413 means the result is bigger than the server accepts,
+      // which happens for very wide schemas; the user must see that, not "internal error".
+      val hint = if (e.statusCode == 413) " The result is larger than the platform API accepts." else ""
+      throw WorkerException("The platform API rejected the $operationType result with HTTP ${e.statusCode}: ${e.message}.$hint", e)
     } catch (e: Exception) {
-      throw WorkerException("Unexpected error performing $operationType. The exit of the connector was: $exitCode", e)
+      throw WorkerException("Unexpected error performing $operationType. The exit of the connector was: $exitCode. Cause: ${e.message}", e)
     }
   }
 

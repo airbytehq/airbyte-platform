@@ -38,6 +38,9 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import io.micronaut.validation.Validated
+import io.micronaut.validation.annotation.ValidatedElement
+import jakarta.validation.constraints.NotNull
 
 @Controller
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -93,15 +96,15 @@ open class OrganizationApiController(
 
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Validated
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.LEGACY,
   )
   override fun deleteOrganization(
-    @Body organizationIdRequestBody: OrganizationIdRequestBody?,
-  ) {
-    // To be implemented; we need a tombstone column for organizations table.
-  }
+    // The validation processor is not configured, so the parameter needs an explicit validation marker.
+    @Body @NotNull @ValidatedElement organizationIdRequestBody: OrganizationIdRequestBody,
+  ): Unit = throw ApiNotImplementedInOssProblem()
 
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)

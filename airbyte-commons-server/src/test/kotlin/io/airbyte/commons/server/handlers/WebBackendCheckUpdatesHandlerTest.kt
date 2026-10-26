@@ -12,10 +12,11 @@ import io.airbyte.api.server.generated.models.WebBackendCheckUpdatesRead
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.io.IOException
 import java.net.URI
 import java.util.Map
@@ -29,9 +30,9 @@ internal class WebBackendCheckUpdatesHandlerTest {
 
   @BeforeEach
   fun beforeEach() {
-    sourceDefinitionsHandler = Mockito.mock(SourceDefinitionsHandler::class.java)
-    destinationDefinitionsHandler = Mockito.mock(DestinationDefinitionsHandler::class.java)
-    remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
+    sourceDefinitionsHandler = mockk<SourceDefinitionsHandler>()
+    destinationDefinitionsHandler = mockk<DestinationDefinitionsHandler>()
+    remoteDefinitionsProvider = mockk<RemoteDefinitionsProvider>()
     webBackendCheckUpdatesHandler =
       WebBackendCheckUpdatesHandler(sourceDefinitionsHandler!!, destinationDefinitionsHandler!!, remoteDefinitionsProvider!!)
   }
@@ -133,9 +134,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
   @Test
   fun testCheckErrorNoCurrentDestinations() {
     setMocksForExceptionCases()
-    Mockito
-      .`when`(destinationDefinitionsHandler!!.listDestinationDefinitions())
-      .thenAnswer { throw IOException("unable to read current destinations") }
+    every { destinationDefinitionsHandler!!.listDestinationDefinitions() } throws IOException("unable to read current destinations")
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
@@ -145,9 +144,7 @@ internal class WebBackendCheckUpdatesHandlerTest {
   @Test
   fun testCheckErrorNoCurrentSources() {
     setMocksForExceptionCases()
-    Mockito
-      .`when`(sourceDefinitionsHandler!!.listSourceDefinitions())
-      .thenAnswer { throw IOException("unable to read current sources") }
+    every { sourceDefinitionsHandler!!.listSourceDefinitions() } throws IOException("unable to read current sources")
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
@@ -175,55 +172,43 @@ internal class WebBackendCheckUpdatesHandlerTest {
     currentDestinations: List<MutableMap.MutableEntry<UUID?, String?>?>,
     latestDestinations: List<MutableMap.MutableEntry<UUID?, String?>?>,
   ) {
-    Mockito
-      .`when`(sourceDefinitionsHandler!!.listSourceDefinitions())
-      .thenReturn(
-        SourceDefinitionReadList(
-          currentSources
-            .stream()
-            .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
-              this.createSourceDef(
-                idImageTagEntry!!,
-              )
-            }.toList(),
-        ),
-      )
-    Mockito
-      .`when`(remoteDefinitionsProvider!!.getSourceDefinitions())
-      .thenReturn(
-        latestSources
+    every { sourceDefinitionsHandler!!.listSourceDefinitions() } returns
+      SourceDefinitionReadList(
+        currentSources
           .stream()
           .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
-            this.createRegistrySourceDef(
+            this.createSourceDef(
               idImageTagEntry!!,
             )
           }.toList(),
       )
+    every { remoteDefinitionsProvider!!.getSourceDefinitions() } returns
+      latestSources
+        .stream()
+        .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
+          this.createRegistrySourceDef(
+            idImageTagEntry!!,
+          )
+        }.toList()
 
-    Mockito
-      .`when`(destinationDefinitionsHandler!!.listDestinationDefinitions())
-      .thenReturn(
-        DestinationDefinitionReadList(
-          currentDestinations
-            .stream()
-            .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
-              this.createDestinationDef(
-                idImageTagEntry!!,
-              )
-            }.toList(),
-        ),
-      )
-    Mockito
-      .`when`(remoteDefinitionsProvider!!.getDestinationDefinitions())
-      .thenReturn(
-        latestDestinations
+    every { destinationDefinitionsHandler!!.listDestinationDefinitions() } returns
+      DestinationDefinitionReadList(
+        currentDestinations
           .stream()
           .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
-            this.createRegistryDestinationDef(
+            this.createDestinationDef(
               idImageTagEntry!!,
             )
           }.toList(),
       )
+    every { remoteDefinitionsProvider!!.getDestinationDefinitions() } returns
+      latestDestinations
+        .stream()
+        .map { idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>? ->
+          this.createRegistryDestinationDef(
+            idImageTagEntry!!,
+          )
+        }.toList()
   }
 
   private fun createRegistryDestinationDef(idImageTagEntry: MutableMap.MutableEntry<UUID?, String?>): ConnectorRegistryDestinationDefinition =

@@ -24,13 +24,14 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
@@ -41,14 +42,14 @@ internal class StateHandlerTest {
 
   @BeforeEach
   fun setup() {
-    statePersistence = mock()
-    jobHistoryHandler = mock()
+    statePersistence = mockk()
+    jobHistoryHandler = mockk()
     stateHandler = StateHandler(statePersistence, jobHistoryHandler)
   }
 
   @Test
   fun testGetCurrentStateEmpty() {
-    whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(Optional.empty<StateWrapper>())
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns Optional.empty<StateWrapper>()
 
     val expected =
       ConnectionState(
@@ -62,13 +63,12 @@ internal class StateHandlerTest {
 
   @Test
   fun testGetLegacyState() {
-    whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns
       Optional.of(
         StateWrapper()
           .withStateType(StateType.LEGACY)
           .withLegacyState(JSON_BLOB),
-      ),
-    )
+      )
 
     val expected =
       ConnectionState(
@@ -83,7 +83,7 @@ internal class StateHandlerTest {
 
   @Test
   fun testGetGlobalState() {
-    whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns
       Optional.of(
         StateWrapper()
           .withStateType(StateType.GLOBAL)
@@ -99,8 +99,7 @@ internal class StateHandlerTest {
                 ),
             ),
           ),
-      ),
-    )
+      )
 
     val expected =
       ConnectionState(
@@ -123,7 +122,7 @@ internal class StateHandlerTest {
 
   @Test
   fun testGetStreamState() {
-    whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns
       Optional.of(
         StateWrapper()
           .withStateType(StateType.STREAM)
@@ -137,8 +136,7 @@ internal class StateHandlerTest {
                 .withStream(AirbyteStreamState().withStreamDescriptor(STREAM_DESCRIPTOR2).withStreamState(JSON_BLOB)),
             ),
           ),
-      ),
-    )
+      )
 
     val expected =
       ConnectionState(
@@ -197,11 +195,15 @@ internal class StateHandlerTest {
         connectionId = CONNECTION_ID,
         connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
       )
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns Optional.empty<StateWrapper>()
+    every { statePersistence.updateOrCreateState(any(), any()) } just Runs
     stateHandler.createOrUpdateState(input)
-    verify(statePersistence, times(1)).updateOrCreateState(
-      CONNECTION_ID,
-      StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null),
-    )
+    verify(exactly = 1) {
+      statePersistence.updateOrCreateState(
+        CONNECTION_ID,
+        StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null),
+      )
+    }
   }
 
   @Test
@@ -211,12 +213,16 @@ internal class StateHandlerTest {
         connectionId = CONNECTION_ID,
         connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
       )
-    whenever<Optional<JobRead>?>(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.empty<JobRead>())
+    every { jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID) } returns Optional.empty<JobRead>()
+    every { statePersistence.getCurrentState(CONNECTION_ID) } returns Optional.empty<StateWrapper>()
+    every { statePersistence.updateOrCreateState(any(), any()) } just Runs
     stateHandler.createOrUpdateStateSafe(input)
-    verify(statePersistence, times(1)).updateOrCreateState(
-      CONNECTION_ID,
-      StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null),
-    )
+    verify(exactly = 1) {
+      statePersistence.updateOrCreateState(
+        CONNECTION_ID,
+        StateWrapper().withStateType(StateType.LEGACY).withLegacyState(JSON_BLOB).withStateMessages(null),
+      )
+    }
   }
 
   @Test
@@ -226,9 +232,7 @@ internal class StateHandlerTest {
         connectionId = CONNECTION_ID,
         connectionState = ConnectionState(connectionId = CONNECTION_ID, stateType = ConnectionStateType.LEGACY, state = JSON_BLOB),
       )
-    whenever<Optional<JobRead>?>(
-      jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID),
-    ).thenReturn(
+    every { jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID) } returns
       Optional.of<JobRead>(
         JobRead(
           id = 1L,
@@ -238,8 +242,7 @@ internal class StateHandlerTest {
           updatedAt = 0L,
           status = JobStatus.RUNNING,
         ),
-      ),
-    )
+      )
     Assertions.assertThrows(
       SyncIsRunningException::class.java,
     ) { stateHandler.createOrUpdateStateSafe(input) }

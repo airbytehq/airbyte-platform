@@ -41,12 +41,14 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
@@ -61,22 +63,16 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   fun setup() {
     truncateAllTables()
 
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
-    Mockito
-      .`when`(
-        featureFlagClient.stringVariation(
-          org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages),
-          org.mockito.kotlin.any<SourceDefinition>(),
-        ),
-      ).thenReturn(TEST_DEFAULT_MAX_SECONDS)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>(relaxed = true)
+    every { featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, any<SourceDefinition>()) } returns TEST_DEFAULT_MAX_SECONDS
 
-    val secretsRepositoryReader: SecretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter: SecretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService: SecretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
-    val scopedConfigurationService: ScopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService: ConnectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
-    val metricClient: MetricClient = Mockito.mock(MetricClient::class.java)
-    val actorPaginationServiceHelper: ActorServicePaginationHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
+    val secretsRepositoryReader: SecretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
+    val secretsRepositoryWriter: SecretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    val secretPersistenceConfigService: SecretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
+    val scopedConfigurationService: ScopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    val connectionTimelineEventService: ConnectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
+    val metricClient: MetricClient = mockk<MetricClient>(relaxed = true)
+    val actorPaginationServiceHelper: ActorServicePaginationHelper = mockk<ActorServicePaginationHelper>(relaxed = true)
 
     actorDefinitionService = ActorDefinitionServiceJooqImpl(database!!)
     val organizationService: OrganizationService = OrganizationServiceJooqImpl(database!!)
@@ -87,7 +83,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
         .withEmail("test@test.com"),
     )
 
-    dataplaneGroupService = Mockito.spy(DataplaneGroupServiceTestJooqImpl(database!!))
+    dataplaneGroupService = spyk(DataplaneGroupServiceTestJooqImpl(database!!))
     dataplaneGroupService.writeDataplaneGroup(
       DataplaneGroup()
         .withId(dataplaneGroupId)
@@ -97,10 +93,10 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
 
-    connectionService = Mockito.spy(ConnectionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
 
     sourceService =
-      Mockito.spy(
+      spyk(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -117,7 +113,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
         ),
       )
     destinationService =
-      Mockito.spy(
+      spyk(
         DestinationServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -136,7 +132,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     organizationService.writeOrganization(MockData.defaultOrganization())
 
     workspaceService =
-      Mockito.spy(
+      spyk(
         WorkspaceServiceJooqImpl(
           database!!,
           featureFlagClient,

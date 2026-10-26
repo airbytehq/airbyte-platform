@@ -1,0 +1,12 @@
+@use "scss/mixins";
+@use "scss/variables";
+
+.visuallyHidden {
+  @include mixins.visually-hidden;
+}
+
+.requiredFieldList {
+  padding-left: variables.$spacing-xl;
+  margin-top: variables.$spacing-sm;
+  margin-bottom: 0;
+}

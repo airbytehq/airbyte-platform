@@ -1,20 +1,27 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { DropdownButton } from "components/ui/DropdownButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 
+import styles from "./Controls.module.scss";
 import { TestCard } from "./TestCard";
 
 interface IProps {
   formType: "source" | "destination";
   isSubmitting: boolean;
   isValid: boolean;
+  /**
+   * Labels of the required fields that are empty. Only `required` errors count: pattern, range and type errors are
+   * ignored. Empty fields that OAuth fills show as one entry that asks the user to authenticate.
+   */
+  emptyRequiredFields: string[];
   dirty: boolean;
   onCancelClick: () => void;
   onDeleteClick?: () => void;
@@ -35,6 +42,45 @@ interface IProps {
   onSaveDraft?: () => Promise<void>;
 }
 
+const MAX_LISTED_REQUIRED_FIELDS = 3;
+
+/** Returns undefined when no required field is empty. */
+const useFillRequiredFieldsMessage = (emptyRequiredFields: string[]) => {
+  const { formatMessage, formatList } = useIntl();
+  if (emptyRequiredFields.length === 0) {
+    return undefined;
+  }
+
+  const hiddenCount = emptyRequiredFields.length - MAX_LISTED_REQUIRED_FIELDS;
+  const listedFields =
+    hiddenCount > 0
+      ? [
+          ...emptyRequiredFields.slice(0, MAX_LISTED_REQUIRED_FIELDS),
+          formatMessage({ id: "connectorForm.fillRequiredFields.more" }, { count: hiddenCount }),
+        ]
+      : emptyRequiredFields;
+  return {
+    tooltip: (
+      <FormattedMessage
+        id="connectorForm.fillRequiredFields"
+        values={{
+          fields: (
+            <ul className={styles.requiredFieldList}>
+              {listedFields.map((field) => (
+                <li key={field}>{field}</li>
+              ))}
+            </ul>
+          ),
+        }}
+      />
+    ),
+    description: formatMessage(
+      { id: "connectorForm.fillRequiredFields" },
+      { fields: formatList(listedFields, { type: "conjunction" }) }
+    ),
+  };
+};
+
 export const Controls: React.FC<IProps> = ({
   isTestConnectionInProgress,
   isSubmitting,
@@ -43,6 +89,7 @@ export const Controls: React.FC<IProps> = ({
   isEditMode,
   isDraftMode = false,
   isValid,
+  emptyRequiredFields,
   dirty,
   onDeleteClick,
   onCancelClick,
@@ -56,15 +103,57 @@ export const Controls: React.FC<IProps> = ({
   const showTestCard =
     hasDefinition &&
     (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
-  const buttonContent =
-    isEditMode && !isDraftMode ? (
-      <FormattedMessage id="form.saveChangesAndTest" />
-    ) : (
-      <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
-    );
   const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
+  const fillRequiredFieldsMessage = useFillRequiredFieldsMessage(emptyRequiredFields);
+  const submitButtonDescribedBy = useId();
+  const submitBlocked = isSubmitting || fillRequiredFieldsMessage !== undefined;
+
+  const submitButton =
+    onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
+      <DropdownButton
+        type="submit"
+        data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+        isLoading={isSubmitting || isSubmittingWithoutCheck}
+        disabled={submitBlocked || (isEditMode && !dirty)}
+        aria-describedby={fillRequiredFieldsMessage && submitButtonDescribedBy}
+        dropdown={{
+          options: [
+            {
+              displayName: formatMessage({ id: "connectorForm.submitWithoutCheck" }),
+              value: "skipCheckConnection",
+            },
+          ],
+          onSelect: (option) => {
+            if (option.value === "skipCheckConnection") {
+              trigger().then(async (valid) => {
+                if (valid) {
+                  setIsSubmittingWithoutCheck(true);
+                  try {
+                    await onSubmitWithoutCheck();
+                  } finally {
+                    setIsSubmittingWithoutCheck(false);
+                  }
+                }
+              });
+            }
+          },
+        }}
+      >
+        <FormattedMessage id="connectorForm.saveAndTest" />
+      </DropdownButton>
+    ) : (
+      <Button
+        type="submit"
+        data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+        isLoading={isSubmitting}
+        disabled={submitBlocked || (isEditMode && !isDraftMode && !dirty)}
+        aria-describedby={fillRequiredFieldsMessage && submitButtonDescribedBy}
+      >
+        <FormattedMessage id="connectorForm.saveAndTest" />
+      </Button>
+    );
 
   return (
     <>
@@ -111,46 +200,14 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="connectorForm.saveDraft" />
           </Button>
         )}
-        {onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
-          <DropdownButton
-            type="submit"
-            data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
-            isLoading={isSubmitting || isSubmittingWithoutCheck}
-            disabled={isSubmitting || (isEditMode && !dirty)}
-            dropdown={{
-              options: [
-                {
-                  displayName: formatMessage({ id: "connectorForm.submitWithoutCheck" }),
-                  value: "skipCheckConnection",
-                },
-              ],
-              onSelect: (option) => {
-                if (option.value === "skipCheckConnection") {
-                  trigger().then(async (valid) => {
-                    if (valid) {
-                      setIsSubmittingWithoutCheck(true);
-                      try {
-                        await onSubmitWithoutCheck();
-                      } finally {
-                        setIsSubmittingWithoutCheck(false);
-                      }
-                    }
-                  });
-                }
-              },
-            }}
-          >
-            {buttonContent}
-          </DropdownButton>
-        ) : (
-          <Button
-            type="submit"
-            data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
-            isLoading={isSubmitting}
-            disabled={isSubmitting || (isEditMode && !isDraftMode && !dirty)}
-          >
-            {buttonContent}
-          </Button>
+        <Tooltip control={submitButton} disabled={!fillRequiredFieldsMessage} placement="top" cursor="not-allowed">
+          {fillRequiredFieldsMessage?.tooltip}
+        </Tooltip>
+        {/* The screen-reader text for the disabled submit button, which cannot take focus to show the tooltip */}
+        {fillRequiredFieldsMessage && (
+          <span id={submitButtonDescribedBy} className={styles.visuallyHidden}>
+            {fillRequiredFieldsMessage.description}
+          </span>
         )}
       </FlexContainer>
     </>
