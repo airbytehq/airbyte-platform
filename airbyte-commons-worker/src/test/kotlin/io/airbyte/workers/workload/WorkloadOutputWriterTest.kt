@@ -10,8 +10,9 @@ import io.airbyte.api.client.model.generated.WorkloadOutputWriteRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
-import io.airbyte.config.State
+import io.airbyte.config.StandardSyncSummary
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -54,7 +55,7 @@ internal class WorkloadOutputWriterTest {
 
   private val replicationOutput =
     ReplicationOutput()
-      .withState(State().withState(Jsons.emptyObject()))
+      .withReplicationAttemptSummary(ReplicationAttemptSummary().withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED))
   private val replicationOutputSerialized = Jsons.serialize(replicationOutput)
 
   private val workloadId = "workload_id"
