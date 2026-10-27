@@ -48,6 +48,7 @@ import io.airbyte.domain.models.auth.AuthorizationTarget
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -102,6 +103,8 @@ class AuthorizationResourceLookupTest {
       connectionEvents = mockk(),
       actorRepository = mockk(),
       attempts = mockk(),
+      entitlements = mockk(),
+      featureFlags = mockk(),
     )
 
   init {
@@ -139,6 +142,40 @@ class AuthorizationResourceLookupTest {
       every { actors.getIdsForActors(listOf(id)) } returns saved
       assertThrows(AuthorizationResourceNotFoundException::class.java) { service.actorWorkspaceAndOrganization(id) }
     }
+  }
+
+  @Test
+  fun `saved connection references come from one validated read`() {
+    val sourceCatalog = UUID.randomUUID()
+    val destinationCatalog = UUID.randomUUID()
+    val operation = UUID.randomUUID()
+    every { connections.getStandardSync(id) } returns
+      StandardSync()
+        .withConnectionId(id)
+        .withSourceId(source)
+        .withDestinationId(destination)
+        .withSourceCatalogId(sourceCatalog)
+        .withDestinationCatalogId(destinationCatalog)
+        .withOperationIds(listOf(operation))
+
+    val references = service.savedConnectionReferences(id)
+
+    assertEquals(source, references.sourceId)
+    assertEquals(destination, references.destinationId)
+    assertEquals(Optional.of(sourceCatalog), references.sourceCatalogId)
+    assertEquals(Optional.of(destinationCatalog), references.destinationCatalogId)
+    assertEquals(listOf(operation), references.operationIds)
+    verify(exactly = 1) { connections.getStandardSync(id) }
+  }
+
+  @Test
+  fun `saved connection references reject missing or mismatched ownership`() {
+    every { connections.getStandardSync(id) } returns StandardSync().withConnectionId(id).withDestinationId(destination)
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedConnectionReferences(id) }
+
+    every { connections.getStandardSync(id) } returns
+      StandardSync().withConnectionId(source).withSourceId(source).withDestinationId(destination)
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedConnectionReferences(id) }
   }
 
   @Test

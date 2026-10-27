@@ -18,6 +18,9 @@ import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.SavedConnectionReferences
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.EnableStrictJsonDeserialization
 import io.airbyte.featureflag.FeatureFlagClient
@@ -50,6 +53,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executor
@@ -64,6 +68,10 @@ internal class StrictJsonDeserializationTest {
     @Singleton
     @Primary
     fun connectionsHandler(): ConnectionsHandler = mockk()
+
+    @Singleton
+    @Primary
+    fun authorizationDataService(): AuthorizationDataService = mockk()
 
     @Singleton
     @Primary
@@ -108,6 +116,9 @@ internal class StrictJsonDeserializationTest {
   lateinit var connectionsHandler: ConnectionsHandler
 
   @Inject
+  lateinit var authorizationDataService: AuthorizationDataService
+
+  @Inject
   lateinit var organizationsHandler: OrganizationsHandler
 
   @Inject
@@ -142,7 +153,15 @@ internal class StrictJsonDeserializationTest {
 
   @BeforeEach
   fun setUp() {
-    clearMocks(connectionsHandler, organizationsHandler, dataplaneGroupService, dataplaneService, entitlementService, featureFlagClient)
+    clearMocks(
+      connectionsHandler,
+      authorizationDataService,
+      organizationsHandler,
+      dataplaneGroupService,
+      dataplaneService,
+      entitlementService,
+      featureFlagClient,
+    )
     wrappedOrganizationUpdateTracker.reset()
     instanceConfigurationSetupTracker.reset()
     every { connectionsHandler.getConnection(any()) } returns connectionRead()
@@ -302,6 +321,13 @@ internal class StrictJsonDeserializationTest {
   fun `connections get continues to accept its declared property`() {
     enableStrictDeserialization()
     val connectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    val owner = WorkspaceAndOrganization(UUID.randomUUID(), UUID.randomUUID())
+    every { authorizationDataService.savedConnectionReferences(connectionId) } returns
+      SavedConnectionReferences(sourceId, destinationId, Optional.empty(), Optional.empty(), emptyList())
+    every { authorizationDataService.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
+    every { authorizationDataService.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
     every { connectionsHandler.getConnection(connectionId) } returns connectionRead()
 
     assertStatus(

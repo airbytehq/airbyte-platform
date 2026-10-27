@@ -24,14 +24,16 @@ import io.airbyte.api.server.generated.models.SourceReadWithMetadata
 import io.airbyte.api.server.generated.models.SourceSearch
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.api.server.generated.models.SynchronousJobRead
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
+import io.airbyte.config.Permission
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
@@ -41,14 +43,11 @@ import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
-import io.micronaut.security.annotation.Secured
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -75,6 +74,14 @@ internal class SourceApiControllerTest {
     context.registerSingleton(SchedulerHandler::class.java, schedulerHandler)
     sourceHandler = mockk()
     context.registerSingleton(SourceHandler::class.java, sourceHandler)
+    val owner = WorkspaceAndOrganization(WORKSPACE_ID, UUID(0, 503))
+    val authorization = mockk<AuthorizationDataService>()
+    every { authorization.savedSourceWorkspaceAndOrganization(any()) } returns owner
+    every { authorization.workspaceAndOrganization(WORKSPACE_ID) } returns owner
+    every { authorization.requireActorDefinitionType(any(), any()) } returns Unit
+    every { authorization.canUseActorDefinition(any(), any()) } returns true
+    every { authorization.actorConnectionIds(any(), any(), any()) } returns emptyList()
+    context.registerSingleton(AuthorizationDataService::class.java, authorization)
   }
 
   @Test
@@ -120,8 +127,8 @@ internal class SourceApiControllerTest {
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/discover_schema"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()))))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = ACTOR_ID))))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDiscoverSchemaRequestBody(sourceId = ACTOR_ID))))
   }
 
   @Test
@@ -135,7 +142,7 @@ internal class SourceApiControllerTest {
           .exchange(
             HttpRequest.POST(
               "/api/v1/sources/discover_schema",
-              SourceDiscoverSchemaRequestBody(sourceId = UUID.randomUUID()),
+              SourceDiscoverSchemaRequestBody(sourceId = ACTOR_ID),
             ),
             JsonNode::class.java,
           )
@@ -183,10 +190,10 @@ internal class SourceApiControllerTest {
     every { sourceHandler.listSourcesForWorkspace(any()) } returns SourceReadList(sources = emptyList()) andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = WORKSPACE_ID))))
     assertStatus(
       HttpStatus.NOT_FOUND,
-      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))),
+      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = WORKSPACE_ID))),
     )
   }
 
@@ -212,8 +219,8 @@ internal class SourceApiControllerTest {
   fun testWriteDiscoverCatalogResult() {
     every { sourceHandler.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = UUID.randomUUID())
 
-    val sourceId = UUID.randomUUID()
-    val workspaceId = UUID.randomUUID()
+    val sourceId = ACTOR_ID
+    val workspaceId = WORKSPACE_ID
     val actors = mockk<ActorRepository>()
     every { actors.findSourceWorkspaceId(sourceId) } returns Optional.of(workspaceId)
     context.registerSingleton(ActorRepository::class.java, actors)
@@ -255,50 +262,49 @@ internal class SourceApiControllerTest {
         "partialUpdateSource",
       )
 
-    val rolesByEndpoint =
-      SourceApiController::class.java.declaredMethods
-        .filter { it.name in writeEndpoints && it.getAnnotation(Secured::class.java) != null }
-        .associate { it.name to it.getAnnotation(Secured::class.java).value.toList() }
-
-    assertEquals(writeEndpoints, rolesByEndpoint.keys)
-
-    rolesByEndpoint.forEach { (name, roles) ->
-      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "$name should allow the source editor")
-      assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "$name should not allow the destination editor")
-      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_EDITOR), "$name should still allow the workspace editor")
-    }
+    assertActorControllerPermissions(
+      SourceApiController::class.java,
+      writeEndpoints,
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+    )
   }
 
   @Test
-  fun `source read endpoints do not gain either actor-scoped editor role`() {
+  fun `source read endpoints allow saved readers and reject organization members`() {
     val readEndpoints = setOf("getSource", "getSourceWithMetadata", "listSourcesForWorkspace", "getMostRecentSourceActorCatalog")
 
-    SourceApiController::class.java.declaredMethods
-      .filter { it.name in readEndpoints && it.getAnnotation(Secured::class.java) != null }
-      .forEach {
-        val roles = it.getAnnotation(Secured::class.java).value.toList()
-        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "${it.name} should stay reader-scoped")
-        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "${it.name} should stay reader-scoped")
-      }
+    assertActorControllerPermissions(
+      SourceApiController::class.java,
+      readEndpoints,
+      Permission.PermissionType.WORKSPACE_READER,
+      Permission.PermissionType.ORGANIZATION_MEMBER,
+    )
   }
 
-  private fun sourceIdRequestBody() = SourceIdRequestBody(sourceId = UUID.randomUUID())
+  companion object {
+    val ACTOR_ID: UUID = UUID(0, 500)
+    val WORKSPACE_ID: UUID = UUID(0, 501)
+    val DEFINITION_ID: UUID = UUID(0, 502)
+  }
 
-  private fun sourceUpdate() = SourceUpdate(sourceId = UUID.randomUUID(), connectionConfiguration = Jsons.emptyObject(), name = "source")
+  private fun sourceIdRequestBody() = SourceIdRequestBody(sourceId = ACTOR_ID)
+
+  private fun sourceUpdate() = SourceUpdate(sourceId = ACTOR_ID, connectionConfiguration = Jsons.emptyObject(), name = "source")
 
   private fun sourceCreate() =
     SourceCreate(
-      sourceDefinitionId = UUID.randomUUID(),
+      sourceDefinitionId = DEFINITION_ID,
       connectionConfiguration = Jsons.emptyObject(),
-      workspaceId = UUID.randomUUID(),
+      workspaceId = WORKSPACE_ID,
       name = "source",
     )
 
   private fun sourceRead() =
     SourceRead(
-      sourceDefinitionId = UUID.randomUUID(),
-      sourceId = UUID.randomUUID(),
-      workspaceId = UUID.randomUUID(),
+      sourceDefinitionId = DEFINITION_ID,
+      sourceId = ACTOR_ID,
+      workspaceId = WORKSPACE_ID,
       connectionConfiguration = Jsons.emptyObject(),
       name = "source",
       sourceName = "source-definition",
@@ -307,9 +313,9 @@ internal class SourceApiControllerTest {
 
   private fun sourceReadWithMetadata() =
     SourceReadWithMetadata(
-      sourceDefinitionId = UUID.randomUUID(),
-      sourceId = UUID.randomUUID(),
-      workspaceId = UUID.randomUUID(),
+      sourceDefinitionId = DEFINITION_ID,
+      sourceId = ACTOR_ID,
+      workspaceId = WORKSPACE_ID,
       connectionConfiguration = Jsons.emptyObject(),
       name = "source",
       sourceName = "source-definition",

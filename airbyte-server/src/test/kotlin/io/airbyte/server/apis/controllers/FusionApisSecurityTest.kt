@@ -5,6 +5,12 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.SavedConnectionReferences
+import io.airbyte.server.auth.OperationPermissions
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -17,13 +23,17 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.filters.AuthenticationFetcher
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import io.mockk.every
+import io.mockk.mockk
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
+import java.util.Optional
 import java.util.UUID
 
 private const val SPEC = "FusionApisSecurityTest"
@@ -40,9 +50,39 @@ private const val ANONYMOUS_HEADER = "X-Test-Anonymous"
 @Property(name = "micronaut.security.token.jwt.enabled", value = "true")
 @Property(name = "micronaut.security.token.jwt.signatures.secret.generator.secret", value = "test-jwt-signature-secret-that-is-long-enough-for-hs256")
 internal class FusionApisSecurityTest {
+  @Requires(property = "spec.name", value = SPEC)
+  @Factory
+  class TestFactory {
+    @Singleton
+    @Primary
+    fun authorizationDataService(): AuthorizationDataService = mockk()
+
+    @Singleton
+    @Primary
+    fun operationPermissions(): OperationPermissions = mockk(relaxed = true)
+  }
+
   @Inject
   @Client("/")
   lateinit var client: HttpClient
+
+  @Inject
+  lateinit var authorizationDataService: AuthorizationDataService
+
+  @BeforeEach
+  fun configureSavedResources() {
+    val resourceId = UUID.fromString(id)
+    val owner = WorkspaceAndOrganization(resourceId, resourceId)
+    every { authorizationDataService.savedSourceWorkspaceAndOrganization(resourceId) } returns owner
+    every { authorizationDataService.savedDestinationWorkspaceAndOrganization(resourceId) } returns owner
+    every { authorizationDataService.savedConnectionReferences(resourceId) } returns
+      SavedConnectionReferences(resourceId, resourceId, Optional.empty(), Optional.empty(), emptyList())
+    every { authorizationDataService.canUseDataplaneGroup(resourceId, resourceId) } returns true
+    every {
+      authorizationDataService.isAssignedSyncWorkload(resourceId, resourceId, resourceId, resourceId, resourceId, any(), resourceId, resourceId)
+    } returns
+      true
+  }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("routes")
@@ -93,7 +133,7 @@ internal class FusionApisSecurityTest {
   }
 
   companion object {
-    private val id = UUID.randomUUID().toString()
+    internal val id = UUID.randomUUID().toString()
 
     private val actorFlags = mapOf("enable_agent_access" to true, "enable_indexing" to true)
     private val destinationFlags = actorFlags + ("enable_backfill" to false)
@@ -142,6 +182,6 @@ class FusionApisAuthenticationFetcher : AuthenticationFetcher<HttpRequest<*>> {
     if (request.headers.contains(ANONYMOUS_HEADER)) {
       Flux.empty()
     } else {
-      Flux.just(Authentication.build("fusion-apis-security-test-user", listOf(AuthRoleConstants.AUTHENTICATED_USER)))
+      Flux.just(Authentication.build(FusionApisSecurityTest.id, listOf(AuthRoleConstants.AUTHENTICATED_USER)))
     }
 }

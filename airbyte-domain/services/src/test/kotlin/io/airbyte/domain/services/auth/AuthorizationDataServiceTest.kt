@@ -9,6 +9,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.mockk.every
@@ -51,6 +52,8 @@ class AuthorizationDataServiceTest {
       connectionEvents = mockk(),
       actorRepository = actorRepository,
       attempts = mockk(),
+      entitlements = mockk(),
+      featureFlags = mockk(),
     )
 
   @Test
@@ -83,6 +86,31 @@ class AuthorizationDataServiceTest {
     val failure = IOException("workspace lookup failed")
     every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } throws failure
     assertSame(failure, assertThrows(IOException::class.java) { service.workspaceAndOrganization(workspaceId) })
+  }
+
+  @Test
+  fun `saved destination ownership uses a destination-specific non-secret lookup`() {
+    val id = UUID.randomUUID()
+    every { actorRepository.findDestinationWorkspaceId(id) } returns Optional.of(workspaceId)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withOrganizationId(organizationId)
+    assertEquals(WorkspaceAndOrganization(workspaceId, organizationId), service.savedDestinationWorkspaceAndOrganization(id))
+    every { actorRepository.findDestinationWorkspaceId(id) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedDestinationWorkspaceAndOrganization(id) }
+    val failure = IOException("destination ownership unavailable")
+    every { actorRepository.findDestinationWorkspaceId(id) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.savedDestinationWorkspaceAndOrganization(id) })
+    verify(exactly = 0) { actorRepository.findByActorId(any()) }
+  }
+
+  @Test
+  fun `definition checks reject wrong kind and missing definitions`() {
+    val id = UUID.randomUUID()
+    every { actorRepository.findDefinitionTypeById(id) } returns Optional.of(ActorType.destination)
+    assertDoesNotThrow { service.requireActorDefinitionType(id, false) }
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.requireActorDefinitionType(id, true) }
+    every { actorRepository.findDefinitionTypeById(id) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.requireActorDefinitionType(id, false) }
   }
 
   @Test

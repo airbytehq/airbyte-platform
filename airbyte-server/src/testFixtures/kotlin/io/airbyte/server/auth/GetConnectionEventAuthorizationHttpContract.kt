@@ -265,6 +265,8 @@ abstract class GetConnectionEventAuthorizationHttpContract {
           connectionEvents = events,
           actorRepository = mockk(),
           attempts = mockk(),
+          entitlements = mockk(),
+          featureFlags = mockk(),
         )
       val handlerConstructor = ConnectionsHandler::class.java.declaredConstructors.single { !it.isSynthetic }
       val handler =
@@ -305,6 +307,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
         OperationPermissions::class.java,
         OperationPermissions(permissions, RoleResolver(mockk(), mockk(), mockk(), mockk()), security),
       )
+      registerSiblingOperationRules(context, controller, setOf(GetConnectionEventRule::class.java))
       context.start()
       assertEquals(security, context.containsBean(SecurityFilter::class.java))
       assertTrue(context.containsBean(UncaughtExceptionHandler::class.java))
@@ -329,7 +332,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
                 ).build(),
               HttpResponse.BodyHandlers.ofString(),
             )
-          assertEquals(status, response.statusCode(), response.body())
+          assertEquals(status, response.statusCode(), "${server.url} request=$body response=${response.body()}")
           if (earlierAllow) assertTrue(context.getBean(GetConnectionEventEarlierAllow::class.java).calls.get() > 0)
           if (!security) {
             verify(exactly = 0) { permissions.getPermissionsByAuthUserId(any()) }

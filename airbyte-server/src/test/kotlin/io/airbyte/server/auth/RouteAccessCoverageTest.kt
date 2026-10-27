@@ -4,6 +4,8 @@
 
 package io.airbyte.server.auth
 
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.io.service.SoftServiceLoader
@@ -77,11 +79,18 @@ class RouteAccessCoverageTest {
               context.registerSingleton(type, mockkClass(type.kotlin, relaxed = true), Qualifiers.byName(name.value))
             }
           }
-        context.registerSingleton(CheckCommandRule::class.java, mockkClass(CheckCommandRule::class, relaxed = true))
-        context.registerSingleton(GetConnectionEventRule::class.java, mockkClass(GetConnectionEventRule::class, relaxed = true))
-        context.registerSingleton(WriteDiscoverCatalogResultRule::class.java, mockkClass(WriteDiscoverCatalogResultRule::class, relaxed = true))
-        context.registerSingleton(SaveAttemptStatsRule::class.java, mockkClass(SaveAttemptStatsRule::class, relaxed = true))
-        context.registerSingleton(SaveAttemptStreamMetadataRule::class.java, mockkClass(SaveAttemptStreamMetadataRule::class, relaxed = true))
+        controllers
+          .flatMap { it.methods.toList() }
+          .mapNotNull { it.getAnnotation(AuthorizeOperation::class.java) }
+          .filter { it.migration == RouteMigration.SHARED }
+          .map { it.rule.java }
+          .distinct()
+          .filter { it != OperationRule::class.java }
+          .forEach { type ->
+            @Suppress("UNCHECKED_CAST")
+            val ruleType = type as Class<OperationRule>
+            context.registerSingleton(ruleType, mockkClass(ruleType.kotlin, relaxed = true))
+          }
         context.registerSingleton(AuthorizationInterceptor::class.java, mockkClass(AuthorizationInterceptor::class, relaxed = true))
         context.start()
         val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
@@ -110,6 +119,14 @@ class RouteAccessCoverageTest {
           "The separate workload API is not Config/public API",
         )
         val entries = routeAccessEntries(inventory)
+        val batch = entries.filter { it.path.startsWith("/api/v1/") && it.family in setOf("sources", "destinations", "connections") }
+        val excludedSearches = setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
+        assertEquals(
+          emptyList<String>(),
+          batch.filter { it.path !in excludedSearches && it.migration != RouteMigration.SHARED }.map { "${it.httpMethod} ${it.path}" },
+          "Every protected operation in the first PLAT-1512 batch must execute a shared rule",
+        )
+        assertEquals(excludedSearches, batch.filter { it.migration == RouteMigration.LEGACY }.map { it.path }.toSet())
         assertTrue(
           entries.any {
             it.path == "/api/v1/connections/events/get" && it.migration == RouteMigration.SHARED &&
@@ -177,8 +194,10 @@ class RouteAccessCoverageTest {
         appendLine("# $edition served route inventory")
         appendLine()
         appendLine("Derived from the active Micronaut Router. HEAD routes are automatic GET companions.")
-        appendLine("Declarations add no permission; existing checks remain in control.")
-        appendLine("SHARED is unsupported until PLAT-1504.")
+        appendLine("SHARED declarations execute typed rules before controller work; LEGACY routes retain their existing checks.")
+        appendLine(
+          "The sources, destinations, and connections Config API batch is migrated, except the three root searches. Other LEGACY families remain for later PLAT-1512 batches.",
+        )
         appendLine()
         appendLine("| Family | Operations | LEGACY remaining |")
         appendLine("| --- | --- | --- |")

@@ -12,6 +12,7 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.FusionResolveRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -24,7 +25,8 @@ import io.micronaut.security.rules.SecurityRule
 open class FusionEnablementResolverApiController : FusionEnablementResolverApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionResolveRule::class,
   )
   override fun resolveFusionEnablementForSync(
     @Body request: FusionEnablementResolveRequest,

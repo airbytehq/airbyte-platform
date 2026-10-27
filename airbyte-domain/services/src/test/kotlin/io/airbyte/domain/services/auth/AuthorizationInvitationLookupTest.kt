@@ -56,6 +56,8 @@ class AuthorizationInvitationLookupTest {
       connectionEvents = mockk(),
       actorRepository = mockk(),
       attempts = mockk(),
+      entitlements = mockk(),
+      featureFlags = mockk(),
     )
 
   @Test

@@ -98,6 +98,17 @@ class OperationPermissions(
     if (requiredRoles.none(resolve(caller, emptySet(), emptyMap(), emptySet())::contains)) throw ForbiddenProblem()
   }
 
+  fun requireAuthenticated(
+    caller: Authentication,
+    allowedCallers: Set<OperationCaller>,
+    owners: List<WorkspaceAndOrganization> = emptyList(),
+  ) {
+    if (!securityEnabled) return
+    requireCaller(caller, allowedCallers)
+    val scope = getTokenScopeClaim(caller)
+    if (scope != null && (owners.isEmpty() || owners.any { scope.workspaceId != it.workspaceId.toString() })) throw ForbiddenProblem()
+  }
+
   private fun requireCaller(
     caller: Authentication,
     allowed: Set<OperationCaller>,

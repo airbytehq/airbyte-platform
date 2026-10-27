@@ -158,6 +158,8 @@ class OperationTypedInputHttpTest {
           connectionEvents = mockk(),
           actorRepository = mockk(),
           attempts = mockk(),
+          entitlements = mockk(),
+          featureFlags = mockk(),
         )
       context.registerSingleton(AuthorizationDataService::class.java, data)
       context.registerSingleton(

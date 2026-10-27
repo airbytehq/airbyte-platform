@@ -4,6 +4,9 @@
 
 package io.airbyte.domain.services.auth
 
+import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.config.Job
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
@@ -29,13 +32,29 @@ import io.airbyte.data.services.SecretStorageService
 import io.airbyte.data.services.TagService
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.AuthorizationTarget
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.EnableDestinationCatalogValidation
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Workspace
 import jakarta.inject.Singleton
+import java.util.Optional
 import java.util.UUID
+
+data class SavedConnectionReferences(
+  val sourceId: UUID,
+  val destinationId: UUID,
+  val sourceCatalogId: Optional<UUID>,
+  val destinationCatalogId: Optional<UUID>,
+  val operationIds: List<UUID>,
+)
 
 /** Fresh, non-secret saved relationships for authorization. */
 @Singleton
@@ -61,6 +80,8 @@ class AuthorizationDataService(
   private val connectionEvents: ConnectionTimelineEventService,
   private val actorRepository: ActorRepository,
   private val attempts: AttemptsRepository,
+  private val entitlements: EntitlementService,
+  private val featureFlags: FeatureFlagClient,
 ) {
   fun workspaceAndOrganization(workspaceId: UUID): WorkspaceAndOrganization {
     val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) }
@@ -80,6 +101,90 @@ class AuthorizationDataService(
     val workspaceId = actorRepository.findSourceWorkspaceId(sourceId).orElseThrow { AuthorizationResourceNotFoundException() }
     return workspaceAndOrganization(workspaceId)
   }
+
+  fun savedDestinationWorkspaceAndOrganization(destinationId: UUID): WorkspaceAndOrganization {
+    val workspaceId = actorRepository.findDestinationWorkspaceId(destinationId).orElseThrow { AuthorizationResourceNotFoundException() }
+    return workspaceAndOrganization(workspaceId)
+  }
+
+  fun savedConnectionReferences(connectionId: UUID): SavedConnectionReferences {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    val sourceId = connection.sourceId ?: throw AuthorizationResourceNotFoundException()
+    val destinationId = connection.destinationId ?: throw AuthorizationResourceNotFoundException()
+    val ids: List<UUID?>? = connection.operationIds
+    return SavedConnectionReferences(
+      sourceId,
+      destinationId,
+      Optional.ofNullable(connection.sourceCatalogId),
+      Optional.ofNullable(connection.destinationCatalogId),
+      ids.orEmpty().map { it ?: throw AuthorizationResourceNotFoundException() },
+    )
+  }
+
+  fun savedConnectionActorIds(connectionId: UUID): Pair<UUID, UUID> {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    return (connection.sourceId ?: throw AuthorizationResourceNotFoundException()) to
+      (connection.destinationId ?: throw AuthorizationResourceNotFoundException())
+  }
+
+  /** Match the saved catalog fallback actually read when a sync catalog is updated. */
+  fun destinationCatalogForValidation(
+    connectionId: UUID,
+    workspaceId: UUID,
+    destinationCatalogId: Optional<UUID>,
+  ): Optional<UUID> {
+    if (!featureFlags.boolVariation(EnableDestinationCatalogValidation, Multi(listOf(Workspace(workspaceId), Connection(connectionId))))) {
+      return Optional.empty()
+    }
+    return destinationCatalogId
+  }
+
+  /** Match the active workspace-scoped connection selection used by actor deletion and schema propagation. */
+  fun actorConnectionIds(
+    actorId: UUID,
+    workspaceId: UUID,
+    source: Boolean,
+  ): List<UUID> =
+    resource { connections.listWorkspaceStandardSyncs(workspaceId, false) }
+      .filter { if (source) it.sourceId == actorId else it.destinationId == actorId }
+      .map { it.connectionId ?: throw AuthorizationResourceNotFoundException() }
+
+  fun catalogWasFetchedByActor(
+    catalogId: UUID,
+    actorId: UUID,
+  ): Boolean = actorRepository.catalogWasFetchedByActor(catalogId, actorId)
+
+  fun requireActorDefinitionType(
+    definitionId: UUID,
+    source: Boolean,
+  ) {
+    val expected = if (source) ActorType.source else ActorType.destination
+    val actual = actorRepository.findDefinitionTypeById(definitionId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(actual == expected)
+  }
+
+  fun isAssignedSyncWorkload(
+    organizationId: UUID,
+    workspaceId: UUID,
+    connectionId: UUID,
+    sourceId: UUID,
+    destinationId: UUID,
+    workloadId: String,
+    dataplaneGroupId: UUID,
+    serviceAccountId: UUID,
+  ): Boolean =
+    actorRepository.isAssignedSyncWorkload(
+      organizationId,
+      workspaceId,
+      connectionId,
+      sourceId,
+      destinationId,
+      workloadId,
+      dataplaneGroupId,
+      serviceAccountId,
+    )
 
   fun sourceWorkspaceAndOrganization(sourceId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(sourceId)
 
@@ -158,7 +263,7 @@ class AuthorizationDataService(
     return owner
   }
 
-  private fun replicationJobConnectionId(jobId: Long): UUID {
+  fun replicationJobConnectionId(jobId: Long): UUID {
     val job = jobs.findById(jobId) ?: throw AuthorizationResourceNotFoundException()
     requireResource(job.id == jobId && job.configType in Job.REPLICATION_TYPES)
     val connectionId =
@@ -200,6 +305,19 @@ class AuthorizationDataService(
     requireResource(group.id == dataplaneGroupId)
     val organizationId = group.organizationId ?: throw AuthorizationResourceNotFoundException()
     return organization(organizationId)
+  }
+
+  /** Shared defaults, entitled PrivateLink, and the customer's own regions follow workspace selection policy. */
+  fun canUseDataplaneGroup(
+    dataplaneGroupId: UUID,
+    organizationId: UUID,
+  ): Boolean {
+    val owner = dataplaneGroupOrganization(dataplaneGroupId)
+    if (dataplaneGroups.listDefaultDataplaneGroups().any { it.id == dataplaneGroupId }) return true
+    if (owner == PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID) {
+      return entitlements.checkEntitlement(OrganizationId(organizationId), PrivateLinkEntitlement).isEntitled
+    }
+    return owner == organizationId
   }
 
   fun groupOrganization(groupId: UUID): UUID {

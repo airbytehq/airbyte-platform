@@ -17,12 +17,14 @@ import io.airbyte.api.server.generated.models.DestinationSearch
 import io.airbyte.api.server.generated.models.DestinationUpdate
 import io.airbyte.api.server.generated.models.JobConfigType
 import io.airbyte.api.server.generated.models.SynchronousJobRead
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.services.DestinationDiscoverService
+import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
@@ -34,7 +36,6 @@ import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
-import io.micronaut.security.annotation.Secured
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
@@ -42,8 +43,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import jakarta.validation.ConstraintViolationException
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -77,6 +76,14 @@ internal class DestinationApiControllerTest {
 
     destinationHandler = mockk()
     context.registerSingleton(DestinationHandler::class.java, destinationHandler)
+    val owner = WorkspaceAndOrganization(WORKSPACE_ID, UUID(0, 503))
+    val authorization = mockk<AuthorizationDataService>()
+    every { authorization.savedDestinationWorkspaceAndOrganization(any()) } returns owner
+    every { authorization.workspaceAndOrganization(WORKSPACE_ID) } returns owner
+    every { authorization.requireActorDefinitionType(any(), any()) } returns Unit
+    every { authorization.canUseActorDefinition(any(), any()) } returns true
+    every { authorization.actorConnectionIds(any(), any(), any()) } returns emptyList()
+    context.registerSingleton(AuthorizationDataService::class.java, authorization)
   }
 
   @Inject
@@ -132,7 +139,7 @@ internal class DestinationApiControllerTest {
           .exchange(
             HttpRequest.POST(
               "/api/v1/destinations/discover_schema",
-              DestinationDiscoverSchemaRequestBody(destinationId = UUID.randomUUID(), disableCache = false),
+              DestinationDiscoverSchemaRequestBody(destinationId = ACTOR_ID, disableCache = false),
             ),
             JsonNode::class.java,
           )
@@ -164,10 +171,10 @@ internal class DestinationApiControllerTest {
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destinations/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = WORKSPACE_ID))))
     assertStatus(
       HttpStatus.NOT_FOUND,
-      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = UUID.randomUUID()))),
+      client.statusException(HttpRequest.POST(path, ActorListCursorPaginatedRequestBody(workspaceId = WORKSPACE_ID))),
     )
   }
 
@@ -212,52 +219,50 @@ internal class DestinationApiControllerTest {
         "partialUpdateDestination",
       )
 
-    val rolesByEndpoint =
-      DestinationApiController::class.java.declaredMethods
-        .filter { it.name in writeEndpoints && it.getAnnotation(Secured::class.java) != null }
-        .associate { it.name to it.getAnnotation(Secured::class.java).value.toList() }
-
-    assertEquals(writeEndpoints, rolesByEndpoint.keys)
-
-    rolesByEndpoint.forEach { (name, roles) ->
-      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "$name should allow the destination editor")
-      assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "$name should not allow the source editor")
-      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_EDITOR), "$name should still allow the workspace editor")
-    }
+    assertActorControllerPermissions(
+      DestinationApiController::class.java,
+      writeEndpoints,
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+    )
   }
 
   @Test
-  fun `destination read endpoints do not gain either actor-scoped editor role`() {
+  fun `destination read endpoints allow saved readers and reject organization members`() {
     val readEndpoints =
       setOf("getDestination", "listDestinationsForWorkspace", "discoverCatalogForDestination", "getCatalogForConnection")
 
-    DestinationApiController::class.java.declaredMethods
-      .filter { it.name in readEndpoints && it.getAnnotation(Secured::class.java) != null }
-      .forEach {
-        val roles = it.getAnnotation(Secured::class.java).value.toList()
-        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "${it.name} should stay reader-scoped")
-        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "${it.name} should stay reader-scoped")
-      }
+    assertActorControllerPermissions(
+      DestinationApiController::class.java,
+      readEndpoints,
+      Permission.PermissionType.WORKSPACE_READER,
+      Permission.PermissionType.ORGANIZATION_MEMBER,
+    )
   }
 
-  private fun destinationIdRequestBody() = DestinationIdRequestBody(destinationId = UUID.randomUUID())
+  companion object {
+    val ACTOR_ID: UUID = UUID(0, 500)
+    val WORKSPACE_ID: UUID = UUID(0, 501)
+    val DEFINITION_ID: UUID = UUID(0, 502)
+  }
 
-  private fun destinationUpdate() =
-    DestinationUpdate(destinationId = UUID.randomUUID(), connectionConfiguration = Jsons.emptyObject(), name = "destination")
+  private fun destinationIdRequestBody() = DestinationIdRequestBody(destinationId = ACTOR_ID)
+
+  private fun destinationUpdate() = DestinationUpdate(destinationId = ACTOR_ID, connectionConfiguration = Jsons.emptyObject(), name = "destination")
 
   private fun destinationCreate() =
     DestinationCreate(
-      workspaceId = UUID.randomUUID(),
+      workspaceId = WORKSPACE_ID,
       name = "destination",
-      destinationDefinitionId = UUID.randomUUID(),
+      destinationDefinitionId = DEFINITION_ID,
       connectionConfiguration = Jsons.emptyObject(),
     )
 
   private fun destinationRead() =
     DestinationRead(
-      destinationDefinitionId = UUID.randomUUID(),
-      destinationId = UUID.randomUUID(),
-      workspaceId = UUID.randomUUID(),
+      destinationDefinitionId = DEFINITION_ID,
+      destinationId = ACTOR_ID,
+      workspaceId = WORKSPACE_ID,
       connectionConfiguration = Jsons.emptyObject(),
       name = "destination",
       destinationName = "destination-definition",

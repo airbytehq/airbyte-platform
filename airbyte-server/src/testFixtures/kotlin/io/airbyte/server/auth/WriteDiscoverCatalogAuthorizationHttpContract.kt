@@ -270,6 +270,8 @@ abstract class WriteDiscoverCatalogAuthorizationHttpContract {
           connectionEvents = mockk(),
           actorRepository = actors,
           attempts = mockk(),
+          entitlements = mockk(),
+          featureFlags = mockk(),
         )
       val converterConstructor = CatalogConverter::class.java.declaredConstructors.single { !it.isSynthetic }
       val converter =
@@ -313,6 +315,7 @@ abstract class WriteDiscoverCatalogAuthorizationHttpContract {
       )
       val fixture = CatalogFixture(context, catalogs, handler, actors, workspaces, permissions)
       configure(fixture)
+      registerSiblingOperationRules(context, controller, setOf(WriteDiscoverCatalogResultRule::class.java))
       context.start()
       if (cloud) assertFalse(isMockKMock(context.getBean(ObjectMapper::class.java)), "Cloud HTTP binding must use the real JSON mapper")
       assertEquals(security, context.containsBean(SecurityFilter::class.java))

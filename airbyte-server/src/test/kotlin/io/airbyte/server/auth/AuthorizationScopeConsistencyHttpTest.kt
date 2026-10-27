@@ -18,8 +18,12 @@ import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.services.PermissionService
+import io.airbyte.data.services.WorkspaceService
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -46,6 +50,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.Optional
 import java.util.UUID
 
 private const val SPEC = "AuthorizationScopeConsistencyHttpTest"
@@ -107,6 +112,14 @@ internal class AuthorizationScopeConsistencyHttpTest {
       every { workspaceHelper.getWorkspaceForConnectionId(attackerConn) } returns attackerWs
       every { workspaceHelper.getOrganizationForWorkspace(attackerWs) } returns attackerOrg
       every { workspaceHelper.getOrganizationForWorkspace(victimWs) } returns victimOrg
+      every { ScopeConsistencyTestBeans.permissions.getPermissionsByAuthUserId(ATTACKER_AUTH_USER_ID) } returns
+        listOf(Permission().withPermissionType(Permission.PermissionType.WORKSPACE_READER).withWorkspaceId(attackerWs))
+      every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(attackerSource) } returns Optional.of(attackerWs)
+      every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(victimSource) } returns Optional.of(victimWs)
+      every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(attackerWs, false) } returns
+        StandardWorkspace().withWorkspaceId(attackerWs).withOrganizationId(attackerOrg)
+      every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(victimWs, false) } returns
+        StandardWorkspace().withWorkspaceId(victimWs).withOrganizationId(victimOrg)
       every { sourceHandler.getSource(any()) } returns
         SourceRead(
           sourceDefinitionId = UUID.randomUUID(),
@@ -264,6 +277,32 @@ class ScopeConsistencyTestBeans {
   ): AuthenticationFactory = AuthenticationFactory(RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler))
 
   @Singleton
+  @Replaces(PermissionService::class)
+  fun permissions(): PermissionService = Companion.permissions
+
+  @Singleton
+  @Replaces(ActorRepository::class)
+  fun actors(): ActorRepository = Companion.actors
+
+  @Singleton
+  @Replaces(WorkspaceService::class)
+  fun workspaces(): WorkspaceService = Companion.workspaces
+
+  @Singleton
+  @Replaces(OperationPermissions::class)
+  fun operationPermissions(
+    authenticationHeaderResolver: AuthenticationHeaderResolver,
+    currentUserService: CurrentUserService,
+    securityService: SecurityService?,
+    permissionHandler: PermissionHandler,
+  ): OperationPermissions =
+    OperationPermissions(
+      Companion.permissions,
+      RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler),
+      true,
+    )
+
+  @Singleton
   @Replaces(PermissionHandler::class)
   fun permissionHandler(): PermissionHandler = Companion.permissionHandler
 
@@ -296,6 +335,9 @@ class ScopeConsistencyTestBeans {
   fun userPersistence(): UserPersistence = Companion.userPersistence
 
   companion object {
+    val permissions: PermissionService = mockk()
+    val actors: ActorRepository = mockk()
+    val workspaces: WorkspaceService = mockk()
     val permissionHandler: PermissionHandler = mockk(relaxed = true)
     val workspaceHelper: WorkspaceHelper = mockk()
     val sourceHandler: SourceHandler = mockk()

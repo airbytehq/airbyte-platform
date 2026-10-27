@@ -13,6 +13,8 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.FusionSourceReadRule
+import io.airbyte.server.auth.FusionSourceWriteRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.PathVariable
@@ -27,7 +29,8 @@ import java.util.UUID
 open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceReadRule::class,
   )
   override fun getFusionSourceEnablement(
     @PathVariable("sourceId") sourceId: UUID,
@@ -35,7 +38,8 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceWriteRule::class,
   )
   override fun createFusionSourceEnablement(
     @PathVariable("sourceId") sourceId: UUID,
@@ -44,7 +48,8 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceWriteRule::class,
   )
   override fun updateFusionSourceEnablement(
     @PathVariable("sourceId") sourceId: UUID,
@@ -53,7 +58,8 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceWriteRule::class,
   )
   override fun deleteFusionSourceEnablement(
     @PathVariable("sourceId") sourceId: UUID,

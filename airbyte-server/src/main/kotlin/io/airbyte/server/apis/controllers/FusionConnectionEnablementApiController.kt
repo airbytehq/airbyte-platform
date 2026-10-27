@@ -13,6 +13,8 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.FusionConnectionReadRule
+import io.airbyte.server.auth.FusionConnectionWriteRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.PathVariable
@@ -27,7 +29,8 @@ import java.util.UUID
 open class FusionConnectionEnablementApiController : FusionConnectionEnablementApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionConnectionReadRule::class,
   )
   override fun getFusionConnectionEnablement(
     @PathVariable("connectionId") connectionId: UUID,
@@ -35,7 +38,8 @@ open class FusionConnectionEnablementApiController : FusionConnectionEnablementA
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionConnectionWriteRule::class,
   )
   override fun createFusionConnectionEnablement(
     @PathVariable("connectionId") connectionId: UUID,
@@ -44,7 +48,8 @@ open class FusionConnectionEnablementApiController : FusionConnectionEnablementA
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionConnectionWriteRule::class,
   )
   override fun updateFusionConnectionEnablement(
     @PathVariable("connectionId") connectionId: UUID,
@@ -53,7 +58,8 @@ open class FusionConnectionEnablementApiController : FusionConnectionEnablementA
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionConnectionWriteRule::class,
   )
   override fun deleteFusionConnectionEnablement(
     @PathVariable("connectionId") connectionId: UUID,

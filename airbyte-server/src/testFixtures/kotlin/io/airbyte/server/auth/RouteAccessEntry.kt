@@ -61,3 +61,22 @@ data class RouteAccessEntry(
 ) {
   val family: String get() = path.removePrefix("/api/public/v1/").removePrefix("/api/v1/").substringBefore('/')
 }
+
+/** A focused endpoint fixture keeps its own rule real while satisfying sibling route declarations. */
+fun registerSiblingOperationRules(
+  context: io.micronaut.context.ApplicationContext,
+  controller: Class<*>,
+  realRules: Set<Class<out io.airbyte.commons.auth.route.OperationRule>>,
+) {
+  controller.methods
+    .mapNotNull { it.getAnnotation(AuthorizeOperation::class.java) }
+    .filter { it.migration == RouteMigration.SHARED }
+    .map { it.rule.java }
+    .distinct()
+    .filter { it !in realRules }
+    .forEach { type ->
+      @Suppress("UNCHECKED_CAST")
+      val ruleType = type as Class<io.airbyte.commons.auth.route.OperationRule>
+      context.registerSingleton(ruleType, io.mockk.mockkClass(ruleType.kotlin, relaxed = true))
+    }
+}

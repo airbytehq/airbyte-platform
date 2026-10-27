@@ -12,6 +12,10 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.FusionDestinationSearchRule
+import io.airbyte.server.auth.FusionDestinationSearchStatusRule
+import io.airbyte.server.auth.FusionSourceSearchRule
+import io.airbyte.server.auth.FusionSourceSearchStatusRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.PathVariable
@@ -26,7 +30,8 @@ import java.util.UUID
 open class FusionSearchApiController : FusionSearchApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceSearchRule::class,
   )
   override fun searchFusionSource(
     @PathVariable("sourceId") sourceId: UUID,
@@ -35,7 +40,8 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionDestinationSearchRule::class,
   )
   override fun searchFusionDestination(
     @PathVariable("destinationId") destinationId: UUID,
@@ -44,7 +50,8 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionSourceSearchStatusRule::class,
   )
   override fun getFusionSourceSearchStatus(
     @PathVariable("sourceId") sourceId: UUID,
@@ -52,7 +59,8 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = FusionDestinationSearchStatusRule::class,
   )
   override fun getFusionDestinationSearchStatus(
     @PathVariable("destinationId") destinationId: UUID,

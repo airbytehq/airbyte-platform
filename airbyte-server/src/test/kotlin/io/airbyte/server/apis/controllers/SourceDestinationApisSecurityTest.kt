@@ -19,17 +19,22 @@ import io.airbyte.api.server.generated.models.SourceReadWithMetadata
 import io.airbyte.api.server.generated.models.SynchronousJobRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.config.DestinationCatalog
 import io.airbyte.config.DestinationCatalogWithId
+import io.airbyte.config.Permission
 import io.airbyte.data.auth.TokenType
+import io.airbyte.data.services.PermissionService
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.DestinationCatalogId
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.SavedConnectionReferences
+import io.airbyte.server.auth.OperationPermissions
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -54,6 +59,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
+import java.util.Optional
 import java.util.UUID
 
 private const val SPEC = "SourceDestinationApisSecurityTest"
@@ -77,9 +83,36 @@ internal class SourceDestinationApisSecurityTest {
     @Primary
     fun authorizationDataService(): AuthorizationDataService {
       val resourceId = UUID.fromString(id)
+      val owner = WorkspaceAndOrganization(resourceId, resourceId)
       return mockk {
-        every { savedSourceWorkspaceAndOrganization(resourceId) } returns WorkspaceAndOrganization(resourceId, resourceId)
+        every { savedSourceWorkspaceAndOrganization(resourceId) } returns owner
+        every { savedDestinationWorkspaceAndOrganization(resourceId) } returns owner
+        every { workspaceAndOrganization(resourceId) } returns owner
+        every { savedConnectionActorIds(resourceId) } returns (resourceId to resourceId)
+        every { savedConnectionReferences(resourceId) } returns
+          SavedConnectionReferences(resourceId, resourceId, Optional.empty(), Optional.empty(), emptyList())
+        every { requireActorDefinitionType(resourceId, any()) } returns Unit
+        every { canUseActorDefinition(resourceId, owner) } returns true
+        every { catalogWasFetchedByActor(resourceId, resourceId) } returns true
+        every { actorConnectionIds(resourceId, resourceId, any()) } returns emptyList()
       }
+    }
+
+    @Singleton
+    @Primary
+    fun operationPermissions(): OperationPermissions {
+      val permissions = mockk<PermissionService>()
+      every { permissions.getPermissionsByAuthUserId(any()) } answers {
+        val type =
+          when (firstArg<String>()) {
+            AuthRoleConstants.WORKSPACE_READER -> Permission.PermissionType.WORKSPACE_READER
+            AuthRoleConstants.WORKSPACE_SOURCE_EDITOR -> Permission.PermissionType.WORKSPACE_SOURCE_EDITOR
+            AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR -> Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR
+            else -> return@answers emptyList()
+          }
+        listOf(Permission().withWorkspaceId(UUID.fromString(id)).withPermissionType(type))
+      }
+      return OperationPermissions(permissions, RoleResolver(mockk(), mockk(), mockk(), mockk()), true)
     }
 
     @Singleton
@@ -244,7 +277,7 @@ internal class SourceDestinationApisSecurityTest {
         Route("/api/v1/destinations/upgrade_version", DESTINATION_EDITOR, mapOf("destinationId" to id)),
         Route(
           "/api/v1/destinations/write_discover_catalog_result",
-          AuthRoleConstants.ADMIN,
+          AuthRoleConstants.DATAPLANE,
           mapOf(
             "catalog" to mapOf("operations" to emptyList<Any>()),
             "destinationId" to id,

@@ -25,7 +25,6 @@ import io.airbyte.api.server.generated.models.SourceSearch
 import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -33,6 +32,12 @@ import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.SourceDeleteRule
+import io.airbyte.server.auth.SourceReadOrWorkerRule
+import io.airbyte.server.auth.SourceReadRule
+import io.airbyte.server.auth.SourceSchemaChangeRule
+import io.airbyte.server.auth.SourceWriteOrWorkerRule
+import io.airbyte.server.auth.SourceWriteRule
 import io.airbyte.server.auth.WriteDiscoverCatalogResultRule
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -48,11 +53,12 @@ open class SourceApiController(
   private val schedulerHandler: SchedulerHandler,
   private val sourceHandler: SourceHandler,
 ) : SourceApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceSchemaChangeRule::class,
   )
   override fun applySchemaChangeForSource(
     @Body sourceAutoPropagateChange: SourceAutoPropagateChange,
@@ -63,38 +69,41 @@ open class SourceApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
   ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun createSource(
     @Body sourceCreate: SourceCreate,
   ): SourceRead = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -102,7 +111,8 @@ open class SourceApiController(
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceDeleteRule::class,
   )
   override fun deleteSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
@@ -113,31 +123,34 @@ open class SourceApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
   ): SourceDiscoverSchemaRead = execute { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceReadOrWorkerRule::class,
   )
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): SourceRead = execute { sourceHandler.getSource(sourceIdRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceReadOrWorkerRule::class,
   )
   override fun getSourceWithMetadata(
     @Body sourceIdWithSecretCoordinatesRequestBody: SourceIdWithSecretCoordinatesRequestBody,
@@ -150,11 +163,12 @@ open class SourceApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceReadRule::class,
   )
   override fun getMostRecentSourceActorCatalog(
     @Body sourceIdRequestBody: SourceIdRequestBody,
@@ -165,21 +179,23 @@ open class SourceApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceReadRule::class,
   )
   override fun listSourcesForWorkspace(
     @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
   ): SourceReadList = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceReadRule::class,
   )
   override fun listSourcesForWorkspacePaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
@@ -193,23 +209,19 @@ open class SourceApiController(
     @Body sourceSearch: SourceSearch,
   ): SourceReadList = execute { sourceHandler.searchSources(sourceSearch) }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-    AuthRoleConstants.DATAPLANE,
-  )
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteOrWorkerRule::class,
   )
   override fun updateSource(
     @Body sourceUpdate: SourceUpdate,
   ): SourceRead = execute { sourceHandler.updateSource(sourceUpdate) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -217,7 +229,8 @@ open class SourceApiController(
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun upgradeSourceVersion(
     @Body sourceIdRequestBody: SourceIdRequestBody,
@@ -228,12 +241,13 @@ open class SourceApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SourceWriteRule::class,
   )
   override fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
