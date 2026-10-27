@@ -965,9 +965,9 @@ temporal:
   ##  temporal.image.pullPolicy The pull policy for the temporal image
   ##  temporal.image.tag The temporal image tag to use
   image:
-    repository: temporalio/auto-setup
+    repository: temporalio/server
     pullPolicy: IfNotPresent
-    tag: "1.27.2"
+    tag: "1.30.8"
 
   ##  temporal.service.type The Kubernetes Service Type
   ##  temporal.service.port The temporal port and exposed kubernetes port
@@ -992,18 +992,6 @@ temporal:
   containerSecurityContext: {}
 
   ##  temporal.extraInitContainers Additional InitContainers to initialize the pod
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraInitContainers:
-  ##   - name: config-loader
-  ##     image: temporalio/auto-setup:1.23
-  ##     command:
-  ##       - /bin/sh
-  ##       - -c
-  ##       - >-
-  ##         find /etc/temporal/config/ -maxdepth 1 -mindepth 1 -exec cp -ar {} /config/ \;
-  ##     volumeMounts:
-  ##       - name: config
-  ##         mountPath: /config
   extraInitContainers: []
 
   ## Configure extra options for the temporal containers' liveness and readiness probes
@@ -1052,23 +1040,9 @@ temporal:
   extraEnv: []
 
   ##  temporal.extraVolumeMounts [array] Additional volumeMounts for temporal container(s).
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraVolumeMounts:
-  ##   - name: tmpdir
-  ##     mountPath: /tmp
-  ##   - name: config
-  ##     mountPath: /etc/temporal/config
-  ##
   extraVolumeMounts: []
 
   ##  temporal.extraVolumes [array] Additional volumes for temporal pod(s).
-  ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
-  ## extraVolumes:
-  ##   - name: tmpdir
-  ##     emptyDir: {}
-  ##  - name: config
-  ##    emptyDir: {}
-  ##
   extraVolumes: []
 
   ## Temporal resource requests and limits
