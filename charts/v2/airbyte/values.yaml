@@ -2920,7 +2920,7 @@ stiggSidecar:
   image:
     repository: public.ecr.aws/stigg/sidecar
     pullPolicy: IfNotPresent
-    tag: 3.101.0
+    tag: 10.1.1
 
   service:
     type: ClusterIP
