@@ -264,6 +264,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
           privateLinks = mockk(),
           connectionEvents = events,
           actorRepository = mockk(),
+          attempts = mockk(),
         )
       val handlerConstructor = ConnectionsHandler::class.java.declaredConstructors.single { !it.isSynthetic }
       val handler =

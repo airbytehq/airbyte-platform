@@ -256,6 +256,7 @@ abstract class CheckCommandAuthorizationHttpContract {
           privateLinks = mockk(),
           connectionEvents = mockk(),
           actorRepository = actorRepository,
+          attempts = mockk(),
         )
       val commands =
         spyk(

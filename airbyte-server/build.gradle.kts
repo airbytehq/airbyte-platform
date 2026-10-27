@@ -142,6 +142,7 @@ dependencies {
   testFixturesImplementation(project(":oss:airbyte-config:config-models"))
   testFixturesImplementation(project(":oss:airbyte-data"))
   testFixturesImplementation(project(":oss:airbyte-domain:services"))
+  testFixturesImplementation(project(":oss:airbyte-persistence:job-persistence"))
   testFixturesImplementation(project(":oss:airbyte-domain:models"))
   testFixturesImplementation(project(":oss:airbyte-api:server-api"))
   testFixturesImplementation(project(":oss:airbyte-db:jooq"))

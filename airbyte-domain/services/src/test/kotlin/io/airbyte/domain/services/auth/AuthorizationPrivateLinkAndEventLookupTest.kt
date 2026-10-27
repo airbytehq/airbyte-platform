@@ -65,6 +65,7 @@ class AuthorizationPrivateLinkAndEventLookupTest {
       privateLinks = privateLinks,
       connectionEvents = events,
       actorRepository = mockk(),
+      attempts = mockk(),
     )
 
   private val link =

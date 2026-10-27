@@ -269,6 +269,7 @@ abstract class WriteDiscoverCatalogAuthorizationHttpContract {
           privateLinks = mockk(),
           connectionEvents = mockk(),
           actorRepository = actors,
+          attempts = mockk(),
         )
       val converterConstructor = CatalogConverter::class.java.declaredConstructors.single { !it.isSynthetic }
       val converter =

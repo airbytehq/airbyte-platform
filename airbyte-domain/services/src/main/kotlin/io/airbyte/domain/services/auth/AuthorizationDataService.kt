@@ -10,6 +10,7 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.AttemptsRepository
 import io.airbyte.data.repositories.AuthorizationCommandRepository
 import io.airbyte.data.repositories.GroupRepository
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
@@ -59,6 +60,7 @@ class AuthorizationDataService(
   private val privateLinks: PrivateLinkService,
   private val connectionEvents: ConnectionTimelineEventService,
   private val actorRepository: ActorRepository,
+  private val attempts: AttemptsRepository,
 ) {
   fun workspaceAndOrganization(workspaceId: UUID): WorkspaceAndOrganization {
     val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) }
@@ -137,7 +139,26 @@ class AuthorizationDataService(
     return workspaceAndOrganization(workspaceId)
   }
 
-  fun jobWorkspaceAndOrganization(jobId: Long): WorkspaceAndOrganization {
+  fun jobWorkspaceAndOrganization(jobId: Long): WorkspaceAndOrganization = connectionWorkspaceAndOrganization(replicationJobConnectionId(jobId))
+
+  fun savedAttemptConnectionId(
+    jobId: Long,
+    attemptNumber: Int,
+  ): UUID {
+    val connectionId = replicationJobConnectionId(jobId)
+    val attempt = attempts.findByJobIdAndAttemptNumber(jobId, attemptNumber.toLong()) ?: throw AuthorizationResourceNotFoundException()
+    requireResource(attempt.id != null && attempt.jobId == jobId && attempt.attemptNumber == attemptNumber.toLong())
+    return connectionId
+  }
+
+  fun savedConnectionWorkspaceAndOrganization(connectionId: UUID): WorkspaceAndOrganization {
+    val owner = connectionWorkspaceAndOrganization(connectionId)
+    requireResource(workspaceAndOrganization(owner.workspaceId) == owner)
+    organization(owner.organizationId)
+    return owner
+  }
+
+  private fun replicationJobConnectionId(jobId: Long): UUID {
     val job = jobs.findById(jobId) ?: throw AuthorizationResourceNotFoundException()
     requireResource(job.id == jobId && job.configType in Job.REPLICATION_TYPES)
     val connectionId =
@@ -146,7 +167,7 @@ class AuthorizationDataService(
       } catch (_: IllegalArgumentException) {
         throw AuthorizationResourceNotFoundException()
       }
-    return connectionWorkspaceAndOrganization(connectionId)
+    return connectionId
   }
 
   fun permissionTarget(permissionId: UUID): AuthorizationTarget {

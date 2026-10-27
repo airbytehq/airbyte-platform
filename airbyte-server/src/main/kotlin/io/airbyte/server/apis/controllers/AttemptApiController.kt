@@ -24,6 +24,8 @@ import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.airbyte.server.apis.requireBody
+import io.airbyte.server.auth.SaveAttemptStatsRule
+import io.airbyte.server.auth.SaveAttemptStreamMetadataRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -83,7 +85,8 @@ class AttemptApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SaveAttemptStatsRule::class,
   )
   override fun saveStats(
     @Body requestBody: SaveStatsRequestBody,
@@ -92,7 +95,8 @@ class AttemptApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SaveAttemptStreamMetadataRule::class,
   )
   override fun saveStreamMetadata(
     @Body requestBody: SaveStreamAttemptMetadataRequestBody?,

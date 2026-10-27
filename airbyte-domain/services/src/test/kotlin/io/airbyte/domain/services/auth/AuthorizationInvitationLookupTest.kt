@@ -55,6 +55,7 @@ class AuthorizationInvitationLookupTest {
       privateLinks = mockk(),
       connectionEvents = mockk(),
       actorRepository = mockk(),
+      attempts = mockk(),
     )
 
   @Test

@@ -80,6 +80,8 @@ class RouteAccessCoverageTest {
         context.registerSingleton(CheckCommandRule::class.java, mockkClass(CheckCommandRule::class, relaxed = true))
         context.registerSingleton(GetConnectionEventRule::class.java, mockkClass(GetConnectionEventRule::class, relaxed = true))
         context.registerSingleton(WriteDiscoverCatalogResultRule::class.java, mockkClass(WriteDiscoverCatalogResultRule::class, relaxed = true))
+        context.registerSingleton(SaveAttemptStatsRule::class.java, mockkClass(SaveAttemptStatsRule::class, relaxed = true))
+        context.registerSingleton(SaveAttemptStreamMetadataRule::class.java, mockkClass(SaveAttemptStreamMetadataRule::class, relaxed = true))
         context.registerSingleton(AuthorizationInterceptor::class.java, mockkClass(AuthorizationInterceptor::class, relaxed = true))
         context.start()
         val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
@@ -121,7 +123,14 @@ class RouteAccessCoverageTest {
           },
         )
         assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.migration == RouteMigration.SHARED })
-        assertTrue(entries.any { it.path == "/api/v1/attempt/save_stats" && it.roles == listOf("isAuthenticated()") })
+        for (path in listOf("save_stats", "save_stream_metadata")) {
+          assertTrue(
+            entries.any {
+              it.path == "/api/v1/attempt/$path" && it.migration == RouteMigration.SHARED &&
+                it.roles == listOf("isAuthenticated()")
+            },
+          )
+        }
         assertFalse(entries.any { it.implementation.contains("wrapped") })
         writeReportAndCheckContract(entries, "oss-${if (securityEnabled) "authenticated" else "no-auth"}", securityEnabled)
       }

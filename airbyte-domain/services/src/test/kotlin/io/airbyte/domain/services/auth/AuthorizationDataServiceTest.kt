@@ -50,6 +50,7 @@ class AuthorizationDataServiceTest {
       privateLinks = mockk(),
       connectionEvents = mockk(),
       actorRepository = actorRepository,
+      attempts = mockk(),
     )
 
   @Test
