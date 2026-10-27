@@ -33,6 +33,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.WriteDiscoverCatalogResultRule
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -238,11 +239,12 @@ open class SourceApiController(
     @Body partialSourceUpdate: PartialSourceUpdate,
   ): SourceRead = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WriteDiscoverCatalogResultRule::class,
   )
   override fun writeDiscoverCatalogResult(
     @Body sourceDiscoverSchemaWriteRequestBody: SourceDiscoverSchemaWriteRequestBody,

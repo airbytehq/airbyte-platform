@@ -28,7 +28,10 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
@@ -50,6 +53,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
+import java.util.Optional
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -208,11 +212,21 @@ internal class SourceApiControllerTest {
   fun testWriteDiscoverCatalogResult() {
     every { sourceHandler.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = UUID.randomUUID())
 
+    val sourceId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val actors = mockk<ActorRepository>()
+    every { actors.findSourceWorkspaceId(sourceId) } returns Optional.of(workspaceId)
+    context.registerSingleton(ActorRepository::class.java, actors)
+    val workspaces = mockk<WorkspaceService>()
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withOrganizationId(UUID.randomUUID())
+    context.registerSingleton(WorkspaceService::class.java, workspaces)
+
     val path = "/api/v1/sources/write_discover_catalog_result"
     assertStatus(
       HttpStatus.OK,
       client.status(
-        HttpRequest.POST(path, SourceDiscoverSchemaWriteRequestBody(catalog = AirbyteCatalog(streams = emptyList()), sourceId = UUID.randomUUID())),
+        HttpRequest.POST(path, SourceDiscoverSchemaWriteRequestBody(catalog = AirbyteCatalog(streams = emptyList()), sourceId = sourceId)),
       ),
     )
   }

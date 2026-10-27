@@ -85,6 +85,37 @@ class ActorRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `source ownership projection excludes destinations and accepts saved sources without reading configuration`() {
+    for (type in listOf(ActorType.source, ActorType.destination)) {
+      for (tombstone in listOf(false, true)) {
+        val actor =
+          actorRepository.save(
+            Actor(
+              workspaceId = UUID.randomUUID(),
+              actorDefinitionId = UUID.randomUUID(),
+              name = "saved-$type",
+              configuration = Jsons.jsonNode(mapOf("password" to "stored-config")),
+              actorType = type,
+              tombstone = tombstone,
+            ),
+          )
+        assertEquals(
+          if (type ==
+            ActorType.source
+          ) {
+            Optional.of(actor.workspaceId)
+          } else {
+            Optional.empty()
+          },
+          actorRepository.findSourceWorkspaceId(actor.id!!),
+        )
+      }
+    }
+    assertTrue(actorRepository.findSourceWorkspaceId(UUID.randomUUID()).isEmpty)
+    assertTrue(actorRepository.findSourceWorkspaceId(UUID(0, 0)).isEmpty)
+  }
+
+  @Test
   fun `ordinary entity updates preserve independently written enablements`() {
     for (type in listOf(ActorType.source, ActorType.destination)) {
       val actor =

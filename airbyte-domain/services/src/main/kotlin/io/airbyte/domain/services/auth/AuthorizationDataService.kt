@@ -74,6 +74,11 @@ class AuthorizationDataService(
     return WorkspaceAndOrganization(actor.workspaceId, organizationId)
   }
 
+  fun savedSourceWorkspaceAndOrganization(sourceId: UUID): WorkspaceAndOrganization {
+    val workspaceId = actorRepository.findSourceWorkspaceId(sourceId).orElseThrow { AuthorizationResourceNotFoundException() }
+    return workspaceAndOrganization(workspaceId)
+  }
+
   fun sourceWorkspaceAndOrganization(sourceId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(sourceId)
 
   fun destinationWorkspaceAndOrganization(destinationId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(destinationId)

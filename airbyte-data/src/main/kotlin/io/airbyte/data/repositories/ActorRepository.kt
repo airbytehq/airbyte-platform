@@ -17,6 +17,9 @@ interface ActorRepository : PageableRepository<Actor, UUID> {
   @Query("SELECT * FROM Actor a WHERE a.id = :actorId")
   fun findByActorId(actorId: UUID): Actor?
 
+  @Query("SELECT workspace_id FROM actor WHERE id = :sourceId AND actor_type = 'source'")
+  fun findSourceWorkspaceId(sourceId: UUID): Optional<UUID>
+
   @Query("SELECT actor_definition_id FROM actor WHERE id = :actorId AND workspace_id = :workspaceId")
   fun findActorDefinitionIdByIdAndWorkspaceId(
     actorId: UUID,

@@ -122,6 +122,7 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(libs.micronaut.http.client)
 
+  testImplementation(libs.okhttp)
   testRuntimeOnly(libs.junit.jupiter.engine)
 
   testFixturesApi(project(":oss:airbyte-commons-auth"))
@@ -129,6 +130,7 @@ dependencies {
   testFixturesImplementation(libs.micronaut.http.server.netty)
   testFixturesImplementation(libs.micronaut.security)
   testFixturesImplementation(libs.bundles.micronaut.data.jdbc)
+  testFixturesImplementation(libs.airbyte.protocol)
   testFixturesImplementation(libs.junit.jupiter.api)
   testFixturesImplementation(libs.mockk)
   testFixturesImplementation(libs.jackson.databind)

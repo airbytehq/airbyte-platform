@@ -79,6 +79,7 @@ class RouteAccessCoverageTest {
           }
         context.registerSingleton(CheckCommandRule::class.java, mockkClass(CheckCommandRule::class, relaxed = true))
         context.registerSingleton(GetConnectionEventRule::class.java, mockkClass(GetConnectionEventRule::class, relaxed = true))
+        context.registerSingleton(WriteDiscoverCatalogResultRule::class.java, mockkClass(WriteDiscoverCatalogResultRule::class, relaxed = true))
         context.registerSingleton(AuthorizationInterceptor::class.java, mockkClass(AuthorizationInterceptor::class, relaxed = true))
         context.start()
         val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
@@ -111,6 +112,12 @@ class RouteAccessCoverageTest {
           entries.any {
             it.path == "/api/v1/connections/events/get" && it.migration == RouteMigration.SHARED &&
               it.roles == listOf("isAuthenticated()") && it.implementation.endsWith("ConnectionApiController#getConnectionEvent")
+          },
+        )
+        assertTrue(
+          entries.any {
+            it.path == "/api/v1/sources/write_discover_catalog_result" && it.migration == RouteMigration.SHARED &&
+              it.roles == listOf("isAuthenticated()") && it.implementation.endsWith("SourceApiController#writeDiscoverCatalogResult")
           },
         )
         assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.migration == RouteMigration.SHARED })

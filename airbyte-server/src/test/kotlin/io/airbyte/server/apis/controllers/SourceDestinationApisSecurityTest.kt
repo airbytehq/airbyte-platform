@@ -25,8 +25,11 @@ import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.config.DestinationCatalog
 import io.airbyte.config.DestinationCatalogWithId
+import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.DestinationCatalogId
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -70,6 +73,15 @@ internal class SourceDestinationApisSecurityTest {
   @Requires(property = "spec.name", value = SPEC)
   @Factory
   class TestFactory {
+    @Singleton
+    @Primary
+    fun authorizationDataService(): AuthorizationDataService {
+      val resourceId = UUID.fromString(id)
+      return mockk {
+        every { savedSourceWorkspaceAndOrganization(resourceId) } returns WorkspaceAndOrganization(resourceId, resourceId)
+      }
+    }
+
     @Singleton
     @Primary
     fun sourceHandler(): SourceHandler =
@@ -212,7 +224,7 @@ internal class SourceDestinationApisSecurityTest {
         Route("/api/v1/sources/search", AuthRoleConstants.AUTHENTICATED_USER, emptyMap()),
         Route("/api/v1/sources/update", SOURCE_EDITOR, sourceUpdate),
         Route("/api/v1/sources/upgrade_version", SOURCE_EDITOR, mapOf("sourceId" to id)),
-        Route("/api/v1/sources/write_discover_catalog_result", AuthRoleConstants.AUTHENTICATED_USER, mapOf("catalog" to emptyCatalog)),
+        Route("/api/v1/sources/write_discover_catalog_result", AuthRoleConstants.DATAPLANE, mapOf("sourceId" to id, "catalog" to emptyCatalog)),
         Route("/api/v1/destinations/check_connection", DESTINATION_EDITOR, mapOf("destinationId" to id)),
         Route("/api/v1/destinations/check_connection_for_update", DESTINATION_EDITOR, destinationUpdate),
         Route(
@@ -306,7 +318,9 @@ private fun destinationCatalog() = DestinationCatalogWithId(DestinationCatalogId
 @Singleton
 class SourceDestinationApisAuthenticationFetcher : AuthenticationFetcher<HttpRequest<*>> {
   override fun fetchAuthentication(request: HttpRequest<*>): Publisher<Authentication> {
-    val roles = listOfNotNull(AuthRoleConstants.AUTHENTICATED_USER, request.headers[TEST_ROLES_HEADER]).distinct()
-    return Flux.just(Authentication.build("source-destination-apis-security-test-user", roles))
+    val role = request.headers[TEST_ROLES_HEADER] ?: AuthRoleConstants.AUTHENTICATED_USER
+    val roles = listOf(AuthRoleConstants.AUTHENTICATED_USER, role).distinct()
+    val claims = if (role == AuthRoleConstants.DATAPLANE) mapOf(TokenType.INTERNAL_CLIENT.toClaim()) else emptyMap()
+    return Flux.just(Authentication.build(role, roles, claims))
   }
 }
