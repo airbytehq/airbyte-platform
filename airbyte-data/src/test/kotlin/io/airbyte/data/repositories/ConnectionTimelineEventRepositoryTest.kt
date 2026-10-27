@@ -10,6 +10,8 @@ import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -77,6 +79,32 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
     assert(persistedEvent.jobId == jobId)
 
     connectionTimelineEventRepository.deleteById(saved.id!!)
+  }
+
+  @Test
+  fun `event ownership lookup returns only saved parent for requested event`() {
+    val firstConnection = UUID.randomUUID()
+    val secondConnection = UUID.randomUUID()
+    val first =
+      connectionTimelineEventRepository.save(
+        ConnectionTimelineEvent(
+          connectionId = firstConnection,
+          eventType = "SYNC_SUCCEEDED",
+          summary = "{\"recordsLoaded\":7}",
+          userId = UUID.randomUUID(),
+          createdAt = OffsetDateTime.now(),
+        ),
+      )
+    val second =
+      connectionTimelineEventRepository.save(
+        ConnectionTimelineEvent(connectionId = secondConnection, eventType = "SYNC_FAILED", createdAt = OffsetDateTime.now()),
+      )
+
+    assertEquals(firstConnection, connectionTimelineEventRepository.findConnectionIdByEventId(first.id!!).get())
+    assertEquals(secondConnection, connectionTimelineEventRepository.findConnectionIdByEventId(second.id!!).get())
+    assertTrue(connectionTimelineEventRepository.findConnectionIdByEventId(UUID.randomUUID()).isEmpty)
+    connectionTimelineEventRepository.deleteById(first.id!!)
+    connectionTimelineEventRepository.deleteById(second.id!!)
   }
 
   @Nested

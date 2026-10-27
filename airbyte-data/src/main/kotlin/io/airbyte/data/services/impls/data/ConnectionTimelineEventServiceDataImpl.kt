@@ -15,6 +15,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -50,6 +51,8 @@ class ConnectionTimelineEventServiceDataImpl(
   }
 
   override fun getEvent(eventId: UUID): ConnectionTimelineEvent = repository.findById(eventId).get()
+
+  override fun findConnectionIdForEvent(eventId: UUID): Optional<UUID> = repository.findConnectionIdByEventId(eventId)
 
   override fun listEvents(
     connectionId: UUID,

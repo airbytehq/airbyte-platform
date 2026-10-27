@@ -8,7 +8,6 @@ import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.util.Optional
 import java.util.UUID
 
 class AuthorizationPrivateLinkAndEventLookupTest {
@@ -82,7 +82,7 @@ class AuthorizationPrivateLinkAndEventLookupTest {
     every { privateLinks.getPrivateLink(id) } returns link
     every { workspaces.getStandardWorkspaceNoSecrets(workspace, false) } returns
       StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(organization)
-    every { events.getEvent(id) } returns ConnectionTimelineEvent(id = id, connectionId = connection, eventType = "SYNC_SUCCEEDED")
+    every { events.findConnectionIdForEvent(id) } returns Optional.of(connection)
     every { connections.getStandardSync(connection) } returns
       StandardSync().withConnectionId(connection).withSourceId(source).withDestinationId(destination)
     for (actor in listOf(source, destination)) {
@@ -151,6 +151,12 @@ class AuthorizationPrivateLinkAndEventLookupTest {
   }
 
   @Test
+  fun `connection event authorization never reads payload or user identifiers`() {
+    assertEquals(WorkspaceAndOrganization(workspace, organization), service.connectionEventWorkspaceAndOrganization(id, connection))
+    verify(exactly = 0) { events.getEvent(any()) }
+  }
+
+  @Test
   fun `connection event resolves its saved parent and reads changed ownership on every call`() {
     assertEquals(WorkspaceAndOrganization(workspace, organization), service.connectionEventWorkspaceAndOrganization(id, connection))
 
@@ -162,7 +168,7 @@ class AuthorizationPrivateLinkAndEventLookupTest {
     assertEquals(WorkspaceAndOrganization(movedWorkspace, movedOrganization), service.connectionEventWorkspaceAndOrganization(id, connection))
 
     val movedConnection = UUID.randomUUID()
-    every { events.getEvent(id) } returns ConnectionTimelineEvent(id = id, connectionId = movedConnection, eventType = "SYNC_SUCCEEDED")
+    every { events.findConnectionIdForEvent(id) } returns Optional.of(movedConnection)
     every { connections.getStandardSync(movedConnection) } returns
       StandardSync().withConnectionId(movedConnection).withSourceId(source).withDestinationId(destination)
     assertEquals(WorkspaceAndOrganization(movedWorkspace, movedOrganization), service.connectionEventWorkspaceAndOrganization(id, movedConnection))
@@ -171,16 +177,14 @@ class AuthorizationPrivateLinkAndEventLookupTest {
 
   @Test
   fun `missing connection event becomes resource not found`() {
-    every { events.getEvent(id) } throws NoSuchElementException("event missing")
+    every { events.findConnectionIdForEvent(id) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
   }
 
   @Test
-  fun `connection event with absent or wrong saved identity fails before parent lookup`() {
-    for (savedId in listOf(null, UUID.randomUUID())) {
-      every { events.getEvent(id) } returns ConnectionTimelineEvent(id = savedId, connectionId = connection, eventType = "SYNC_SUCCEEDED")
-      assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-    }
+  fun `connection event without saved parent fails before parent lookup`() {
+    every { events.findConnectionIdForEvent(id) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
     verify(exactly = 0) { connections.getStandardSync(any()) }
     verify(exactly = 0) { actors.getIdsForActors(any()) }
   }
@@ -190,7 +194,7 @@ class AuthorizationPrivateLinkAndEventLookupTest {
     val otherConnection = UUID.randomUUID()
     every { connections.getStandardSync(otherConnection) } returns
       StandardSync().withConnectionId(otherConnection).withSourceId(source).withDestinationId(destination)
-    every { events.getEvent(id) } returns ConnectionTimelineEvent(id = id, connectionId = otherConnection, eventType = "SYNC_SUCCEEDED")
+    every { events.findConnectionIdForEvent(id) } returns Optional.of(otherConnection)
 
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
     verify(exactly = 0) { connections.getStandardSync(any()) }
@@ -227,10 +231,10 @@ class AuthorizationPrivateLinkAndEventLookupTest {
   @Test
   fun `connection event parent and actor dependency errors propagate unchanged`() {
     val eventFailure = IOException("events unavailable")
-    every { events.getEvent(id) } throws eventFailure
+    every { events.findConnectionIdForEvent(id) } throws eventFailure
     assertSame(eventFailure, assertThrows(IOException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) })
 
-    every { events.getEvent(id) } returns ConnectionTimelineEvent(id = id, connectionId = connection, eventType = "SYNC_SUCCEEDED")
+    every { events.findConnectionIdForEvent(id) } returns Optional.of(connection)
     val connectionFailure = IOException("connections unavailable")
     every { connections.getStandardSync(connection) } throws connectionFailure
     assertSame(connectionFailure, assertThrows(IOException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) })

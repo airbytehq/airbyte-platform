@@ -513,9 +513,10 @@ internal class ConnectionApisSecurityTest {
     @JvmStatic
     fun routes() = routes
 
-    // routes open to any authenticated caller have no role to withhold
+    // Routes open to any authenticated caller have no role to withhold.
+    // The event route checks saved ownership in its dedicated HTTP contract, which supplies a saved event.
     @JvmStatic
-    fun securedRoutes() = routes.filter { it.allowedRole != AUTHENTICATED }
+    fun securedRoutes() = routes.filter { it.allowedRole != AUTHENTICATED && it.path != "$V1/connections/events/get" }
 
     @JvmStatic
     fun routesWithRequiredFields() = routes.filter { it.requiresBody }

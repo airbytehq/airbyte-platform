@@ -61,6 +61,7 @@ import io.airbyte.commons.server.handlers.StreamRefreshesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.ConnectionService
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.GetConnectionEventRule
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpStatus
@@ -275,11 +276,12 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GetConnectionEventRule::class,
   )
   override fun getConnectionEvent(
     @Body connectionEventIdRequestBody:

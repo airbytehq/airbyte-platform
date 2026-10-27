@@ -19,8 +19,13 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 
@@ -36,6 +41,22 @@ internal class ConnectionTimelineEventServiceDataImplTest {
         repository = repository,
         mapper = MoreMappers.initMapper(),
       )
+  }
+
+  @Test
+  fun `ownership lookup preserves saved parent absence and failures without reading full event`() {
+    val eventId = UUID.randomUUID()
+    val connectionId = UUID.randomUUID()
+    every { repository.findConnectionIdByEventId(eventId) } returns Optional.of(connectionId)
+    assertEquals(connectionId, service.findConnectionIdForEvent(eventId).get())
+
+    every { repository.findConnectionIdByEventId(eventId) } returns Optional.empty()
+    assertTrue(service.findConnectionIdForEvent(eventId).isEmpty)
+
+    val failure = IOException("event ownership unavailable")
+    every { repository.findConnectionIdByEventId(eventId) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.findConnectionIdForEvent(eventId) })
+    verify(exactly = 0) { repository.findById(any()) }
   }
 
   @Test

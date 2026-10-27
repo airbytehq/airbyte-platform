@@ -107,15 +107,13 @@ class AuthorizationDataService(
     connectionEventId: UUID,
     expectedConnectionId: UUID,
   ): WorkspaceAndOrganization {
-    val event =
-      try {
-        connectionEvents.getEvent(connectionEventId)
-      } catch (_: NoSuchElementException) {
-        throw AuthorizationResourceNotFoundException()
-      }
-    requireResource(event.id == connectionEventId && event.connectionId == expectedConnectionId)
-    return connectionWorkspaceAndOrganization(event.connectionId)
+    val connectionId = connectionEventConnectionId(connectionEventId)
+    requireResource(connectionId == expectedConnectionId)
+    return connectionWorkspaceAndOrganization(connectionId)
   }
+
+  fun connectionEventConnectionId(connectionEventId: UUID): UUID =
+    connectionEvents.findConnectionIdForEvent(connectionEventId).orElseThrow { AuthorizationResourceNotFoundException() }
 
   fun connectionWorkspaceAndOrganization(connectionId: UUID): WorkspaceAndOrganization {
     val connection = resource { connections.getStandardSync(connectionId) }

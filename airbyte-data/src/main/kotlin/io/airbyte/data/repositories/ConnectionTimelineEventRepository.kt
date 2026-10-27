@@ -13,10 +13,14 @@ import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
 import java.time.OffsetDateTime
+import java.util.Optional
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimelineEvent, UUID> {
+  @Query("SELECT connection_id FROM connection_timeline_event WHERE id = :eventId")
+  fun findConnectionIdByEventId(eventId: UUID): Optional<UUID>
+
   @Query(
     """
         SELECT * FROM connection_timeline_event

@@ -9,6 +9,7 @@ import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.shared.ConnectionEvent
 import java.time.OffsetDateTime
+import java.util.Optional
 import java.util.UUID
 
 interface ConnectionTimelineEventService {
@@ -30,6 +31,8 @@ interface ConnectionTimelineEventService {
   ): ConnectionTimelineEvent
 
   fun getEvent(eventId: UUID): ConnectionTimelineEvent
+
+  fun findConnectionIdForEvent(eventId: UUID): Optional<UUID>
 
   fun listEvents(
     connectionId: UUID,
