@@ -24,7 +24,6 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.jackson.kotlin)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
-  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)

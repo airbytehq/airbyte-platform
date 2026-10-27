@@ -12,8 +12,6 @@ dependencies {
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
-  implementation(project(":oss:airbyte-db:jooq"))
-  implementation(project(":oss:airbyte-db:db-lib"))
 
   implementation(libs.google.cloud.storage)
   implementation(libs.bundles.micronaut.kotlin)
