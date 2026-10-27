@@ -11,6 +11,7 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
 import io.airbyte.commons.server.handlers.helpers.validateWorkspace
 import io.airbyte.commons.server.support.AuthenticationId
@@ -111,12 +112,12 @@ open class ResourceBootstrapHandler(
             .withPermissionId(uuidSupplier.get()),
         )
       }.onFailure { e ->
-        when (e) {
-          is PermissionRedundantException ->
-            logger.info {
-              "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}"
-            }
-          else -> throw e
+        if (e is PermissionRedundantException || (e is ConflictException && e.cause is PermissionRedundantException)) {
+          logger.info {
+            "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}"
+          }
+        } else {
+          throw e
         }
       }
 

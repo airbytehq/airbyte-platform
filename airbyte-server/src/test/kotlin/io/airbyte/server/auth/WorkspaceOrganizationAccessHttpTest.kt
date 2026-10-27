@@ -27,10 +27,12 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
@@ -113,6 +115,8 @@ internal class WorkspaceOrganizationAccessHttpTest {
         workspaceService,
         organizationService,
         permissionHandler,
+        permissionService,
+        actorRepository,
         connectionService,
         sourceService,
         destinationService,
@@ -125,7 +129,9 @@ internal class WorkspaceOrganizationAccessHttpTest {
       every { workspaceService.getStandardWorkspaceFromConnection(connectionId, any()) } returns workspace
       every { organizationService.getActiveOrganization(organizationId) } returns
         Optional.of(Organization().withOrganizationId(organizationId))
-      every { connectionService.getStandardSync(connectionId) } returns StandardSync().withSourceId(sourceId).withDestinationId(destinationId)
+      every { connectionService.getStandardSync(connectionId) } returns
+        StandardSync().withConnectionId(connectionId).withSourceId(sourceId).withDestinationId(destinationId)
+      every { actorRepository.findSourceWorkspaceId(sourceId) } returns Optional.of(workspaceId)
       every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withWorkspaceId(workspaceId)
       every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(workspaceId)
       every { ffClient.boolVariation(HydrateLimits, Workspace(workspaceId)) } returns false
@@ -180,6 +186,8 @@ internal class WorkspaceOrganizationAccessHttpTest {
   @ValueSource(booleans = [false, true])
   fun `include tombstone does not grant access to another workspace`(includeTombstone: Boolean) {
     every { WorkspaceOrganizationAccessTestBeans.permissionHandler.getPermissionsByAuthUserId(AUTH_USER_ID) } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN).withOrganizationId(UUID.randomUUID()))
+    every { WorkspaceOrganizationAccessTestBeans.permissionService.getPermissionsByAuthUserId(AUTH_USER_ID) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN).withOrganizationId(UUID.randomUUID()))
 
     assertEquals(HttpStatus.FORBIDDEN, status("get", mapOf("workspaceId" to workspaceId, "includeTombstone" to includeTombstone)))
@@ -260,6 +268,7 @@ internal class WorkspaceOrganizationAccessHttpTest {
       granted.withWorkspaceId(workspaceId)
     }
     every { WorkspaceOrganizationAccessTestBeans.permissionHandler.getPermissionsByAuthUserId(AUTH_USER_ID) } returns listOf(granted)
+    every { WorkspaceOrganizationAccessTestBeans.permissionService.getPermissionsByAuthUserId(AUTH_USER_ID) } returns listOf(granted)
   }
 
   private fun normalReads(): List<Pair<String, Map<String, Any>>> =
@@ -317,6 +326,36 @@ class WorkspaceOrganizationAccessTestBeans {
   fun permissionHandler(): PermissionHandler = Companion.permissionHandler
 
   @Singleton
+  @Replaces(PermissionService::class)
+  fun permissionService(): PermissionService = Companion.permissionService
+
+  @Singleton
+  @Replaces(OperationPermissions::class)
+  fun operationPermissions(
+    authenticationHeaderResolver: AuthenticationHeaderResolver,
+    currentUserService: CurrentUserService,
+    securityService: SecurityService?,
+    permissionHandler: PermissionHandler,
+  ): OperationPermissions =
+    OperationPermissions(
+      Companion.permissionService,
+      RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler),
+      true,
+    )
+
+  @Singleton
+  @Replaces(WorkspaceService::class)
+  fun workspaceService(): WorkspaceService = Companion.workspaceService
+
+  @Singleton
+  @Replaces(ConnectionService::class)
+  fun connectionService(): ConnectionService = Companion.connectionService
+
+  @Singleton
+  @Replaces(ActorRepository::class)
+  fun actorRepository(): ActorRepository = Companion.actorRepository
+
+  @Singleton
   @Replaces(WorkspaceHelper::class)
   fun workspaceHelper(): WorkspaceHelper = Companion.workspaceHelper()
 
@@ -326,6 +365,8 @@ class WorkspaceOrganizationAccessTestBeans {
 
   companion object {
     val permissionHandler: PermissionHandler = mockk(relaxed = true)
+    val permissionService: PermissionService = mockk()
+    val actorRepository: ActorRepository = mockk()
     val workspaceService: WorkspaceService = mockk()
     val organizationService: OrganizationService = mockk()
     val connectionService: ConnectionService = mockk()

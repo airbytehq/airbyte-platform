@@ -16,6 +16,9 @@ import io.airbyte.config.Permission
 import io.airbyte.data.auth.AirbyteJwtGenerator
 import io.airbyte.data.auth.TokenType
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.services.PermissionService
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -43,7 +46,7 @@ import java.util.UUID
 
 private const val SPEC = "ServiceAccountTokenHttpTest"
 
-// Sends a real service-account token over HTTP. Only the permission lookup and the handler are mocked.
+// Sends a real service-account token through JWT authentication and the shared rule; saved metadata and business work are mocked.
 @MicronautTest(environments = ["test"])
 @Property(name = "spec.name", value = SPEC)
 @Property(name = "micronaut.security.enabled", value = "true")
@@ -61,13 +64,19 @@ internal class ServiceAccountTokenHttpTest {
   private val connectionId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
+  private val sourceId = UUID.randomUUID()
+  private val destinationId = UUID.randomUUID()
 
   @BeforeEach
   fun stub() {
     with(ServiceAccountTokenTestBeans) {
-      clearMocks(permissionHandler, workspaceHelper, stateHandler)
+      clearMocks(permissionHandler, workspaceHelper, stateHandler, permissions, data)
       every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
       every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
+      val owner = WorkspaceAndOrganization(workspaceId, organizationId)
+      every { data.savedConnectionActorIds(connectionId) } returns (sourceId to destinationId)
+      every { data.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
+      every { data.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
       every { stateHandler.getState(any()) } returns ConnectionState(connectionId = connectionId, stateType = ConnectionStateType.NOT_SET)
     }
   }
@@ -76,16 +85,22 @@ internal class ServiceAccountTokenHttpTest {
   fun `a service account token gets its roles from the service account's permissions`() {
     every { ServiceAccountTokenTestBeans.permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE).withServiceAccountId(serviceAccountId))
+    every { ServiceAccountTokenTestBeans.permissions.getPermissionsByServiceAccountId(serviceAccountId) } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE).withServiceAccountId(serviceAccountId))
 
     assertEquals(HttpStatus.OK, getState(serviceAccountToken()))
 
     verify { ServiceAccountTokenTestBeans.permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) }
+    verify { ServiceAccountTokenTestBeans.permissions.getPermissionsByServiceAccountId(serviceAccountId) }
+    verify(exactly = 0) { ServiceAccountTokenTestBeans.permissions.getPermissionsByAuthUserId(any()) }
     verify(exactly = 0) { ServiceAccountTokenTestBeans.permissionHandler.getPermissionsByAuthUserId(any()) }
   }
 
   @Test
   fun `a service account token with a bad signature is rejected`() {
     every { ServiceAccountTokenTestBeans.permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE).withServiceAccountId(serviceAccountId))
+    every { ServiceAccountTokenTestBeans.permissions.getPermissionsByServiceAccountId(serviceAccountId) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE).withServiceAccountId(serviceAccountId))
     val (header, payload, signature) = serviceAccountToken().split(".")
     // Change the first character. Changing the last one may not change the signature.
@@ -98,6 +113,7 @@ internal class ServiceAccountTokenHttpTest {
   @Test
   fun `a service account without permissions is rejected`() {
     every { ServiceAccountTokenTestBeans.permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns emptyList()
+    every { ServiceAccountTokenTestBeans.permissions.getPermissionsByServiceAccountId(serviceAccountId) } returns emptyList()
 
     assertEquals(HttpStatus.FORBIDDEN, assertThrows<HttpClientResponseException> { getState(serviceAccountToken()) }.status)
     verify { ServiceAccountTokenTestBeans.stateHandler wasNot Called }
@@ -129,6 +145,19 @@ class ServiceAccountTokenTestBeans {
   ): AuthenticationFactory = AuthenticationFactory(RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler))
 
   @Singleton
+  @Replaces(AuthorizationDataService::class)
+  fun data(): AuthorizationDataService = Companion.data
+
+  @Singleton
+  @Replaces(PermissionService::class)
+  fun permissions(): PermissionService = Companion.permissions
+
+  @Singleton
+  @Replaces(OperationPermissions::class)
+  fun operationPermissions(): OperationPermissions =
+    OperationPermissions(Companion.permissions, RoleResolver(mockk(), mockk(), mockk(), mockk()), true)
+
+  @Singleton
   @Replaces(PermissionHandler::class)
   fun permissionHandler(): PermissionHandler = Companion.permissionHandler
 
@@ -141,6 +170,8 @@ class ServiceAccountTokenTestBeans {
   fun stateHandler(): StateHandler = Companion.stateHandler
 
   companion object {
+    val data: AuthorizationDataService = mockk()
+    val permissions: PermissionService = mockk()
     val permissionHandler: PermissionHandler = mockk(relaxed = true)
     val workspaceHelper: WorkspaceHelper = mockk()
     val stateHandler: StateHandler = mockk()

@@ -9,7 +9,6 @@ import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.DestinationCoreConfig
 import io.airbyte.api.server.generated.models.SourceCoreConfig
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -27,11 +26,12 @@ import io.micronaut.security.rules.SecurityRule
 open class SchedulerApiController(
   private val schedulerHandler: SchedulerHandler,
 ) : SchedulerApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SchedulerDestinationRule::class,
   )
   override fun executeDestinationCheckConnection(
     @Body destinationCoreConfig: DestinationCoreConfig,
@@ -42,21 +42,23 @@ open class SchedulerApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SchedulerSourceRule::class,
   )
   override fun executeSourceCheckConnection(
     @Body sourceCoreConfig: SourceCoreConfig,
   ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SchedulerSourceRule::class,
   )
   override fun executeSourceDiscoverSchema(
     @Body sourceCoreConfig: SourceCoreConfig,

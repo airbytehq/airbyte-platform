@@ -22,6 +22,7 @@ import io.airbyte.config.helpers.PermissionHelper.definedPermissionGrantsTargetP
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.InactiveUserAccessException
+import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
@@ -84,6 +85,8 @@ open class PermissionHandler(
     return try {
       permissionService.createPermission(permissionCreate)
     } catch (e: InactiveUserAccessException) {
+      throw ConflictException(e.message, e)
+    } catch (e: PermissionRedundantException) {
       throw ConflictException(e.message, e)
     }
   }

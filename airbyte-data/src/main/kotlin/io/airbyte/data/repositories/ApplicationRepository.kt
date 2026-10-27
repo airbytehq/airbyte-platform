@@ -14,6 +14,11 @@ import java.util.UUID
 interface ApplicationRepository : PageableRepository<Application, UUID> {
   fun findByAuthUserId(authUserId: String): List<Application>
 
+  fun existsByAuthUserIdAndId(
+    authUserId: String,
+    applicationId: UUID,
+  ): Boolean
+
   fun findByAuthUserIdAndId(
     authUserId: String,
     applicationId: UUID,

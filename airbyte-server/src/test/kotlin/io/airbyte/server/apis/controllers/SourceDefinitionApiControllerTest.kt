@@ -22,6 +22,7 @@ import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.server.auth.requireCommunityDefinitionForControllerTest
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -78,12 +79,14 @@ internal class SourceDefinitionApiControllerTest {
   }
 
   @Test
-  fun testDeleteSourceDefinitionNoWriteAccess() {
+  fun testDeleteSourceDefinitionKeepsCommunityCustomAccess() {
     val sourceDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(sourceDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
+    every { sourceDefinitionsHandler.deleteSourceDefinition(any()) } returns Unit
     val request = SourceDefinitionIdRequestBody(sourceDefinitionId = sourceDefinitionId)
-    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+    Assertions.assertDoesNotThrow {
+      requireCommunityDefinitionForControllerTest(true, request)
       controller.deleteSourceDefinition(request)
     }
   }
@@ -187,12 +190,14 @@ internal class SourceDefinitionApiControllerTest {
   }
 
   @Test
-  fun testUpdateSourceDefinitionNoWriteAccess() {
+  fun testUpdateSourceDefinitionKeepsCommunityCustomAccess() {
     val sourceDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(sourceDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
     val request = SourceDefinitionUpdate(sourceDefinitionId = sourceDefinitionId, dockerImageTag = "0.1.0", workspaceId = UUID.randomUUID())
-    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+    every { sourceDefinitionsHandler.updateSourceDefinition(any()) } returns sourceDefinitionRead()
+    Assertions.assertDoesNotThrow {
+      requireCommunityDefinitionForControllerTest(true, request)
       controller.updateSourceDefinition(request)
     }
   }

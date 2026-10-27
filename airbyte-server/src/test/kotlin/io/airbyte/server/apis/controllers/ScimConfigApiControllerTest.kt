@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.ScimConfigStatus
 import io.airbyte.api.server.generated.models.ScimIdpProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -27,7 +26,6 @@ import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Status
-import io.micronaut.security.annotation.Secured
 import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
@@ -193,17 +191,13 @@ class ScimConfigApiControllerTest {
   }
 
   @Test
-  fun `all SCIM endpoints require organization admin and only mutations use the SCIM audit provider`() {
+  fun `only SCIM mutations use the SCIM audit provider`() {
     val mutatingEndpointNames = setOf("enableScim", "rotateScimToken", "disableScim")
     val endpointNames = mutatingEndpointNames + "getScimConfig"
     val endpoints = ScimConfigApiController::class.java.declaredMethods.filter { it.name in endpointNames }
 
     assertEquals(endpointNames, endpoints.map { it.name }.toSet())
     endpoints.forEach { endpoint ->
-      assertEquals(
-        listOf(AuthRoleConstants.ORGANIZATION_ADMIN),
-        endpoint.getAnnotation(Secured::class.java).value.toList(),
-      )
       val audit = endpoint.getAnnotation(AuditLogging::class.java)
       if (endpoint.name in mutatingEndpointNames) {
         assertEquals(AuditLoggingProvider.SCIM, audit.provider)

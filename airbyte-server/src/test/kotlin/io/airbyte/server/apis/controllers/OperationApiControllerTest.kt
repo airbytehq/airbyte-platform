@@ -19,6 +19,7 @@ import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -44,6 +45,7 @@ private fun operationRead() =
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
+@Property(name = "controller.response.authorization.fixture", value = "true")
 internal class OperationApiControllerTest {
   @Inject
   lateinit var context: ApplicationContext

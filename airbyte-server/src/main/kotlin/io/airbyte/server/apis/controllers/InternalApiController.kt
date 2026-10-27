@@ -13,6 +13,7 @@ import io.airbyte.commons.server.handlers.JobsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.ForceCleanupConnectionsRule
 import io.airbyte.workload.services.WorkloadService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
@@ -22,6 +23,7 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
@@ -69,9 +71,11 @@ open class InternalApiController(
    */
   @Post("/force_cleanup_connections")
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = ForceCleanupConnectionsRule::class,
   )
   fun forceCleanupConnections(
     @Body forceCleanupConnectionsRequestBody: ForceCleanupConnectionsRequestBody,

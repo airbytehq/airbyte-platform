@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
+import java.util.UUID
 
 /**
  * An Application provides API access on behalf of a User.
@@ -34,6 +35,12 @@ interface ApplicationService {
    * @return a list of Applications.
    */
   fun listApplicationsByUser(user: AuthenticatedUser): List<Application>
+
+  /** Check saved ownership of a Config API application ID without reading credentials or mutating the application. */
+  fun requireApplicationOwner(
+    authUserId: String,
+    applicationId: UUID,
+  )
 
   /**
    * Deletes an Application. The [user] must own the Application for it to be deleted.

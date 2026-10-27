@@ -7,10 +7,12 @@ package io.airbyte.domain.services.auth
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Job
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
+import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AttemptsRepository
@@ -90,6 +92,59 @@ class AuthorizationDataService(
     return WorkspaceAndOrganization(workspaceId, organizationId)
   }
 
+  fun savedWorkspaceAndOrganization(
+    workspaceId: UUID,
+    includeTombstone: Boolean,
+  ): WorkspaceAndOrganization {
+    val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, includeTombstone) }
+    requireResource(workspace.workspaceId == workspaceId)
+    return WorkspaceAndOrganization(workspaceId, workspace.organizationId ?: throw AuthorizationResourceNotFoundException())
+  }
+
+  /** Absence is an explicit create branch; malformed saved ownership and dependency errors still fail. */
+  fun existingWorkspaceAndOrganization(workspaceId: UUID): Optional<WorkspaceAndOrganization> {
+    val workspace =
+      try {
+        workspaces.getStandardWorkspaceNoSecrets(workspaceId, true)
+      } catch (_: io.airbyte.data.ConfigNotFoundException) {
+        return Optional.empty()
+      }
+    requireResource(workspace.workspaceId == workspaceId)
+    return Optional.of(WorkspaceAndOrganization(workspaceId, workspace.organizationId ?: throw AuthorizationResourceNotFoundException()))
+  }
+
+  fun workspaceBySlug(slug: String): WorkspaceAndOrganization {
+    val workspace = resource { workspaces.getWorkspaceBySlug(slug, false) }
+    requireResource(workspace.slug == slug)
+    return WorkspaceAndOrganization(
+      workspace.workspaceId ?: throw AuthorizationResourceNotFoundException(),
+      workspace.organizationId ?: throw AuthorizationResourceNotFoundException(),
+    )
+  }
+
+  /** This workspace read consumes only the connection's source, and explicitly supports tombstones. */
+  fun connectionSourceWorkspaceAndOrganization(
+    connectionId: UUID,
+    includeTombstone: Boolean,
+  ): WorkspaceAndOrganization {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    val sourceId = connection.sourceId ?: throw AuthorizationResourceNotFoundException()
+    val workspaceId = actorRepository.findSourceWorkspaceId(sourceId).orElseThrow { AuthorizationResourceNotFoundException() }
+    return savedWorkspaceAndOrganization(workspaceId, includeTombstone)
+  }
+
+  fun requireWorkspaceDbtConfig(
+    workspaceId: UUID,
+    configId: UUID,
+  ) {
+    val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) }
+    requireResource(workspace.workspaceId == workspaceId)
+    val savedConfigs = workspace.webhookOperationConfigs ?: throw IllegalArgumentException("webhook operations is null.")
+    val configs = Jsons.`object`(savedConfigs, WebhookOperationConfigs::class.java)
+    require(configs.webhookConfigs.any { it.id == configId }) { "No such webhook config id $configId in workspace $workspaceId" }
+  }
+
   fun actorWorkspaceAndOrganization(actorId: UUID): WorkspaceAndOrganization {
     val actor = actors.getIdsForActors(listOf(actorId)).singleOrNull() ?: throw AuthorizationResourceNotFoundException()
     requireResource(actor.actorId == actorId)
@@ -129,6 +184,37 @@ class AuthorizationDataService(
       (connection.destinationId ?: throw AuthorizationResourceNotFoundException())
   }
 
+  /** Historical billing consumes deleted connections, actors and workspaces as well. */
+  fun billingConnectionWorkspaceAndOrganization(connectionId: UUID): WorkspaceAndOrganization {
+    val (sourceId, destinationId) = savedConnectionActorIds(connectionId)
+    val sourceWorkspace = actorRepository.findSourceWorkspaceId(sourceId).orElseThrow { AuthorizationResourceNotFoundException() }
+    val destinationWorkspace = actorRepository.findDestinationWorkspaceId(destinationId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(sourceWorkspace == destinationWorkspace)
+    val owner = savedWorkspaceAndOrganization(sourceWorkspace, true)
+    val definition = savedActorDefinitionId(sourceId, sourceWorkspace)
+    requireActorDefinitionType(definition, true)
+    return owner
+  }
+
+  fun savedConnectionOperationIds(connectionId: UUID): List<UUID> {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    val ids: List<UUID?>? = connection.operationIds
+    return ids.orEmpty().map { it ?: throw AuthorizationResourceNotFoundException() }
+  }
+
+  fun savedSourceCatalogId(connectionId: UUID): Optional<UUID> {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    return Optional.ofNullable(connection.sourceCatalogId)
+  }
+
+  fun savedDestinationCatalogId(connectionId: UUID): Optional<UUID> {
+    val connection = resource { connections.getStandardSync(connectionId) }
+    requireResource(connection.connectionId == connectionId)
+    return Optional.ofNullable(connection.destinationCatalogId)
+  }
+
   /** Match the saved catalog fallback actually read when a sync catalog is updated. */
   fun destinationCatalogForValidation(
     connectionId: UUID,
@@ -156,6 +242,14 @@ class AuthorizationDataService(
     actorId: UUID,
   ): Boolean = actorRepository.catalogWasFetchedByActor(catalogId, actorId)
 
+  fun catalogWasFetchedByAnotherActor(
+    catalogId: UUID,
+    actorId: UUID,
+  ): Boolean = !actorRepository.catalogWasFetchedByActor(catalogId, actorId) && actorRepository.findLatestActorIdByCatalogId(catalogId).isPresent
+
+  fun catalogSourceWorkspaceAndOrganizations(catalogId: UUID): List<WorkspaceAndOrganization> =
+    actorRepository.findSourceWorkspaceIdsByCatalogId(catalogId).map { savedWorkspaceAndOrganization(it, true) }.distinct()
+
   fun requireActorDefinitionType(
     definitionId: UUID,
     source: Boolean,
@@ -163,6 +257,48 @@ class AuthorizationDataService(
     val expected = if (source) ActorType.source else ActorType.destination
     val actual = actorRepository.findDefinitionTypeById(definitionId).orElseThrow { AuthorizationResourceNotFoundException() }
     requireResource(actual == expected)
+  }
+
+  fun requireDefinitionDefaultVersion(definitionId: UUID) {
+    // The default-version endpoint historically fails when the optional version is absent.
+    val version = actors.getDefaultVersionForActorDefinitionIdOptional(definitionId).orElseThrow()
+    requireResource(version.actorDefinitionId == definitionId && version.versionId != null)
+  }
+
+  fun requireSavedActorDefinition(definitionId: UUID) {
+    actorRepository.findDefinitionTypeById(definitionId).orElseThrow { AuthorizationResourceNotFoundException() }
+  }
+
+  fun savedDefinitionVersionParent(versionId: UUID): UUID {
+    val version = resource { actors.getActorDefinitionVersion(versionId) }
+    requireResource(version.versionId == versionId)
+    return version.actorDefinitionId ?: throw AuthorizationResourceNotFoundException()
+  }
+
+  /** Scoped configuration names deliberately retain deleted-actor placeholders. */
+  fun existingSavedActorWorkspaceAndOrganization(actorId: UUID): Optional<WorkspaceAndOrganization> {
+    val source = actorRepository.findSourceWorkspaceId(actorId)
+    val workspace = if (source.isPresent) source else actorRepository.findDestinationWorkspaceId(actorId)
+    return workspace.map { savedWorkspaceAndOrganization(it, true) }
+  }
+
+  /** Grant removal is an exact idempotent filter, including already-removed definitions. */
+  fun requireActorDefinitionTypeIfPresent(
+    definitionId: UUID,
+    source: Boolean,
+  ) {
+    actorRepository.findDefinitionTypeById(definitionId).ifPresent { actual ->
+      requireResource(actual == if (source) ActorType.source else ActorType.destination)
+    }
+  }
+
+  fun organizationCanUseActorDefinition(
+    definitionId: UUID,
+    organizationId: UUID,
+  ): Boolean {
+    val version = actors.getDefaultVersionForActorDefinitionIdOptional(definitionId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(version.actorDefinitionId == definitionId)
+    return actors.scopeCanUseDefinition(definitionId, organizationId, "organization")
   }
 
   fun isAssignedSyncWorkload(
@@ -251,7 +387,7 @@ class AuthorizationDataService(
     attemptNumber: Int,
   ): UUID {
     val connectionId = replicationJobConnectionId(jobId)
-    val attempt = attempts.findByJobIdAndAttemptNumber(jobId, attemptNumber.toLong()) ?: throw AuthorizationResourceNotFoundException()
+    val attempt = attempts.findAuthorizationMetadata(jobId, attemptNumber.toLong()).orElseThrow { AuthorizationResourceNotFoundException() }
     requireResource(attempt.id != null && attempt.jobId == jobId && attempt.attemptNumber == attemptNumber.toLong())
     return connectionId
   }
@@ -264,7 +400,7 @@ class AuthorizationDataService(
   }
 
   fun replicationJobConnectionId(jobId: Long): UUID {
-    val job = jobs.findById(jobId) ?: throw AuthorizationResourceNotFoundException()
+    val job = jobs.findJobMetadataById(jobId).orElseThrow { AuthorizationResourceNotFoundException() }
     requireResource(job.id == jobId && job.configType in Job.REPLICATION_TYPES)
     val connectionId =
       try {
@@ -334,9 +470,9 @@ class AuthorizationDataService(
 
   fun secretStorageTarget(secretStorageId: UUID): AuthorizationTarget {
     val storage = secretStorages.findById(SecretStorageId(secretStorageId)) ?: throw AuthorizationResourceNotFoundException()
-    requireResource(storage.id == SecretStorageId(secretStorageId) && !storage.tombstone)
+    requireResource(storage.id == SecretStorageId(secretStorageId))
     return when (storage.scopeType) {
-      SecretStorageScopeType.WORKSPACE -> AuthorizationTarget.Workspace(workspaceAndOrganization(storage.scopeId))
+      SecretStorageScopeType.WORKSPACE -> AuthorizationTarget.Workspace(savedWorkspaceAndOrganization(storage.scopeId, true))
       SecretStorageScopeType.ORGANIZATION -> AuthorizationTarget.Organization(organization(storage.scopeId))
     }
   }
@@ -349,10 +485,22 @@ class AuthorizationDataService(
   }
 
   fun builderProjectWorkspaceAndOrganization(builderProjectId: UUID): WorkspaceAndOrganization {
-    val project = resource { projects.getConnectorBuilderProject(builderProjectId, false) }
-    requireResource(project.builderProjectId == builderProjectId)
-    val workspaceId = project.workspaceId ?: throw AuthorizationResourceNotFoundException()
+    val project = resource { projects.getConnectorBuilderProjectMetadata(builderProjectId) }
+    requireResource(project.id == builderProjectId)
+    val workspaceId = project.workspace.orElseThrow { AuthorizationResourceNotFoundException() }
     return workspaceAndOrganization(workspaceId)
+  }
+
+  fun commandExistsInWorkspace(
+    commandId: String,
+    owner: WorkspaceAndOrganization,
+  ): Boolean {
+    val saved = commands.findByIdAndOrganizationId(commandId, owner.organizationId)
+    if (saved.isEmpty) return false
+    val command = saved.get()
+    requireResource(command.id == commandId && command.organizationId == owner.organizationId)
+    requireResource(savedWorkspaceAndOrganization(command.workspaceId, true) == owner)
+    return true
   }
 
   fun commandWorkspaceAndOrganization(
@@ -370,6 +518,21 @@ class AuthorizationDataService(
     val subjects = users.listAuthUserIdsForUser(userId).toSet()
     requireResource(subjects.isNotEmpty() && subjects.none(String::isBlank))
     return subjects
+  }
+
+  fun requireUser(userId: UUID) {
+    val user = users.getUser(userId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(user.userId == userId)
+  }
+
+  fun requireAuthUserSubject(authUserId: String) {
+    val user = users.getUserByAuthId(authUserId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(user.authUserId == authUserId && user.userId != null)
+  }
+
+  fun requireUserByEmail(email: String) {
+    val user = users.getUserByEmail(email).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(user.userId != null)
   }
 
   fun invitationTarget(invitationId: UUID): AuthorizationTarget {

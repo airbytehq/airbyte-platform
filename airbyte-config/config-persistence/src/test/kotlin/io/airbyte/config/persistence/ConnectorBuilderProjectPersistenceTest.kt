@@ -24,11 +24,13 @@ import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
+import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
+import io.airbyte.data.services.shared.ConnectorBuilderProjectMetadata
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
@@ -142,6 +144,51 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .isEqualTo(project)
     org.junit.jupiter.api.Assertions
       .assertNotNull(project.updatedAt)
+  }
+
+  @Test
+  fun `authorization project metadata excludes testing values and filters deleted or foreign workspace projects`() {
+    createBaseObjects()
+    val service = connectorBuilderService!!
+    val project = project1!!
+    val source = linkSourceDefinition(project.builderProjectId)
+    val baseVersion = ActorDefinitionServiceJooqImpl(database).getActorDefinitionVersion(source.sourceDefinitionId, "0.0.1").orElseThrow().versionId
+    service.writeBuilderProjectDraft(
+      project.builderProjectId,
+      project.workspaceId,
+      project.name,
+      project.manifestDraft,
+      null,
+      baseVersion,
+      null,
+      null,
+    )
+    service.updateBuilderProjectTestingValues(project.builderProjectId, ObjectMapper().readTree("""{"secret":"sensitive-testing-value"}"""))
+    Assertions
+      .assertThat(
+        service.getConnectorBuilderProjectMetadata(project.builderProjectId),
+      ).isEqualTo(
+        ConnectorBuilderProjectMetadata(
+          project.builderProjectId,
+          Optional.of(project.workspaceId),
+          Optional.of(source.sourceDefinitionId),
+          Optional.of(baseVersion),
+          true,
+        ),
+      )
+    Assertions
+      .assertThat(
+        service
+          .listConnectorBuilderProjectMetadata(mainWorkspace!!)
+          .map {
+            it.id
+          }.toSet(),
+      ).isEqualTo(setOf(project.builderProjectId, project2!!.builderProjectId))
+    Assertions.assertThat(service.listConnectorBuilderProjectMetadata(UUID.randomUUID())).isEmpty()
+    org.junit.jupiter.api
+      .assertThrows<ConfigNotFoundException> { service.getConnectorBuilderProjectMetadata(deletedProject!!.builderProjectId) }
+    org.junit.jupiter.api
+      .assertThrows<ConfigNotFoundException> { service.getConnectorBuilderProjectMetadata(UUID.randomUUID()) }
   }
 
   @Test

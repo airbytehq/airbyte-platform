@@ -244,6 +244,18 @@ class WorkspacePersistence(
       .toList()
   }
 
+  /** Same effective membership query, returning no workspace configuration or credentials. */
+  fun listActiveWorkspaceIdsByUserId(userId: UUID): List<UUID> =
+    database.query { ctx: DSLContext ->
+      ctx
+        .fetch(
+          "SELECT id FROM (${PermissionPersistenceHelper.LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY}) accessible_workspaces",
+          userId,
+          PermissionPersistenceHelper.getGrantingPermissionTypeArray(Permission.PermissionType.WORKSPACE_READER),
+          getSearchKeyword(Optional.empty()),
+        ).map { it.get("id", UUID::class.java) }
+    }
+
   /**
    * List all workspaces readable by user id, returning result ordered by workspace name. Supports
    * pagination and keyword search.

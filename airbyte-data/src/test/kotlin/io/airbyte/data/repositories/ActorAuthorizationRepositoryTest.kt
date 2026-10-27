@@ -67,6 +67,43 @@ class ActorAuthorizationRepositoryTest : AbstractConfigRepositoryTest() {
     assertTrue(actors.catalogWasFetchedByActor(catalog, second))
     assertFalse(actors.catalogWasFetchedByActor(catalog, unrelated))
     assertFalse(actors.catalogWasFetchedByActor(UUID(0, 0), first))
+
+    val foreignOrganization = organizationRepository.save(Organization(name = "other owner", email = "other@example.com")).id!!
+    val foreignWorkspace =
+      workspaceRepository
+        .save(
+          Workspace(
+            name = "other catalog fetcher",
+            slug = UUID.randomUUID().toString(),
+            dataplaneGroupId = group,
+            organizationId = foreignOrganization,
+          ),
+        ).id!!
+    jooqDslContext.execute("UPDATE actor SET workspace_id = ? WHERE id = ?", foreignWorkspace, second)
+    jooqDslContext.execute(
+      "INSERT INTO actor_catalog_fetch_event (id, actor_id, actor_catalog_id, config_hash, actor_version, created_at, modified_at) VALUES (?, ?, ?, 'hash', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+      UUID.randomUUID(),
+      first,
+      catalog,
+    )
+    assertEquals(setOf(workspace, foreignWorkspace), actors.findSourceWorkspaceIdsByCatalogId(catalog).toSet())
+    assertEquals(2, actors.findSourceWorkspaceIdsByCatalogId(catalog).size)
+    assertTrue(actors.findSourceWorkspaceIdsByCatalogId(UUID(0, 0)).isEmpty())
+
+    val destination = actor("destination").first
+    val destinationOnlyCatalog = UUID.randomUUID()
+    jooqDslContext.execute(
+      "INSERT INTO actor_catalog (id, catalog, catalog_hash, created_at, catalog_type) VALUES (?, '{}'::jsonb, ?, CURRENT_TIMESTAMP, 'destination_catalog')",
+      destinationOnlyCatalog,
+      UUID.randomUUID().toString().replace("-", ""),
+    )
+    jooqDslContext.execute(
+      "INSERT INTO actor_catalog_fetch_event (id, actor_id, actor_catalog_id, config_hash, actor_version, created_at, modified_at) VALUES (?, ?, ?, 'hash', '1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+      UUID.randomUUID(),
+      destination,
+      destinationOnlyCatalog,
+    )
+    assertTrue(actors.findSourceWorkspaceIdsByCatalogId(destinationOnlyCatalog).isEmpty())
   }
 
   @Test

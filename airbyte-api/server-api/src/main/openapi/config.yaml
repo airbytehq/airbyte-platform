@@ -4333,7 +4333,8 @@ paths:
     post:
       tags:
         - scheduler
-      summary: Run discover schema for a given source a source configuration
+      summary: Run discover schema for a saved source using its configuration
+      description: The sourceId must identify a saved source because the discovery result is written back for that source.
       operationId: executeSourceDiscoverSchema
       requestBody:
         content:
@@ -13162,6 +13163,8 @@ components:
 
     ScopedConfigurationListRequestBody:
       type: object
+      minProperties: 1
+      maxProperties: 1
       properties:
         config_key:
           type: string
@@ -13223,6 +13226,8 @@ components:
       type: object
       required:
         - config_key
+        - resource_id
+        - resource_type
         - scope_id
         - scope_type
       properties:
@@ -14794,8 +14799,6 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
     BuilderProjectForDefinitionResponse:
       type: object
-      required:
-        - builderProjectId
       properties:
         builderProjectId:
           type: string

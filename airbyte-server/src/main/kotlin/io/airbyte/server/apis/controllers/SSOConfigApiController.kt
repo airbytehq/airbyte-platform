@@ -14,7 +14,6 @@ import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
 import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -28,20 +27,24 @@ import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.domain.services.sso.SsoConfigDomainService
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.SsoAdminRule
+import io.airbyte.server.auth.SsoDeleteRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 
 @Controller
 open class SSOConfigApiController(
   private val ssoConfigDomainService: SsoConfigDomainService,
   private val entitlementService: EntitlementService,
 ) : SsoConfigApi {
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoAdminRule::class,
   )
   override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
     entitlementService.ensureEntitled(OrganizationId(getSSOConfigRequestBody.organizationId), SsoEntitlement)
@@ -58,12 +61,13 @@ open class SSOConfigApiController(
     )
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoAdminRule::class,
   )
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoEntitlement)
@@ -87,12 +91,13 @@ open class SSOConfigApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoDeleteRule::class,
   )
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoEntitlement)
@@ -105,12 +110,13 @@ open class SSOConfigApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoAdminRule::class,
   )
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoEntitlement)
@@ -126,12 +132,13 @@ open class SSOConfigApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoAdminRule::class,
   )
   override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(activateSSOConfigRequestBody.organizationId), SsoEntitlement)
@@ -144,12 +151,13 @@ open class SSOConfigApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SSO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SsoAdminRule::class,
   )
   override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)

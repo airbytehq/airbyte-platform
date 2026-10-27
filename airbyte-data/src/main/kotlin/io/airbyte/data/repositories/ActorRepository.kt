@@ -33,6 +33,18 @@ interface ActorRepository : PageableRepository<Actor, UUID> {
     actorId: UUID,
   ): Boolean
 
+  @Query("SELECT actor_id FROM actor_catalog_fetch_event WHERE actor_catalog_id = :catalogId ORDER BY created_at DESC LIMIT 1")
+  fun findLatestActorIdByCatalogId(catalogId: UUID): Optional<UUID>
+
+  @Query(
+    """
+    SELECT DISTINCT a.workspace_id FROM actor_catalog_fetch_event f
+    JOIN actor a ON a.id = f.actor_id
+    WHERE f.actor_catalog_id = :catalogId AND a.actor_type = 'source'
+    """,
+  )
+  fun findSourceWorkspaceIdsByCatalogId(catalogId: UUID): List<UUID>
+
   @Query(
     """
     SELECT EXISTS(

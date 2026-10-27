@@ -50,6 +50,67 @@ private fun implementationMethod(route: UriRouteInfo<*, *>): Method {
 
 private fun normalizePath(path: String): String = path.replace(Regex("\\{[?&][^}]*}"), "").replace(Regex("\\{([^}:]+):[^}]+}"), "{$1}").trimEnd('/')
 
+/** The pre-migration operation set is frozen independently of active annotations. */
+fun assertRemainingProtectedConfigRoutes(
+  inventory: RouteAccessInventory,
+  edition: String,
+) {
+  val expected =
+    RouteAccessEntry::class.java.getResourceAsStream("/auth/remaining-config-route-rules.tsv")!!.bufferedReader().useLines { lines ->
+      lines
+        .filterNot { it.startsWith("#") }
+        .map { it.split('\t') }
+        .filter { it[0] == edition }
+        .associate { "${it[1]} ${it[2]}" to it[3] }
+    }
+  org.junit.jupiter.api.Assertions
+    .assertEquals(if (edition == "oss") 311 else 312, expected.size)
+  val actual =
+    inventory
+      .routes()
+      .filter {
+        it.httpMethodName != "HEAD"
+      }.associateBy { "${it.httpMethodName} ${normalizePath(it.uriMatchTemplate.toString())}" }
+  for ((operation, rule) in expected) {
+    val route = actual[operation] ?: throw AssertionError("Missing frozen operation $operation")
+    val declaration = route.annotationMetadata
+    org.junit.jupiter.api.Assertions.assertEquals(
+      setOf(io.micronaut.security.rules.SecurityRule.IS_AUTHENTICATED),
+      declaration.getValue(Secured::class.java, Array<String>::class.java).orElse(emptyArray()).toSet(),
+      "$operation must reach the typed rule through Micronaut authentication",
+    )
+    org.junit.jupiter.api.Assertions.assertEquals(
+      RouteAccessPolicy.PROTECTED,
+      declaration.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow(),
+      operation,
+    )
+    org.junit.jupiter.api.Assertions.assertEquals(
+      RouteMigration.SHARED,
+      declaration.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElseThrow(),
+      operation,
+    )
+    org.junit.jupiter.api.Assertions
+      .assertEquals(rule, declaration.classValue(AuthorizeOperation::class.java, "rule").orElseThrow().name, operation)
+  }
+  val legacy =
+    routeAccessEntries(inventory).filter {
+      it.httpMethod != "HEAD" && it.path.startsWith("/api/v1/") &&
+        it.access == RouteAccessPolicy.PROTECTED &&
+        it.migration == RouteMigration.LEGACY
+    }
+  org.junit.jupiter.api.Assertions.assertEquals(
+    setOf(
+      "/api/v1/sources/search",
+      "/api/v1/destinations/search",
+      "/api/v1/connections/search",
+    ),
+    legacy
+      .map {
+        it.path
+      }.toSet(),
+  )
+}
+
 data class RouteAccessEntry(
   val httpMethod: String,
   val path: String,

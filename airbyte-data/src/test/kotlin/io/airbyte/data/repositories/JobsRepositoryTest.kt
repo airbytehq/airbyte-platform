@@ -5,7 +5,14 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.JobConfig
+import io.airbyte.data.repositories.entities.Attempt
+import io.airbyte.data.repositories.entities.AttemptAuthorizationMetadata
 import io.airbyte.data.repositories.entities.Job
+import io.airbyte.data.repositories.entities.JobAuthorizationMetadata
+import io.airbyte.data.services.JobService
+import io.airbyte.data.services.shared.JobMetadata
+import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.kotest.matchers.shouldBe
@@ -50,6 +57,38 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     )
 
   private var nextCreatedAt = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+
+  @Test
+  fun `authorization metadata selects job scope and exact attempt pair without payload configuration`() {
+    val scope = UUID.randomUUID().toString()
+    val job =
+      jobsRepository.save(
+        createJob(71, scope, JobStatus.running).apply {
+          config =
+            Jsons.jsonNode(mapOf("sourceConfiguration" to mapOf("password" to "unread-job-secret")))
+        },
+      )
+    val attempt =
+      attemptsRepository.save(
+        Attempt(
+          id = 81L,
+          jobId = job.id,
+          attemptNumber = 0L,
+          status = AttemptStatus.running,
+          attemptSyncConfig =
+            Jsons.jsonNode(
+              mapOf("password" to "unread-attempt-secret"),
+            ),
+          output = Jsons.jsonNode(mapOf("private" to "unread-output")),
+        ),
+      )
+    jobsRepository.findAuthorizationMetadataById(job.id).orElseThrow() shouldBe JobAuthorizationMetadata(job.id, JobConfigType.sync, scope)
+    context.getBean(JobService::class.java).findJobMetadataById(job.id).orElseThrow() shouldBe JobMetadata(job.id, JobConfig.ConfigType.SYNC, scope)
+    attemptsRepository.findAuthorizationMetadata(job.id, 0L).orElseThrow() shouldBe AttemptAuthorizationMetadata(attempt.id!!, job.id, 0L)
+    jobsRepository.findAuthorizationMetadataById(Long.MAX_VALUE).isEmpty shouldBe true
+    attemptsRepository.findAuthorizationMetadata(job.id, 1L).isEmpty shouldBe true
+    attemptsRepository.findAuthorizationMetadata(Long.MAX_VALUE, 0L).isEmpty shouldBe true
+  }
 
   @AfterEach
   fun cleanup() {

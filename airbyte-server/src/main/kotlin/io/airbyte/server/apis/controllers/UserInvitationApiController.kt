@@ -12,7 +12,6 @@ import io.airbyte.api.server.generated.models.UserInvitationCreateRequestBody
 import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
 import io.airbyte.api.server.generated.models.UserInvitationListRequestBody
 import io.airbyte.api.server.generated.models.UserInvitationRead
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -20,6 +19,12 @@ import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.AuthenticatedMetadataRule
+import io.airbyte.server.auth.InvitationAcceptRule
+import io.airbyte.server.auth.InvitationCancelRule
+import io.airbyte.server.auth.InvitationReadRule
+import io.airbyte.server.auth.InvitationScopeAdminRule
+import io.airbyte.server.auth.InvitationScopeReadRule
 import io.airbyte.server.handlers.UserInvitationHandler
 import io.airbyte.server.helpers.UserInvitationAuthorizationHelper
 import io.micronaut.http.annotation.Body
@@ -37,9 +42,11 @@ class UserInvitationApiController(
   private val currentUserService: CurrentUserService,
   private val userInvitationAuthorizationHelper: UserInvitationAuthorizationHelper,
 ) : UserInvitationApi {
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = InvitationReadRule::class,
   )
   override fun getUserInvitation(
     @PathParam("inviteCode") inviteCode: String,
@@ -51,19 +58,21 @@ class UserInvitationApiController(
       },
     )
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = InvitationScopeReadRule::class,
   )
   override fun listPendingInvitations(
     @Body invitationListRequestBody: UserInvitationListRequestBody?,
   ): List<UserInvitationAdminRead> = userInvitationHandler.getPendingInvitations(invitationListRequestBody)
 
-  @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = InvitationScopeAdminRule::class,
   )
   override fun createUserInvitation(
     @Body invitationCreateRequestBody: UserInvitationCreateRequestBody?,
@@ -73,9 +82,11 @@ class UserInvitationApiController(
       userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody!!, currentUser)
     }
 
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = InvitationAcceptRule::class,
   )
   override fun acceptUserInvitation(
     @Body inviteCodeRequestBody: InviteCodeRequestBody?,
@@ -85,9 +96,11 @@ class UserInvitationApiController(
       userInvitationHandler.accept(inviteCodeRequestBody!!, currentUser)
     }
 
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = AuthenticatedMetadataRule::class,
   )
   override fun declineUserInvitation(
     @Body inviteCodeRequestBody: InviteCodeRequestBody?,
@@ -97,9 +110,11 @@ class UserInvitationApiController(
       throw RuntimeException("Not yet implemented")
     }
 
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = InvitationCancelRule::class,
   )
   override fun cancelUserInvitation(
     @Body invitationRequestBody: UserInvitationCancelRequestBody?,

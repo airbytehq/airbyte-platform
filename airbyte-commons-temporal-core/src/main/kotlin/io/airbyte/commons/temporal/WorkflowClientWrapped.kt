@@ -10,9 +10,12 @@ import io.airbyte.metrics.MetricClient
 import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse
+import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryRequest
+import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryResponse
 import io.temporal.client.BatchRequest
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
+import io.temporal.common.converter.DataConverter
 import io.temporal.workflow.Functions.Proc1
 
 /**
@@ -45,6 +48,15 @@ class WorkflowClientWrapped
        * Return the namespace of the temporal client.
        */
       get() = temporalWorkflowClient.options.namespace
+
+    val dataConverter: DataConverter
+      get() = temporalWorkflowClient.options.dataConverter
+
+    fun blockingGetWorkflowExecutionHistory(request: GetWorkflowExecutionHistoryRequest): GetWorkflowExecutionHistoryResponse =
+      withRetries(
+        { temporalWorkflowClient.workflowServiceStubs.blockingStub().getWorkflowExecutionHistory(request) },
+        "getWorkflowExecutionHistory",
+      )!!
 
     /**
      * Creates workflow client stub for a known execution. Use it to send signals or queries to a

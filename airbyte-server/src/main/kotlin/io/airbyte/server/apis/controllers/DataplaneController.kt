@@ -23,9 +23,6 @@ import io.airbyte.api.server.generated.models.DataplaneTokenRequestBody
 import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
 import io.airbyte.api.server.generated.models.HeartbeatRecord
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -75,11 +72,12 @@ open class DataplaneController(
   private val airbyteConfig: AirbyteConfig,
 ) : DataplaneApi,
   DataplanesApi {
-  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneCreateRule::class,
   )
   override fun createDataplane(
     @Body dataplaneCreateRequestBody: DataplaneCreateRequestBody,
@@ -105,11 +103,12 @@ open class DataplaneController(
     )
   }
 
-  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun updateDataplane(
     @Body dataplaneUpdateRequestBody: DataplaneUpdateRequestBody,
@@ -124,11 +123,12 @@ open class DataplaneController(
     )
   }
 
-  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun deleteDataplane(
     @Body dataplaneDeleteRequestBody: DataplaneDeleteRequestBody,
@@ -139,11 +139,12 @@ open class DataplaneController(
     return toDataplaneRead(tombstonedDataplane)
   }
 
-  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun listDataplanes(
     @Body dataplaneListRequestBody: DataplaneListRequestBody,
@@ -188,9 +189,11 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneMachineRule::class,
   )
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
@@ -204,12 +207,6 @@ open class DataplaneController(
       throw ServiceAccountNotFound(UUID.fromString(req.clientId))
     }
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
-
-    roleResolver
-      .newRequest()
-      .withCurrentAuthentication()
-      .withOrg(dataplaneGroup.organizationId)
-      .requireRole(DATAPLANE)
 
     // TODO implement version based gating of dataplane based on airbyte version here
 
@@ -229,9 +226,11 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneMachineRule::class,
   )
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
@@ -243,12 +242,6 @@ open class DataplaneController(
     }
 
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
-
-    roleResolver
-      .newRequest()
-      .withCurrentAuthentication()
-      .withOrg(dataplaneGroup.organizationId)
-      .requireRole(DATAPLANE)
 
     // TODO implement version based gating of dataplane based on airbyte version here
 
@@ -303,11 +296,12 @@ open class DataplaneController(
     entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 
-  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun listDataplaneHealth(
     @Body request: OrganizationIdRequestBody,

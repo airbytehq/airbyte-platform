@@ -14,11 +14,9 @@ import io.airbyte.api.server.generated.models.GroupPermissionCreate
 import io.airbyte.api.server.generated.models.GroupPermissionIdRequestBody
 import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.PublicPermissionType
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.Group
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
@@ -26,6 +24,7 @@ import io.airbyte.data.services.GroupService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.domain.models.GroupId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.server.auth.requireGroupAdminForControllerTest
 import io.airbyte.server.helpers.GroupPermissionValidator
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.mockk.confirmVerified
@@ -114,9 +113,9 @@ class GroupPermissionApiControllerTest {
   @Test
   fun `listGroupPermissions rejects an admin of a different organization`() {
     every { groupService.getGroup(groupId) } returns group()
-    every { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) } throws ForbiddenProblem()
 
     assertThrows<ForbiddenProblem> {
+      requireGroupAdminForControllerTest(groupId.value, organizationId.value, GroupIdRequestBody(groupId.value))
       controller.listGroupPermissions(GroupIdRequestBody(groupId.value))
     }
     verify(exactly = 0) { permissionService.getPermissionsByGroupId(any()) }
@@ -175,9 +174,13 @@ class GroupPermissionApiControllerTest {
   @Test
   fun `createGroupPermission rejects an admin of a different organization`() {
     every { groupService.getGroup(groupId) } returns group()
-    every { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) } throws ForbiddenProblem()
 
     assertThrows<ForbiddenProblem> {
+      requireGroupAdminForControllerTest(
+        groupId.value,
+        organizationId.value,
+        GroupPermissionCreate(groupId.value, PublicPermissionType.WORKSPACE_ADMIN, workspaceId, null),
+      )
       controller.createGroupPermission(GroupPermissionCreate(groupId.value, PublicPermissionType.WORKSPACE_ADMIN, workspaceId, null))
     }
     verify(exactly = 0) { permissionService.createGroupPermission(any()) }
@@ -359,9 +362,9 @@ class GroupPermissionApiControllerTest {
   @Test
   fun `deleteGroupPermission rejects an admin of a different organization`() {
     every { groupService.getGroup(groupId) } returns group()
-    every { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) } throws ForbiddenProblem()
 
     assertThrows<ForbiddenProblem> {
+      requireGroupAdminForControllerTest(groupId.value, organizationId.value, GroupPermissionIdRequestBody(groupId.value, permissionId))
       controller.deleteGroupPermission(GroupPermissionIdRequestBody(groupId.value, permissionId))
     }
     verify(exactly = 0) { permissionService.deleteGroupPermission(any()) }
@@ -433,8 +436,6 @@ class GroupPermissionApiControllerTest {
   }
 
   private fun verifyAuthorizedAndEntitled() {
-    verify { roleRequest.withRef(AuthenticationId.ORGANIZATION_ID, organizationId.value.toString()) }
-    verify { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) }
     verify { groupsEntitlementHelper.ensureEntitled(organizationId) }
   }
 

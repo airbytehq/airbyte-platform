@@ -35,7 +35,6 @@ import io.airbyte.api.server.generated.models.WorkspaceUsageRead
 import io.airbyte.api.server.generated.models.WorkspaceUsageRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -45,6 +44,19 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.server.apis.execute
 import io.airbyte.server.apis.requireBody
+import io.airbyte.server.auth.OssUnsupportedOperationRule
+import io.airbyte.server.auth.WorkspaceAdminRule
+import io.airbyte.server.auth.WorkspaceCreateRule
+import io.airbyte.server.auth.WorkspaceFilteredOrganizationRule
+import io.airbyte.server.auth.WorkspaceGetRule
+import io.airbyte.server.auth.WorkspaceListRule
+import io.airbyte.server.auth.WorkspaceReadRule
+import io.airbyte.server.auth.WorkspaceReadUnsupportedRule
+import io.airbyte.server.auth.WorkspaceTombstoneConnectionRule
+import io.airbyte.server.auth.WorkspaceTransferRule
+import io.airbyte.server.auth.WorkspaceUserListRule
+import io.airbyte.server.auth.WorkspaceWriteRule
+import io.airbyte.server.auth.WorkspaceWriteUnsupportedRule
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -60,9 +72,11 @@ open class WorkspaceApiController(
   private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
 ) : WorkspaceApi {
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OssUnsupportedOperationRule::class,
   )
   override fun getWorkspaceSkillDocs(
     workspaceId: String,
@@ -70,11 +84,12 @@ open class WorkspaceApiController(
     section: String?,
   ): JsonNode = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceCreateRule::class,
   )
   override fun createWorkspace(
     @Body workspaceCreate: WorkspaceCreate,
@@ -100,10 +115,11 @@ open class WorkspaceApiController(
       workspacesHandler.createWorkspace(workspaceCreate)
     }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceCreateRule::class,
   )
   override fun createWorkspaceIfNotExist(
     @Body workspaceCreateWithId: WorkspaceCreateWithId,
@@ -132,12 +148,13 @@ open class WorkspaceApiController(
       workspacesHandler.createWorkspaceIfNotExist(workspaceCreateWithId)
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
   @Status(HttpStatus.NO_CONTENT)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceAdminRule::class,
   )
   override fun deleteWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
@@ -148,11 +165,12 @@ open class WorkspaceApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceReadRule::class,
   )
   override fun getOrganizationInfo(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
@@ -163,56 +181,56 @@ open class WorkspaceApiController(
       )
     }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_READER,
-    AuthRoleConstants.ORGANIZATION_READER,
-    AuthRoleConstants.DATAPLANE,
-    AuthRoleConstants.EMBEDDED_END_USER,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceGetRule::class,
   )
   override fun getWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): WorkspaceRead = execute { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceReadRule::class,
   )
   override fun getWorkspaceBySlug(
     @Body slugRequestBody: SlugRequestBody,
   ): WorkspaceRead = execute { workspacesHandler.getWorkspaceBySlug(slugRequestBody) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceReadUnsupportedRule::class,
   )
   override fun getWorkspaceUsage(
     @Body workspaceUsageRequestBody: WorkspaceUsageRequestBody?,
   ): WorkspaceUsageRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceReadUnsupportedRule::class,
   )
   override fun getWorkspaceDataWorkerAvailability(
     @Body workspaceDataWorkerAvailabilityRequestBody: WorkspaceDataWorkerAvailabilityRequestBody?,
   ): WorkspaceDataWorkerAvailabilityRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceListRule::class,
   )
   override fun listWorkspacesPaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
@@ -223,32 +241,24 @@ open class WorkspaceApiController(
       )
     }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceWriteRule::class,
   )
   override fun updateWorkspace(
     @Body workspaceUpdate: WorkspaceUpdate,
   ): WorkspaceRead = execute { workspacesHandler.updateWorkspace(workspaceUpdate) }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceWriteRule::class,
   )
   override fun updateWorkspaceFeedback(
     @Body workspaceGiveFeedback: WorkspaceGiveFeedback,
@@ -259,48 +269,47 @@ open class WorkspaceApiController(
     }
   }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceWriteRule::class,
   )
   override fun updateWorkspaceName(
     @Body workspaceUpdateName: WorkspaceUpdateName,
   ): WorkspaceRead = execute { workspacesHandler.updateWorkspaceName(workspaceUpdateName) }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceTransferRule::class,
   )
   override fun updateWorkspaceOrganization(
     @Body workspaceUpdateOrganization: WorkspaceUpdateOrganization,
   ): WorkspaceRead = execute { workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceReadRule::class,
   )
   override fun getWorkspaceByConnectionId(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): WorkspaceRead = execute { workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, false) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceTombstoneConnectionRule::class,
   )
   override fun getWorkspaceByConnectionIdWithTombstone(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
@@ -309,11 +318,12 @@ open class WorkspaceApiController(
   // No organization role is required because this endpoint can list workspaces within an org that a
   // user does not have an org-level permission for. This endpoint only returns workspaces that the
   // user has a permission for, so it is safe to authorize any authenticated user.
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceFilteredOrganizationRule::class,
   )
   override fun listWorkspacesInOrganization(
     @Body listWorkspacesInOrganizationRequestBody: ListWorkspacesInOrganizationRequestBody?,
@@ -325,26 +335,23 @@ open class WorkspaceApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.READER, AuthRoleConstants.SELF)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceUserListRule::class,
   )
   override fun listWorkspacesByUser(
     @Body request: ListWorkspacesByUserRequestBody?,
   ): WorkspaceReadList = execute { workspacesHandler.listWorkspacesByUser(request.requireBody()) }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = WorkspaceWriteUnsupportedRule::class,
   )
   override fun getAvailableDbtJobsForWorkspace(workspaceGetDbtJobsRequest: WorkspaceGetDbtJobsRequest): WorkspaceGetDbtJobsResponse =
     throw ApiNotImplementedInOssProblem()

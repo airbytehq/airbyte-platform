@@ -11,11 +11,12 @@ import io.airbyte.api.server.generated.models.OrganizationSemanticSearchEnableme
 import io.airbyte.api.server.generated.models.OrganizationSemanticSearchEnablementUpdateRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.OssOrganizationAdminUnsupportedRule
+import io.airbyte.server.auth.OssUnsupportedOperationRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -26,20 +27,23 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationSemanticSearchApiController : OrganizationSemanticSearchApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OssUnsupportedOperationRule::class,
   )
   override fun getOrganizationSemanticSearchEnablement(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationSemanticSearchEnablementRead = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OssOrganizationAdminUnsupportedRule::class,
   )
   override fun updateOrganizationSemanticSearchEnablement(
     @Body organizationSemanticSearchEnablementUpdateRequestBody: OrganizationSemanticSearchEnablementUpdateRequestBody,

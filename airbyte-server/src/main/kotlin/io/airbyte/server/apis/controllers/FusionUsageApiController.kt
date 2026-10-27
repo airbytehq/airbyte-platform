@@ -11,6 +11,7 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.OssUnsupportedOperationRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.PathVariable
@@ -24,9 +25,11 @@ import java.util.UUID
 @ExecuteOn(AirbyteTaskExecutors.IO)
 open class FusionUsageApiController : FusionUsageApi {
   @Get("/organizations/{organizationId}/tool_calls/usage")
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OssUnsupportedOperationRule::class,
   )
   override fun getFusionUsage(
     @PathVariable organizationId: UUID,

@@ -7,6 +7,8 @@ package io.airbyte.commons.temporal
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
+import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateInput
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
@@ -14,8 +16,11 @@ import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
+import io.airbyte.commons.temporal.scheduling.SpecMetadata
+import io.airbyte.commons.temporal.scheduling.SpecRequest
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.config.ActorContext
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobCheckConnectionConfig
@@ -41,10 +46,17 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import io.temporal.api.common.v1.WorkflowExecution
+import io.temporal.api.common.v1.WorkflowType
+import io.temporal.api.enums.v1.EventType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
+import io.temporal.api.history.v1.History
+import io.temporal.api.history.v1.HistoryEvent
+import io.temporal.api.history.v1.WorkflowExecutionStartedEventAttributes
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse
+import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryRequest
+import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryResponse
 import io.temporal.api.workflowservice.v1.WorkflowServiceGrpc.WorkflowServiceBlockingStub
 import io.temporal.client.BatchRequest
 import io.temporal.client.WorkflowClient
@@ -67,6 +79,82 @@ import java.util.function.Supplier
  * Setup for the Temporal Client test suite.
  */
 internal class TemporalClientTest {
+  @Test
+  fun `definition workflow ownership reads only the typed first event without reading results`() {
+    val workspace = UUID.randomUUID()
+    val definition = UUID.randomUUID()
+    val input =
+      ActorDefinitionUpdateInput(
+        "request",
+        ActorType.SOURCE,
+        definition,
+        SpecRequest(
+          true,
+          "fixture/image",
+          "1",
+          workspace,
+        ),
+        SpecMetadata(null, null, null, null),
+      )
+    val request = slot<GetWorkflowExecutionHistoryRequest>()
+    val attributes =
+      WorkflowExecutionStartedEventAttributes
+        .newBuilder()
+        .setWorkflowType(WorkflowType.newBuilder().setName("ActorDefinitionUpdateWorkflow"))
+        .setInput(AirbyteTemporalDataConverter().toPayloads(input).orElseThrow())
+        .build()
+    every { workflowServiceBlockingStub.getWorkflowExecutionHistory(capture(request)) } returns
+      GetWorkflowExecutionHistoryResponse
+        .newBuilder()
+        .setHistory(
+          History.newBuilder().addEvents(
+            HistoryEvent
+              .newBuilder()
+              .setEventType(
+                EventType.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED,
+              ).setWorkflowExecutionStartedEventAttributes(attributes),
+          ),
+        ).build()
+    val owner = temporalClient.getActorDefinitionWorkflowOwner("request")
+    Assertions.assertEquals(workspace, owner.workspaceId)
+    Assertions.assertEquals(ActorType.SOURCE, owner.actorType)
+    Assertions.assertEquals(definition, owner.actorDefinitionId.orElseThrow())
+    Assertions.assertEquals("request", request.captured.execution.workflowId)
+    Assertions.assertEquals(NAMESPACE, request.captured.namespace)
+    Assertions.assertEquals(1, request.captured.maximumPageSize)
+    Assertions.assertFalse(request.captured.waitNewEvent)
+    every { workflowServiceBlockingStub.getWorkflowExecutionHistory(any()) } returns
+      GetWorkflowExecutionHistoryResponse
+        .newBuilder()
+        .setHistory(
+          History.newBuilder().addEvents(
+            HistoryEvent
+              .newBuilder()
+              .setEventType(
+                EventType.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED,
+              ).setWorkflowExecutionStartedEventAttributes(
+                attributes.toBuilder().setWorkflowType(WorkflowType.newBuilder().setName("OtherWorkflow")),
+              ),
+          ),
+        ).build()
+    Assertions.assertThrows(IllegalStateException::class.java) { temporalClient.getActorDefinitionWorkflowOwner("request") }
+    verify(exactly = 0) { workflowClient.newWorkflowStub(any<Class<Any>>(), any<String>()) }
+  }
+
+  @Test
+  fun `definition ownership preserves missing execution and dependency failures`() {
+    every { workflowServiceBlockingStub.getWorkflowExecutionHistory(any()) } throws
+      io.grpc.Status.NOT_FOUND
+        .asRuntimeException()
+    Assertions.assertThrows(NoSuchElementException::class.java) { temporalClient.getActorDefinitionWorkflowOwner("missing") }
+    val failure =
+      io.grpc.Status.PERMISSION_DENIED
+        .asRuntimeException()
+    every { workflowServiceBlockingStub.getWorkflowExecutionHistory(any()) } throws failure
+    val caught = Assertions.assertThrows(io.grpc.StatusRuntimeException::class.java) { temporalClient.getActorDefinitionWorkflowOwner("request") }
+    Assertions.assertSame(failure, caught)
+  }
+
   private lateinit var workflowClient: WorkflowClient
   private lateinit var temporalClient: TemporalClient
   private lateinit var logPath: Path
@@ -83,7 +171,12 @@ internal class TemporalClientTest {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test")
     logPath = workspaceRoot.resolve(JOB_ID.toString()).resolve(ATTEMPT_ID.toString()).resolve(DEFAULT_LOG_FILENAME)
     workflowClient = mockk(relaxed = true)
-    every { workflowClient.options } returns WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build()
+    every { workflowClient.options } returns
+      WorkflowClientOptions
+        .newBuilder()
+        .setNamespace(NAMESPACE)
+        .setDataConverter(AirbyteTemporalDataConverter())
+        .build()
     workflowServiceStubs = mockk(relaxed = true)
     every { workflowClient.workflowServiceStubs } returns workflowServiceStubs
     every { workflowClient.signalWithStart(any<BatchRequest>()) } returns WorkflowExecution.newBuilder().build()

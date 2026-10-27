@@ -14,12 +14,15 @@ import io.airbyte.api.server.generated.models.StreamStatusRead
 import io.airbyte.api.server.generated.models.StreamStatusReadList
 import io.airbyte.api.server.generated.models.StreamStatusRunState
 import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.StreamStatusCreateRule
+import io.airbyte.server.auth.StreamStatusListRule
+import io.airbyte.server.auth.StreamStatusRunStateRule
+import io.airbyte.server.auth.StreamStatusUpdateRule
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -27,6 +30,7 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import java.io.Serial
 
 @Controller
@@ -34,11 +38,12 @@ class StreamStatusesApiController(
   private val handler: StreamStatusesHandler,
 ) : StreamStatusesApi {
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = StreamStatusCreateRule::class,
   )
   override fun createStreamStatus(
     @Body req: StreamStatusCreateRequestBody?,
@@ -48,11 +53,12 @@ class StreamStatusesApiController(
     return handler.createStreamStatus(req)
   }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = StreamStatusUpdateRule::class,
   )
   override fun updateStreamStatus(
     @Body req: StreamStatusUpdateRequestBody?,
@@ -62,11 +68,12 @@ class StreamStatusesApiController(
     return handler.updateStreamStatus(req)
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = StreamStatusListRule::class,
   )
   override fun getStreamStatuses(
     @Body req: StreamStatusListRequestBody?,
@@ -76,11 +83,12 @@ class StreamStatusesApiController(
     return handler.listStreamStatus(req)
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = StreamStatusRunStateRule::class,
   )
   override fun getStreamStatusesByRunState(
     @Body req: ConnectionIdRequestBody?,

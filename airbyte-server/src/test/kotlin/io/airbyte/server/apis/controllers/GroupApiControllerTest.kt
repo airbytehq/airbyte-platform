@@ -17,11 +17,12 @@ import io.airbyte.api.server.generated.models.GroupIdRequestBody
 import io.airbyte.api.server.generated.models.GroupMemberRequestBody
 import io.airbyte.api.server.generated.models.GroupUpdate
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.RouteAccessPolicy
+import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.Group
 import io.airbyte.config.GroupMember
 import io.airbyte.data.services.AlreadyGroupMemberException
@@ -33,6 +34,7 @@ import io.airbyte.data.services.UserNotOrganizationMemberException
 import io.airbyte.domain.models.GroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
+import io.airbyte.server.auth.requireGroupAdminForControllerTest
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.security.annotation.Secured
@@ -424,13 +426,12 @@ class GroupApiControllerTest {
   @Test
   fun `group-scoped operations reject an admin of a different organization`() {
     every { groupService.getGroup(groupId) } returns group()
-    every { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) } throws ForbiddenProblem()
 
     assertThrows<ForbiddenProblem> {
+      requireGroupAdminForControllerTest(groupId.value, organizationId.value, GroupIdRequestBody(groupId.value))
       controller.listGroupMembers(GroupIdRequestBody(groupId.value))
     }
 
-    verify { roleRequest.withRef(AuthenticationId.ORGANIZATION_ID, organizationId.value.toString()) }
     verify(exactly = 0) { groupService.getGroupMembers(any()) }
   }
 
@@ -485,23 +486,25 @@ class GroupApiControllerTest {
 
   @Test
   fun `every endpoint is guarded by an authorization annotation`() {
-    // The six group-scoped operations resolve the organization from the stored group, so they are
-    // authorized in getAuthorizedGroup and only need the class-level authentication rule. Micronaut
-    // rejects any matched route for which no security rule votes, so a missing class-level
-    // annotation would make those six endpoints unreachable rather than unguarded.
-    val classSecured = GroupApiController::class.java.getAnnotation(Secured::class.java)
-    assertNotNull(classSecured, "GroupApiController must carry a class-level @Secured annotation")
-    assertEquals(listOf(SecurityRule.IS_AUTHENTICATED), classSecured.value.toList())
-
-    // createGroup and listGroups take the organization from the request body and have no in-method
-    // role check, so the annotation is their only organization-scoped guard.
-    listOf("createGroup", "listGroups").forEach { method ->
-      val secured =
-        GroupApiController::class.java.methods
-          .single { it.name == method }
-          .getAnnotation(Secured::class.java)
-      assertNotNull(secured, "$method must carry @Secured")
-      assertEquals(listOf(AuthRoleConstants.ORGANIZATION_ADMIN), secured.value.toList())
+    val expectedRules =
+      mapOf(
+        "addGroupMember" to io.airbyte.server.auth.GroupMemberAddRule::class,
+        "createGroup" to io.airbyte.server.auth.OrganizationAdminRule::class,
+        "deleteGroup" to io.airbyte.server.auth.GroupSavedAdminRule::class,
+        "getGroup" to io.airbyte.server.auth.GroupSavedAdminRule::class,
+        "listGroupMembers" to io.airbyte.server.auth.GroupSavedAdminRule::class,
+        "listGroups" to io.airbyte.server.auth.OrganizationAdminRule::class,
+        "removeGroupMember" to io.airbyte.server.auth.GroupMemberRemoveRule::class,
+        "updateGroup" to io.airbyte.server.auth.GroupSavedAdminRule::class,
+      )
+    for ((name, rule) in expectedRules) {
+      val method = GroupApiController::class.java.methods.single { it.name == name }
+      assertEquals(listOf(SecurityRule.IS_AUTHENTICATED), method.getAnnotation(Secured::class.java).value.toList(), name)
+      val declaration = method.getAnnotation(AuthorizeOperation::class.java)
+      assertNotNull(declaration, name)
+      assertEquals(RouteAccessPolicy.PROTECTED, declaration.access, name)
+      assertEquals(RouteMigration.SHARED, declaration.migration, name)
+      assertEquals(rule, declaration.rule, name)
     }
   }
 
@@ -513,8 +516,6 @@ class GroupApiControllerTest {
     )
 
   private fun verifyAuthorizedAndEntitled(organizationId: OrganizationId) {
-    verify { roleRequest.withRef(AuthenticationId.ORGANIZATION_ID, organizationId.value.toString()) }
-    verify { roleRequest.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) }
     verify { groupsEntitlementHelper.ensureEntitled(organizationId) }
   }
 

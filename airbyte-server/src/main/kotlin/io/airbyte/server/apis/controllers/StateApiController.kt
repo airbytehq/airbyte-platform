@@ -8,7 +8,6 @@ import io.airbyte.api.server.generated.apis.StateApi
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.ConnectionState
 import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -26,36 +25,34 @@ import io.micronaut.security.rules.SecurityRule
 open class StateApiController(
   private val stateHandler: StateHandler,
 ) : StateApi {
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ConnectionStateWorkerRule::class,
   )
   override fun createOrUpdateState(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,
   ): ConnectionState = execute { stateHandler.createOrUpdateState(connectionStateCreateOrUpdate) }
 
-  @Secured(
-    AuthRoleConstants.WORKSPACE_EDITOR,
-    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-    AuthRoleConstants.ORGANIZATION_EDITOR,
-  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ConnectionStateWriteRule::class,
   )
   override fun createOrUpdateStateSafe(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,
   ): ConnectionState = execute { stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate) }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ConnectionStateReadRule::class,
   )
   override fun getState(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,

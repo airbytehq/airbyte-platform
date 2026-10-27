@@ -19,6 +19,7 @@ import io.airbyte.config.Permission
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.data.services.InactiveUserAccessException
+import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
@@ -121,6 +122,16 @@ internal class PermissionHandlerTest {
     fun `inactive SCIM User grant becomes an HTTP conflict`() {
       every { permissionService.getPermissionsForUser(userId) } returns emptyList()
       every { permissionService.createPermission(any()) } throws InactiveUserAccessException("inactive")
+
+      Assertions.assertThrows(ConflictException::class.java) {
+        permissionHandler.createPermission(permission)
+      }
+    }
+
+    @Test
+    fun `redundant grant becomes an HTTP conflict`() {
+      every { permissionService.getPermissionsForUser(userId) } returns emptyList()
+      every { permissionService.createPermission(any()) } throws PermissionRedundantException("redundant")
 
       Assertions.assertThrows(ConflictException::class.java) {
         permissionHandler.createPermission(permission)

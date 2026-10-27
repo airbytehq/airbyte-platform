@@ -136,6 +136,8 @@ dependencies {
   testFixturesImplementation(libs.jackson.databind)
   testFixturesImplementation(libs.jooq)
   testFixturesImplementation(project(":oss:airbyte-commons-server"))
+  testFixturesImplementation(project(":oss:airbyte-audit-logging"))
+  testFixturesImplementation(project(":oss:airbyte-commons-temporal"))
   testFixturesImplementation(project(":oss:airbyte-commons-entitlements"))
   testFixturesImplementation(project(":oss:airbyte-commons"))
   testFixturesImplementation(project(":oss:airbyte-commons-storage"))
@@ -146,6 +148,7 @@ dependencies {
   testFixturesImplementation(project(":oss:airbyte-persistence:job-persistence"))
   testFixturesImplementation(project(":oss:airbyte-domain:models"))
   testFixturesImplementation(project(":oss:airbyte-api:server-api"))
+  testFixturesImplementation(project(":oss:airbyte-api:server-api-client"))
   testFixturesImplementation(project(":oss:airbyte-api:problems-api"))
   testFixturesImplementation(project(":oss:airbyte-db:jooq"))
   testFixturesImplementation(project(":oss:airbyte-featureflag"))
@@ -304,9 +307,8 @@ airbyte {
 
 tasks.named<Test>("test") {
   // Micronaut retains metadata from closed contexts, so limit how many test classes share a JVM.
-  forkEvery = 50
-  // Safe to run test classes in parallel JVMs: tests use random ports and per-JVM containers.
-  maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+  forkEvery = 5
+  maxParallelForks = 2
 
   environment(
     mapOf(

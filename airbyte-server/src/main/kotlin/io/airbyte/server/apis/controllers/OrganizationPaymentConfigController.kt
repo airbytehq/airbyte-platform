@@ -10,8 +10,6 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.server.generated.apis.OrganizationPaymentConfigApi
 import io.airbyte.api.server.generated.models.OrganizationPaymentConfigRead
 import io.airbyte.api.server.generated.models.OrganizationPaymentConfigUpdateRequestBody
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -26,6 +24,8 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.PathVariable
 import io.micronaut.scheduling.annotation.ExecuteOn
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -39,25 +39,29 @@ open class OrganizationPaymentConfigController(
   protected val organizationService: OrganizationService,
   protected val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
 ) : OrganizationPaymentConfigApi {
-  @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.OrganizationPaymentConfigRule::class,
   )
   override fun getOrganizationPaymentConfig(
     @PathVariable("organizationId") organizationId: UUID,
-  ): OrganizationPaymentConfigRead =
+  ): OrganizationPaymentConfigRead = readOrganizationPaymentConfig(organizationId)
+
+  protected fun readOrganizationPaymentConfig(organizationId: UUID): OrganizationPaymentConfigRead =
     organizationPaymentConfigRepository.findByOrganizationId(organizationId)?.toApiModel()
       ?: throw ResourceNotFoundProblem(
         ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
       )
 
-  @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.OrganizationPaymentConfigRule::class,
   )
   override fun endGracePeriod(
     @PathVariable("organizationId") organizationId: UUID,
@@ -65,11 +69,12 @@ open class OrganizationPaymentConfigController(
     organizationService.handlePaymentGracePeriodEnded(OrganizationId(organizationId))
   }
 
-  @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.OrganizationPaymentConfigRule::class,
   )
   override fun updateOrganizationPaymentConfig(
     @Body requestBody: OrganizationPaymentConfigUpdateRequestBody?,
@@ -87,7 +92,7 @@ open class OrganizationPaymentConfigController(
     }
 
     organizationPaymentConfigRepository.savePaymentConfig(existingConfig)
-    return getOrganizationPaymentConfig(body.organizationId)
+    return readOrganizationPaymentConfig(body.organizationId)
   }
 }
 

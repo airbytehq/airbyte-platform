@@ -534,6 +534,7 @@ class ActorConnectionRulesTest {
       every { data.tagWorkspaceAndOrganization(any()) } returns OWNER
       every { data.canUseDataplaneGroup(any(), ORGANIZATION) } returns true
       every { data.catalogWasFetchedByActor(any(), any()) } returns true
+      every { data.catalogWasFetchedByAnotherActor(any(), any()) } returns false
       every { data.requireActorDefinitionType(any(), any()) } just Runs
       every { data.canUseActorDefinition(any(), any()) } returns true
       every { savedPermissions.getPermissionsByAuthUserId("caller") } returns

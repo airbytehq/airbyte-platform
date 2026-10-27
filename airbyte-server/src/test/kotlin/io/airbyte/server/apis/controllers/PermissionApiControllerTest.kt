@@ -19,6 +19,7 @@ import io.airbyte.config.Permission
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -35,6 +36,7 @@ import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
+@Property(name = "controller.response.authorization.fixture", value = "true")
 internal class PermissionApiControllerTest {
   @Inject
   lateinit var context: ApplicationContext

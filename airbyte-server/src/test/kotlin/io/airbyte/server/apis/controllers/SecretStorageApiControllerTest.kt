@@ -20,11 +20,16 @@ import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.UserId
+import io.airbyte.domain.models.auth.AuthorizationTarget
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.secrets.SecretStorageCredentialsService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.server.assertStatus
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -45,6 +50,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @MicronautTest(rebuildContext = true)
+@Property(name = "spec.name", value = "SecretStorageApiControllerTest")
 internal class SecretStorageApiControllerTest {
   @Factory
   class TestFactory {
@@ -57,12 +63,20 @@ internal class SecretStorageApiControllerTest {
     fun secretStorageCredentialsService(): SecretStorageCredentialsService = mockk()
 
     @Singleton
+    @Replaces(AuthorizationDataService::class)
+    @Requires(property = "spec.name", value = "SecretStorageApiControllerTest")
+    fun authorizationDataService(): AuthorizationDataService = mockk()
+
+    @Singleton
     @Replaces(RoleResolver::class)
     fun roleResolver(): RoleResolver = mockk(relaxed = true)
   }
 
   @Inject
   private lateinit var currentUserService: CurrentUserService
+
+  @Inject
+  lateinit var authorizationData: AuthorizationDataService
 
   @Inject
   lateinit var secretStorageService: SecretStorageService
@@ -95,6 +109,8 @@ internal class SecretStorageApiControllerTest {
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
+    every { authorizationData.secretStorageTarget(secretStorageId.value) } returns
+      AuthorizationTarget.Workspace(WorkspaceAndOrganization(secretStorage.scopeId, UUID.randomUUID()))
     every { secretStorageService.getById(secretStorageId) } returns secretStorage
 
     val storageWithConfig =
@@ -137,6 +153,7 @@ internal class SecretStorageApiControllerTest {
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
+    every { authorizationData.workspaceAndOrganization(scopeId) } returns WorkspaceAndOrganization(scopeId, UUID.randomUUID())
     every { secretStorageService.listSecretStorage(SecretStorageScopeType.WORKSPACE, scopeId) } returns listOf(secretStorage)
 
     val path = "/api/v1/secret_storage/list"
@@ -167,6 +184,7 @@ internal class SecretStorageApiControllerTest {
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
+    every { authorizationData.organization(secretStorage.scopeId) } returns secretStorage.scopeId
     val storageConfig = Jsons.jsonNode(mapOf("key" to "value"))
 
     val secretStorageCreate =

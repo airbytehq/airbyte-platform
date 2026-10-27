@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.apis.AuditLogsApi
 import io.airbyte.api.server.generated.models.AuditLogListRequestBody
 import io.airbyte.api.server.generated.models.AuditLogReadList
 import io.airbyte.audit.logging.read.AuditLogReadService
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -18,10 +17,12 @@ import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.server.apis.mappers.AuditLogApiMapper
+import io.airbyte.server.auth.AuditLogOrganizationRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 
 /**
@@ -35,11 +36,12 @@ open class AuditLogApiController(
   private val auditLogReadService: AuditLogReadService,
   private val authenticationHeaderResolver: AuthenticationHeaderResolver,
 ) : AuditLogsApi {
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = AuditLogOrganizationRule::class,
   )
   override fun listAuditLogs(auditLogListRequestBody: AuditLogListRequestBody): AuditLogReadList {
     val authorizedOrganizationIds = resolveAuthorizedOrganizationIds()

@@ -46,6 +46,26 @@ class ApplicationServiceKeycloakImpl(
   private val airbyteAuthConfig: AirbyteAuthConfig,
   private val authUserOwnershipService: ScimAuthUserOwnershipService,
 ) : ApplicationService {
+  override fun requireApplicationOwner(
+    authUserId: String,
+    applicationId: UUID,
+  ) {
+    // These existing service-user attributes hold ownership. Client representations include secrets.
+    val serviceUser =
+      keycloakAdminClient
+        .realm(keycloakConfiguration.clientRealm)
+        .users()
+        .searchByAttributes(0, 2, null, false, "$CLIENT_ID:$applicationId")
+        .singleOrNull() ?: throw NoSuchElementException("Application ownership metadata was not found or was ambiguous")
+    val attributes: Map<String, List<String>>? = serviceUser.attributes
+    val clientId = attributes?.get(CLIENT_ID)?.singleOrNull()
+    val owner = attributes?.get(USER_ID)?.singleOrNull()
+    if (clientId != applicationId.toString() || owner.isNullOrBlank()) {
+      throw NoSuchElementException("Application ownership metadata was not found or was ambiguous")
+    }
+    if (owner != authUserId) throw BadRequestException("You do not have permission to delete this Application")
+  }
+
   /**
    * An ID that uniquely identifies the Application in the downstream service. Is used for deletion.
    *

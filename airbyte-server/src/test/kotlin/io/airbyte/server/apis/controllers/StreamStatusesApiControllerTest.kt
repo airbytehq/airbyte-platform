@@ -14,12 +14,18 @@ import io.airbyte.api.server.generated.models.StreamStatusRead
 import io.airbyte.api.server.generated.models.StreamStatusReadList
 import io.airbyte.api.server.generated.models.StreamStatusRunState
 import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
+import io.airbyte.data.repositories.StreamStatusAuthorizationRepository
+import io.airbyte.data.repositories.entities.StreamStatusAuthorization
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -33,8 +39,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.Optional
 import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
 import kotlin.random.Random
 
 private const val PATH_BASE = "/api/v1/stream_statuses"
@@ -44,12 +50,35 @@ private const val PATH_LIST = "$PATH_BASE/list"
 private const val PATH_LATEST_PER_RUN_STATE = "$PATH_BASE/latest_per_run_state"
 
 @MicronautTest
+@Property(name = "spec.name", value = "StreamStatusesApiControllerTest")
 internal class StreamStatusesApiControllerTest {
   @Factory
+  @Requires(property = "spec.name", value = "StreamStatusesApiControllerTest")
   class TestFactory {
     @Singleton
     @Replaces(StreamStatusesHandler::class)
     fun streamStatusHandler(): StreamStatusesHandler = mockk()
+
+    @Singleton
+    @Replaces(AuthorizationDataService::class)
+    fun authorizationData(): AuthorizationDataService =
+      mockk<AuthorizationDataService>().also { data ->
+        val owner = WorkspaceAndOrganization(workspaceId, authorizationOrganizationId)
+        every { data.workspaceAndOrganization(workspaceId) } returns owner
+        every { data.savedConnectionActorIds(any()) } returns (sourceId to destinationId)
+        every { data.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
+        every { data.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
+        every { data.replicationJobConnectionId(jobId) } returns connectionId
+        every { data.savedAttemptConnectionId(jobId, 0) } returns connectionId
+      }
+
+    @Singleton
+    @Replaces(StreamStatusAuthorizationRepository::class)
+    fun statusOwnership(): StreamStatusAuthorizationRepository =
+      mockk<StreamStatusAuthorizationRepository>().also { rows ->
+        every { rows.findByIdAndWorkspaceId(any(), workspaceId) } answers
+          { Optional.of(StreamStatusAuthorization(firstArg(), workspaceId, connectionId, jobId, 0, "sync")) }
+      }
   }
 
   @Inject
@@ -178,6 +207,9 @@ internal class StreamStatusesApiControllerTest {
 private val testNamespace = "test_"
 private val testName = "table_1"
 private val workspaceId = UUID.randomUUID()
+private val authorizationOrganizationId = UUID.randomUUID()
+private val sourceId = UUID.randomUUID()
+private val destinationId = UUID.randomUUID()
 private val connectionId = UUID.randomUUID()
 private val jobId: Long = Random.nextLong()
 private val transitionedAtMs: Long = System.currentTimeMillis()
@@ -226,7 +258,7 @@ private fun validPagination(): Pagination = Pagination(pageSize = 10, rowOffset 
 
 fun validList(): StreamStatusListRequestBody =
   StreamStatusListRequestBody(
-    workspaceId = UUID.randomUUID(),
-    jobId = ThreadLocalRandom.current().nextLong(),
+    workspaceId = workspaceId,
+    jobId = jobId,
     pagination = validPagination(),
   )

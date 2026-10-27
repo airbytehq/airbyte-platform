@@ -154,7 +154,7 @@ internal fun requireSavedSourceCatalog(
   references: SavedConnectionReferences,
 ) {
   references.sourceCatalogId.ifPresent { catalogId ->
-    if (!data.catalogWasFetchedByActor(catalogId, references.sourceId)) throw BadRequestProblem()
+    if (data.catalogWasFetchedByAnotherActor(catalogId, references.sourceId)) throw BadRequestProblem()
   }
 }
 

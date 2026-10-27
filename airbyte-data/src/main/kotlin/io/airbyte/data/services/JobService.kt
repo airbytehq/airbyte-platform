@@ -7,10 +7,14 @@ package io.airbyte.data.services
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
+import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.data.services.shared.LatestJobHealthSummary
 import java.time.OffsetDateTime
+import java.util.Optional
 
 interface JobService {
+  fun findJobMetadataById(id: Long): Optional<JobMetadata>
+
   /**
    * Find latest job by jobId
    */

@@ -11,6 +11,8 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.Date
@@ -26,6 +28,48 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
   @AfterEach
   fun tearDown() {
     scopedConfigurationRepository.deleteAll()
+  }
+
+  @Test
+  fun `authorization metadata omits arbitrary value and version selector cannot return network tokens`() {
+    val scope = UUID.randomUUID()
+    val link = UUID.randomUUID()
+    val token =
+      scopedConfigurationRepository.save(
+        ScopedConfiguration(
+          id = UUID.randomUUID(),
+          key = "network_security_token",
+          value = "sensitive-network-token",
+          scopeType = ConfigScopeType.workspace,
+          scopeId = scope,
+          originType = ConfigOriginType.private_link,
+          origin = link.toString(),
+        ),
+      )
+    val metadata = scopedConfigurationRepository.findAuthorizationMetadataById(token.id).orElseThrow()
+    assertEquals(token.id, metadata.id)
+    assertEquals("network_security_token", metadata.key)
+    assertEquals(scope, metadata.scopeId)
+    assertEquals(ConfigScopeType.workspace, metadata.scopeType)
+    assertEquals(ConfigOriginType.private_link, metadata.originType)
+    assertEquals(link.toString(), metadata.origin)
+    assertEquals(null, metadata.resourceType)
+    assertEquals(null, metadata.resourceId)
+    assertTrue(scopedConfigurationRepository.findConnectorVersionSelectorById(token.id).isEmpty)
+    assertTrue(scopedConfigurationRepository.findAuthorizationMetadataById(UUID(0, 0)).isEmpty)
+    val version = UUID.randomUUID()
+    val pin =
+      scopedConfigurationRepository.save(
+        token.copy(
+          id = UUID.randomUUID(),
+          key = "connector_version",
+          value = version.toString(),
+          resourceType = ConfigResourceType.actor_definition,
+          resourceId = UUID.randomUUID(),
+        ),
+      )
+    assertEquals(version.toString(), scopedConfigurationRepository.findConnectorVersionSelectorById(pin.id).orElseThrow())
+    assertTrue(scopedConfigurationRepository.findConnectorVersionSelectorById(UUID(0, 0)).isEmpty)
   }
 
   @Test

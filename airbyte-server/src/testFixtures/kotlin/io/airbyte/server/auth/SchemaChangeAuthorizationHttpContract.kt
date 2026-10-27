@@ -348,6 +348,7 @@ abstract class SchemaChangeAuthorizationHttpContract {
                     }
                   // Catalog deduplication permits another actor's fetch only when the expected actor also fetched it.
                   every { actors.catalogWasFetchedByActor(catalog, OTHER_ACTOR) } returns (state != CatalogState.VALID)
+                  every { actors.findLatestActorIdByCatalogId(catalog) } returns Optional.of(OTHER_ACTOR)
                   every { actors.catalogWasFetchedByActor(catalog, actor) } answers {
                     when (state) {
                       CatalogState.INVALID,

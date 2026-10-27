@@ -10,6 +10,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ScopedConfigurationKey
+import io.airbyte.data.services.shared.ScopedConfigurationMetadata
 import java.util.Optional
 import java.util.UUID
 
@@ -17,6 +18,10 @@ import java.util.UUID
  * A service that manages scoped configurations.
  */
 interface ScopedConfigurationService {
+  fun getScopedConfigurationMetadata(configId: UUID): ScopedConfigurationMetadata
+
+  fun getConnectorVersionSelector(configId: UUID): String
+
   /**
    * Get a scoped configuration by its id.
    */

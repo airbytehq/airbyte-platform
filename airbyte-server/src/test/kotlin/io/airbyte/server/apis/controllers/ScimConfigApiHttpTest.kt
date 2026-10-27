@@ -57,6 +57,7 @@ private const val SCIM_CONFIG_SPEC = "ScimConfigApiHttpTest"
 
 @MicronautTest(rebuildContext = true)
 @Property(name = "spec.name", value = SCIM_CONFIG_SPEC)
+@Property(name = "controller.response.authorization.fixture", value = "true")
 internal class ScimConfigApiHttpTest {
   @Requires(property = "spec.name", value = SCIM_CONFIG_SPEC)
   @Factory

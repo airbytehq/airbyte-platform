@@ -12,7 +12,6 @@ import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanR
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -25,7 +24,6 @@ import java.util.UUID
 
 class EntitlementsApiControllerTest {
   private lateinit var entitlementService: EntitlementService
-  private lateinit var organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper
   private lateinit var entitlementsApiController: EntitlementsApiController
 
   private val organizationId = UUID.randomUUID()
@@ -34,8 +32,7 @@ class EntitlementsApiControllerTest {
   @BeforeEach
   fun setup() {
     entitlementService = mockk()
-    organizationAccessAuthorizationHelper = mockk(relaxed = true)
-    entitlementsApiController = EntitlementsApiController(entitlementService, organizationAccessAuthorizationHelper)
+    entitlementsApiController = EntitlementsApiController(entitlementService)
   }
 
   @Test
@@ -73,8 +70,6 @@ class EntitlementsApiControllerTest {
         EntitlementResult(featureId = "feature-maximum-workspaces", isEntitled = true, value = 3L, isUnlimited = false),
       )
 
-    // Mock validation to succeed
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
     every { entitlementService.getEntitlements(OrganizationId(organizationId)) } returns entitlementResults
 
     val result = entitlementsApiController.getEntitlements(requestBody)
@@ -98,32 +93,22 @@ class EntitlementsApiControllerTest {
     assertEquals(3L, numericEntitlement.value)
     assertEquals(false, numericEntitlement.isUnlimited)
 
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
     verify(exactly = 1) { entitlementService.getEntitlements(OrganizationId(organizationId)) }
   }
 
   @Test
-  fun testGetEntitlementsReturnsEmptyListWhenValidationFails() {
+  fun testGetEntitlementsPropagatesServiceDenial() {
     val requestBody = GetEntitlementsByOrganizationIdRequestBody(organizationId = organizationId)
-    val forbiddenException = ForbiddenProblem()
+    every { entitlementService.getEntitlements(OrganizationId(organizationId)) } throws ForbiddenProblem()
 
-    // Mock validation to fail
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
-
-    val result = entitlementsApiController.getEntitlements(requestBody)
-
-    assertNotNull(result)
-    assertEquals(0, result.entitlements.size) // Should return empty list instead of throwing
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
-    verify(exactly = 0) { entitlementService.getEntitlements(any()) } // Should not call service
+    assertThrows<ForbiddenProblem> { entitlementsApiController.getEntitlements(requestBody) }
+    verify(exactly = 1) { entitlementService.getEntitlements(OrganizationId(organizationId)) }
   }
 
   @Test
   fun testGetEntitlementsWithEmptyResults() {
     val requestBody = GetEntitlementsByOrganizationIdRequestBody(organizationId = organizationId)
 
-    // Mock validation to succeed
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
     every { entitlementService.getEntitlements(OrganizationId(organizationId)) } returns emptyList()
 
     val result = entitlementsApiController.getEntitlements(requestBody)
@@ -131,7 +116,6 @@ class EntitlementsApiControllerTest {
     assertNotNull(result)
     assertEquals(0, result.entitlements.size)
 
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
     verify(exactly = 1) { entitlementService.getEntitlements(OrganizationId(organizationId)) }
   }
 

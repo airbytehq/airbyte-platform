@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.GetActorDefinitionVersionDefaultRe
 import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionResponse
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -29,11 +28,12 @@ import io.micronaut.security.rules.SecurityRule
 class ActorDefinitionVersionApiController(
   @param:Body private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler,
 ) : ActorDefinitionVersionApi {
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionSourceMetadataRule::class,
   )
   override fun getActorDefinitionVersionForSourceId(
     @Body sourceIdRequestBody: SourceIdRequestBody,
@@ -44,11 +44,12 @@ class ActorDefinitionVersionApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getActorDefinitionVersionForDestinationId(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
@@ -59,11 +60,12 @@ class ActorDefinitionVersionApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionDefaultVersionRule::class,
   )
   override fun getActorDefinitionVersionDefault(
     @Body actorDefinitionVersionDefaultRequestBody: GetActorDefinitionVersionDefaultRequestBody,
@@ -74,11 +76,12 @@ class ActorDefinitionVersionApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionResolveVersionRule::class,
   )
   override fun resolveActorDefinitionVersionByTag(
     @Body resolveActorDefinitionVersionRequestBody: ResolveActorDefinitionVersionRequestBody,

@@ -15,7 +15,6 @@ import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
-import io.airbyte.config.JobStatus
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.StandardSync
@@ -25,6 +24,7 @@ import io.airbyte.data.auth.TokenType
 import io.airbyte.data.repositories.AttemptsRepository
 import io.airbyte.data.repositories.StreamAttemptMetadataRepository
 import io.airbyte.data.repositories.entities.Attempt
+import io.airbyte.data.repositories.entities.AttemptAuthorizationMetadata
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.JobService
@@ -33,9 +33,12 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.StreamAttemptMetadataService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
+import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.server.apis.controllers.AttemptApiController
+import io.airbyte.server.apis.controllers.DataplaneController
+import io.airbyte.server.apis.controllers.ServiceAccountsController
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.publisher.Publishers
@@ -150,22 +153,27 @@ abstract class AttemptWriteAuthorizationHttpContract {
   @Test
   fun `composite attempt lookup cannot authorize an attempt belonging to another job or attempt number`() {
     for (saved in listOf(
-      Attempt(id = ATTEMPT_ROW, jobId = JOB + 1, attemptNumber = ATTEMPT.toLong()),
-      Attempt(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = ATTEMPT + 1L),
-      Attempt(id = null, jobId = JOB, attemptNumber = ATTEMPT.toLong()),
-      Attempt(id = ATTEMPT_ROW, jobId = null, attemptNumber = ATTEMPT.toLong()),
-      Attempt(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = null),
+      AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB + 1, attemptNumber = ATTEMPT.toLong()),
+      AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = ATTEMPT + 1L),
+      AttemptAuthorizationMetadata(id = null, jobId = JOB, attemptNumber = ATTEMPT.toLong()),
+      AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = null, attemptNumber = ATTEMPT.toLong()),
+      AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = null),
     )) {
       request(status = 404) { fixture ->
         every { fixture.permissions.getPermissionsByServiceAccountId(ACCOUNT) } returns listOf(grant("global"))
-        every { fixture.attempts.findByJobIdAndAttemptNumber(JOB, ATTEMPT.toLong()) } returns saved
+        every { fixture.attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } returns Optional.of(saved)
       }
     }
   }
 
   @Test
   fun `all saved replication job types remain supported`() {
-    for (type in Job.REPLICATION_TYPES) request(status = 200) { fixture -> every { fixture.jobs.findById(JOB) } returns savedJob(type = type) }
+    for (type in Job.REPLICATION_TYPES) {
+      request(status = 200) { fixture ->
+        every { fixture.jobs.findJobMetadataById(JOB) } returns
+          Optional.of(savedJob(type = type))
+      }
+    }
   }
 
   @Test
@@ -183,14 +191,14 @@ abstract class AttemptWriteAuthorizationHttpContract {
     )) {
       request(status = 400, statsBody = stats, metadataBody = metadata) { fixture ->
         // Any attempted ownership lookup would be visible even if binding fails first.
-        every { fixture.jobs.findById(any()) } throws AssertionError("invalid input read a saved job")
+        every { fixture.jobs.findJobMetadataById(any()) } throws AssertionError("invalid input read a saved job")
       }
     }
     withAttemptServer { fixture ->
       val response = post(fixture.server, "/api/v1/attempt/save_stats", statsBody().replace(CONNECTION.toString(), "bad"), "dataplane")
       assertEquals(400, response.statusCode(), response.body())
       fixture.verifyWrites(0)
-      verify(exactly = 0) { fixture.jobs.findById(any()) }
+      verify(exactly = 0) { fixture.jobs.findJobMetadataById(any()) }
     }
   }
 
@@ -218,14 +226,14 @@ abstract class AttemptWriteAuthorizationHttpContract {
     )) {
       request(status = 404) { fixture ->
         when (missing) {
-          "job" -> every { fixture.jobs.findById(JOB) } returns null
-          "job-id" -> every { fixture.jobs.findById(JOB) } returns savedJob(id = JOB + 1)
-          "job-type" -> every { fixture.jobs.findById(JOB) } returns savedJob(type = JobConfig.ConfigType.DISCOVER_SCHEMA)
-          "scope" -> every { fixture.jobs.findById(JOB) } returns savedJob(scope = "bad")
+          "job" -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.empty()
+          "job-id" -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.of(savedJob(id = JOB + 1))
+          "job-type" -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.of(savedJob(type = JobConfig.ConfigType.DISCOVER_SCHEMA))
+          "scope" -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.of(savedJob(scope = "bad"))
           "attempt" -> {
-            every { fixture.attempts.findByJobIdAndAttemptNumber(JOB, ATTEMPT.toLong()) } returns null
-            every { fixture.attempts.findByJobIdAndAttemptNumber(JOB + 1, ATTEMPT.toLong()) } returns
-              Attempt(id = ATTEMPT_ROW, jobId = JOB + 1, attemptNumber = ATTEMPT.toLong())
+            every { fixture.attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } returns Optional.empty()
+            every { fixture.attempts.findAuthorizationMetadata(JOB + 1, ATTEMPT.toLong()) } returns
+              Optional.of(AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB + 1, attemptNumber = ATTEMPT.toLong()))
           }
           "connection" ->
             every { fixture.connections.getStandardSync(CONNECTION) } throws
@@ -270,9 +278,9 @@ abstract class AttemptWriteAuthorizationHttpContract {
     for (failure in listOf("job", "attempt", "connection", "actor", "workspace", "organization", "permission", "unexpected-job")) {
       request(status = 500) { fixture ->
         when (failure) {
-          "job" -> every { fixture.jobs.findById(JOB) } throws IOException("job unavailable")
-          "unexpected-job" -> every { fixture.jobs.findById(JOB) } throws IllegalStateException("job unavailable")
-          "attempt" -> every { fixture.attempts.findByJobIdAndAttemptNumber(JOB, ATTEMPT.toLong()) } throws IOException("attempt unavailable")
+          "job" -> every { fixture.jobs.findJobMetadataById(JOB) } throws IOException("job unavailable")
+          "unexpected-job" -> every { fixture.jobs.findJobMetadataById(JOB) } throws IllegalStateException("job unavailable")
+          "attempt" -> every { fixture.attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } throws IOException("attempt unavailable")
           "connection" -> every { fixture.connections.getStandardSync(CONNECTION) } throws IOException("connection unavailable")
           "actor" -> every { fixture.actors.getIdsForActors(any()) } throws IOException("actor unavailable")
           "workspace" -> every { fixture.workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } throws IOException("workspace unavailable")
@@ -289,10 +297,10 @@ abstract class AttemptWriteAuthorizationHttpContract {
       every { fixture.permissions.getPermissionsByServiceAccountId(any()) } throws
         AssertionError("noauth queried grants")
     }
-    request(status = 404, security = false, token = "") { fixture -> every { fixture.jobs.findById(JOB) } returns null }
+    request(status = 404, security = false, token = "") { fixture -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.empty() }
     request(status = 404, security = false, token = "") { fixture ->
-      every { fixture.attempts.findByJobIdAndAttemptNumber(JOB, ATTEMPT.toLong()) } returns
-        null
+      every { fixture.attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } returns
+        Optional.empty()
     }
     request(status = 400, security = false, token = "", statsBody = "{}", metadataBody = "{}")
   }
@@ -306,7 +314,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
         emptyList()
     }
     request(status = 403, token = "other-scope", earlierAllow = true)
-    request(status = 404, earlierAllow = true) { fixture -> every { fixture.jobs.findById(JOB) } returns null }
+    request(status = 404, earlierAllow = true) { fixture -> every { fixture.jobs.findJobMetadataById(JOB) } returns Optional.empty() }
   }
 
   protected fun request(
@@ -367,11 +375,14 @@ abstract class AttemptWriteAuthorizationHttpContract {
       every { attempts.findByJobIdAndAttemptNumber(any(), any()) } returns null
       every { attempts.findByJobIdAndAttemptNumber(JOB, ATTEMPT.toLong()) } returns
         Attempt(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = ATTEMPT.toLong())
+      every { attempts.findAuthorizationMetadata(any(), any()) } returns Optional.empty()
+      every { attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } returns
+        Optional.of(AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB, attemptNumber = ATTEMPT.toLong()))
       val metadata = mockk<StreamAttemptMetadataRepository>(relaxed = true)
       val metadataService = spyk(StreamAttemptMetadataService(attempts, metadata))
       val jobs = mockk<JobService>()
-      every { jobs.findById(any()) } returns null
-      every { jobs.findById(JOB) } returns savedJob()
+      every { jobs.findJobMetadataById(any()) } returns Optional.empty()
+      every { jobs.findJobMetadataById(JOB) } returns Optional.of(savedJob())
       val permissions = mockk<PermissionService>()
       every { permissions.getPermissionsByServiceAccountId(ACCOUNT) } returns listOf(grant("organization"))
       every { permissions.getPermissionsByAuthUserId(any()) } returns listOf(grant("global", Permission.PermissionType.INSTANCE_ADMIN))
@@ -454,7 +465,15 @@ abstract class AttemptWriteAuthorizationHttpContract {
           permissions,
         )
       configure(fixture)
+      val attemptRules = setOf(SaveAttemptStatsRule::class.java, SaveAttemptStreamMetadataRule::class.java)
+      registerSiblingOperationRules(context, AttemptApiController::class.java, attemptRules)
+      if (signed) {
+        registerSiblingOperationRules(context, DataplaneController::class.java, attemptRules)
+        registerSiblingOperationRules(context, ServiceAccountsController::class.java, attemptRules)
+      }
       context.start()
+      assertFalse(isMockKMock(context.getBean(SaveAttemptStatsRule::class.java)))
+      assertFalse(isMockKMock(context.getBean(SaveAttemptStreamMetadataRule::class.java)))
       assertFalse(isMockKMock(context.getBean(ObjectMapper::class.java)), "HTTP binding must use the real JSON mapper")
       assertEquals(security, context.containsBean(SecurityFilter::class.java))
       assertTrue(context.containsBean(UncaughtExceptionHandler::class.java))
@@ -516,7 +535,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
     body: String,
     token: String = "",
   ): HttpResponse<String> =
-    HttpClient.newHttpClient().use { client ->
+    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build().use { client ->
       val builder =
         java.net.http.HttpRequest
           .newBuilder(URI("${server.url}$path"))
@@ -550,7 +569,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
       id: Long = JOB,
       type: JobConfig.ConfigType = JobConfig.ConfigType.SYNC,
       scope: String = CONNECTION.toString(),
-    ): Job = Job(id, type, scope, JobConfig(), emptyList(), JobStatus.RUNNING, null, 0, 0, false)
+    ): JobMetadata = JobMetadata(id, type, scope)
 
     fun statsBody(connection: UUID? = CONNECTION): String =
       """{"jobId":$JOB,"attemptNumber":$ATTEMPT,"stats":{"recordsEmitted":0,"bytesEmitted":0,"recordsCommitted":0,"bytesCommitted":0,"recordsRejected":0,"estimatedRecords":0,"estimatedBytes":0},"streamStats":[]${connection?.let {

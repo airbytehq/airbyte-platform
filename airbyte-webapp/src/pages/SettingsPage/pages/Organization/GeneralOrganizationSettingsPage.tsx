@@ -30,7 +30,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   // if EITHER flag OR feature is enabled, provide diagnostics
   const isDownloadDiagnosticsEnabled = isDownloadDiagnosticsFlagEnabled || isDownloadDiagnosticsFeatureEnabled;
 
-  const canDownloadDiagnostics = useIntent("DownloadDiagnostics", { organizationId }) && isDownloadDiagnosticsEnabled;
+  const canDownloadDiagnostics = useIntent("DownloadDiagnostics", {}) && isDownloadDiagnosticsEnabled;
 
   return (
     <FlexContainer direction="column" gap="xl">

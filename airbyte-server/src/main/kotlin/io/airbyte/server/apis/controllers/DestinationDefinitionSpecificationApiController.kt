@@ -8,7 +8,6 @@ import io.airbyte.api.server.generated.apis.DestinationDefinitionSpecificationAp
 import io.airbyte.api.server.generated.models.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.server.generated.models.DestinationDefinitionSpecificationRead
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -26,11 +25,12 @@ import io.micronaut.security.rules.SecurityRule
 open class DestinationDefinitionSpecificationApiController(
   private val connectorDefinitionSpecificationHandler: ConnectorDefinitionSpecificationHandler,
 ) : DestinationDefinitionSpecificationApi {
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getDestinationDefinitionSpecification(
     @Body destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
@@ -41,11 +41,12 @@ open class DestinationDefinitionSpecificationApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getSpecificationForDestinationId(
     @Body destinationIdRequestBody: DestinationIdRequestBody,

@@ -25,6 +25,11 @@ class ApplicationServiceMicronautImpl(
   private val airbyteAuthConfig: AirbyteAuthConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
 ) : ApplicationService {
+  override fun requireApplicationOwner(
+    authUserId: String,
+    applicationId: UUID,
+  ): Unit = throw UnsupportedOperationException()
+
   override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
     listOf(
       Application()

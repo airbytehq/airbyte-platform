@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.ConnectionStream
@@ -426,6 +427,7 @@ open class SchedulerHandler
     }
 
     fun discoverSchemaForSourceFromSourceCreate(sourceCreate: SourceCoreConfig): SourceDiscoverSchemaRead {
+      val sourceId = sourceCreate.sourceId ?: throw BadRequestProblem()
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceCreate.workspaceId, includeTombstone = true)
       if (workspace.tombstone) {
         throw NotFoundException("Cannot run discover on tombstoned workspace")
@@ -433,7 +435,7 @@ open class SchedulerHandler
 
       val sourceDef = sourceService.getStandardSourceDefinition(sourceCreate.sourceDefinitionId)
       val sourceVersion =
-        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.workspaceId, sourceCreate.sourceId)
+        actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.workspaceId, sourceId)
       val partialConfig =
         secretSanitizer.sanitizePartialConfig(
           sourceCreate.workspaceId,
@@ -451,6 +453,7 @@ open class SchedulerHandler
       // technically declared as required.
       val source =
         SourceConnection()
+          .withSourceId(sourceId)
           .withSourceDefinitionId(sourceCreate.sourceDefinitionId)
           .withConfiguration(partialConfig)
           .withWorkspaceId(sourceCreate.workspaceId)

@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.ScimConfigResponse
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -28,11 +27,13 @@ import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimOrganizationNotFoundException
 import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
+import io.airbyte.server.auth.OrganizationAdminRule
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import io.airbyte.api.server.generated.models.ScimConfigStatus as ApiScimConfigStatus
 import io.airbyte.api.server.generated.models.ScimIdpProvider as ApiScimIdpProvider
 import io.airbyte.domain.models.scim.ScimConfigurationStatus as DomainScimConfigurationStatus
@@ -47,11 +48,12 @@ open class ScimConfigApiController(
   private val currentUserService: CurrentUserService,
   private val webUrlHelper: WebUrlHelper,
 ) : ScimConfigApi {
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun getScimConfig(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
@@ -61,12 +63,13 @@ open class ScimConfigApiController(
         .toApi(available = scimAccessGate.isAllowed(organizationId))
     }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun enableScim(enableScimRequestBody: EnableScimRequestBody): ScimConfigResponse =
     executeScim {
@@ -80,12 +83,13 @@ open class ScimConfigApiController(
         ).toApi(available = true)
     }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun rotateScimToken(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
@@ -98,13 +102,14 @@ open class ScimConfigApiController(
         ).toApi(available = true)
     }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
   @Status(HttpStatus.NO_CONTENT)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun disableScim(organizationIdRequestBody: OrganizationIdRequestBody) {
     executeScim {

@@ -308,7 +308,10 @@ abstract class CheckCommandAuthorizationHttpContract {
       )
       context.registerSingleton(ApiPojoConverters::class.java, mockk<ApiPojoConverters>())
       context.registerSingleton(io.airbyte.commons.logging.LogUtils::class.java, mockk<io.airbyte.commons.logging.LogUtils>())
+      registerSiblingOperationRules(context, io.airbyte.server.apis.controllers.CommandApiController::class.java, setOf(CheckCommandRule::class.java))
       context.start()
+      org.junit.jupiter.api.Assertions
+        .assertFalse(io.mockk.isMockKMock(context.getBean(CheckCommandRule::class.java)))
       context.getBean(EmbeddedServer::class.java).start().use { server ->
         HttpClient.newHttpClient().use { client ->
           val builder =

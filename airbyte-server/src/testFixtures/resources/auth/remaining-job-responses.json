@@ -1,0 +1,72 @@
+{
+  "JobInfoRead": {
+    "job": {
+      "id": 7,
+      "configType": "sync",
+      "configId": "00000000-0000-0000-0000-000000000001",
+      "createdAt": 0,
+      "updatedAt": 0,
+      "status": "pending"
+    },
+    "attempts": []
+  },
+  "JobInfoLightRead": {
+    "job": {
+      "id": 7,
+      "configType": "sync",
+      "configId": "00000000-0000-0000-0000-000000000001",
+      "createdAt": 0,
+      "updatedAt": 0,
+      "status": "pending"
+    }
+  },
+  "JobOptionalRead": {},
+  "JobDebugInfoRead": {
+    "job": {
+      "id": 7,
+      "configType": "sync",
+      "configId": "00000000-0000-0000-0000-000000000001",
+      "status": "pending",
+      "airbyteVersion": "fixture",
+      "sourceDefinition": {
+        "sourceDefinitionId": "00000000-0000-0000-0000-000000000001",
+        "name": "fixture",
+        "dockerRepository": "fixture",
+        "dockerImageTag": "fixture"
+      },
+      "destinationDefinition": {
+        "destinationDefinitionId": "00000000-0000-0000-0000-000000000001",
+        "name": "fixture",
+        "dockerRepository": "fixture",
+        "dockerImageTag": "fixture",
+        "documentationUrl": "fixture"
+      }
+    },
+    "attempts": []
+  },
+  "JobReadList": {
+    "jobs": [],
+    "totalJobCount": 0
+  },
+  "AttemptInfoRead": {
+    "attempt": {
+      "id": 0,
+      "status": "running",
+      "createdAt": 0,
+      "updatedAt": 0
+    }
+  },
+  "AttemptStats": {},
+  "CreateNewAttemptNumberResponse": {
+    "attemptNumber": 0
+  },
+  "RetryStateRead": {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "jobId": 7,
+    "connectionId": "00000000-0000-0000-0000-000000000001",
+    "successiveCompleteFailures": 0,
+    "totalCompleteFailures": 0,
+    "successivePartialFailures": 0,
+    "totalPartialFailures": 0
+  }
+}

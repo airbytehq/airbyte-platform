@@ -4,15 +4,19 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
@@ -20,9 +24,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -51,6 +57,42 @@ class ResourceBootstrapHandlerTest {
       dataplaneGroupService,
       entitlementService,
     )
+
+  @Nested
+  inner class BootstrapWorkspace {
+    private val workspaceCreate =
+      WorkspaceCreateWithId(
+        id = UUID.randomUUID(),
+        name = "workspace",
+        organizationId = orgId,
+        dataplaneGroupId = orgId,
+      )
+
+    @BeforeEach
+    fun setup() {
+      every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(UUID.randomUUID())
+      every { organizationService.getOrganization(orgId) } returns Optional.of(Organization().withOrganizationId(orgId))
+      every { roleResolver.newRequest() } returns mockk(relaxed = true)
+      every { workspaceService.writeWorkspaceWithSecrets(any()) } returns Unit
+    }
+
+    @Test
+    fun `redundant workspace grant does not block onboarding`() {
+      every { permissionHandler.createPermission(any()) } throws
+        ConflictException("redundant", PermissionRedundantException("redundant"))
+
+      handler.bootStrapWorkspaceForCurrentUser(workspaceCreate)
+
+      verify { workspaceService.writeWorkspaceWithSecrets(any()) }
+    }
+
+    @Test
+    fun `other permission conflicts still block onboarding`() {
+      every { permissionHandler.createPermission(any()) } throws ConflictException("inactive")
+
+      assertThrows(ConflictException::class.java) { handler.bootStrapWorkspaceForCurrentUser(workspaceCreate) }
+    }
+  }
 
   @Nested
   inner class `findOrCreateOrganizationAndPermission` {

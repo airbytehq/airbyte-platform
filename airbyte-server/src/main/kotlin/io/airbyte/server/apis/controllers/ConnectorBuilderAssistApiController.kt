@@ -5,12 +5,12 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.apis.ConnectorBuilderAssistApi
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.AssistProxyHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.server.auth.AuthenticatedMetadataRule
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
@@ -28,11 +28,12 @@ class ConnectorBuilderAssistApiController(
   private val assistProxyHandler: AssistProxyHandler,
 ) : ConnectorBuilderAssistApi {
   @Post(uri = "/process", consumes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = AuthenticatedMetadataRule::class,
   )
   override fun assistV1Process(
     @Body requestBody: Map<String, Any>,

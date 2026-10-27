@@ -24,13 +24,11 @@ import io.airbyte.api.server.generated.models.GroupUpdate
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.Group
 import io.airbyte.data.services.AlreadyGroupMemberException
 import io.airbyte.data.services.GroupManagedByScimException
@@ -43,6 +41,10 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import io.airbyte.server.apis.mappers.toGroupMemberRead
 import io.airbyte.server.apis.mappers.toGroupRead
+import io.airbyte.server.auth.GroupMemberAddRule
+import io.airbyte.server.auth.GroupMemberRemoveRule
+import io.airbyte.server.auth.GroupSavedAdminRule
+import io.airbyte.server.auth.OrganizationAdminRule
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -65,9 +67,11 @@ open class GroupApiController(
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : GroupApi {
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupMemberAddRule::class,
   )
   override fun addGroupMember(groupMemberRequestBody: GroupMemberRequestBody): GroupMemberRead {
     val group = getAuthorizedGroup(groupMemberRequestBody.groupId)
@@ -95,11 +99,12 @@ open class GroupApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun createGroup(groupCreate: GroupCreate): GroupRead {
     val organizationId = OrganizationId(groupCreate.organizationId)
@@ -129,9 +134,11 @@ open class GroupApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupSavedAdminRule::class,
   )
   override fun deleteGroup(groupIdRequestBody: GroupIdRequestBody) {
     val group = getAuthorizedGroup(groupIdRequestBody.groupId)
@@ -143,15 +150,19 @@ open class GroupApiController(
     }
   }
 
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupSavedAdminRule::class,
   )
   override fun getGroup(groupIdRequestBody: GroupIdRequestBody): GroupRead = getAuthorizedGroup(groupIdRequestBody.groupId).toGroupRead()
 
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupSavedAdminRule::class,
   )
   override fun listGroupMembers(groupIdRequestBody: GroupIdRequestBody): GroupMemberReadList {
     getAuthorizedGroup(groupIdRequestBody.groupId)
@@ -161,10 +172,11 @@ open class GroupApiController(
     )
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationAdminRule::class,
   )
   override fun listGroups(organizationIdRequestBody: OrganizationIdRequestBody): GroupReadList {
     val organizationId = OrganizationId(organizationIdRequestBody.organizationId)
@@ -181,9 +193,11 @@ open class GroupApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupMemberRemoveRule::class,
   )
   override fun removeGroupMember(groupMemberRequestBody: GroupMemberRequestBody) {
     val group = getAuthorizedGroup(groupMemberRequestBody.groupId)
@@ -200,9 +214,11 @@ open class GroupApiController(
   }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GroupSavedAdminRule::class,
   )
   override fun updateGroup(groupUpdate: GroupUpdate): GroupRead {
     val existingGroup = getAuthorizedGroup(groupUpdate.groupId)
@@ -234,11 +250,6 @@ open class GroupApiController(
             .resourceId(groupId.toString()),
         )
 
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
 
     return group

@@ -5,13 +5,13 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.apis.OpenapiApi
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.AuthenticatedMetadataRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -23,11 +23,12 @@ import java.io.File
 class OpenapiApiController(
   private val openApiConfigHandler: OpenApiConfigHandler,
 ) : OpenapiApi {
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = AuthenticatedMetadataRule::class,
   )
   override fun getOpenApiSpec(): File = execute { openApiConfigHandler.file }
 }

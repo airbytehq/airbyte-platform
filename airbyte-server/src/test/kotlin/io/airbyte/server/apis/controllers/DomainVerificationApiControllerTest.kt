@@ -206,7 +206,6 @@ class DomainVerificationApiControllerTest {
 
     domainVerificationApiController.deleteDomainVerification(requestBody)
 
-    verify { organizationDomainVerificationService.getDomainVerification(testId) }
     verify { organizationDomainVerificationService.deleteDomainVerification(testId) }
   }
 
@@ -262,7 +261,6 @@ class DomainVerificationApiControllerTest {
     val result = domainVerificationApiController.resetDomainVerification(requestBody)
 
     assertEquals(DomainVerificationResponse.Status.PENDING, result.status)
-    verify { organizationDomainVerificationService.getDomainVerification(testId) }
     verify { organizationDomainVerificationService.resetDomainVerification(testId) }
   }
 

@@ -18,7 +18,6 @@ import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.api.server.generated.models.WorkspaceUserAccessInfoReadList
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -26,6 +25,12 @@ import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.GlobalAdminRule
+import io.airbyte.server.auth.OrganizationMemberRule
+import io.airbyte.server.auth.UserEmailRule
+import io.airbyte.server.auth.UserOnboardingRule
+import io.airbyte.server.auth.UserSelfRule
+import io.airbyte.server.auth.UserWorkspaceReadRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -41,38 +46,42 @@ import io.micronaut.security.rules.SecurityRule
 open class UserApiController(
   private val userHandler: UserHandler,
 ) : UserApi {
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserSelfRule::class,
   )
   override fun getUser(
     @Body userIdRequestBody: UserIdRequestBody,
   ): UserRead = execute { userHandler.getUser(userIdRequestBody) }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserSelfRule::class,
   )
   override fun getUserByAuthId(
     @Body userAuthIdRequestBody: UserAuthIdRequestBody,
   ): UserRead = execute { userHandler.getUserByAuthId(userAuthIdRequestBody) }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserEmailRule::class,
   )
   override fun getUserByEmail(
     @Body userEmailRequestBody: UserEmailRequestBody,
   ): UserRead = execute { userHandler.getUserByEmail(userEmailRequestBody) }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
   @AuditLogging(AuditLoggingProvider.ONLY_ACTOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserSelfRule::class,
   )
   override fun deleteUser(
     @Body userIdRequestBody: UserIdRequestBody,
@@ -83,21 +92,23 @@ open class UserApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
   @AuditLogging(AuditLoggingProvider.ONLY_ACTOR)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserSelfRule::class,
   )
   override fun updateUser(
     @Body userUpdate: UserUpdate,
   ): UserRead = execute { userHandler.updateUser(userUpdate) }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OrganizationMemberRule::class,
   )
   override fun listUsersInOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
@@ -106,11 +117,12 @@ open class UserApiController(
       userHandler.listUsersInOrganization(organizationIdRequestBody ?: throw BadRequestException("Request body is required."))
     }
 
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserWorkspaceReadRule::class,
   )
   override fun listAccessInfoByWorkspaceId(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
@@ -121,19 +133,21 @@ open class UserApiController(
       )
     }
 
-  @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GlobalAdminRule::class,
   )
   override fun listInstanceAdminUsers(): UserWithPermissionInfoReadList = execute { userHandler.listInstanceAdminUsers() }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = UserOnboardingRule::class,
   )
   override fun getOrCreateUserByAuthId(
     @Body userAuthIdRequestBody: UserAuthIdRequestBody,

@@ -36,7 +36,7 @@ class WorkloadOutputControllerTest {
 
   @BeforeEach
   fun setup() {
-    controller = WorkloadOutputController(storageClient, workloadService, roleResolver)
+    controller = WorkloadOutputController(storageClient)
 
     every { storageClient.write(any(), any()) } returns Unit
     every { workloadService.getWorkload(any()) } returns

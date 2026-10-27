@@ -704,6 +704,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     val actualWorkspaces = workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()).toSet()
 
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+    assertEquals(expectedWorkspaces.map { it.workspaceId }.toSet(), workspacePersistence.listActiveWorkspaceIdsByUserId(userId).toSet())
   }
 
   @Test

@@ -15,7 +15,6 @@ import io.airbyte.api.server.generated.models.DataWorkerReallocateRequestBody
 import io.airbyte.api.server.generated.models.DataWorkerRemoveCapacityRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -36,53 +35,58 @@ import io.micronaut.security.rules.SecurityRule
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class DataWorkerAllocationApiController : DataWorkerAllocationApi {
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataWorkerAllocationOrganizationUnsupportedRule::class,
   )
   override fun listDataWorkerAllocations(
     @Body dataWorkerAllocationListRequestBody: DataWorkerAllocationListRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataWorkerAllocationOrganizationUnsupportedRule::class,
   )
   override fun getDataWorkerAllocation(
     @Body dataWorkerAllocationGetRequestBody: DataWorkerAllocationGetRequestBody,
   ): DataWorkerAllocationRead = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataWorkerAllocationOrganizationUnsupportedRule::class,
   )
   override fun reallocateDataWorkerCapacity(
     @Body dataWorkerReallocateRequestBody: DataWorkerReallocateRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.OssInstanceAdminUnsupportedRule::class,
   )
   override fun addDataWorkerCapacity(
     @Body dataWorkerAddCapacityRequestBody: DataWorkerAddCapacityRequestBody,
   ): DataWorkerAllocationListResponse = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ADMIN)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.OssInstanceAdminUnsupportedRule::class,
   )
   override fun removeDataWorkerCapacity(
     @Body dataWorkerRemoveCapacityRequestBody: DataWorkerRemoveCapacityRequestBody,

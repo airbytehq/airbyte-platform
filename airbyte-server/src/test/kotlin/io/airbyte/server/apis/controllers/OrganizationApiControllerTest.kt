@@ -14,7 +14,12 @@ import io.airbyte.api.server.generated.models.OrganizationInfoRead
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
 import io.airbyte.commons.server.handlers.OrganizationsHandler
+import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.OrganizationAccessService
+import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.OrganizationAccessibleRule
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
+import io.micronaut.security.authentication.Authentication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -27,6 +32,11 @@ import java.time.LocalDate
 import java.util.UUID
 
 class OrganizationApiControllerTest {
+  private val authorizationData = mockk<AuthorizationDataService>()
+  private val organizationAccess = mockk<OrganizationAccessService>()
+  private val operationPermissions = mockk<OperationPermissions>(relaxed = true)
+  private val rule = OrganizationAccessibleRule(authorizationData, organizationAccess, operationPermissions)
+
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper
 
@@ -52,36 +62,40 @@ class OrganizationApiControllerTest {
 
     // Default behavior: organizationsHandler returns organization info
     every { organizationsHandler.getOrganizationInfo(organizationId) } returns organizationInfoRead
+    every { authorizationData.organization(organizationId) } returns organizationId
+    every { organizationAccess.hasAccessibleWorkspace("caller", organizationId) } returns false
   }
 
   @Test
   fun `getOrganization succeeds when validation passes`() {
     val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
+    every { operationPermissions.requireOrganizations(any(), listOf(organizationId), any(), any()) } returns Unit
     every { organizationsHandler.getOrganization(requestBody) } returns organizationRead
 
+    rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(requestBody)))
     val result = organizationApiController.getOrganization(requestBody)
 
     assertNotNull(result)
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { authorizationData.organization(organizationId) }
     verify(exactly = 1) { organizationsHandler.getOrganization(requestBody) }
   }
 
   @Test
   fun `getOrganization fails when validation fails`() {
     val forbiddenException = ForbiddenProblem()
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
+    every { operationPermissions.requireOrganizations(any(), listOf(organizationId), any(), any()) } throws forbiddenException
 
     val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
     val exception =
       assertThrows<ForbiddenProblem> {
+        rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(requestBody)))
         organizationApiController.getOrganization(requestBody)
       }
 
     assertEquals(forbiddenException, exception)
     verify(exactly = 0) { organizationsHandler.getOrganization(any()) }
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { authorizationData.organization(organizationId) }
   }
 
   @Test
@@ -126,32 +140,34 @@ class OrganizationApiControllerTest {
   @Test
   fun `getOrgInfo succeeds when validation passes`() {
     // Mock the currentUserService to succeed (no exception thrown)
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
+    every { operationPermissions.requireOrganizations(any(), listOf(organizationId), any(), any()) } returns Unit
 
     val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
+    rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(requestBody)))
     val result = organizationApiController.getOrgInfo(requestBody)
 
     assertNotNull(result)
     assertEquals(organizationId, result.organizationId)
     verify(exactly = 1) { organizationsHandler.getOrganizationInfo(organizationId) }
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { authorizationData.organization(organizationId) }
   }
 
   @Test
   fun `getOrgInfo fails when validation fails`() {
     val forbiddenException = ForbiddenProblem()
-    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
+    every { operationPermissions.requireOrganizations(any(), listOf(organizationId), any(), any()) } throws forbiddenException
 
     val requestBody = OrganizationIdRequestBody(organizationId = organizationId)
 
     val exception =
       assertThrows<ForbiddenProblem> {
+        rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(requestBody)))
         organizationApiController.getOrgInfo(requestBody)
       }
 
     assertEquals(forbiddenException, exception)
     verify(exactly = 0) { organizationsHandler.getOrganizationInfo(organizationId) } // Should not call handler
-    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { authorizationData.organization(organizationId) }
   }
 }

@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.AirbyteStream
 import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
 import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
@@ -1161,9 +1162,7 @@ internal class SchedulerHandlerTest {
     org.junit.jupiter.api.Assertions
       .assertEquals(actual.catalogId, discoverResponse.output)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(actual.jobInfo)
-    org.junit.jupiter.api.Assertions
-      .assertTrue(actual.jobInfo!!.succeeded)
+      .assertTrue(requireNotNull(actual.jobInfo).succeeded)
     verify { sourceService.getSourceConnection(source.sourceId) }
     verify { catalogService.getActorCatalog(request.sourceId, SOURCE_DOCKER_TAG, any()) }
 
@@ -1362,9 +1361,7 @@ internal class SchedulerHandlerTest {
     org.junit.jupiter.api.Assertions
       .assertNull(actual.catalog)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(actual.jobInfo)
-    org.junit.jupiter.api.Assertions
-      .assertFalse(actual.jobInfo!!.succeeded)
+      .assertFalse(requireNotNull(actual.jobInfo).succeeded)
     verify { sourceService.getSourceConnection(source.sourceId) }
     verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
     verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
@@ -1389,6 +1386,7 @@ internal class SchedulerHandlerTest {
   fun testDiscoverSchemaForSourceFromSourceCreateDisabledWorkspace() {
     val source =
       SourceConnection()
+        .withSourceId(UUID.randomUUID())
         .withSourceDefinitionId(SOURCE.sourceDefinitionId)
         .withConfiguration(SOURCE.configuration)
         .withWorkspaceId(SOURCE.workspaceId)
@@ -1397,6 +1395,7 @@ internal class SchedulerHandlerTest {
         sourceDefinitionId = source.sourceDefinitionId,
         connectionConfiguration = source.configuration,
         workspaceId = source.workspaceId,
+        sourceId = source.sourceId,
       )
     val mockWorkspace =
       mockk<StandardWorkspace>().also {
@@ -1409,9 +1408,22 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  fun `source create discovery requires a saved source id`() {
+    val sourceCoreConfig =
+      SourceCoreConfig(
+        sourceDefinitionId = SOURCE.sourceDefinitionId,
+        connectionConfiguration = SOURCE.configuration,
+        workspaceId = SOURCE.workspaceId,
+      )
+
+    assertThrows<BadRequestProblem> { schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig) }
+  }
+
+  @Test
   fun testDiscoverSchemaForSourceFromSourceCreate() {
     val source =
       SourceConnection()
+        .withSourceId(UUID.randomUUID())
         .withSourceDefinitionId(SOURCE.sourceDefinitionId)
         .withConfiguration(SOURCE.getConfiguration())
         .withWorkspaceId(SOURCE.workspaceId)
@@ -1442,6 +1454,7 @@ internal class SchedulerHandlerTest {
         sourceDefinitionId = source.sourceDefinitionId,
         connectionConfiguration = source.getConfiguration(),
         workspaceId = source.workspaceId,
+        sourceId = source.sourceId,
       )
     val actorCatalog =
       ActorCatalog()
@@ -1464,7 +1477,7 @@ internal class SchedulerHandlerTest {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         source.workspaceId,
-        null,
+        source.sourceId,
       )
     } returns sourceVersion
     every {
@@ -1496,13 +1509,14 @@ internal class SchedulerHandlerTest {
     org.junit.jupiter.api.Assertions
       .assertTrue(actual.jobInfo!!.succeeded)
     verify { synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH) }
-    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) }
   }
 
   @Test
   fun testDiscoverSchemaForSourceFromSourceCreateFailed() {
     val source =
       SourceConnection()
+        .withSourceId(UUID.randomUUID())
         .withSourceDefinitionId(SOURCE.sourceDefinitionId)
         .withConfiguration(SOURCE.getConfiguration())
         .withWorkspaceId(SOURCE.workspaceId)
@@ -1518,6 +1532,7 @@ internal class SchedulerHandlerTest {
         sourceDefinitionId = source.sourceDefinitionId,
         connectionConfiguration = source.getConfiguration(),
         workspaceId = source.workspaceId,
+        sourceId = source.sourceId,
       )
 
     val sourceDefinition =
@@ -1530,7 +1545,7 @@ internal class SchedulerHandlerTest {
         .withDockerImageTag(SOURCE_DOCKER_TAG)
         .withProtocolVersion(SOURCE_PROTOCOL_VERSION)
         .withSpec(CONNECTOR_SPECIFICATION)
-    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, null) } returns sourceVersion
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) } returns sourceVersion
     every {
       synchronousSchedulerClient.createDiscoverSchemaJob(
         source,

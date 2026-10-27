@@ -5,7 +5,6 @@
 package io.airbyte.domain.services.auth
 
 import io.airbyte.config.ConfigNotFoundType
-import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Job
@@ -18,9 +17,13 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.Tag
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.AttemptsRepository
 import io.airbyte.data.repositories.AuthorizationCommandRepository
 import io.airbyte.data.repositories.GroupRepository
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
+import io.airbyte.data.repositories.entities.Attempt
+import io.airbyte.data.repositories.entities.AttemptAuthorizationMetadata
 import io.airbyte.data.repositories.entities.AuthorizationCommand
 import io.airbyte.data.repositories.entities.Group
 import io.airbyte.data.repositories.entities.OrganizationDomainVerification
@@ -37,6 +40,8 @@ import io.airbyte.data.services.SecretStorageService
 import io.airbyte.data.services.TagService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
+import io.airbyte.data.services.shared.ConnectorBuilderProjectMetadata
+import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationMethod
 import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationStatus
 import io.airbyte.domain.models.SecretStorage
@@ -49,9 +54,12 @@ import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.util.Optional
@@ -80,6 +88,8 @@ class AuthorizationResourceLookupTest {
   private val projects = mockk<ConnectorBuilderService>()
   private val commands = mockk<AuthorizationCommandRepository>()
   private val users = mockk<UserPersistence>()
+  private val actorRepository = mockk<ActorRepository>()
+  private val attempts = mockk<AttemptsRepository>()
   private val service =
     AuthorizationDataService(
       workspaces,
@@ -101,8 +111,8 @@ class AuthorizationResourceLookupTest {
       mockk(),
       privateLinks = mockk(),
       connectionEvents = mockk(),
-      actorRepository = mockk(),
-      attempts = mockk(),
+      actorRepository = actorRepository,
+      attempts = attempts,
       entitlements = mockk(),
       featureFlags = mockk(),
     )
@@ -115,6 +125,31 @@ class AuthorizationResourceLookupTest {
       every { actors.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, workspace, org))
     }
     every { connections.getStandardSync(id) } returns StandardSync().withConnectionId(id).withSourceId(source).withDestinationId(destination)
+  }
+
+  @Test
+  fun `catalog owner metadata retains every saved source workspace and propagates malformed parents or dependency failures`() {
+    val laterWorkspace = UUID.randomUUID()
+    val laterOrg = UUID.randomUUID()
+    val later = WorkspaceAndOrganization(laterWorkspace, laterOrg)
+    every { actorRepository.findSourceWorkspaceIdsByCatalogId(id) } returns listOf(workspace, laterWorkspace)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspace, true) } returns StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(org)
+    every { workspaces.getStandardWorkspaceNoSecrets(laterWorkspace, true) } returns
+      StandardWorkspace().withWorkspaceId(laterWorkspace).withOrganizationId(laterOrg)
+    assertEquals(listOf(pair, later), service.catalogSourceWorkspaceAndOrganizations(id))
+    verify(exactly = 0) { actorRepository.findByActorId(any()) }
+    verify(exactly = 0) { actors.getIdsForActors(any()) }
+
+    val failure = IOException("later catalog owner unavailable")
+    every { workspaces.getStandardWorkspaceNoSecrets(laterWorkspace, true) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.catalogSourceWorkspaceAndOrganizations(id) })
+    every { workspaces.getStandardWorkspaceNoSecrets(laterWorkspace, true) } returns StandardWorkspace().withWorkspaceId(laterWorkspace)
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.catalogSourceWorkspaceAndOrganizations(id) }
+    every { workspaces.getStandardWorkspaceNoSecrets(laterWorkspace, true) } returns
+      StandardWorkspace().withWorkspaceId(UUID.randomUUID()).withOrganizationId(laterOrg)
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.catalogSourceWorkspaceAndOrganizations(id) }
+    every { actorRepository.findSourceWorkspaceIdsByCatalogId(id) } returns emptyList()
+    assertEquals(emptyList<WorkspaceAndOrganization>(), service.catalogSourceWorkspaceAndOrganizations(id))
   }
 
   @Test
@@ -206,19 +241,49 @@ class AuthorizationResourceLookupTest {
   @Test
   fun `all replication job types resolve saved connection scope`() {
     for (type in Job.REPLICATION_TYPES) {
-      every { jobs.findById(0L) } returns job(type, id.toString())
+      every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(0L, type, id.toString()))
       assertEquals(pair, service.jobWorkspaceAndOrganization(0L))
     }
   }
 
   @Test
+  fun `job and attempt ownership never loads job config or attempt payloads`() {
+    every { jobs.findById(0L) } returns job(JobConfig.ConfigType.SYNC, id.toString())
+    every { attempts.findByJobIdAndAttemptNumber(0L, 0L) } returns Attempt(id = 41L, jobId = 0L, attemptNumber = 0L)
+    every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(0L, JobConfig.ConfigType.SYNC, id.toString()))
+    every { attempts.findAuthorizationMetadata(0L, 0L) } returns Optional.of(AttemptAuthorizationMetadata(41L, 0L, 0L))
+    assertEquals(id, service.replicationJobConnectionId(0L))
+    assertEquals(id, service.savedAttemptConnectionId(0L, 0))
+    assertAll(
+      { verify(exactly = 0) { jobs.findById(any()) } },
+      { verify(exactly = 0) { attempts.findByJobIdAndAttemptNumber(any(), any()) } },
+    )
+  }
+
+  @Test
   fun `missing unsupported and malformed job scope fail closed`() {
-    every { jobs.findById(0L) } returns null
+    every { jobs.findJobMetadataById(0L) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.jobWorkspaceAndOrganization(0L) }
-    every { jobs.findById(0L) } returns job(JobConfig.ConfigType.CHECK_CONNECTION_SOURCE, id.toString())
+    every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(0L, JobConfig.ConfigType.CHECK_CONNECTION_SOURCE, id.toString()))
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.jobWorkspaceAndOrganization(0L) }
-    every { jobs.findById(0L) } returns job(JobConfig.ConfigType.SYNC, "invalid")
+    every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(0L, JobConfig.ConfigType.SYNC, "invalid"))
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.jobWorkspaceAndOrganization(0L) }
+    every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(99L, JobConfig.ConfigType.SYNC, id.toString()))
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.jobWorkspaceAndOrganization(0L) }
+  }
+
+  @Test
+  fun `attempt ownership requires the exact saved job and attempt pair and propagates lookup errors`() {
+    every { jobs.findJobMetadataById(0L) } returns Optional.of(JobMetadata(0L, JobConfig.ConfigType.SYNC, id.toString()))
+    every { attempts.findAuthorizationMetadata(0L, 0L) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedAttemptConnectionId(0L, 0) }
+    every { attempts.findAuthorizationMetadata(0L, 0L) } returns Optional.of(AttemptAuthorizationMetadata(41L, 99L, 0L))
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedAttemptConnectionId(0L, 0) }
+    every { attempts.findAuthorizationMetadata(0L, 0L) } returns Optional.of(AttemptAuthorizationMetadata(41L, 0L, 99L))
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedAttemptConnectionId(0L, 0) }
+    val failure = IOException("attempt metadata unavailable")
+    every { attempts.findAuthorizationMetadata(0L, 0L) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.savedAttemptConnectionId(0L, 0) })
   }
 
   @Test
@@ -281,6 +346,7 @@ class AuthorizationResourceLookupTest {
 
   @Test
   fun `secret storage uses its saved scope without loading secrets`() {
+    every { workspaces.getStandardWorkspaceNoSecrets(workspace, true) } returns StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(org)
     for (scope in SecretStorageScopeType.entries) {
       val storage =
         SecretStorage(
@@ -312,17 +378,73 @@ class AuthorizationResourceLookupTest {
         },
         service.secretStorageTarget(id),
       )
+      every { secretStorages.findById(SecretStorageId(id)) } returns storage.copy(tombstone = true)
+      assertEquals(
+        if (scope == SecretStorageScopeType.WORKSPACE) AuthorizationTarget.Workspace(pair) else AuthorizationTarget.Organization(org),
+        service.secretStorageTarget(id),
+      )
     }
     every { secretStorages.findById(SecretStorageId(id)) } returns null
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.secretStorageTarget(id) }
   }
 
   @Test
+  fun `existing secret references retain saved ownership after their workspace is tombstoned`() {
+    every { secretStorages.findById(SecretStorageId(id)) } returns
+      SecretStorage(
+        SecretStorageId(id),
+        SecretStorageScopeType.WORKSPACE,
+        workspace,
+        "storage",
+        SecretStorageType.LOCAL_TESTING,
+        false,
+        tombstone = true,
+        createdBy = source,
+        updatedBy = source,
+        createdAt = null,
+        updatedAt = null,
+      )
+    every { workspaces.getStandardWorkspaceNoSecrets(workspace, false) } throws
+      ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, workspace)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspace, true) } returns
+      StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(org).withTombstone(true)
+    assertEquals(AuthorizationTarget.Workspace(pair), service.secretStorageTarget(id))
+  }
+
+  @Test
   fun `tag and builder project use saved workspace`() {
     every { tags.getTagById(id) } returns Tag().withTagId(id).withWorkspaceId(workspace)
-    every { projects.getConnectorBuilderProject(id, false) } returns ConnectorBuilderProject().withBuilderProjectId(id).withWorkspaceId(workspace)
+    every { projects.getConnectorBuilderProjectMetadata(id) } returns ConnectorBuilderProjectMetadata(id, Optional.of(workspace))
     assertEquals(pair, service.tagWorkspaceAndOrganization(id))
     assertEquals(pair, service.builderProjectWorkspaceAndOrganization(id))
+  }
+
+  @Test
+  fun `builder ownership does not load testing credentials or manifest payload`() {
+    every { projects.getConnectorBuilderProjectMetadata(id) } returns ConnectorBuilderProjectMetadata(id, Optional.of(workspace))
+    every { projects.getConnectorBuilderProject(id, false) } throws AssertionError("testing credentials must not be read")
+    assertEquals(pair, service.builderProjectWorkspaceAndOrganization(id))
+    verify(exactly = 0) { projects.getConnectorBuilderProject(any(), any()) }
+  }
+
+  @Test
+  fun `command retry lookup distinguishes absent rows from inconsistent scoped metadata and preserves dependency errors`() {
+    every { commands.findByIdAndOrganizationId("command", org) } returns Optional.empty()
+    assertFalse(service.commandExistsInWorkspace("command", pair))
+    verify(exactly = 0) { workspaces.getStandardWorkspaceNoSecrets(workspace, true) }
+    val saved = AuthorizationCommand("command", workspace, org)
+    every { commands.findByIdAndOrganizationId("command", org) } returns Optional.of(saved)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspace, true) } returns
+      StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(org).withTombstone(true)
+    assertTrue(service.commandExistsInWorkspace("command", pair))
+    every { workspaces.getStandardWorkspaceNoSecrets(id, true) } returns StandardWorkspace().withWorkspaceId(id).withOrganizationId(org)
+    for (candidate in listOf(saved.copy(id = "wrong"), saved.copy(organizationId = id), saved.copy(workspaceId = id))) {
+      every { commands.findByIdAndOrganizationId("command", org) } returns Optional.of(candidate)
+      assertThrows(AuthorizationResourceNotFoundException::class.java) { service.commandExistsInWorkspace("command", pair) }
+    }
+    val failure = IOException("command metadata unavailable")
+    every { commands.findByIdAndOrganizationId("command", org) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.commandExistsInWorkspace("command", pair) })
   }
 
   @Test
@@ -355,7 +477,7 @@ class AuthorizationResourceLookupTest {
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.dataplaneGroupOrganization(id) }
     every { tags.getTagById(id) } throws ConfigNotFoundException(ConfigNotFoundType.TAG, id)
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.tagWorkspaceAndOrganization(id) }
-    every { projects.getConnectorBuilderProject(id, false) } throws ConfigNotFoundException(ConfigNotFoundType.CONNECTOR_BUILDER_PROJECT, id)
+    every { projects.getConnectorBuilderProjectMetadata(id) } throws ConfigNotFoundException(ConfigNotFoundType.CONNECTOR_BUILDER_PROJECT, id)
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.builderProjectWorkspaceAndOrganization(id) }
     every { commands.findByIdAndOrganizationId("missing", org) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.commandWorkspaceAndOrganization("missing", org) }
@@ -369,7 +491,7 @@ class AuthorizationResourceLookupTest {
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.dataplaneGroupOrganization(id) }
     every { tags.getTagById(id) } returns Tag().withTagId(id)
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.tagWorkspaceAndOrganization(id) }
-    every { projects.getConnectorBuilderProject(id, false) } returns ConnectorBuilderProject().withBuilderProjectId(id)
+    every { projects.getConnectorBuilderProjectMetadata(id) } returns ConnectorBuilderProjectMetadata(id, Optional.empty())
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.builderProjectWorkspaceAndOrganization(id) }
     every { commands.findByIdAndOrganizationId("command", org) } returns Optional.of(AuthorizationCommand("wrong", workspace, org))
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.commandWorkspaceAndOrganization("command", org) }

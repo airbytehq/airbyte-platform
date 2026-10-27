@@ -12,6 +12,7 @@ import io.airbyte.server.handlers.RetryStatesHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
@@ -42,6 +43,7 @@ private val jobRetryStateRequestBody =
   )
 
 @MicronautTest
+@Property(name = "controller.response.authorization.fixture", value = "true")
 internal class JobRetryStatesApiControllerTest {
   @Factory
   class TestFactory {

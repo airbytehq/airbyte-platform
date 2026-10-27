@@ -9,8 +9,6 @@ import io.airbyte.api.server.generated.apis.BillingNotificationSettingsApi
 import io.airbyte.api.server.generated.models.BillingNotificationSettingsRead
 import io.airbyte.api.server.generated.models.BillingNotificationSettingsUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -18,6 +16,8 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 
 /**
  * Billing notification settings are a Cloud feature. The Cloud implementation lives in
@@ -25,21 +25,23 @@ import io.micronaut.scheduling.annotation.ExecuteOn
  */
 @Controller
 open class BillingNotificationSettingsController : BillingNotificationSettingsApi {
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getBillingNotificationSettings(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): BillingNotificationSettingsRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun updateBillingNotificationSettings(
     @Body billingNotificationSettingsUpdateRequestBody: BillingNotificationSettingsUpdateRequestBody,

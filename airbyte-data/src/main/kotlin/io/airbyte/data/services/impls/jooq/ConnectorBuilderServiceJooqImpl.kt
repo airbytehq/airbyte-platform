@@ -15,6 +15,7 @@ import io.airbyte.config.ConnectorBuilderProjectVersionedManifest
 import io.airbyte.config.DeclarativeManifest
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectorBuilderService
+import io.airbyte.data.services.shared.ConnectorBuilderProjectMetadata
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -43,6 +44,43 @@ class ConnectorBuilderServiceJooqImpl
     @Named("configDatabase") database: Database?,
   ) : ConnectorBuilderService {
     private val database = ExceptionWrappingDatabase(database)
+
+    override fun getConnectorBuilderProjectMetadata(builderProjectId: UUID): ConnectorBuilderProjectMetadata {
+      val record: Record? =
+        database.query { ctx ->
+          ctx
+            .select(AUTHORIZATION_PROJECT_COLUMNS)
+            .from(Tables.CONNECTOR_BUILDER_PROJECT)
+            .where(
+              Tables.CONNECTOR_BUILDER_PROJECT.ID
+                .eq(builderProjectId)
+                .andNot(Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE),
+            ).fetchOne()
+        }
+      return record?.let(::authorizationProject) ?: throw ConfigNotFoundException(ConfigNotFoundType.CONNECTOR_BUILDER_PROJECT, builderProjectId)
+    }
+
+    override fun listConnectorBuilderProjectMetadata(workspaceId: UUID): List<ConnectorBuilderProjectMetadata> =
+      database.query { ctx ->
+        ctx
+          .select(AUTHORIZATION_PROJECT_COLUMNS)
+          .from(Tables.CONNECTOR_BUILDER_PROJECT)
+          .where(
+            Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID
+              .eq(workspaceId)
+              .andNot(Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE),
+          ).fetch()
+          .map(::authorizationProject)
+      }
+
+    private fun authorizationProject(row: Record): ConnectorBuilderProjectMetadata =
+      ConnectorBuilderProjectMetadata(
+        requireNotNull(row.get(Tables.CONNECTOR_BUILDER_PROJECT.ID)),
+        Optional.ofNullable(row.get(Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID)),
+        Optional.ofNullable(row.get(Tables.CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID)),
+        Optional.ofNullable(row.get(Tables.CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID)),
+        requireNotNull(row.get("hasDraft", Boolean::class.java)),
+      )
 
     /**
      * Get connector builder project.
@@ -984,6 +1022,15 @@ class ConnectorBuilderServiceJooqImpl
 
     companion object {
       private const val INJECTED_DECLARATIVE_MANIFEST_KEY = "__injected_declarative_manifest"
+
+      private val AUTHORIZATION_PROJECT_COLUMNS: List<Field<*>> =
+        listOf(
+          Tables.CONNECTOR_BUILDER_PROJECT.ID,
+          Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID,
+          Tables.CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID,
+          Tables.CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID,
+          DSL.field(Tables.CONNECTOR_BUILDER_PROJECT.MANIFEST_DRAFT.isNotNull()).`as`("hasDraft"),
+        )
 
       private val BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS: List<Field<*>> =
         listOf<Field<*>>(

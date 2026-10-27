@@ -15,7 +15,6 @@ import io.airbyte.api.server.generated.models.InternalOperationResult
 import io.airbyte.api.server.generated.models.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.server.generated.models.SaveStatsRequestBody
 import io.airbyte.api.server.generated.models.SaveStreamAttemptMetadataRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -24,6 +23,8 @@ import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.airbyte.server.apis.requireBody
+import io.airbyte.server.auth.JobAdminRule
+import io.airbyte.server.auth.JobReadRule
 import io.airbyte.server.auth.SaveAttemptStatsRule
 import io.airbyte.server.auth.SaveAttemptStreamMetadataRule
 import io.micronaut.http.annotation.Body
@@ -39,10 +40,11 @@ class AttemptApiController(
   private val jobConverter: JobConverter,
 ) : AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = JobReadRule::class,
   )
   override fun getAttemptForJob(
     @Body requestBody: GetAttemptStatsRequestBody,
@@ -57,20 +59,22 @@ class AttemptApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = JobAdminRule::class,
   )
   override fun createNewAttemptNumber(
     @Body requestBody: CreateNewAttemptNumberRequest,
   ): CreateNewAttemptNumberResponse = execute { attemptHandler.createNewAttemptNumber(requestBody.jobId) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = JobReadRule::class,
   )
   override fun getAttemptCombinedStats(
     @Body requestBody: GetAttemptStatsRequestBody,
@@ -83,6 +87,7 @@ class AttemptApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.SHARED,
@@ -93,6 +98,7 @@ class AttemptApiController(
   ): InternalOperationResult = execute { attemptHandler.saveStats(requestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
     migration = RouteMigration.SHARED,
@@ -102,21 +108,23 @@ class AttemptApiController(
     @Body requestBody: SaveStreamAttemptMetadataRequestBody?,
   ): InternalOperationResult = execute { attemptHandler.saveStreamMetadata(requestBody.requireBody()) }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = JobAdminRule::class,
   )
   override fun saveSyncConfig(
     @Body requestBody: SaveAttemptSyncConfigRequestBody,
   ): InternalOperationResult = execute { attemptHandler.saveSyncConfig(requestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = JobAdminRule::class,
   )
   override fun failAttempt(
     @Body requestBody: FailAttemptRequest,

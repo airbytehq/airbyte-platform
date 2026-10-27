@@ -187,6 +187,7 @@ internal class StrictJsonDeserializationTest {
   @Test
   fun `organization request uses stale false while refreshing and becomes strict after publication`() {
     val organizationId = UUID.randomUUID()
+    every { authorizationDataService.organization(organizationId) } returns organizationId
     val body =
       mapOf(
         "organizationId" to organizationId.toString(),
@@ -277,6 +278,7 @@ internal class StrictJsonDeserializationTest {
   fun `organizations update accepts declared properties and invokes the handler once`() {
     enableStrictDeserialization()
     val organizationId = UUID.randomUUID()
+    every { authorizationDataService.organization(organizationId) } returns organizationId
 
     assertStatus(
       HttpStatus.OK,
@@ -373,6 +375,7 @@ internal class StrictJsonDeserializationTest {
   fun `dataplane api accepts a declared snake case property`() {
     enableStrictDeserialization()
     val organizationId = UUID.randomUUID()
+    every { authorizationDataService.organization(organizationId) } returns organizationId
     val dataplaneGroup =
       DataplaneGroup().apply {
         id = UUID.randomUUID()

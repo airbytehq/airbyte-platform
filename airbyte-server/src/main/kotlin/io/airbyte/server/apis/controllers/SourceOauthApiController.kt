@@ -18,7 +18,6 @@ import io.airbyte.api.server.generated.models.SourceOAuthScopesRequest
 import io.airbyte.api.server.generated.models.SourceOauthConsentRequest
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -30,6 +29,7 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 
 @Controller
 @RequiresIntent(Intent.RunOAuthFlow)
@@ -37,9 +37,11 @@ class SourceOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : SourceOauthApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthFlowRule::class,
   )
   override fun completeSourceOAuth(
     @Body completeSourceOauthRequest: CompleteSourceOauthRequest,
@@ -56,9 +58,11 @@ class SourceOauthApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthFlowRule::class,
   )
   override fun getEmbeddedSourceOAuthConsent(
     @Body embeddedSourceOauthConsentRequest: EmbeddedSourceOauthConsentRequest,
@@ -71,31 +75,37 @@ class SourceOauthApiController(
         sourceId = embeddedSourceOauthConsentRequest.sourceId,
         oAuthInputConfiguration = Jsons.emptyObject(),
       )
-    return getSourceOAuthConsent(sourceOauthConsentRequest)
+    return execute { oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest) }
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthFlowRule::class,
   )
   override fun getSourceOAuthScopes(
     @Body request: SourceOAuthScopesRequest,
   ): SourceOAuthScopesRead = execute { oAuthHandler.getSourceOAuthScopes(request) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthFlowRule::class,
   )
   override fun getSourceOAuthConsent(
     @Body sourceOauthConsentRequest: SourceOauthConsentRequest,
   ): OAuthConsentRead = execute { oAuthHandler.getSourceOAuthConsent(sourceOauthConsentRequest) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthFlowRule::class,
   )
   override fun revokeSourceOAuthTokens(
     @Body revokeSourceOauthTokensRequest: RevokeSourceOauthTokensRequest,
@@ -106,11 +116,12 @@ class SourceOauthApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SourceOAuthInstanceRule::class,
   )
   override fun setInstancewideSourceOauthParams(
     @Body setInstancewideSourceOauthParamsRequestBody: SetInstancewideSourceOauthParamsRequestBody,

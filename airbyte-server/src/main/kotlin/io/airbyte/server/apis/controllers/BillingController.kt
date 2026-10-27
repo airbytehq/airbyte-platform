@@ -16,9 +16,6 @@ import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.OrganizationSubscriptionInfoRead
 import io.airbyte.api.server.generated.models.OrganizationTrialStatusRead
 import io.airbyte.api.server.generated.models.PaymentInformationRead
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -27,109 +24,122 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 
 @Controller
 open class BillingController : BillingApi {
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getCustomerPortalLink(
     @Body customerPortalRequestBody: CustomerPortalRequestBody?,
   ): CustomerPortalRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun listPastInvoices(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): ListInvoicesRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getPaymentInformation(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): PaymentInformationRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ViewOrganizationDetails)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingSubscriptionUnsupportedRule::class,
   )
   override fun getSubscriptionInfo(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): OrganizationSubscriptionInfoRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.WEBHOOK)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.UnavailableProtectedRule::class,
   )
   override fun handleWebhook(
     @Body event: JsonNode?,
   ): Unit = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ViewOrganizationTrialStatus)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingTrialUnsupportedRule::class,
   )
   override fun getOrganizationTrialStatus(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): OrganizationTrialStatusRead = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingBackfillStubRule::class,
   )
   override fun backfillUsage(billingBackfillUsageRequest: BillingBackfillUsageRequest?): Unit = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun cancelSubscription(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): CancelSubscriptionRead = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.GlobalAdminRule::class,
   )
   override fun disableDelinquentWorkspaces(): Unit = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun unscheduleCancelSubscription(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,
   ): Unit = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun unschedulePlanChange(
     @Body organizationIdRequestBody: OrganizationIdRequestBody?,

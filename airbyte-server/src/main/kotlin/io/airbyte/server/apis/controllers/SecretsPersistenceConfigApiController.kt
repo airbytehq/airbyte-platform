@@ -9,7 +9,6 @@ import io.airbyte.api.server.generated.models.CreateOrUpdateSecretsPersistenceCo
 import io.airbyte.api.server.generated.models.ScopeType
 import io.airbyte.api.server.generated.models.SecretPersistenceConfig
 import io.airbyte.api.server.generated.models.SecretPersistenceConfigGetRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -38,10 +37,11 @@ class SecretsPersistenceConfigApiController(
   private val secretPersistenceConfigHandler: SecretPersistenceConfigHandler,
   private val featureFlagClient: FeatureFlagClient,
 ) : SecretsPersistenceConfigApi {
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SecretsPersistenceWriteRule::class,
   )
   override fun createOrUpdateSecretsPersistenceConfig(
     @Body requestBody: CreateOrUpdateSecretsPersistenceConfigRequestBody,
@@ -89,10 +89,11 @@ class SecretsPersistenceConfigApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.SecretsPersistenceReadRule::class,
   )
   override fun getSecretsPersistenceConfig(
     @Body requestBody: SecretPersistenceConfigGetRequestBody,

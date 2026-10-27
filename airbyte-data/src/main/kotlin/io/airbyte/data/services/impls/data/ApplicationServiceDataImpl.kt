@@ -40,6 +40,15 @@ class ApplicationServiceDataImpl(
 
   override fun deletesApplicationsTransactionally(): Boolean = true
 
+  override fun requireApplicationOwner(
+    authUserId: String,
+    applicationId: UUID,
+  ) {
+    if (!applicationRepository.existsByAuthUserIdAndId(authUserId, applicationId)) {
+      throw IllegalArgumentException("application was not found with the userId and applicationId provided")
+    }
+  }
+
   /**
    * Create the application with the name provided for the user.
    * @param user The User to create the application for

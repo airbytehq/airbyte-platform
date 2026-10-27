@@ -7,7 +7,6 @@ package io.airbyte.server.apis
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.server.generated.apis.DiagnosticToolApi
 import io.airbyte.api.server.generated.models.DiagnosticReportRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -27,10 +26,11 @@ class DiagnosticToolApiController(
   private val diagnosticToolHandler: DiagnosticToolHandler,
 ) : DiagnosticToolApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DiagnosticReportRule::class,
   )
   override fun generateDiagnosticReport(
     @Body @Valid diagnosticReportRequestBody: DiagnosticReportRequestBody?,

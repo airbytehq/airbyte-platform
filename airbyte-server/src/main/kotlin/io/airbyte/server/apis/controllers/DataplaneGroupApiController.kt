@@ -15,9 +15,6 @@ import io.airbyte.api.server.generated.models.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.server.generated.models.DataplaneRead
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -49,11 +46,12 @@ class DataplaneGroupApiController(
   protected val dataplaneService: DataplaneService,
   private val entitlementService: EntitlementService,
 ) : DataplaneGroupApi {
-  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneGroupManageRule::class,
   )
   override fun createDataplaneGroup(
     @Body dataplaneGroupCreateRequestBody: DataplaneGroupCreateRequestBody,
@@ -68,11 +66,12 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(createdDataplaneGroup))
   }
 
-  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneGroupManageRule::class,
   )
   override fun updateDataplaneGroup(
     @Body dataplaneGroupUpdateRequestBody: DataplaneGroupUpdateRequestBody,
@@ -89,11 +88,12 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(dataplaneGroup))
   }
 
-  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneGroupManageRule::class,
   )
   override fun deleteDataplaneGroup(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
@@ -110,11 +110,12 @@ class DataplaneGroupApiController(
     return toDataplaneGroupRead(writeDataplaneGroup(tombstonedGroup))
   }
 
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DataplaneGroupListRule::class,
   )
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,

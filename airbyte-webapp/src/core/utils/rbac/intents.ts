@@ -7,7 +7,7 @@ export const intentToRbacQuery = {
   UpdateOrganization: { resourceType: "ORGANIZATION", role: "ADMIN" },
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
   ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
-  DownloadDiagnostics: { resourceType: "ORGANIZATION", role: "READER" },
+  DownloadDiagnostics: { resourceType: "INSTANCE", role: "ADMIN" },
   ViewOrganizationWorkspaces: { resourceType: "ORGANIZATION", role: "READER" },
   CreateOrganizationWorkspaces: { resourceType: "ORGANIZATION", role: "EDITOR" },
 

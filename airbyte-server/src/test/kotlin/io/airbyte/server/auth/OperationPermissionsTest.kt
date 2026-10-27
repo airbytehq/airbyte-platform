@@ -39,6 +39,36 @@ class OperationPermissionsTest {
   }
 
   @Test
+  fun `dataplane identity accepts the actual machine and rejects human administrators and foreign clients`() {
+    val client = UUID(0, 9)
+    for (type in listOf(TokenType.SERVICE_ACCOUNT, TokenType.DATAPLANE_V1)) {
+      assertDoesNotThrow { checker.requireDataplaneIdentity(Authentication.build(client.toString(), mapOf(type.toClaim())), client) }
+      assertThrows(ForbiddenProblem::class.java) {
+        checker.requireDataplaneIdentity(Authentication.build(UUID(0, 10).toString(), mapOf(type.toClaim())), client)
+      }
+    }
+    assertDoesNotThrow { checker.requireDataplaneIdentity(Authentication.build("internal", mapOf(TokenType.INTERNAL_CLIENT.toClaim())), client) }
+    for (type in listOf(TokenType.USER, TokenType.EMBEDDED_V1, TokenType.WORKLOAD_API)) {
+      assertThrows(ForbiddenProblem::class.java) {
+        checker.requireDataplaneIdentity(Authentication.build(client.toString(), listOf(AuthRoleConstants.ADMIN), mapOf(type.toClaim())), client)
+      }
+    }
+    assertThrows(ForbiddenProblem::class.java) {
+      checker.requireDataplaneIdentity(
+        Authentication.build(
+          client.toString(),
+          mapOf(
+            TokenType.SERVICE_ACCOUNT.toClaim(),
+            TokenScopeClaim.CLAIM_ID to TokenScopeClaim(workspace.toString()),
+          ),
+        ),
+        client,
+      )
+    }
+    assertDoesNotThrow { OperationPermissions(permissions, resolver, false).requireDataplaneIdentity(caller, client) }
+  }
+
+  @Test
   fun `direct workspace permission is sufficient without organization access`() {
     grant(Permission.PermissionType.WORKSPACE_READER, workspaceId = workspace)
     assertDoesNotThrow { checker.requireWorkspaces(caller, listOf(workspaceAndOrganization), readers, humans) }
@@ -50,6 +80,33 @@ class OperationPermissionsTest {
     grant(Permission.PermissionType.WORKSPACE_ADMIN, workspaceId = workspace)
     val other = WorkspaceAndOrganization(UUID.randomUUID(), organization)
     assertThrows(ForbiddenProblem::class.java) { checker.requireWorkspaces(caller, listOf(workspaceAndOrganization, other), readers, humans) }
+  }
+
+  @Test
+  fun `catalog alternatives require an allowed action in one matching scope and do not swallow permission errors`() {
+    val other = WorkspaceAndOrganization(UUID.randomUUID(), UUID.randomUUID())
+    val candidates = listOf(other, workspaceAndOrganization)
+    grant(Permission.PermissionType.WORKSPACE_READER, workspaceId = workspace)
+    assertDoesNotThrow { checker.requireAnyWorkspace(caller, candidates, readers, humans) }
+    assertThrows(ForbiddenProblem::class.java) { checker.requireAnyWorkspace(caller, candidates, setOf(AuthRoleConstants.WORKSPACE_EDITOR), humans) }
+    assertThrows(ForbiddenProblem::class.java) { checker.requireAnyWorkspace(caller, emptyList(), readers, humans) }
+    assertThrows(ForbiddenProblem::class.java) { checker.requireAnyWorkspace(caller, candidates, emptySet(), humans) }
+
+    val scoped = Authentication.build("user", mapOf(TokenScopeClaim.CLAIM_ID to TokenScopeClaim(workspace.toString())))
+    assertDoesNotThrow { checker.requireAnyWorkspace(scoped, candidates, readers, humans) }
+    val foreignScope = Authentication.build("user", mapOf(TokenScopeClaim.CLAIM_ID to TokenScopeClaim(other.workspaceId.toString())))
+    assertThrows(ForbiddenProblem::class.java) { checker.requireAnyWorkspace(foreignScope, candidates, readers, humans) }
+    assertThrows(ForbiddenProblem::class.java) {
+      checker.requireAnyWorkspace(Authentication.build("user", mapOf(TokenType.WORKLOAD_API.toClaim())), candidates, readers, humans)
+    }
+
+    val failure = IOException("permission metadata unavailable")
+    every { permissions.getPermissionsByAuthUserId("user") } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { checker.requireAnyWorkspace(caller, candidates, readers, humans) })
+    assertDoesNotThrow { OperationPermissions(permissions, resolver, false).requireAnyWorkspace(caller, candidates, readers, humans) }
+    assertThrows(ForbiddenProblem::class.java) {
+      OperationPermissions(permissions, resolver, false).requireAnyWorkspace(caller, emptyList(), readers, humans)
+    }
   }
 
   @Test

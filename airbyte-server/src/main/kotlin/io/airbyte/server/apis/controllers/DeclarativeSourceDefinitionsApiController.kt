@@ -9,13 +9,13 @@ import io.airbyte.api.server.generated.models.DeclarativeManifestsReadList
 import io.airbyte.api.server.generated.models.DeclarativeSourceDefinitionCreateManifestRequestBody
 import io.airbyte.api.server.generated.models.ListDeclarativeManifestsRequestBody
 import io.airbyte.api.server.generated.models.UpdateActiveManifestRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.DeclarativeManifestRule
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -32,11 +32,12 @@ class DeclarativeSourceDefinitionsApiController(
   private val handler: DeclarativeSourceDefinitionsHandler,
 ) : DeclarativeSourceDefinitionsApi {
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = DeclarativeManifestRule::class,
   )
   override fun createDeclarativeSourceDefinitionManifest(
     @Body requestBody: DeclarativeSourceDefinitionCreateManifestRequestBody,
@@ -48,11 +49,12 @@ class DeclarativeSourceDefinitionsApiController(
   }
 
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = DeclarativeManifestRule::class,
   )
   override fun updateDeclarativeManifestVersion(
     @Body requestBody: UpdateActiveManifestRequestBody,
@@ -64,11 +66,12 @@ class DeclarativeSourceDefinitionsApiController(
   }
 
   @Status(HttpStatus.OK)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = DeclarativeManifestRule::class,
   )
   override fun listDeclarativeManifests(
     @Body requestBody: ListDeclarativeManifestsRequestBody,

@@ -15,12 +15,14 @@ import io.airbyte.data.services.JobService
 import io.airbyte.data.services.impls.data.mappers.toConfig
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.data.services.shared.LatestJobHealthSummary
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
+import java.util.Optional
 import kotlin.jvm.optionals.getOrNull
 
 const val DEFAULT_SORT_FIELD = "createdAt"
@@ -31,6 +33,9 @@ class JobServiceDataImpl(
   private val jobsRepository: JobsRepository,
   private val logUtils: LogUtils,
 ) : JobService {
+  override fun findJobMetadataById(id: Long): Optional<JobMetadata> =
+    jobsRepository.findAuthorizationMetadataById(id).map { JobMetadata(it.id, it.configType.toConfig(), it.scope) }
+
   override fun findById(id: Long): Job? = jobsRepository.findById(id).getOrNull()?.toConfigModel()
 
   override fun listJobs(

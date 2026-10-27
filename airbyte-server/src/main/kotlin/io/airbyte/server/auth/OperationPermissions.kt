@@ -8,6 +8,7 @@ import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.auth.TokenType
 import io.airbyte.data.services.PermissionService
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
@@ -47,6 +48,15 @@ class OperationPermissions(
     }
   }
 
+  /** Keep token restrictions while resolving manual current-user checks from the saved human subject. */
+  fun currentUser(
+    caller: Authentication,
+    users: CurrentUserService,
+  ): Authentication {
+    if (securityEnabled) requireCaller(caller, organizationCallers)
+    return Authentication.build(users.getCurrentUser().authUserId, caller.roles, caller.attributes + TokenType.USER.toClaim())
+  }
+
   fun requireSelf(
     caller: Authentication,
     subject: String,
@@ -55,6 +65,36 @@ class OperationPermissions(
     requireCaller(caller, setOf(OperationCaller.USER))
     if (getTokenScopeClaim(caller) != null) throw ForbiddenProblem()
     if (caller.name != subject) throw ForbiddenProblem()
+  }
+
+  /** A content-deduplicated catalog can have several valid saved workspace associations. */
+  fun requireAnyWorkspace(
+    caller: Authentication,
+    candidates: List<WorkspaceAndOrganization>,
+    requiredRoles: Set<String>,
+    allowedCallers: Set<OperationCaller>,
+  ) {
+    if (candidates.isEmpty() || requiredRoles.isEmpty()) throw ForbiddenProblem()
+    if (!securityEnabled) return
+    requireCaller(caller, allowedCallers)
+    val scope = getTokenScopeClaim(caller)
+    for (candidate in candidates) {
+      if (scope != null && scope.workspaceId != candidate.workspaceId.toString()) continue
+      val available =
+        resolve(caller, setOf(candidate.workspaceId), mapOf(candidate.workspaceId to candidate.organizationId), setOf(candidate.organizationId))
+      if (requiredRoles.any(available::contains)) return
+    }
+    throw ForbiddenProblem()
+  }
+
+  fun requireDataplaneIdentity(
+    caller: Authentication,
+    serviceAccountId: UUID,
+  ) {
+    if (!securityEnabled) return
+    requireCaller(caller, setOf(OperationCaller.INTERNAL_CLIENT, OperationCaller.DATAPLANE, OperationCaller.SERVICE_ACCOUNT))
+    if (getTokenScopeClaim(caller) != null) throw ForbiddenProblem()
+    if (TokenType.fromClaims(caller.attributes) != TokenType.INTERNAL_CLIENT && caller.name != serviceAccountId.toString()) throw ForbiddenProblem()
   }
 
   fun requireOrganizations(

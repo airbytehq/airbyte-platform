@@ -16,6 +16,7 @@ import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ScopedConfigurationKey
+import io.airbyte.data.services.shared.ScopedConfigurationMetadata
 import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.UUID
@@ -24,6 +25,30 @@ import java.util.UUID
 class ScopedConfigurationServiceDataImpl(
   private val repository: ScopedConfigurationRepository,
 ) : ScopedConfigurationService {
+  override fun getScopedConfigurationMetadata(configId: UUID): ScopedConfigurationMetadata {
+    val row =
+      repository.findAuthorizationMetadataById(configId).orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.SCOPED_CONFIGURATION, configId)
+      }
+    return ScopedConfigurationMetadata(
+      row.id,
+      row.key,
+      row.scopeType.toConfigModel(),
+      row.scopeId,
+      Optional.ofNullable(row.resourceType).map {
+        ConfigResourceType.fromValue(it.literal)
+      },
+      Optional.ofNullable(row.resourceId),
+      row.originType.toConfigModel(),
+      row.origin,
+    )
+  }
+
+  override fun getConnectorVersionSelector(configId: UUID): String =
+    repository
+      .findConnectorVersionSelectorById(configId)
+      .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.SCOPED_CONFIGURATION, configId) }
+
   override fun getScopedConfiguration(configId: UUID): ScopedConfiguration =
     repository
       .findById(configId)

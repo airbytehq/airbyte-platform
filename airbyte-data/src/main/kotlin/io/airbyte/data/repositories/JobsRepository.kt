@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Job
+import io.airbyte.data.repositories.entities.JobAuthorizationMetadata
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.Query
@@ -12,10 +13,14 @@ import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
 import java.time.OffsetDateTime
+import java.util.Optional
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface JobsRepository : PageableRepository<Job, Long> {
+  @Query("SELECT id, config_type, scope FROM jobs WHERE id = :id")
+  fun findAuthorizationMetadataById(id: Long): Optional<JobAuthorizationMetadata>
+
   /**
    * Counts the number of failed jobs since the last successful job for a given scope.
    * If there are no successful jobs, it counts all failed jobs for that scope.

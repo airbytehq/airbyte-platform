@@ -9,6 +9,7 @@ import io.airbyte.config.ActorDefinitionConfigInjection
 import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest
 import io.airbyte.config.DeclarativeManifest
+import io.airbyte.data.services.shared.ConnectorBuilderProjectMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import java.util.Optional
 import java.util.UUID
@@ -18,6 +19,10 @@ import java.util.stream.Stream
  * This service is responsible for managing the lifecycle of connector builder projects.
  */
 interface ConnectorBuilderService {
+  fun getConnectorBuilderProjectMetadata(builderProjectId: UUID): ConnectorBuilderProjectMetadata
+
+  fun listConnectorBuilderProjectMetadata(workspaceId: UUID): List<ConnectorBuilderProjectMetadata>
+
   fun getConnectorBuilderProject(
     builderProjectId: UUID,
     fetchManifestDraft: Boolean,

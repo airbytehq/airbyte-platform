@@ -14,8 +14,6 @@ import io.airbyte.api.server.generated.models.ActorDefinitionResultResponse
 import io.airbyte.api.server.generated.models.ActorDefinitionUpdateRequest
 import io.airbyte.api.server.generated.models.ActorDefinitionUpdateResponse
 import io.airbyte.api.server.generated.models.ScopeType
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -23,6 +21,10 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.ActorType
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.ActorDefinitionCreateRule
+import io.airbyte.server.auth.ActorDefinitionFinishRule
+import io.airbyte.server.auth.ActorDefinitionResultRule
+import io.airbyte.server.auth.ActorDefinitionUpdateRule
 import io.airbyte.server.handlers.ActorDefinitionsHandler
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -38,11 +40,12 @@ open class ActorDefinitionApiController(
   private val actorDefinitionsHandler: ActorDefinitionsHandler,
   private val accessValidator: ActorDefinitionAccessValidator,
 ) : ActorDefinitionApi {
-  @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = ActorDefinitionCreateRule::class,
   )
   override fun createActorDefinition(
     @Body actorDefinitionCreateRequest: ActorDefinitionCreateRequest,
@@ -62,35 +65,32 @@ open class ActorDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = ActorDefinitionUpdateRule::class,
   )
   override fun updateActorDefinition(
     @Body actorDefinitionUpdateRequest: ActorDefinitionUpdateRequest,
-  ): ActorDefinitionUpdateResponse {
-    accessValidator.validateWriteAccess(actorDefinitionUpdateRequest.actorDefinitionId)
-    return execute {
+  ): ActorDefinitionUpdateResponse =
+    execute {
       actorDefinitionsHandler.updateActorDefinition(
         actorDefinitionUpdateRequest,
       )
     }
-  }
 
-  @RequiresIntent(Intent.UploadCustomConnector)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = ActorDefinitionFinishRule::class,
   )
   override fun finishActorDefinitionUpdate(
     @Body actorDefinitionFinishRequest: ActorDefinitionFinishRequest,
   ): ActorDefinitionFinishResponse {
     val actorUpdateRequest = actorDefinitionFinishRequest.actorUpdateRequest
-    val actorDefinitionId = actorUpdateRequest.actorDefinitionId
-    if (actorDefinitionId != null) {
-      accessValidator.validateWriteAccess(actorDefinitionId)
-    }
     return execute {
       val result =
         actorDefinitionsHandler.finishActorDefinitionUpdate(
@@ -108,9 +108,11 @@ open class ActorDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = ActorDefinitionResultRule::class,
   )
   override fun getActorDefinitionResult(
     @Body actorDefinitionResultRequest: ActorDefinitionResultRequest,

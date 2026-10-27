@@ -119,6 +119,7 @@ class RouteAccessCoverageTest {
           "The separate workload API is not Config/public API",
         )
         val entries = routeAccessEntries(inventory)
+        assertRemainingProtectedConfigRoutes(inventory, "oss")
         val batch = entries.filter { it.path.startsWith("/api/v1/") && it.family in setOf("sources", "destinations", "connections") }
         val excludedSearches = setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
         assertEquals(
@@ -196,7 +197,7 @@ class RouteAccessCoverageTest {
         appendLine("Derived from the active Micronaut Router. HEAD routes are automatic GET companions.")
         appendLine("SHARED declarations execute typed rules before controller work; LEGACY routes retain their existing checks.")
         appendLine(
-          "The sources, destinations, and connections Config API batch is migrated, except the three root searches. Other LEGACY families remain for later PLAT-1512 batches.",
+          "The protected Config API is migrated except for the three root searches.",
         )
         appendLine()
         appendLine("| Family | Operations | LEGACY remaining |")

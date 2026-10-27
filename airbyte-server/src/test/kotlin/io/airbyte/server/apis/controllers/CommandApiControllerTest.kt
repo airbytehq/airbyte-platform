@@ -5,11 +5,13 @@
 package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.server.generated.models.CancelCommandRequest
 import io.airbyte.api.server.generated.models.CancelCommandResponse
 import io.airbyte.api.server.generated.models.CheckCommandOutputRequest
 import io.airbyte.api.server.generated.models.CheckCommandOutputResponse
+import io.airbyte.api.server.generated.models.CommandGetRequest
 import io.airbyte.api.server.generated.models.CommandStatusRequest
 import io.airbyte.api.server.generated.models.CommandStatusResponse
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
@@ -20,16 +22,16 @@ import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
 import io.airbyte.api.server.generated.models.ReplicateCommandOutputResponse
 import io.airbyte.api.server.generated.models.RunCheckCommandRequest
 import io.airbyte.api.server.generated.models.RunCheckCommandResponse
+import io.airbyte.api.server.generated.models.RunDiscoverCommandRequest
+import io.airbyte.api.server.generated.models.RunReplicateCommandRequest
 import io.airbyte.api.server.generated.models.RunSpecCommandRequest
 import io.airbyte.api.server.generated.models.RunSpecCommandResponse
 import io.airbyte.api.server.generated.models.SpecCommandOutputRequest
 import io.airbyte.api.server.generated.models.SpecCommandOutputResponse
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogEvent
 import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.LogSource
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorCatalog
@@ -41,20 +43,24 @@ import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.data.repositories.ActorRepository
-import io.airbyte.data.services.WorkspaceService
-import io.airbyte.domain.models.ActorId
-import io.airbyte.domain.models.CommandId
-import io.airbyte.domain.models.ConnectionId
-import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.SavedExecutionAuthorizationDataService
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationCatalog
 import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
+import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.ReadCommandRule
+import io.airbyte.server.auth.RunDiscoverCommandRule
+import io.airbyte.server.auth.RunReplicateCommandRule
+import io.airbyte.server.auth.RunSpecCommandRule
 import io.airbyte.server.services.CommandService
 import io.airbyte.server.services.CommandStatus
+import io.micronaut.security.authentication.Authentication
 import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
@@ -77,11 +83,8 @@ import io.airbyte.api.server.generated.models.StreamDescriptor as ApiStreamDescr
 class CommandApiControllerTest {
   private lateinit var controller: CommandApiController
 
-  private lateinit var actorRepository: ActorRepository
   private lateinit var catalogConverter: CatalogConverter
   private lateinit var commandService: CommandService
-  private lateinit var roleResolver: RoleResolver
-  private lateinit var workspaceService: WorkspaceService
   private lateinit var apiToPojoConverters: ApiPojoConverters
 
   companion object {
@@ -97,29 +100,14 @@ class CommandApiControllerTest {
 
   @BeforeEach
   fun setup() {
-    val defaultRequestMock = mockk<RoleResolver.Request>()
-    every { defaultRequestMock.withCurrentAuthentication() } returns defaultRequestMock
-    every { defaultRequestMock.withRef(any(), any<UUID>()) } returns defaultRequestMock
-    every { defaultRequestMock.requireRole(any()) } returns Unit
-    every { defaultRequestMock.requireOneOfRoles(any()) } returns Unit
-    every { defaultRequestMock.roles() } returns setOf(AuthRoleConstants.WORKSPACE_RUNNER, AuthRoleConstants.WORKSPACE_READER)
-
-    roleResolver = mockk(relaxed = true)
-    every { roleResolver.newRequest() } returns defaultRequestMock
-
-    actorRepository = mockk(relaxed = true)
     catalogConverter = mockk(relaxed = true)
     commandService = mockk(relaxed = true)
-    workspaceService = mockk(relaxed = true)
     apiToPojoConverters = ApiPojoConverters(mockk(relaxed = true))
 
     controller =
       CommandApiController(
-        roleResolver = roleResolver,
-        actorRepository = actorRepository,
         catalogConverter = catalogConverter,
         commandService = commandService,
-        workspaceService = workspaceService,
         logUtils = mockk(relaxed = true),
         apiPojoConverters = apiToPojoConverters,
       )
@@ -578,64 +566,87 @@ class CommandApiControllerTest {
   }
 
   @Test
-  fun `role validation from an ActorId should look up actors`() {
-    val actorId = UUID.randomUUID()
-    val f = { "looked up actor" }
-    val result = controller.withRoleValidation(ActorId(actorId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
-
-    verify { actorRepository.findByActorId(actorId) }
-    assertEquals("looked up actor", result)
+  fun `discover authorization resolves the exact actor before command work`() {
+    val data = mockk<AuthorizationDataService>()
+    every { data.commandExistsInWorkspace(TEST_COMMAND_ID, WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))) } returns false
+    val permissions = mockk<OperationPermissions>(relaxed = true)
+    val rule = RunDiscoverCommandRule(data, permissions)
+    val owner = WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))
+    every { data.actorWorkspaceAndOrganization(TEST_ACTOR_ID) } returns owner
+    rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(RunDiscoverCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID))))
+    verify(exactly = 1) { data.actorWorkspaceAndOrganization(TEST_ACTOR_ID) }
+    verify { commandService wasNot Called }
   }
 
   @Test
-  fun `role validation from a CommandId should look up commands`() {
-    val commandId = "my-command"
-    val f = { "looked up command" }
-    val result = controller.withRoleValidation(CommandId(commandId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
-
-    verify { commandService.get(commandId = commandId) }
-    assertEquals("looked up command", result)
+  fun `command authorization uses metadata without reading command input`() {
+    val data = mockk<SavedExecutionAuthorizationDataService>()
+    val rule = ReadCommandRule(data, mockk(relaxed = true))
+    every { data.command(TEST_COMMAND_ID) } returns WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))
+    rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(CommandGetRequest(id = TEST_COMMAND_ID))))
+    verify(exactly = 1) { data.command(TEST_COMMAND_ID) }
+    verify { commandService wasNot Called }
   }
 
   @Test
-  fun `role validation from a ConnectionId should look up connection`() {
-    val connectionId = UUID.randomUUID()
-    val f = { "looked up connection" }
-    val result = controller.withRoleValidation(ConnectionId(connectionId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
-
-    verify { workspaceService.getStandardWorkspaceFromConnection(connectionId, false) }
-    assertEquals("looked up connection", result)
+  fun `replication authorization binds exact connection and saved job attempt`() {
+    val connection = UUID.randomUUID()
+    val data = mockk<AuthorizationDataService>()
+    every { data.commandExistsInWorkspace(TEST_COMMAND_ID, WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))) } returns false
+    val rule = RunReplicateCommandRule(data, mockk(relaxed = true))
+    every { data.connectionWorkspaceAndOrganization(connection) } returns WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))
+    every { data.savedAttemptConnectionId(17, 0) } returns connection
+    rule.authorize(
+      Authentication.build("caller"),
+      rule.readInput(
+        arrayOf(
+          RunReplicateCommandRequest(id = TEST_COMMAND_ID, connectionId = connection, jobId = "17", attemptNumber = 0),
+        ),
+      ),
+    )
+    verify(exactly = 1) { data.connectionWorkspaceAndOrganization(connection) }
+    verify(exactly = 1) { data.savedAttemptConnectionId(17, 0) }
+    verify { commandService wasNot Called }
   }
 
   @Test
-  fun `role validation from a WorkspaceId should check the id directly`() {
-    val workspaceId = UUID.randomUUID()
-    val f = { "didn't look up workspace" }
-    val result = controller.withRoleValidation(WorkspaceId(workspaceId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
-
-    verify { workspaceService wasNot Called }
-    assertEquals("didn't look up workspace", result)
+  fun `spec authorization resolves the actual saved workspace`() {
+    val data = mockk<AuthorizationDataService>()
+    every { data.commandExistsInWorkspace(TEST_COMMAND_ID, WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))) } returns false
+    val rule = RunSpecCommandRule(data, mockk(relaxed = true))
+    every { data.workspaceAndOrganization(TEST_WORKSPACE_ID) } returns WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))
+    rule.authorize(
+      Authentication.build("caller"),
+      rule.readInput(
+        arrayOf(
+          RunSpecCommandRequest(id = TEST_COMMAND_ID, workspaceId = TEST_WORKSPACE_ID, dockerImageTag = "latest", dockerImage = "fixture/image"),
+        ),
+      ),
+    )
+    verify(exactly = 1) { data.workspaceAndOrganization(TEST_WORKSPACE_ID) }
+    verify { commandService wasNot Called }
   }
 
   @Test
-  fun `role validation for an unsupported type throws an IllegalStateException`() {
-    val untypedUUID = UUID.randomUUID()
-    assertThrows<IllegalStateException> {
-      controller.withRoleValidation(untypedUUID, role = AuthRoleConstants.WORKSPACE_RUNNER, call = {
-        TODO("I should not be executed")
-      })
-    }
+  fun `command authorization rejects unsupported input types before lookups`() {
+    val data = mockk<SavedExecutionAuthorizationDataService>()
+    val rule = ReadCommandRule(data, mockk())
+    assertThrows<BadRequestProblem> { rule.readInput(arrayOf(UUID.randomUUID())) }
+    verify { data wasNot Called }
+    verify { commandService wasNot Called }
   }
 
   @Test
-  fun `role validation for an unknown object throws a problem`() {
-    val actorId = UUID.randomUUID()
-    every { actorRepository.findByActorId(actorId) } returns null
+  fun `missing command ownership stays forbidden before permissions or command work`() {
+    val data = mockk<SavedExecutionAuthorizationDataService>()
+    val permissions = mockk<OperationPermissions>()
+    val rule = ReadCommandRule(data, permissions)
+    every { data.command(TEST_COMMAND_ID) } throws AuthorizationResourceNotFoundException()
     assertThrows<ForbiddenProblem> {
-      controller.withRoleValidation(ActorId(actorId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = {
-        TODO("I should not be executed")
-      })
+      rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(CommandGetRequest(id = TEST_COMMAND_ID))))
     }
+    verify { permissions wasNot Called }
+    verify { commandService wasNot Called }
   }
 
   @Test
@@ -1226,14 +1237,7 @@ class CommandApiControllerTest {
   }
 
   @Test
-  fun `getCheckCommandOutput accepts EMBEDDED_END_USER role`() {
-    val requestMock = mockk<RoleResolver.Request>()
-    every { requestMock.withCurrentAuthentication() } returns requestMock
-    every { requestMock.withRef(any(), any<UUID>()) } returns requestMock
-    every { requestMock.requireOneOfRoles(any()) } returns Unit
-    every { requestMock.roles() } returns setOf(AuthRoleConstants.EMBEDDED_END_USER)
-    every { roleResolver.newRequest() } returns requestMock
-
+  fun `getCheckCommandOutput returns status and command ID`() {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
@@ -1251,14 +1255,7 @@ class CommandApiControllerTest {
   }
 
   @Test
-  fun `runCheckCommand accepts EMBEDDED_END_USER role`() {
-    val requestMock = mockk<RoleResolver.Request>()
-    every { requestMock.withCurrentAuthentication() } returns requestMock
-    every { requestMock.withRef(any(), any<UUID>()) } returns requestMock
-    every { requestMock.requireOneOfRoles(any()) } returns Unit
-    every { requestMock.roles() } returns setOf(AuthRoleConstants.EMBEDDED_END_USER)
-    every { roleResolver.newRequest() } returns requestMock
-
+  fun `runCheckCommand returns command ID`() {
     val request =
       RunCheckCommandRequest(id = TEST_COMMAND_ID, actorId = TEST_ACTOR_ID)
 

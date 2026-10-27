@@ -12,6 +12,7 @@ import io.airbyte.commons.temporal.exception.UnreachableWorkflowException
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateInput
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateOutput
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionWorkflowOwner
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
@@ -46,10 +47,16 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.common.v1.WorkflowType
+import io.temporal.api.enums.v1.EventType
+import io.temporal.api.enums.v1.HistoryEventFilterType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.filter.v1.StatusFilter
 import io.temporal.api.filter.v1.WorkflowTypeFilter
+import io.temporal.api.workflowservice.v1.GetWorkflowExecutionHistoryRequest
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest
 import io.temporal.client.WorkflowClient
@@ -61,6 +68,7 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.nio.file.Path
+import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -807,6 +815,41 @@ class TemporalClient(
 
     // Start workflow asynchronously
     WorkflowClient.start(workflow::run, input)
+  }
+
+  /** Read saved ownership from the parent start event, before polling its potentially sensitive result. */
+  fun getActorDefinitionWorkflowOwner(requestId: String): ActorDefinitionWorkflowOwner {
+    val request =
+      GetWorkflowExecutionHistoryRequest
+        .newBuilder()
+        .setNamespace(workflowClientWrapped.namespace)
+        .setExecution(WorkflowExecution.newBuilder().setWorkflowId(requestId))
+        .setHistoryEventFilterType(HistoryEventFilterType.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+        .setMaximumPageSize(1)
+        .setWaitNewEvent(false)
+        .build()
+    val history =
+      try {
+        workflowClientWrapped.blockingGetWorkflowExecutionHistory(request).history
+      } catch (failure: StatusRuntimeException) {
+        if (failure.status.code != Status.Code.NOT_FOUND) throw failure
+        throw NoSuchElementException("Actor definition workflow not found").apply { initCause(failure) }
+      }
+    val first = history.eventsList.firstOrNull() ?: error("Workflow start event missing")
+    check(first.eventType == EventType.EVENT_TYPE_WORKFLOW_EXECUTION_STARTED) { "Workflow start event missing" }
+    val start = first.workflowExecutionStartedEventAttributes
+    check(
+      start.workflowType.name == "ActorDefinitionUpdateWorkflow" && start.input.payloadsCount == 1,
+    ) { "Unexpected actor definition workflow input" }
+    val input: ActorDefinitionUpdateInput? =
+      workflowClientWrapped.dataConverter.fromPayloads(
+        0,
+        Optional.of(start.input),
+        ActorDefinitionUpdateInput::class.java,
+        ActorDefinitionUpdateInput::class.java,
+      )
+    check(input != null && input.requestId == requestId && requestId.isNotBlank()) { "Mismatched actor definition workflow input" }
+    return ActorDefinitionWorkflowOwner(input.specRequest.workspaceId, input.actorType, Optional.ofNullable(input.actorDefinitionId))
   }
 
   /**

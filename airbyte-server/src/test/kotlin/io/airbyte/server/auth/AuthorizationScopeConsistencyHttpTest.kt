@@ -17,13 +17,22 @@ import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.JobConfig
+import io.airbyte.config.Organization
 import io.airbyte.config.Permission
+import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.services.ActorDefinitionService
+import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.JobService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
+import io.airbyte.data.services.shared.JobMetadata
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -58,7 +67,7 @@ private const val ATTACKER_AUTH_USER_ID = "attacker-auth-user"
 
 /**
  * Drives the request bodies from CVE-2026-80049 through the real Netty header extraction, JWT authentication, role
- * resolution and `@Secured` check. Only the persistence-backed collaborators are replaced. The caller is a reader in
+ * resolution and the shared typed rules. Only the persistence-backed collaborators are replaced. The caller is a reader in
  * their own workspace and holds nothing on the victim's.
  *
  * The JWT [AuthenticationFactory] is rebuilt here around a real [RoleResolver] because another test in this module
@@ -85,6 +94,8 @@ internal class AuthorizationScopeConsistencyHttpTest {
   private val attackerSource = UUID.randomUUID()
   private val victimSource = UUID.randomUUID()
   private val attackerConn = UUID.randomUUID()
+  private val victimConn = UUID.randomUUID()
+  private val victimDestination = UUID.randomUUID()
   private val attackerJob = 4242L
   private val victimJob = 7L
   private val victimUser = UUID.randomUUID()
@@ -101,6 +112,10 @@ internal class AuthorizationScopeConsistencyHttpTest {
         organizationsHandler,
         userHandler,
         userPersistence,
+        jobs,
+        connections,
+        definitions,
+        organizations,
       )
       every { userPersistence.listAuthUserIdsForUser(victimUser) } returns listOf("victim-auth-user")
       every { workspaceHelper.getWorkspaceForJobId(attackerJob) } returns attackerWs
@@ -116,10 +131,20 @@ internal class AuthorizationScopeConsistencyHttpTest {
         listOf(Permission().withPermissionType(Permission.PermissionType.WORKSPACE_READER).withWorkspaceId(attackerWs))
       every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(attackerSource) } returns Optional.of(attackerWs)
       every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(victimSource) } returns Optional.of(victimWs)
+      every { ScopeConsistencyTestBeans.actors.findDestinationWorkspaceId(victimDestination) } returns Optional.of(victimWs)
       every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(attackerWs, false) } returns
         StandardWorkspace().withWorkspaceId(attackerWs).withOrganizationId(attackerOrg)
       every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(victimWs, false) } returns
         StandardWorkspace().withWorkspaceId(victimWs).withOrganizationId(victimOrg)
+      every { jobs.findJobMetadataById(victimJob) } returns Optional.of(JobMetadata(victimJob, JobConfig.ConfigType.SYNC, victimConn.toString()))
+      every { connections.getStandardSync(victimConn) } returns
+        StandardSync().withConnectionId(victimConn).withSourceId(victimSource).withDestinationId(victimDestination)
+      for (actor in listOf(victimSource, victimDestination)) {
+        every { definitions.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, victimWs, victimOrg))
+      }
+      for (organization in listOf(attackerOrg, victimOrg)) {
+        every { organizations.getOrganization(organization) } returns Optional.of(Organization().withOrganizationId(organization))
+      }
       every { sourceHandler.getSource(any()) } returns
         SourceRead(
           sourceDefinitionId = UUID.randomUUID(),
@@ -199,6 +224,8 @@ internal class AuthorizationScopeConsistencyHttpTest {
   fun `an organization_id field that hides the organization of a victim is rejected before the handler runs`() {
     // The endpoint reads `organizationId` and ignores `organization_id`. The caller is an admin of their own organization.
     every { ScopeConsistencyTestBeans.permissionHandler.getPermissionsByAuthUserId(ATTACKER_AUTH_USER_ID) } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN).withOrganizationId(attackerOrg))
+    every { ScopeConsistencyTestBeans.permissions.getPermissionsByAuthUserId(ATTACKER_AUTH_USER_ID) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN).withOrganizationId(attackerOrg))
     val status =
       postExpectingError(
@@ -289,6 +316,22 @@ class ScopeConsistencyTestBeans {
   fun workspaces(): WorkspaceService = Companion.workspaces
 
   @Singleton
+  @Replaces(JobService::class)
+  fun jobs(): JobService = Companion.jobs
+
+  @Singleton
+  @Replaces(ConnectionService::class)
+  fun connections(): ConnectionService = Companion.connections
+
+  @Singleton
+  @Replaces(ActorDefinitionService::class)
+  fun definitions(): ActorDefinitionService = Companion.definitions
+
+  @Singleton
+  @Replaces(OrganizationService::class)
+  fun organizations(): OrganizationService = Companion.organizations
+
+  @Singleton
   @Replaces(OperationPermissions::class)
   fun operationPermissions(
     authenticationHeaderResolver: AuthenticationHeaderResolver,
@@ -335,6 +378,10 @@ class ScopeConsistencyTestBeans {
   fun userPersistence(): UserPersistence = Companion.userPersistence
 
   companion object {
+    val jobs: JobService = mockk()
+    val connections: ConnectionService = mockk()
+    val definitions: ActorDefinitionService = mockk()
+    val organizations: OrganizationService = mockk()
     val permissions: PermissionService = mockk()
     val actors: ActorRepository = mockk()
     val workspaces: WorkspaceService = mockk()

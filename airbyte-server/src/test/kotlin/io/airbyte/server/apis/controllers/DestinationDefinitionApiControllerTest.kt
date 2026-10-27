@@ -22,6 +22,7 @@ import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.server.auth.requireCommunityDefinitionForControllerTest
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -82,12 +83,14 @@ internal class DestinationDefinitionApiControllerTest {
   }
 
   @Test
-  fun testDeleteDestinationDefinitionNoWriteAccess() {
+  fun testDeleteDestinationDefinitionKeepsCommunityCustomAccess() {
     val destinationDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(destinationDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
+    every { destinationDefinitionsHandler.deleteDestinationDefinition(any()) } returns Unit
     val destinationDefinitionIdRequestBody = DestinationDefinitionIdRequestBody(destinationDefinitionId = destinationDefinitionId)
-    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+    Assertions.assertDoesNotThrow {
+      requireCommunityDefinitionForControllerTest(false, destinationDefinitionIdRequestBody)
       destinationDefinitionApiController.deleteDestinationDefinition(destinationDefinitionIdRequestBody)
     }
   }
@@ -201,13 +204,15 @@ internal class DestinationDefinitionApiControllerTest {
   }
 
   @Test
-  fun testUpdateDestinationDefinitionNoWriteAccess() {
+  fun testUpdateDestinationDefinitionKeepsCommunityCustomAccess() {
     val destinationDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(destinationDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
     val destinationDefinitionUpdate =
       DestinationDefinitionUpdate(destinationDefinitionId = destinationDefinitionId, dockerImageTag = "0.1.0", workspaceId = UUID.randomUUID())
-    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+    every { destinationDefinitionsHandler.updateDestinationDefinition(any()) } returns destinationDefinitionRead()
+    Assertions.assertDoesNotThrow {
+      requireCommunityDefinitionForControllerTest(false, destinationDefinitionUpdate)
       destinationDefinitionApiController.updateDestinationDefinition(destinationDefinitionUpdate)
     }
   }

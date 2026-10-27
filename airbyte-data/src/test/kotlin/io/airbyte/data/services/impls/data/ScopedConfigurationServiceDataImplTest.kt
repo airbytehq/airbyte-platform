@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ScopedConfigurationRepository
 import io.airbyte.data.repositories.entities.ScopedConfiguration
+import io.airbyte.data.repositories.entities.ScopedConfigurationAuthorization
 import io.airbyte.data.services.impls.data.mappers.EntityConfigOriginType
 import io.airbyte.data.services.impls.data.mappers.ModelConfigOriginType
 import io.airbyte.data.services.impls.data.mappers.ModelConfigScopeType
@@ -22,6 +23,7 @@ import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -41,6 +43,36 @@ internal class ScopedConfigurationServiceDataImplTest {
   @BeforeEach
   fun reset() {
     clearAllMocks()
+  }
+
+  @Test
+  fun `authorization reads metadata and only the explicit connector version selector without full row hydration`() {
+    val id = UUID.randomUUID()
+    val scope = UUID.randomUUID()
+    val resource = UUID.randomUUID()
+    val row =
+      ScopedConfigurationAuthorization(
+        id,
+        "network_security_token",
+        EntityConfigScopeType.workspace,
+        scope,
+        EntityConfigResourceType.connection,
+        resource,
+        ConfigOriginType.private_link,
+        "link",
+      )
+    every { scopedConfigurationRepository.findAuthorizationMetadataById(id) } returns Optional.of(row)
+    every { scopedConfigurationRepository.findConnectorVersionSelectorById(id) } returns Optional.empty()
+    val metadata = scopedConfigurationService.getScopedConfigurationMetadata(id)
+    assertEquals(id, metadata.id)
+    assertEquals(ModelConfigScopeType.WORKSPACE, metadata.scopeType)
+    assertEquals(Optional.of(ModelConfigResourceType.CONNECTION), metadata.resourceType)
+    assertEquals(Optional.of(resource), metadata.resourceId)
+    assertEquals("link", metadata.origin)
+    assertThrows<ConfigNotFoundException> { scopedConfigurationService.getConnectorVersionSelector(id) }
+    every { scopedConfigurationRepository.findAuthorizationMetadataById(id) } returns Optional.empty()
+    assertThrows<ConfigNotFoundException> { scopedConfigurationService.getScopedConfigurationMetadata(id) }
+    verify(exactly = 0) { scopedConfigurationRepository.findById(any()) }
   }
 
   @Test

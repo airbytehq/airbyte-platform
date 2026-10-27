@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.apis.ScopedConfigurationApi
 import io.airbyte.api.server.generated.models.ScopedConfigurationContextRequestBody
 import io.airbyte.api.server.generated.models.ScopedConfigurationContextResponse
@@ -18,7 +19,6 @@ import io.airbyte.api.server.generated.models.ScopedConfigurationReadRequestBody
 import io.airbyte.api.server.generated.models.ScopedConfigurationReadResponse
 import io.airbyte.api.server.generated.models.ScopedConfigurationUpdateRequestBody
 import io.airbyte.api.server.generated.models.ScopedConfigurationUpdateResponse
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -40,11 +40,12 @@ import io.micronaut.security.rules.SecurityRule
 class ScopedConfigurationApiController(
   private val scopedConfigurationHandler: ScopedConfigurationHandler,
 ) : ScopedConfigurationApi {
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationCreateRule::class,
   )
   override fun createScopedConfiguration(
     @Body requestBody: ScopedConfigurationCreateRequestBody?,
@@ -59,11 +60,12 @@ class ScopedConfigurationApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationDeleteRule::class,
   )
   override fun deleteScopedConfiguration(
     @Body requestBody: ScopedConfigurationDeleteRequestBody?,
@@ -76,11 +78,12 @@ class ScopedConfigurationApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationListRule::class,
   )
   override fun getScopedConfigurationsList(
     @Body requestBody: ScopedConfigurationListRequestBody?,
@@ -91,10 +94,7 @@ class ScopedConfigurationApiController(
       val configKey = scopedConfigurationListRequestBody.configKey
       val originType = scopedConfigurationListRequestBody.originType
       if (configKey != null && originType != null) {
-        throw RuntimeException(
-          "Either a configuration key or origin type is required, but not both. " +
-            "Got configKey=${scopedConfigurationListRequestBody.configKey} originType=%${scopedConfigurationListRequestBody.originType}.",
-        )
+        throw BadRequestProblem()
       }
 
       if (configKey != null) {
@@ -106,20 +106,18 @@ class ScopedConfigurationApiController(
             ConfigOriginType.valueOf(originType),
           )
       } else {
-        throw RuntimeException(
-          "Either a configuration key or origin type is required. " +
-            "Got configKey=${scopedConfigurationListRequestBody.configKey} originType=%${scopedConfigurationListRequestBody.originType}.",
-        )
+        throw BadRequestProblem()
       }
       ScopedConfigurationListResponse(scopedConfigurations = scopedConfigurations)
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationReadRule::class,
   )
   override fun getScopedConfigurationById(
     @Body requestBody: ScopedConfigurationReadRequestBody?,
@@ -133,11 +131,12 @@ class ScopedConfigurationApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationContextRule::class,
   )
   override fun getScopedConfigurationContext(
     @Body requestBody: ScopedConfigurationContextRequestBody?,
@@ -150,11 +149,12 @@ class ScopedConfigurationApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.ScopedConfigurationUpdateRule::class,
   )
   override fun updateScopedConfiguration(
     @Body requestBody: ScopedConfigurationUpdateRequestBody?,

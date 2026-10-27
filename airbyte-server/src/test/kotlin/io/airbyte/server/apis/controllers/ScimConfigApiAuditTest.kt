@@ -23,6 +23,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.StoreAuditLogs
@@ -76,6 +77,10 @@ internal class ScimConfigApiAuditTest {
 
     @Singleton
     @Primary
+    fun authorizationDataService(): AuthorizationDataService = mockk()
+
+    @Singleton
+    @Primary
     fun currentUserService(): CurrentUserService = mockk()
 
     @Singleton
@@ -115,6 +120,9 @@ internal class ScimConfigApiAuditTest {
   lateinit var currentUserService: CurrentUserService
 
   @Inject
+  lateinit var authorizationData: AuthorizationDataService
+
+  @Inject
   lateinit var auditLoggingInterceptor: AuditLoggingInterceptor
 
   private val organizationId = UUID.fromString("c7838139-e08d-4493-9785-2a626531e9bd")
@@ -125,6 +133,7 @@ internal class ScimConfigApiAuditTest {
   fun setUp() {
     clearMocks(service, currentUserService, AUDIT_STORAGE_CLIENT)
     auditDocuments.clear()
+    every { authorizationData.organization(organizationId) } returns organizationId
     every { currentUserService.getCurrentUser() } returns
       mockk(relaxed = true) {
         every { this@mockk.userId } returns this@ScimConfigApiAuditTest.userId

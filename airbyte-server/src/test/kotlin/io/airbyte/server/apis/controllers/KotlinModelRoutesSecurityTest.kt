@@ -47,13 +47,22 @@ import io.airbyte.commons.server.handlers.NotificationsHandler
 import io.airbyte.commons.server.handlers.OpenApiConfigHandler
 import io.airbyte.commons.server.handlers.SignalHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Permission
+import io.airbyte.data.auth.TokenType
+import io.airbyte.data.repositories.entities.StreamStatusAuthorization
+import io.airbyte.data.services.PermissionService
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
+import io.airbyte.domain.models.auth.AuthorizationTarget
+import io.airbyte.domain.models.auth.WorkspaceAndOrganization
+import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.domain.services.auth.StreamStatusAuthorizationDataService
 import io.airbyte.domain.services.secrets.SecretMigrationService
 import io.airbyte.domain.services.secrets.SecretStorageCredentialsService
 import io.airbyte.domain.services.secrets.SecretStorageService
+import io.airbyte.server.auth.OperationPermissions
 import io.airbyte.server.handlers.RetryStatesHandler
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.micronaut.context.annotation.Factory
@@ -87,6 +96,18 @@ import java.util.UUID
 
 private const val SPEC_NAME = "KotlinModelRoutesSecurityTest"
 private const val TEST_ROLES_HEADER = "X-Test-Roles"
+private const val UNSUPPORTED_CALLER = "unsupported-workload"
+private val ROUTES_WORKSPACE = UUID(0, 101)
+private val ROUTES_ORGANIZATION = UUID(0, 102)
+private val ROUTES_CONNECTION = UUID(0, 103)
+private val ROUTES_SOURCE = UUID(0, 104)
+private val ROUTES_DESTINATION = UUID(0, 105)
+private val ROUTES_DEFINITION = UUID(0, 106)
+private val ROUTES_STATUS = UUID(0, 107)
+private val ROUTES_STORAGE = UUID(0, 108)
+private val ROUTES_FROM_STORAGE = UUID(0, 109)
+private val ROUTES_TO_STORAGE = UUID(0, 110)
+private val ROUTES_SERVICE = UUID(0, 111)
 
 /**
  * Calls every route that moved to the Kotlin-generated server models, with security turned on.
@@ -143,6 +164,23 @@ internal class KotlinModelRoutesSecurityTest {
 
     @Singleton @Primary
     fun roleResolver(): RoleResolver = mockk(relaxed = true)
+
+    @Singleton @Primary
+    fun authorizationDataService(): AuthorizationDataService = mockk()
+
+    @Singleton @Primary
+    fun streamStatusAuthorizationDataService(): StreamStatusAuthorizationDataService = mockk()
+
+    @Singleton @Primary
+    fun operationPermissions(): OperationPermissions {
+      val permissions = mockk<PermissionService>()
+      every { permissions.getPermissionsByAuthUserId(AuthRoleConstants.WORKSPACE_READER) } returns
+        listOf(Permission().withWorkspaceId(ROUTES_WORKSPACE).withPermissionType(Permission.PermissionType.WORKSPACE_READER))
+      every { permissions.getPermissionsByAuthUserId(AuthRoleConstants.AUTHENTICATED_USER) } returns emptyList()
+      every { permissions.getPermissionsByServiceAccountId(ROUTES_SERVICE) } returns
+        listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE))
+      return OperationPermissions(permissions, RoleResolver(mockk(), mockk(), mockk(), mockk()), true)
+    }
   }
 
   @Inject
@@ -175,8 +213,27 @@ internal class KotlinModelRoutesSecurityTest {
 
   @Inject lateinit var currentUserService: CurrentUserService
 
+  @Inject lateinit var authorizationData: AuthorizationDataService
+
+  @Inject lateinit var statusAuthorization: StreamStatusAuthorizationDataService
+
   @BeforeEach
   fun stubHandlers() {
+    val owner = WorkspaceAndOrganization(ROUTES_WORKSPACE, ROUTES_ORGANIZATION)
+    every { authorizationData.workspaceAndOrganization(ROUTES_WORKSPACE) } returns owner
+    every { authorizationData.organization(ROUTES_ORGANIZATION) } returns ROUTES_ORGANIZATION
+    every { authorizationData.savedConnectionActorIds(ROUTES_CONNECTION) } returns (ROUTES_SOURCE to ROUTES_DESTINATION)
+    every { authorizationData.savedSourceWorkspaceAndOrganization(ROUTES_SOURCE) } returns owner
+    every { authorizationData.savedDestinationWorkspaceAndOrganization(ROUTES_DESTINATION) } returns owner
+    every { authorizationData.replicationJobConnectionId(1L) } returns ROUTES_CONNECTION
+    every { authorizationData.savedAttemptConnectionId(1L, 0) } returns ROUTES_CONNECTION
+    justRun { authorizationData.requireActorDefinitionType(ROUTES_DEFINITION, true) }
+    every { authorizationData.canUseActorDefinition(ROUTES_DEFINITION, owner) } returns true
+    for (id in listOf(ROUTES_STORAGE, ROUTES_FROM_STORAGE, ROUTES_TO_STORAGE)) {
+      every { authorizationData.secretStorageTarget(id) } returns AuthorizationTarget.Workspace(owner)
+    }
+    every { statusAuthorization.status(ROUTES_STATUS, ROUTES_WORKSPACE) } returns
+      StreamStatusAuthorization(ROUTES_STATUS, ROUTES_WORKSPACE, ROUTES_CONNECTION, 1L, 0, "sync")
     every { healthCheckHandler.health() } returns HealthCheckRead(available = true)
     every { deploymentMetadataHandler.getDeploymentMetadata() } returns
       DeploymentMetadataRead(id = UUID.randomUUID(), mode = "COMMUNITY", version = "1.0.0")
@@ -266,13 +323,15 @@ internal class KotlinModelRoutesSecurityTest {
     private val workspaceReader = listOf(AuthRoleConstants.WORKSPACE_READER)
     private val authenticatedUser = listOf(AuthRoleConstants.AUTHENTICATED_USER)
     private val notLoggedIn = emptyList<String>()
+    private val unsupportedCaller = listOf(UNSUPPORTED_CALLER)
+    private val dataplane = listOf(AuthRoleConstants.DATAPLANE)
 
     @JvmStatic
     fun routes(): List<Route> =
       listOf(
         Route("health", "/api/v1/health", null, notLoggedIn, null, isGet = true),
         Route("deployment metadata", "/api/v1/deployment/metadata", null, authenticatedUser, notLoggedIn),
-        Route("openapi", "/api/v1/openapi", null, authenticatedUser, workspaceReader, isGet = true),
+        Route("openapi", "/api/v1/openapi", null, authenticatedUser, unsupportedCaller, isGet = true),
         Route("instance configuration get", "/api/v1/instance_configuration", null, notLoggedIn, null, isGet = true),
         Route("instance configuration setup", "/api/v1/instance_configuration/setup", setupRequestBody(), notLoggedIn, null),
         // deprecated no-op endpoint, see NotificationsApiController
@@ -281,7 +340,7 @@ internal class KotlinModelRoutesSecurityTest {
           "/api/v1/notifications/try",
           Notification(notificationType = NotificationType.SLACK),
           authenticatedUser,
-          workspaceReader,
+          unsupportedCaller,
           allowedStatus = HttpStatus.UNPROCESSABLE_ENTITY,
         ),
         Route(
@@ -292,7 +351,7 @@ internal class KotlinModelRoutesSecurityTest {
             notificationTrigger = NotificationTrigger.SYNC_SUCCESS,
           ),
           authenticatedUser,
-          workspaceReader,
+          unsupportedCaller,
         ),
         Route("signal", "/api/v1/signal", SignalInput(workflowType = "sync", workflowId = "workflow"), admin, workspaceReader),
         Route("stream statuses create", "/api/v1/stream_statuses/create", streamStatusCreate(), admin, workspaceReader, HttpStatus.CREATED),
@@ -301,7 +360,7 @@ internal class KotlinModelRoutesSecurityTest {
         Route(
           "stream statuses latest per run state",
           "/api/v1/stream_statuses/latest_per_run_state",
-          ConnectionIdRequestBody(connectionId = UUID.randomUUID()),
+          ConnectionIdRequestBody(connectionId = ROUTES_CONNECTION),
           workspaceReader,
           authenticatedUser,
         ),
@@ -325,22 +384,21 @@ internal class KotlinModelRoutesSecurityTest {
         Route(
           "secret storage delete",
           "/api/v1/secret_storage/delete",
-          SecretStorageIdRequestBody(secretStorageId = UUID.randomUUID()),
+          SecretStorageIdRequestBody(secretStorageId = ROUTES_STORAGE),
           admin,
           workspaceReader,
         ),
-        // role checks for this route happen inside the controller (RoleResolver), so only login is enforced here
         Route(
           "secret storage get",
           "/api/v1/secret_storage/get",
-          SecretStorageIdRequestBody(secretStorageId = UUID.randomUUID()),
-          authenticatedUser,
+          SecretStorageIdRequestBody(secretStorageId = ROUTES_STORAGE),
+          dataplane,
           notLoggedIn,
         ),
         Route(
           "secret storage list",
           "/api/v1/secret_storage/list",
-          SecretStorageListRequestBody(scopeType = ScopeType.WORKSPACE, scopeId = UUID.randomUUID()),
+          SecretStorageListRequestBody(scopeType = ScopeType.WORKSPACE, scopeId = ROUTES_WORKSPACE),
           admin,
           workspaceReader,
         ),
@@ -348,10 +406,10 @@ internal class KotlinModelRoutesSecurityTest {
           "secret storage migrate",
           "/api/v1/secret_storage/migrate",
           MigrateSecretStorageRequestBody(
-            fromSecretStorageId = UUID.randomUUID(),
-            toSecretStorageId = UUID.randomUUID(),
+            fromSecretStorageId = ROUTES_FROM_STORAGE,
+            toSecretStorageId = ROUTES_TO_STORAGE,
             scopeType = ScopeType.WORKSPACE,
-            scopeId = UUID.randomUUID(),
+            scopeId = ROUTES_WORKSPACE,
           ),
           admin,
           workspaceReader,
@@ -374,8 +432,8 @@ internal class KotlinModelRoutesSecurityTest {
 
     private fun streamStatusCreate() =
       StreamStatusCreateRequestBody(
-        workspaceId = UUID.randomUUID(),
-        connectionId = UUID.randomUUID(),
+        workspaceId = ROUTES_WORKSPACE,
+        connectionId = ROUTES_CONNECTION,
         jobId = 1L,
         jobType = StreamStatusJobType.SYNC,
         attemptNumber = 0,
@@ -386,9 +444,9 @@ internal class KotlinModelRoutesSecurityTest {
 
     private fun streamStatusUpdate() =
       StreamStatusUpdateRequestBody(
-        id = UUID.randomUUID(),
-        workspaceId = UUID.randomUUID(),
-        connectionId = UUID.randomUUID(),
+        id = ROUTES_STATUS,
+        workspaceId = ROUTES_WORKSPACE,
+        connectionId = ROUTES_CONNECTION,
         jobId = 1L,
         jobType = StreamStatusJobType.SYNC,
         attemptNumber = 0,
@@ -399,14 +457,14 @@ internal class KotlinModelRoutesSecurityTest {
 
     private fun streamStatusList() =
       StreamStatusListRequestBody(
-        workspaceId = UUID.randomUUID(),
-        connectionId = UUID.randomUUID(),
+        workspaceId = ROUTES_WORKSPACE,
+        connectionId = ROUTES_CONNECTION,
         pagination = Pagination(pageSize = 10, rowOffset = 0),
       )
 
     private fun retryStateRequest() =
       JobRetryStateRequestBody(
-        connectionId = UUID.randomUUID(),
+        connectionId = ROUTES_CONNECTION,
         jobId = 1L,
         successiveCompleteFailures = 0,
         totalCompleteFailures = 0,
@@ -417,8 +475,8 @@ internal class KotlinModelRoutesSecurityTest {
     private fun connectorDocumentationRequest() =
       ConnectorDocumentationRequestBody(
         actorType = ActorType.SOURCE,
-        actorDefinitionId = UUID.randomUUID(),
-        workspaceId = UUID.randomUUID(),
+        actorDefinitionId = ROUTES_DEFINITION,
+        workspaceId = ROUTES_WORKSPACE,
       )
 
     private fun secretStorageCreate() =
@@ -426,7 +484,7 @@ internal class KotlinModelRoutesSecurityTest {
         descriptor = "storage",
         secretStorageType = io.airbyte.api.server.generated.models.SecretStorageType.VAULT,
         scopeType = ScopeType.ORGANIZATION,
-        scopeId = UUID.randomUUID(),
+        scopeId = ROUTES_ORGANIZATION,
         config = Jsons.jsonNode(mapOf("key" to "value")),
       )
   }
@@ -487,12 +545,21 @@ private fun secretStorage() =
     updatedAt = OffsetDateTime.now(),
   )
 
-/** Logs the caller in with whatever roles the test puts in [TEST_ROLES_HEADER]; no header means not logged in. */
+/** Selects real user or worker claims and saved grants; no header means not logged in. */
 @Requires(property = "spec.name", value = SPEC_NAME)
 @Singleton
 class RoleHeaderAuthenticationFetcher : AuthenticationFetcher<HttpRequest<*>> {
   override fun fetchAuthentication(request: HttpRequest<*>): Publisher<Authentication> {
     val roles = request.headers[TEST_ROLES_HEADER] ?: return Flux.empty()
-    return Flux.just(Authentication.build("routes-security-test-user", roles.split(",")))
+    val required = roles.split(",")
+    val kind =
+      when {
+        UNSUPPORTED_CALLER in required -> TokenType.WORKLOAD_API
+        AuthRoleConstants.ADMIN in required -> TokenType.INTERNAL_CLIENT
+        AuthRoleConstants.DATAPLANE in required -> TokenType.SERVICE_ACCOUNT
+        else -> TokenType.USER
+      }
+    val subject = if (kind == TokenType.SERVICE_ACCOUNT) ROUTES_SERVICE.toString() else required.single()
+    return Flux.just(Authentication.build(subject, required, mapOf(kind.toClaim())))
   }
 }

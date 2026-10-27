@@ -12,7 +12,6 @@ import io.airbyte.api.server.generated.models.CompleteOAuthResponse
 import io.airbyte.api.server.generated.models.DestinationOauthConsentRequest
 import io.airbyte.api.server.generated.models.OAuthConsentRead
 import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
@@ -32,11 +31,12 @@ import io.micronaut.security.rules.SecurityRule
 class DestinationOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : DestinationOauthApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DestinationOAuthFlowRule::class,
   )
   override fun completeDestinationOAuth(
     @Body completeDestinationOAuthRequest: CompleteDestinationOAuthRequest,
@@ -48,21 +48,23 @@ class DestinationOauthApiController(
     return execute { oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest) }
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DestinationOAuthFlowRule::class,
   )
   override fun getDestinationOAuthConsent(
     @Body destinationOauthConsentRequest: DestinationOauthConsentRequest,
   ): OAuthConsentRead = execute { oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest) }
 
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = io.airbyte.server.auth.DestinationOAuthInstanceRule::class,
   )
   override fun setInstancewideDestinationOauthParams(
     @Body setInstancewideDestinationOauthParamsRequestBody: SetInstancewideDestinationOauthParamsRequestBody,

@@ -21,6 +21,8 @@ import io.airbyte.data.services.ApplicationService
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.annotations.RequestTimeout
+import io.airbyte.server.auth.CurrentUserApplicationRule
+import io.airbyte.server.auth.OwnedApplicationRule
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Body
@@ -73,11 +75,12 @@ open class ApplicationsController(
    * @param applicationCreate The Application request.
    * @return The created Application.
    */
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = CurrentUserApplicationRule::class,
   )
   override fun createApplication(
     @Body applicationCreate: ApplicationCreate,
@@ -91,11 +94,12 @@ open class ApplicationsController(
    *
    * @param applicationIdRequestBody The id of the Application to delete.
    */
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = OwnedApplicationRule::class,
   )
   override fun deleteApplication(
     @Body applicationIdRequestBody: ApplicationIdRequestBody,
@@ -111,11 +115,12 @@ open class ApplicationsController(
    *
    * @return The list of Applications.
    */
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = CurrentUserApplicationRule::class,
   )
   override fun listApplications(): ApplicationReadList {
     val applications =

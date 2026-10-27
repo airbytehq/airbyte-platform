@@ -318,7 +318,7 @@ open class ScopedConfigurationHandler
     fun getScopedConfigurationContext(contextRequestBody: ScopedConfigurationContextRequestBody): ScopedConfigurationContextResponse {
       val key = contextRequestBody.configKey
       val resourceType = ConfigResourceType.fromValue(contextRequestBody.resourceType)
-      val resourceId = contextRequestBody.resourceId!!
+      val resourceId = contextRequestBody.resourceId
       val scopeType = ConfigScopeType.fromValue(contextRequestBody.scopeType)
       val scopeId = contextRequestBody.scopeId
 

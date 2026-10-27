@@ -5,9 +5,7 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
-import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.server.generated.apis.DomainVerificationsApi
 import io.airbyte.api.server.generated.models.DomainVerificationCreateRequestBody
 import io.airbyte.api.server.generated.models.DomainVerificationIdRequestBody
@@ -16,20 +14,19 @@ import io.airbyte.api.server.generated.models.DomainVerificationResponse
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.domain.models.DomainVerificationMethod
 import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.OrganizationDomainVerification
+import io.airbyte.server.auth.DomainVerificationOrganizationRule
+import io.airbyte.server.auth.GlobalAdminRule
+import io.airbyte.server.auth.SavedDomainVerificationRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -42,12 +39,13 @@ open class DomainVerificationApiController(
   private val currentUserService: CurrentUserService,
   private val roleResolver: RoleResolver,
 ) : DomainVerificationsApi {
-  @RequiresIntent(Intent.ManageDomainVerification)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = DomainVerificationOrganizationRule::class,
   )
   override fun createDomainVerification(domainVerificationCreateRequestBody: DomainVerificationCreateRequestBody): DomainVerificationResponse {
     try {
@@ -67,10 +65,11 @@ open class DomainVerificationApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @RequiresIntent(Intent.ManageDomainVerification)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = DomainVerificationOrganizationRule::class,
   )
   override fun listDomainVerifications(organizationIdRequestBody: OrganizationIdRequestBody): DomainVerificationListResponse {
     val organizationId = organizationIdRequestBody.organizationId
@@ -83,11 +82,12 @@ open class DomainVerificationApiController(
    * List all pending domain verifications for cron processing.
    * Requires instance ADMIN role because it spans all organizations.
    */
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = GlobalAdminRule::class,
   )
   override fun listPendingDomainVerifications(): DomainVerificationListResponse {
     val pendingVerifications = organizationDomainVerificationService.findByStatus(DomainVerificationStatus.PENDING)
@@ -102,28 +102,13 @@ open class DomainVerificationApiController(
    * organization admin users who want to initiate a manual check.
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SavedDomainVerificationRule::class,
   )
   override fun checkDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
-    val verification =
-      try {
-        organizationDomainVerificationService.getDomainVerification(domainVerificationIdRequestBody.domainVerificationId)
-      } catch (_: IllegalArgumentException) {
-        throw ResourceNotFoundProblem(
-          ProblemResourceData()
-            .resourceType("domain_verification")
-            .resourceId(domainVerificationIdRequestBody.domainVerificationId.toString()),
-        )
-      }
-
-    roleResolver
-      .newRequest()
-      .withCurrentAuthentication()
-      .withRef(AuthenticationId.ORGANIZATION_ID, verification.organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     val updatedVerification =
       organizationDomainVerificationService.checkAndUpdateVerification(
         domainVerificationIdRequestBody.domainVerificationId,
@@ -138,28 +123,13 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SavedDomainVerificationRule::class,
   )
   override fun deleteDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody) {
-    val verification =
-      try {
-        organizationDomainVerificationService.getDomainVerification(domainVerificationIdRequestBody.domainVerificationId)
-      } catch (_: IllegalArgumentException) {
-        throw ResourceNotFoundProblem(
-          ProblemResourceData()
-            .resourceType("domain_verification")
-            .resourceId(domainVerificationIdRequestBody.domainVerificationId.toString()),
-        )
-      }
-
-    roleResolver
-      .newRequest()
-      .withCurrentAuthentication()
-      .withRef(AuthenticationId.ORGANIZATION_ID, verification.organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     try {
       organizationDomainVerificationService.deleteDomainVerification(
         domainVerificationId = domainVerificationIdRequestBody.domainVerificationId,
@@ -178,28 +148,13 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    migration = RouteMigration.SHARED,
+    rule = SavedDomainVerificationRule::class,
   )
   override fun resetDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
-    val verification =
-      try {
-        organizationDomainVerificationService.getDomainVerification(domainVerificationIdRequestBody.domainVerificationId)
-      } catch (_: IllegalArgumentException) {
-        throw ResourceNotFoundProblem(
-          ProblemResourceData()
-            .resourceType("domain_verification")
-            .resourceId(domainVerificationIdRequestBody.domainVerificationId.toString()),
-        )
-      }
-
-    roleResolver
-      .newRequest()
-      .withCurrentAuthentication()
-      .withRef(AuthenticationId.ORGANIZATION_ID, verification.organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     try {
       val resetVerification =
         organizationDomainVerificationService.resetDomainVerification(
