@@ -19,19 +19,11 @@
     transition: opacity 0.2s ease;
     opacity: 0;
 
-    &.badgeNew,
-    &.badgeBeta {
+    &.badgeNew {
       opacity: 1;
       margin-left: auto;
-    }
-
-    &.badgeNew {
       color: colors.$white;
       background-color: colors.$blue-400;
-    }
-
-    &.badgeBeta {
-      color: colors.$dark-blue-900;
     }
   }
 
@@ -67,9 +59,4 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-:global(.airbyteThemeDark) .menuItem .badgeBeta {
-  color: colors.$foreground;
-  background-color: colors.$grey-400;
 }

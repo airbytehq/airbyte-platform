@@ -103,7 +103,6 @@
   "sidebar.logout.failed": "An error occurred while signing out. Please try again.",
   "sidebar.lightMode": "Light mode",
   "sidebar.darkMode": "Dark mode",
-  "sidebar.beta": "Beta",
   "sidebar.new": "New",
   "sidebar.defaultUsername": "User",
   "sidebar.workspaceAndOrg": "{workspace} | {organization}",

@@ -40,7 +40,7 @@ interface NavItemInnerProps {
   icon: IconProps["type"];
   withNotification?: boolean;
   isActive?: boolean;
-  withBadge?: "beta" | "new";
+  withBadge?: "new";
   labelColor?: TextColor;
 }
 
@@ -63,15 +63,8 @@ const NavItemInner: React.FC<NavItemInnerProps> = ({
         </Text>
       )}
       {withBadge && (
-        <Badge
-          variant={withBadge === "beta" ? "grey" : "blue"}
-          className={classNames(styles.badge, {
-            [styles.badgeNew]: withBadge === "new",
-            [styles.badgeBeta]: withBadge === "beta",
-          })}
-        >
-          {withBadge === "beta" && <FormattedMessage id="sidebar.beta" />}
-          {withBadge === "new" && <FormattedMessage id="sidebar.new" />}
+        <Badge variant="blue" className={classNames(styles.badge, styles.badgeNew)}>
+          <FormattedMessage id="sidebar.new" />
         </Badge>
       )}
       {withNotification && <NotificationIndicator />}

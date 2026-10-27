@@ -123,9 +123,9 @@ const renderSidebar = (pathname: string) =>
         "cloud.installMcp.sidebar": "Install MCP",
         "settings.organization": "Organization",
         "settings.organizationSettings": "Organization settings",
-        "sidebar.beta": "Beta",
         "sidebar.defaultUsername": "User",
         "sidebar.home": "Home",
+        "sidebar.new": "New",
       }}
     >
       <MemoryRouter initialEntries={[pathname]}>
@@ -163,7 +163,7 @@ describe("SideBar organization navigation", () => {
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("aria-current", "page");
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("href", "/organization/test-org/install-mcp");
     expect(screen.getByTestId("installMcpSidebarLink").querySelector('[data-icon="mcp"]')).toBeInTheDocument();
-    expect(screen.getByTestId("installMcpSidebarLink")).toHaveTextContent("Beta");
+    expect(screen.getByTestId("installMcpSidebarLink")).toHaveTextContent("New");
   });
 
   it("only highlights Context Layer on the first-class Context Layer route", () => {

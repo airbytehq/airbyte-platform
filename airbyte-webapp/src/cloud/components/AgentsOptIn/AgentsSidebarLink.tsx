@@ -75,7 +75,7 @@ export const InstallMcpSidebarLink: React.FC = () => {
       to={`/${RoutePaths.Organization}/${organizationId}/${CloudSettingsRoutePaths.InstallMcp}`}
       testId="installMcpSidebarLink"
       className={styles.installMcpLink}
-      withBadge="beta"
+      withBadge="new"
     />
   );
 };
