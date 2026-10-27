@@ -5,7 +5,6 @@ import { Navigate } from "react-router-dom";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Message } from "components/ui/Message";
-import { PageContainer } from "components/ui/PageContainer";
 
 import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
 import { useOrganizationPlan } from "area/organization/utils/useOrganizationPlan";
@@ -52,60 +51,56 @@ const OrganizationPlanPageContent: React.FC = () => {
   } = useGetOrganizationSubscriptionInfo(organizationId, showActivePlanSection);
 
   return (
-    <PageContainer>
-      <FlexContainer direction="column" gap="xl">
-        <Heading as="h1" size="md">
-          <FormattedMessage id="settings.organization.billing.plan.title" />
-        </Heading>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1" size="md">
+        <FormattedMessage id="settings.organization.billing.plan.title" />
+      </Heading>
 
-        {showActivePlanSection ? (
-          <>
-            <ActivePlanCard
-              tier={activeTier}
-              planName={subscription?.entitlementPlan?.planName ?? subscription?.name}
-              isLoading={subscriptionLoading}
-              isError={subscriptionError}
-              cancellationDate={subscription?.cancellationDate}
-            />
-            {!isTopTier && (
-              <FlexContainer direction="column" gap="lg">
-                {isStandardPlan && <PlusPlanCard disabled={isLockedSubscription} isPaidPlan />}
-                {isPlusPlan && <StandardPlanCard disabled={isLockedSubscription} mode="downgrade" />}
-                <ProPlanCard />
-                <PricingComparisonLink />
-              </FlexContainer>
-            )}
-          </>
-        ) : (
-          <>
-            <Message
-              type="info"
-              text={formatMessage({ id: "settings.organization.billing.plan.noActivePlan.title" })}
-              secondaryText={<FormattedMessage id="settings.organization.billing.plan.noActivePlan.description" />}
-            />
+      {showActivePlanSection ? (
+        <>
+          <ActivePlanCard
+            tier={activeTier}
+            planName={subscription?.entitlementPlan?.planName ?? subscription?.name}
+            isLoading={subscriptionLoading}
+            isError={subscriptionError}
+            cancellationDate={subscription?.cancellationDate}
+          />
+          {!isTopTier && (
             <FlexContainer direction="column" gap="lg">
-              <StandardPlanCard disabled={isLockedSubscription} mode="subscribe" />
-              <PlusPlanCard disabled={isLockedSubscription} isPaidPlan={false} />
+              {isStandardPlan && <PlusPlanCard disabled={isLockedSubscription} isPaidPlan />}
+              {isPlusPlan && <StandardPlanCard disabled={isLockedSubscription} mode="downgrade" />}
               <ProPlanCard />
               <PricingComparisonLink />
             </FlexContainer>
-          </>
-        )}
-      </FlexContainer>
-    </PageContainer>
+          )}
+        </>
+      ) : (
+        <>
+          <Message
+            type="info"
+            text={formatMessage({ id: "settings.organization.billing.plan.noActivePlan.title" })}
+            secondaryText={<FormattedMessage id="settings.organization.billing.plan.noActivePlan.description" />}
+          />
+          <FlexContainer direction="column" gap="lg">
+            <StandardPlanCard disabled={isLockedSubscription} mode="subscribe" />
+            <PlusPlanCard disabled={isLockedSubscription} isPaidPlan={false} />
+            <ProPlanCard />
+            <PricingComparisonLink />
+          </FlexContainer>
+        </>
+      )}
+    </FlexContainer>
   );
 };
 
 const PlanGridPageContent: React.FC = () => {
   return (
-    <PageContainer>
-      <FlexContainer direction="column" gap="xl">
-        <Heading as="h1" size="md">
-          <FormattedMessage id="settings.organization.billing.plan.title" />
-        </Heading>
-        <PlanGrid />
-      </FlexContainer>
-    </PageContainer>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1" size="md">
+        <FormattedMessage id="settings.organization.billing.plan.title" />
+      </Heading>
+      <PlanGrid />
+    </FlexContainer>
   );
 };
 

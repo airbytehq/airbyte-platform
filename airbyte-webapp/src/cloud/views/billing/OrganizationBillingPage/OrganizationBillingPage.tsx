@@ -6,7 +6,6 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Message } from "components/ui/Message";
-import { PageContainer } from "components/ui/PageContainer";
 
 import { isOrganizationSubscribed, useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
 import { useShowsBillingAlertsSection } from "cloud/area/billing/utils/useShowsBillingAlertsSection";
@@ -42,57 +41,55 @@ export const OrganizationBillingPage: React.FC = () => {
   const showsBillingAlertsSection = useShowsBillingAlertsSection();
 
   return (
-    <PageContainer>
-      <FlexContainer direction="column" gap="xl">
-        <Heading as="h1" size="md">
-          <FormattedMessage id="settings.organization.billing.title" />
-        </Heading>
+    <FlexContainer direction="column" gap="xl">
+      <Heading as="h1" size="md">
+        <FormattedMessage id="settings.organization.billing.title" />
+      </Heading>
 
-        {/* Show credits as a banner in case the user isn't on an active subscription and thus sees the susbcribe to airbyte cards. */}
-        {showSubscribeCards && !!subscriptionInfo?.credits?.balance && subscriptionInfo?.credits?.balance > 0 && (
-          <Box mb="none">
-            <Message
-              text={
-                <FormattedMessage
-                  id="settings.organization.billing.remainingCreditsBanner"
-                  values={{
-                    amount: formatCredits(subscriptionInfo.credits.balance),
-                  }}
-                />
-              }
-            />
-          </Box>
-        )}
-        <BillingBanners />
+      {/* Show credits as a banner in case the user isn't on an active subscription and thus sees the susbcribe to airbyte cards. */}
+      {showSubscribeCards && !!subscriptionInfo?.credits?.balance && subscriptionInfo?.credits?.balance > 0 && (
+        <Box mb="none">
+          <Message
+            text={
+              <FormattedMessage
+                id="settings.organization.billing.remainingCreditsBanner"
+                values={{
+                  amount: formatCredits(subscriptionInfo.credits.balance),
+                }}
+              />
+            }
+          />
+        </Box>
+      )}
+      <BillingBanners />
 
-        {showSubscribeCards ? (
-          <SubscribeCards />
-        ) : (
-          <BorderedTiles>
-            <Subscription />
+      {showSubscribeCards ? (
+        <SubscribeCards />
+      ) : (
+        <BorderedTiles>
+          <Subscription />
 
-            <AccountBalance />
+          <AccountBalance />
 
+          <BorderedTile>
+            <BillingInformation />
+          </BorderedTile>
+
+          {!isProPlan && !isFlexPlan && (
             <BorderedTile>
-              <BillingInformation />
+              <PaymentMethod />
             </BorderedTile>
+          )}
+        </BorderedTiles>
+      )}
 
-            {!isProPlan && !isFlexPlan && (
-              <BorderedTile>
-                <PaymentMethod />
-              </BorderedTile>
-            )}
-          </BorderedTiles>
-        )}
+      {showsBillingAlertsSection && <BillingAlerts />}
 
-        {showsBillingAlertsSection && <BillingAlerts />}
-
-        {billing?.subscriptionStatus !== "pre_subscription" && billing?.paymentStatus !== "uninitialized" && (
-          <Box py="lg">
-            <Invoices />
-          </Box>
-        )}
-      </FlexContainer>
-    </PageContainer>
+      {billing?.subscriptionStatus !== "pre_subscription" && billing?.paymentStatus !== "uninitialized" && (
+        <Box py="lg">
+          <Invoices />
+        </Box>
+      )}
+    </FlexContainer>
   );
 };
