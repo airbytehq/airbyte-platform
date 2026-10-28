@@ -224,9 +224,29 @@ export const SyncCatalogTable: FC = () => {
       },
     }),
     columnHelper.accessor("primaryKey", {
-      header: () => {},
+      header: () => (
+        <FlexContainer alignItems="center" gap="none">
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="form.primaryKey" />
+          </Text>
+          <InfoTooltip>
+            <FormattedMessage id="connectionForm.primaryKey.info" />
+            <TooltipLearnMoreLink url={links.primaryKeyAndCursorLink} />
+          </InfoTooltip>
+        </FlexContainer>
+      ),
       cell: ({ row }) =>
-        isStreamRow(row) ? (
+        isNamespaceRow(row) ? (
+          <FlexContainer alignItems="center" gap="none">
+            <Text size="sm" color="grey500">
+              <FormattedMessage id="form.primaryKey" />
+            </Text>
+            <InfoTooltip>
+              <FormattedMessage id="connectionForm.primaryKey.info" />
+              <TooltipLearnMoreLink url={links.primaryKeyAndCursorLink} />
+            </InfoTooltip>
+          </FlexContainer>
+        ) : isStreamRow(row) ? (
           <StreamPKCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldPKCell row={row} />
@@ -237,9 +257,29 @@ export const SyncCatalogTable: FC = () => {
       },
     }),
     columnHelper.accessor("cursorField", {
-      header: () => {},
+      header: () => (
+        <FlexContainer alignItems="center" gap="none">
+          <Text size="sm" color="grey500">
+            <FormattedMessage id="form.cursorField" />
+          </Text>
+          <InfoTooltip>
+            <FormattedMessage id="connectionForm.cursor.info" />
+            <TooltipLearnMoreLink url={links.primaryKeyAndCursorLink} />
+          </InfoTooltip>
+        </FlexContainer>
+      ),
       cell: ({ row }) =>
-        isStreamRow(row) ? (
+        isNamespaceRow(row) ? (
+          <FlexContainer alignItems="center" gap="none">
+            <Text size="sm" color="grey500">
+              <FormattedMessage id="form.cursorField" />
+            </Text>
+            <InfoTooltip>
+              <FormattedMessage id="connectionForm.cursor.info" />
+              <TooltipLearnMoreLink url={links.primaryKeyAndCursorLink} />
+            </InfoTooltip>
+          </FlexContainer>
+        ) : isStreamRow(row) ? (
           <StreamCursorCell row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
         ) : (
           <FieldCursorCell row={row} />

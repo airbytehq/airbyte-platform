@@ -661,11 +661,67 @@ exports[`CreateConnectionForm should render 1`] = `
                                 <th
                                   class="<removed-for-snapshot-test>"
                                   colspan="1"
-                                />
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Primary key
+                                    </p>
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="info-outline"
+                                            data-testid="mocksvg"
+                                          />
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                </th>
                                 <th
                                   class="<removed-for-snapshot-test>"
                                   colspan="1"
-                                />
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Cursor
+                                    </p>
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="info-outline"
+                                            data-testid="mocksvg"
+                                          />
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                </th>
                                 <th
                                   class="<removed-for-snapshot-test>"
                                   colspan="1"
@@ -779,10 +835,66 @@ exports[`CreateConnectionForm should render 1`] = `
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
-                                />
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Primary key
+                                    </p>
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="info-outline"
+                                            data-testid="mocksvg"
+                                          />
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
-                                />
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Cursor
+                                    </p>
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <div
+                                            class="<removed-for-snapshot-test>"
+                                            data-icon="info-outline"
+                                            data-testid="mocksvg"
+                                          />
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </div>
+                                </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >

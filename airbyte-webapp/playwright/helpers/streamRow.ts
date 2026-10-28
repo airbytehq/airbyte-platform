@@ -394,7 +394,7 @@ export const streamRow = {
     const fieldRowLoc = streamRow.getFieldRow(page, namespace, streamName, fieldName);
     const pkCell = fieldRowLoc.locator('div[data-testid="field-pk-cell"]');
     const pkText = await pkCell.textContent();
-    return pkText?.includes("primary key") || false;
+    return pkText?.includes("Primary key") || false;
   },
 
   /**
@@ -404,7 +404,7 @@ export const streamRow = {
     const fieldRowLoc = streamRow.getFieldRow(page, namespace, streamName, fieldName);
     const cursorCell = fieldRowLoc.locator('div[data-testid="field-cursor-cell"]');
     const cursorText = await cursorCell.textContent();
-    return cursorText?.includes("cursor") || false;
+    return cursorText?.includes("Cursor") || false;
   },
 
   /**

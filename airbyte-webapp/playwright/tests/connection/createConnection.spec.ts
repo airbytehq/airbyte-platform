@@ -303,7 +303,7 @@ test.describe("Connection - Create new connection", () => {
       await expect(idFieldCheckbox).toBeDisabled({ timeout: 10000 });
 
       // Verify id field is marked as primary key
-      await expect(idFieldRow.locator('[data-testid="field-pk-cell"]')).toContainText("primary key", {
+      await expect(idFieldRow.locator('[data-testid="field-pk-cell"]')).toContainText("Primary key", {
         timeout: 10000,
       });
 
