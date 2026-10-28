@@ -7,12 +7,10 @@ package io.airbyte.domain.services.auth
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Job
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
-import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AttemptsRepository
@@ -141,8 +139,8 @@ class AuthorizationDataService(
     val workspace = resource { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) }
     requireResource(workspace.workspaceId == workspaceId)
     val savedConfigs = workspace.webhookOperationConfigs ?: throw IllegalArgumentException("webhook operations is null.")
-    val configs = Jsons.`object`(savedConfigs, WebhookOperationConfigs::class.java)
-    require(configs.webhookConfigs.any { it.id == configId }) { "No such webhook config id $configId in workspace $workspaceId" }
+    val hasConfig = savedConfigs.path("webhookConfigs").any { it.path("id").asText() == configId.toString() }
+    require(hasConfig) { "No such webhook config id $configId in workspace $workspaceId" }
   }
 
   fun actorWorkspaceAndOrganization(actorId: UUID): WorkspaceAndOrganization {

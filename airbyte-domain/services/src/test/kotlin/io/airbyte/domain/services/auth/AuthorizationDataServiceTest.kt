@@ -4,6 +4,7 @@
 
 package io.airbyte.domain.services.auth
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.StandardSync
@@ -204,6 +205,68 @@ class AuthorizationDataServiceTest {
         service.workspaceAndOrganization(workspaceId)
       },
     )
+  }
+
+  @Test
+  fun `dbt config ownership accepts saved secret references without hydrating them`() {
+    val configId = UUID(0, 0)
+    val savedConfigs =
+      Jsons.deserialize(
+        """
+        {
+          "webhookConfigs": [
+            {"id": "${UUID(0, 1)}", "name": "other dbt", "authToken": {"_secret": "other-coordinate"}},
+            {"id": "$configId", "name": "dbt", "authToken": {"_secret": "saved-coordinate"}}
+          ]
+        }
+        """.trimIndent(),
+      )
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(savedConfigs)
+
+    assertDoesNotThrow { service.requireWorkspaceDbtConfig(workspaceId, configId) }
+    verify(exactly = 0) { workspaces.getWorkspaceWithSecrets(any(), any()) }
+  }
+
+  @Test
+  fun `dbt config ownership rejects IDs outside the workspace`() {
+    val configId = UUID(0, 2)
+    val savedConfigs =
+      Jsons.deserialize(
+        """{"webhookConfigs": [{"id": "${UUID(0, 1)}", "name": "dbt", "authToken": {"_secret": "saved-coordinate"}}]}""",
+      )
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(savedConfigs)
+
+    val failure = assertThrows(IllegalArgumentException::class.java) { service.requireWorkspaceDbtConfig(workspaceId, configId) }
+    assertEquals("No such webhook config id $configId in workspace $workspaceId", failure.message)
+  }
+
+  @Test
+  fun `dbt config ownership rejects missing and empty saved configs`() {
+    val configId = UUID(0, 2)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns StandardWorkspace().withWorkspaceId(workspaceId)
+    val missing = assertThrows(IllegalArgumentException::class.java) { service.requireWorkspaceDbtConfig(workspaceId, configId) }
+    assertEquals("webhook operations is null.", missing.message)
+
+    for (savedConfigs in listOf("{}", """{"webhookConfigs": []}""")) {
+      every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+        StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(Jsons.deserialize(savedConfigs))
+      val empty = assertThrows(IllegalArgumentException::class.java) { service.requireWorkspaceDbtConfig(workspaceId, configId) }
+      assertEquals("No such webhook config id $configId in workspace $workspaceId", empty.message)
+    }
+  }
+
+  @Test
+  fun `dbt config ownership preserves workspace lookup failures`() {
+    val configId = UUID(0, 2)
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } throws
+      ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, workspaceId)
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.requireWorkspaceDbtConfig(workspaceId, configId) }
+
+    val failure = IOException("workspace lookup failed")
+    every { workspaces.getStandardWorkspaceNoSecrets(workspaceId, false) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.requireWorkspaceDbtConfig(workspaceId, configId) })
   }
 
   @Test
