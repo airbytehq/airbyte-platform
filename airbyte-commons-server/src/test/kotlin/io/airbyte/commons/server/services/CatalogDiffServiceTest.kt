@@ -10,9 +10,14 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.SourceService
+import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
@@ -38,6 +43,9 @@ internal class CatalogDiffServiceTest {
   private lateinit var connectionService: ConnectionService
   private lateinit var applySchemaChangeHelper: ApplySchemaChangeHelper
   private lateinit var metricClient: MetricClient
+  private lateinit var featureFlagClient: TestClient
+  private lateinit var sourceService: SourceService
+  private lateinit var workspaceHelper: WorkspaceHelper
   private lateinit var catalogDiffService: CatalogDiffService
 
   private lateinit var workspaceId: UUID
@@ -64,6 +72,13 @@ internal class CatalogDiffServiceTest {
     applySchemaChangeHelper = mockk()
     every { connectionService.writeStandardSync(any()) } just Runs
     metricClient = mockk(relaxed = true)
+    featureFlagClient = mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
+    sourceService = mockk()
+    every { sourceService.getSourceConnection(any()) } returns
+      SourceConnection().withSourceDefinitionId(UUID.randomUUID()).withWorkspaceId(UUID.randomUUID())
+    workspaceHelper = mockk()
+    every { workspaceHelper.getOrganizationForWorkspace(any()) } returns UUID.randomUUID()
 
     catalogDiffService =
       CatalogDiffService(
@@ -73,6 +88,9 @@ internal class CatalogDiffServiceTest {
         catalogConverter,
         catalogMergeHelper,
         metricClient,
+        featureFlagClient,
+        sourceService,
+        workspaceHelper,
       )
 
     workspaceId = UUID.randomUUID()
@@ -267,6 +285,33 @@ internal class CatalogDiffServiceTest {
     // but have the fields from the new catalog
     val mergedStream = result.mergedCatalog!!.streams[0]
     assertEquals(true, mergedStream.config!!.selected, "Stream should remain selected from configured catalog")
+  }
+
+  @Test
+  fun `diffCatalogs widens a changed column in the merged catalog when the flag is on`() {
+    val currentCatalog = createAirbyteCatalog("users", listOf("id"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id"))
+    newCatalog.streams[0].jsonSchema = Jsons.jsonNode(mapOf("type" to "object", "properties" to mapOf("id" to mapOf("type" to "integer"))))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    every { applySchemaChangeHelper.containsBreakingChange(any()) } returns false
+    every { featureFlagClient.boolVariation(WidenColumnTypes, any()) } returns true
+
+    val result =
+      catalogDiffService.diffCatalogs(
+        DiffCatalogsRequest(currentCatalogId = currentCatalogId, newCatalogId = newCatalogId, connectionId = connectionId),
+      )
+
+    assertEquals(
+      Jsons.jsonNode(mapOf("type" to "string", "airbyte_source_type" to "integer")),
+      result.mergedCatalog!!
+        .streams[0]
+        .stream!!
+        .jsonSchema!!
+        .get("properties")
+        .get("id"),
+    )
   }
 
   @Test

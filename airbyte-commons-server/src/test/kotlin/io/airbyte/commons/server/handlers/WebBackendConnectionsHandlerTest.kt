@@ -115,6 +115,7 @@ import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
@@ -163,6 +164,7 @@ internal class WebBackendConnectionsHandlerTest {
   private lateinit var connectionService: ConnectionService
   private lateinit var workspaceService: WorkspaceService
   private lateinit var workspaceHelper: WorkspaceHelper
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var actorDefinitionVersionHelper: ActorDefinitionVersionHelper
   private lateinit var actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper
   private lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
@@ -189,6 +191,7 @@ internal class WebBackendConnectionsHandlerTest {
     connectionService = mockk(relaxed = true)
     workspaceService = mockk(relaxed = true)
     workspaceHelper = mockk(relaxed = true)
+    featureFlagClient = mockk(relaxed = true)
     schedulerHandler = mockk(relaxed = true)
     eventRunner = mockk(relaxed = true)
     actorDefinitionVersionHelper = mockk(relaxed = true)
@@ -298,6 +301,8 @@ internal class WebBackendConnectionsHandlerTest {
           destinationCatalogGenerator,
           connectionTimelineEventHelper,
           catalogConfigDiffHelper,
+          featureFlagClient,
+          workspaceHelper,
         ),
       )
 

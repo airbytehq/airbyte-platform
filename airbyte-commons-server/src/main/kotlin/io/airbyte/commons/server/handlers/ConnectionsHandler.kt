@@ -97,6 +97,7 @@ import io.airbyte.commons.entitlements.models.OnDemandCapacityEnabledEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.protocol.ColumnTypeWidening
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConnectionHelper
 import io.airbyte.commons.server.converters.ConnectionHelper.Companion.validateCatalogDoesntContainDuplicateStreamNames
@@ -116,6 +117,7 @@ import io.airbyte.commons.server.handlers.helpers.NotificationHelper
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper.pageSize
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper.rowOffset
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap
+import io.airbyte.commons.server.handlers.helpers.widenColumnTypesContext
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.services.CatalogDiffService
 import io.airbyte.commons.server.services.DestinationDiscoverService.Companion.actorCatalogToDestinationCatalog
@@ -172,6 +174,7 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.featureflag.Workspace
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError
@@ -1963,6 +1966,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           applySchemaChangeInternal(
             connection.connectionId,
             workspaceId,
+            workspace.organizationId,
+            source.sourceDefinitionId,
             currentCatalog,
             catalog,
             diffToApply.transforms,
@@ -2018,6 +2023,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private fun applySchemaChangeInternal(
       connectionId: UUID,
       workspaceId: UUID,
+      organizationId: UUID,
+      sourceDefinitionId: UUID,
       currentSyncCatalog: AirbyteCatalog,
       newCatalog: AirbyteCatalog,
       transformations: List<StreamTransform>,
@@ -2036,7 +2043,19 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           transformations,
           nonBreakingChangesPreference,
           supportedDestinationSyncModes,
+          featureFlagClient.boolVariation(WidenColumnTypes, widenColumnTypesContext(organizationId, sourceDefinitionId)),
         )
+      propagateResult.widenedColumns.forEach {
+        metricClient.count(
+          OssMetricsRegistry.COLUMN_TYPE_WIDENED,
+          1L,
+          MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, sourceDefinitionId.toString()),
+          MetricAttribute(
+            MetricTags.COLUMN_TYPE_CHANGE,
+            "${ColumnTypeWidening.sourceTypeName(it.savedType)}->${ColumnTypeWidening.sourceTypeName(it.sourceType)}",
+          ),
+        )
+      }
       trackSchemaChange(workspaceId, connectionId, propagateResult)
       return propagateResult
     }

@@ -883,6 +883,77 @@ internal class AutoPropagateSchemaChangeHelperTest {
     }
   }
 
+  @Nested
+  inner class WidenColumnTypes {
+    private val savedSchema = deserialize("""{"type": "object", "properties": {"order_id": {"type": "string"}}}""")
+    private val discoveredSchema =
+      deserialize("""{"type": "object", "properties": {"order_id": {"type": "number", "airbyte_type": "integer"}}}""")
+    private val transform =
+      StreamTransform(streamDescriptor = StreamDescriptor(name = NAME1), transformType = StreamTransform.TransformType.UPDATE_STREAM)
+
+    @Test
+    fun `flag off replaces the column with the discovered type`() {
+      val result = update(createAirbyteCatalogWithSchema(NAME1, savedSchema), widenColumnTypes = false)
+
+      Assertions
+        .assertThat(
+          result.catalog.streams[0]
+            .stream!!
+            .jsonSchema,
+        ).isEqualTo(discoveredSchema)
+      Assertions.assertThat(result.widenedColumns).isEmpty()
+    }
+
+    @Test
+    fun `flag on keeps the saved type and records the source type`() {
+      val result = update(createAirbyteCatalogWithSchema(NAME1, savedSchema), widenColumnTypes = true)
+
+      Assertions
+        .assertThat(
+          result.catalog.streams[0]
+            .stream!!
+            .jsonSchema,
+        ).isEqualTo(deserialize("""{"type": "object", "properties": {"order_id": {"type": "string", "airbyte_source_type": "integer"}}}"""))
+      Assertions.assertThat(result.widenedColumns).hasSize(1)
+    }
+
+    @Test
+    fun `flag on doesn't widen a dedup primary key`() {
+      val saved =
+        createAirbyteCatalogWithSchema(NAME1, savedSchema).let { catalog ->
+          catalog.copy(
+            streams =
+              catalog.streams.map {
+                it.copy(config = it.config!!.copy(destinationSyncMode = DestinationSyncMode.APPEND_DEDUP, primaryKey = listOf(listOf("order_id"))))
+              },
+          )
+        }
+
+      val result = update(saved, widenColumnTypes = true)
+
+      Assertions
+        .assertThat(
+          result.catalog.streams[0]
+            .stream!!
+            .jsonSchema,
+        ).isEqualTo(discoveredSchema)
+      Assertions.assertThat(result.widenedColumns).isEmpty()
+    }
+
+    private fun update(
+      savedCatalog: AirbyteCatalog,
+      widenColumnTypes: Boolean,
+    ): ApplySchemaChangeHelper.UpdateSchemaResult =
+      applySchemaChangeHelper.getUpdatedSchema(
+        savedCatalog,
+        createAirbyteCatalogWithSchema(NAME1, discoveredSchema),
+        listOf(transform),
+        NonBreakingChangesPreference.PROPAGATE_COLUMNS,
+        SUPPORTED_DESTINATION_SYNC_MODES,
+        widenColumnTypes,
+      )
+  }
+
   companion object {
     private const val NAME1 = "name1"
     private const val NAMESPACE1 = "namespace1"

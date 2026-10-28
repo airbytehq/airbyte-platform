@@ -15,10 +15,15 @@ import io.airbyte.commons.server.converters.CatalogDiffConverters.streamTransfor
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
+import io.airbyte.commons.server.handlers.helpers.widenColumnTypesContext
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.StandardSync
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.SourceService
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -35,19 +40,20 @@ class CatalogDiffService(
   private val catalogConverter: CatalogConverter,
   private val catalogMergeHelper: CatalogMergeHelper,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
+  private val sourceService: SourceService,
+  private val workspaceHelper: WorkspaceHelper,
 ) {
   fun diffCatalogs(request: DiffCatalogsRequest): DiffCatalogsResponse {
     val currentCatalogId = request.currentCatalogId
     val newCatalogId = request.newCatalogId
     val connectionId = request.connectionId
+    val connection = connectionId?.let { connectionService.getStandardSync(it) }
 
     // If connection ID is provided, use it to get configured catalog
     // Otherwise, retrieve catalogs without connection context
     val (currentCatalog, newCatalog, configuredCatalog) =
-      if (connectionId != null) {
-        // Get connection to retrieve configured catalog
-        val connection = connectionService.getStandardSync(connectionId)
-
+      if (connection != null) {
         // Retrieve and convert catalogs
         Triple(
           retrieveDiscoveredCatalog(currentCatalogId),
@@ -78,7 +84,7 @@ class CatalogDiffService(
 
     // Compute merged catalog if connection ID is provided
     val mergedCatalog: AirbyteCatalog? =
-      if (connectionId != null && configuredCatalog != null) {
+      if (connection != null && configuredCatalog != null) {
         // Convert catalogs to API format
         // originalConfigured: the configured catalog with user selections (converted from internal model)
         val originalConfiguredApiCatalog = catalogConverter.toApi(configuredCatalog, null)
@@ -88,7 +94,16 @@ class CatalogDiffService(
         val newDiscoveredApiCatalog = catalogConverter.toApi(newCatalog, null)
 
         // Merge the new catalog with the connection's configured catalog
-        catalogMergeHelper.mergeCatalogWithConfiguration(originalConfiguredApiCatalog, originalDiscoveredApiCatalog, newDiscoveredApiCatalog)
+        val source = sourceService.getSourceConnection(connection.sourceId)
+        val organizationId = workspaceHelper.getOrganizationForWorkspace(source.workspaceId)
+        val widenColumnTypes =
+          featureFlagClient.boolVariation(WidenColumnTypes, widenColumnTypesContext(organizationId, source.sourceDefinitionId))
+        catalogMergeHelper.mergeCatalogWithConfiguration(
+          originalConfiguredApiCatalog,
+          originalDiscoveredApiCatalog,
+          newDiscoveredApiCatalog,
+          widenColumnTypes,
+        )
       } else {
         null
       }

@@ -11,6 +11,7 @@ import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
 import io.airbyte.api.server.generated.models.DestinationSyncMode
 import io.airbyte.api.server.generated.models.SelectedFieldInfo
 import io.airbyte.api.server.generated.models.SyncMode
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateApiCatalogWithTwoFields
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateBasicApiCatalog
@@ -491,6 +492,47 @@ internal class CatalogMergeHelperTest {
 
     Assertions.assertEquals(expected, actual)
   }
+
+  @Test
+  fun `page load keeps a widened column when widening is on`() {
+    val widened = catalogWithColumn("""{"type": "string", "airbyte_source_type": "integer"}""")
+    val discovered = catalogWithColumn("""{"type": "number", "airbyte_type": "integer"}""")
+
+    val merged = catalogMergeHelper.mergeCatalogWithConfiguration(widened, discovered, discovered, widenColumnTypes = true)
+
+    Assertions.assertEquals(widened.streams[0].stream!!.jsonSchema, merged.streams[0].stream!!.jsonSchema)
+  }
+
+  @Test
+  fun `page load replaces a widened column when widening is off`() {
+    val widened = catalogWithColumn("""{"type": "string", "airbyte_source_type": "integer"}""")
+    val discovered = catalogWithColumn("""{"type": "number", "airbyte_type": "integer"}""")
+
+    val merged = catalogMergeHelper.mergeCatalogWithConfiguration(widened, discovered, discovered, widenColumnTypes = false)
+
+    Assertions.assertEquals(discovered.streams[0].stream!!.jsonSchema, merged.streams[0].stream!!.jsonSchema)
+  }
+
+  @Test
+  fun `refresh widens a changed column when widening is on`() {
+    val saved = catalogWithColumn("""{"type": "string"}""")
+    val discovered = catalogWithColumn("""{"type": "number", "airbyte_type": "integer"}""")
+
+    val merged = catalogMergeHelper.mergeCatalogWithConfiguration(saved, saved, discovered, widenColumnTypes = true)
+
+    Assertions.assertEquals(
+      catalogWithColumn("""{"type": "string", "airbyte_source_type": "integer"}""").streams[0].stream!!.jsonSchema,
+      merged.streams[0].stream!!.jsonSchema,
+    )
+  }
+
+  // The basic catalog's cursor is its first field, so the widened column is a separate one.
+  private fun catalogWithColumn(column: String): AirbyteCatalog =
+    generateBasicApiCatalog().withFirstStream(
+      stream = {
+        it.copy(jsonSchema = Jsons.deserialize("""{"type": "object", "properties": {"$FIELD2": $column}}"""))
+      },
+    )
 
   private fun AirbyteCatalog.withFirstStream(
     stream: (AirbyteStream) -> AirbyteStream = { it },

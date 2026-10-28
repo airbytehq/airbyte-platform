@@ -49,6 +49,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
+import io.airbyte.commons.server.handlers.helpers.widenColumnTypesContext
 import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.ActorCatalogFetchEvent
@@ -57,6 +58,7 @@ import io.airbyte.config.RefreshStream
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -70,6 +72,8 @@ import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.buildFilters
 import io.airbyte.data.services.shared.parseSortKey
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
@@ -114,6 +118,8 @@ class WebBackendConnectionsHandler(
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val connectionTimelineEventHelper: ConnectionTimelineEventHelper,
   private val catalogConfigDiffHelper: CatalogConfigDiffHelper,
+  private val featureFlagClient: FeatureFlagClient,
+  private val workspaceHelper: WorkspaceHelper,
 ) {
   fun getWorkspaceState(webBackendWorkspaceState: WebBackendWorkspaceState): WebBackendWorkspaceStateResult {
     val workspaceId = webBackendWorkspaceState.workspaceId
@@ -434,6 +440,7 @@ class WebBackendConnectionsHandler(
           configuredCatalog,
           catalogUsedToMakeConfiguredCatalog.orElse(configuredCatalog),
           refreshedDiscoveredCatalog,
+          sourceService.getSourceConnection(connection.sourceId).let { shouldWidenColumnTypes(it.workspaceId, it.sourceDefinitionId) },
         )
 
       diff = refreshedCatalog.get().catalogDiff
@@ -445,7 +452,12 @@ class WebBackendConnectionsHandler(
         )
     } else if (catalogUsedToMakeConfiguredCatalog.isPresent) {
       // reconstructs a full picture of the full schema at the time the catalog was configured.
-      syncCatalog = updateSchemaWithOriginalDiscoveredCatalog(configuredCatalog, catalogUsedToMakeConfiguredCatalog.get())
+      syncCatalog =
+        updateSchemaWithOriginalDiscoveredCatalog(
+          configuredCatalog,
+          catalogUsedToMakeConfiguredCatalog.get(),
+          sourceService.getSourceConnection(connection.sourceId).let { shouldWidenColumnTypes(it.workspaceId, it.sourceDefinitionId) },
+        )
       // diff not relevant if there was no refresh.
       diff = null
     } else {
@@ -461,10 +473,25 @@ class WebBackendConnectionsHandler(
   private fun updateSchemaWithOriginalDiscoveredCatalog(
     configuredCatalog: AirbyteCatalog,
     originalDiscoveredCatalog: AirbyteCatalog,
+    widenColumnTypes: Boolean,
   ): AirbyteCatalog {
     // We pass the original discovered catalog in as the "new" discovered catalog.
-    return catalogMergeHelper.mergeCatalogWithConfiguration(configuredCatalog, originalDiscoveredCatalog, originalDiscoveredCatalog)
+    return catalogMergeHelper.mergeCatalogWithConfiguration(
+      configuredCatalog,
+      originalDiscoveredCatalog,
+      originalDiscoveredCatalog,
+      widenColumnTypes,
+    )
   }
+
+  private fun shouldWidenColumnTypes(
+    workspaceId: UUID,
+    sourceDefinitionId: UUID,
+  ): Boolean =
+    featureFlagClient.boolVariation(
+      WidenColumnTypes,
+      widenColumnTypesContext(workspaceHelper.getOrganizationForWorkspace(workspaceId), sourceDefinitionId),
+    )
 
   private fun getRefreshedSchema(
     sourceId: UUID,
@@ -580,6 +607,7 @@ class WebBackendConnectionsHandler(
           updatedConnectionRead.syncCatalog,
           catalogUsedToMakeConfiguredCatalog.get(),
           catalogUsedToMakeConfiguredCatalog.get(),
+          shouldWidenColumnTypes(source.workspaceId, source.sourceDefinitionId),
         )
       updatedConnectionRead = updatedConnectionRead.copy(syncCatalog = syncCatalog)
     }

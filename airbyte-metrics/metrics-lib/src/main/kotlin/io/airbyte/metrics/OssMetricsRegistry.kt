@@ -360,6 +360,10 @@ enum class OssMetricsRegistry(
     metricName = "schema_change_auto_propagated",
     metricDescription = "a schema change have been propagated",
   ),
+  COLUMN_TYPE_WIDENED(
+    metricName = "column_type_widened",
+    metricDescription = "a column type change was kept at a supertype during schema auto-propagation",
+  ),
   WORKER_DESTINATION_MESSAGE_READ(
     metricName = "worker_destination_message_read",
     metricDescription = "whenever a message is read from the destination",

@@ -11,6 +11,7 @@ import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
 import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
 import io.airbyte.api.server.generated.models.SelectedFieldInfo
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.protocol.ColumnTypeWidening
 import io.airbyte.config.helpers.FieldGenerator
 import jakarta.inject.Singleton
 
@@ -35,12 +36,14 @@ class CatalogMergeHelper(
    * @param originalConfigured fully configured, original catalog with user selections
    * @param originalDiscovered the original discovered catalog used to make the original configured catalog
    * @param discovered newly discovered catalog, no configurations set
+   * @param widenColumnTypes keep changed columns at a supertype instead of replacing them, see [ColumnTypeWidening]
    * @return merged catalog with most up-to-date schema and preserved configurations from old catalog
    */
   fun mergeCatalogWithConfiguration(
     originalConfigured: AirbyteCatalog,
     originalDiscovered: AirbyteCatalog,
     discovered: AirbyteCatalog,
+    widenColumnTypes: Boolean = false,
   ): AirbyteCatalog {
     val streamDescriptorToOriginalStream =
       originalConfigured.streams.associate {
@@ -67,8 +70,14 @@ class CatalogMergeHelper(
         } else {
           discoveredStreamConfig.copy(selected = false)
         }
+      val outputSchema =
+        if (widenColumnTypes && originalConfiguredStream != null) {
+          widenStreamSchema(originalConfiguredStream.stream!!, stream, originalConfiguredStream.config!!).jsonSchema
+        } else {
+          stream.jsonSchema
+        }
       val outputStream =
-        AirbyteStreamAndConfiguration(stream = Jsons.clone(stream), config = outputStreamConfig)
+        AirbyteStreamAndConfiguration(stream = Jsons.clone(stream.copy(jsonSchema = outputSchema)), config = outputStreamConfig)
       streams.add(outputStream)
     }
     return AirbyteCatalog(streams = streams)

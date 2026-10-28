@@ -17,6 +17,7 @@ import io.airbyte.api.server.generated.models.StreamDescriptor
 import io.airbyte.api.server.generated.models.StreamTransform
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.protocol.ColumnTypeWidening
 import jakarta.inject.Singleton
 import jakarta.ws.rs.NotSupportedException
 import java.util.function.Consumer
@@ -37,6 +38,7 @@ class ApplySchemaChangeHelper(
     @JvmField val catalog: AirbyteCatalog,
     @JvmField val appliedDiff: CatalogDiff,
     @JvmField val changeDescription: List<String>,
+    @JvmField val widenedColumns: List<ColumnTypeWidening.WidenedColumn> = emptyList(),
   )
 
   /**
@@ -108,6 +110,7 @@ class ApplySchemaChangeHelper(
    * @param newCatalog the new catalog, which contains all the streams, even the unselected ones
    * @param transformations list of transformations per stream
    * @param nonBreakingChangesPreference user preference for the auto propagation
+   * @param widenColumnTypes keep changed columns at a supertype instead of replacing them, see [ColumnTypeWidening]
    * @return an UpdateSchemaResult containing the updated catalog, applied diff, and change
    * descriptions
    */
@@ -117,6 +120,7 @@ class ApplySchemaChangeHelper(
     transformations: List<StreamTransform>,
     nonBreakingChangesPreference: NonBreakingChangesPreference,
     supportedDestinationSyncModes: List<DestinationSyncMode>,
+    widenColumnTypes: Boolean = false,
   ): UpdateSchemaResult {
     val copiedOldCatalog = Jsons.clone(oldCatalog)
     val oldCatalogPerStream = extractStreamAndConfigPerStreamDescriptor(copiedOldCatalog).toMutableMap()
@@ -124,6 +128,7 @@ class ApplySchemaChangeHelper(
 
     val changes: MutableList<String> = ArrayList()
     val appliedTransforms: MutableList<StreamTransform> = ArrayList()
+    val widenedColumns = mutableListOf<ColumnTypeWidening.WidenedColumn>()
 
     transformations.forEach(
       Consumer<StreamTransform> { transformation: StreamTransform ->
@@ -158,8 +163,16 @@ class ApplySchemaChangeHelper(
                 } else {
                   streamConfig
                 }
-              oldCatalogPerStream[streamDescriptor] =
-                oldStreamAndConfig.copy(stream = newCatalogPerStream[streamDescriptor]!!.stream, config = updatedConfig)
+              val newStream = newCatalogPerStream[streamDescriptor]!!.stream!!
+              val updatedStream =
+                if (widenColumnTypes) {
+                  val widening = widenStreamSchema(oldStreamAndConfig.stream!!, newStream, streamConfig)
+                  widenedColumns.addAll(widening.widenedColumns)
+                  newStream.copy(jsonSchema = widening.jsonSchema)
+                } else {
+                  newStream
+                }
+              oldCatalogPerStream[streamDescriptor] = oldStreamAndConfig.copy(stream = updatedStream, config = updatedConfig)
               changes.add(formatDiff(transformation))
               appliedTransforms.add(transformation)
             }
@@ -200,6 +213,7 @@ class ApplySchemaChangeHelper(
       AirbyteCatalog(streams = oldCatalogPerStream.values.toList()),
       CatalogDiff(transforms = appliedTransforms),
       changes,
+      widenedColumns,
     )
   }
 

@@ -103,6 +103,7 @@ import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.server.handlers.helpers.MapperSecretHelper
 import io.airbyte.commons.server.handlers.helpers.NotificationHelper
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper
+import io.airbyte.commons.server.handlers.helpers.widenColumnTypesContext
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.commons.server.helpers.ConnectionHelpers.FIELD_NAME
 import io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME
@@ -206,6 +207,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.featureflag.Workspace
 import io.airbyte.mappers.helpers.createHashingMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -213,7 +215,10 @@ import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGen
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperError
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.MapperErrorType
 import io.airbyte.mappers.transformations.HashingMapper
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.JsonSchemaType
@@ -503,6 +508,9 @@ internal class ConnectionsHandlerTest {
         catalogConverter,
         catalogMergeHelper,
         metricClient,
+        featureFlagClient,
+        sourceService,
+        workspaceHelper,
       )
 
     connectionSchedulerHelper =
@@ -5124,6 +5132,40 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
+    fun testAutoPropagateWidensColumnTypeWhenFlagIsOn() {
+      every { featureFlagClient.boolVariation(WidenColumnTypes, widenColumnTypesContext(organizationId, source.sourceDefinitionId)) } returns true
+      val catalogWithDiff =
+        catalogConverter.toApi(CatalogHelpers.createAirbyteCatalog(shoes, Field.of(sku, JsonSchemaType.INTEGER)), sourceVersion)
+
+      connectionsHandler.applySchemaChange(
+        ConnectionAutoPropagateSchemaChange(
+          connectionId = connectionId,
+          workspaceId = workspaceId,
+          catalogId = sourceCatalogId,
+          catalog = catalogWithDiff,
+        ),
+      )
+
+      val standardSyncArgumentCaptor = slot<StandardSync>()
+      verify { connectionService.writeStandardSync(capture(standardSyncArgumentCaptor)) }
+      assertEquals(
+        deserialize("{\"type\": \"string\", \"airbyte_source_type\": \"integer\"}"),
+        standardSyncArgumentCaptor.captured.catalog.streams[0]
+          .stream.jsonSchema
+          .get("properties")
+          .get(sku),
+      )
+      verify {
+        metricClient.count(
+          OssMetricsRegistry.COLUMN_TYPE_WIDENED,
+          1L,
+          MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, source.sourceDefinitionId.toString()),
+          MetricAttribute(MetricTags.COLUMN_TYPE_CHANGE, "string->integer"),
+        )
+      }
+    }
+
+    @Test
     fun testAutoPropagateColumnsOnly() {
       // See test above for why this part is necessary.
       val originalSync = clone(standardSync!!)
@@ -5536,9 +5578,11 @@ internal class ConnectionsHandlerTest {
     private var standardSync: StandardSync? = null
     private val notificationSettings = NotificationSettings()
     private val email = "WorkspaceEmail@Company.com"
+    private val organizationId: UUID = UUID.randomUUID()
     private val workspace: StandardWorkspace =
       StandardWorkspace()
         .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
         .withEmail(email)
         .withNotificationSettings(notificationSettings)
     private val actorCatalog: ActorCatalog? =

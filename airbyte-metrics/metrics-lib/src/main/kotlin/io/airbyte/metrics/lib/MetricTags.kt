@@ -96,6 +96,7 @@ object MetricTags {
   const val SECRET_STORAGE_ID: String = "secret_storage_id"
   const val SOURCE_IMAGE: String = "source_image"
   const val SOURCE_IMAGE_IS_DEFAULT: String = "source_image_is_default"
+  const val COLUMN_TYPE_CHANGE: String = "column_type_change"
   const val SKIPPED = "skipped"
   const val SSO_OPERATION: String = "sso_operation"
   const val SSO_DEFAULT_ROLE: String = "sso_default_role"
