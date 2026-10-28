@@ -5,13 +5,16 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.exception.WorkloadLauncherException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
@@ -153,5 +156,19 @@ class LaunchPodStageTest {
     }
 
     assert(result.payload == payload)
+  }
+
+  @Test
+  fun `fails connect workloads without launching a pod`() {
+    val launcher: KubePodClient = mockk()
+    val stage = LaunchPodStage(launcher, mockk(), mockk())
+    val connectInput =
+      ConnectInput(host = "db.example.com", port = 5432, workspaceId = UUID.randomUUID(), organizationId = UUID.randomUUID())
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(), payload = ConnectPayload(connectInput))
+
+    val error = assertThrows<WorkloadLauncherException> { stage.applyStage(io) }
+
+    assert(error.message == "Connect is not supported by this data plane version")
+    verify(exactly = 0) { launcher.launchCheck(any(), any()) }
   }
 }

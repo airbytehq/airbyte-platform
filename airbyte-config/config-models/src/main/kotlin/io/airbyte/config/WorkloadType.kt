@@ -22,6 +22,9 @@ enum class WorkloadType(
 
   @JsonProperty("spec")
   SPEC("spec"),
+
+  @JsonProperty("connect")
+  CONNECT("connect"),
   ;
 
   @JsonValue

@@ -16,6 +16,7 @@ fun OpenApiWorkloadType.toInternalApi(): io.airbyte.config.WorkloadType =
     OpenApiWorkloadType.DISCOVER -> InternalApiWorkloadType.DISCOVER
     OpenApiWorkloadType.SPEC -> InternalApiWorkloadType.SPEC
     OpenApiWorkloadType.SYNC -> InternalApiWorkloadType.SYNC
+    OpenApiWorkloadType.CONNECT -> InternalApiWorkloadType.CONNECT
   }
 
 fun OpenApiWorkload.toLauncherInput(): LauncherInput =

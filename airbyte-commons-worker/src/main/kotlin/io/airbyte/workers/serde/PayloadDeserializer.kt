@@ -5,6 +5,7 @@
 package io.airbyte.workers.serde
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.ConnectInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.ReplicationActivityInput
@@ -20,4 +21,6 @@ class PayloadDeserializer {
   fun toDiscoverCatalogInput(payload: String): DiscoverCatalogInput = Jsons.deserialize(payload, DiscoverCatalogInput::class.java)
 
   fun toSpecInput(payload: String): SpecInput = Jsons.deserialize(payload, SpecInput::class.java)
+
+  fun toConnectInput(payload: String): ConnectInput = Jsons.deserialize(payload, ConnectInput::class.java)
 }

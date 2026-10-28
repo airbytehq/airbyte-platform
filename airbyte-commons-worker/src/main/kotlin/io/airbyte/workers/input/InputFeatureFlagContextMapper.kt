@@ -5,6 +5,7 @@
 package io.airbyte.workers.input
 
 import io.airbyte.config.ActorContext
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.ConnectionContext
 import io.airbyte.featureflag.Context
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -34,4 +35,6 @@ class InputFeatureFlagContextMapper {
   fun map(input: SpecInput): Context = input.toFeatureFlagContext()
 
   fun map(input: ReplicationInput): Context = input.toFeatureFlagContext()
+
+  fun map(input: ConnectInput): Context = input.toFeatureFlagContext()
 }

@@ -6,6 +6,7 @@ package io.airbyte.workers.input
 
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorType
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.ConnectionContext
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
@@ -94,3 +95,5 @@ fun DiscoverCatalogInput.toFeatureFlagContext(): Context {
 fun SpecInput.toFeatureFlagContext(): Context = this.launcherConfig.toFeatureFlagContext()
 
 fun ReplicationInput.toFeatureFlagContext(): Context = this.connectionContext?.toFeatureFlagContext() ?: Empty
+
+fun ConnectInput.toFeatureFlagContext(): Context = Multi(listOf(Workspace(workspaceId), Organization(organizationId)))

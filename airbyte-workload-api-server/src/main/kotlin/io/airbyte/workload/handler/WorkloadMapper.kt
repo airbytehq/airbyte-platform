@@ -49,6 +49,7 @@ fun ApiWorkloadType.toDomain(): WorkloadType =
     ApiWorkloadType.DISCOVER -> WorkloadType.DISCOVER
     ApiWorkloadType.SPEC -> WorkloadType.SPEC
     ApiWorkloadType.SYNC -> WorkloadType.SYNC
+    ApiWorkloadType.CONNECT -> WorkloadType.CONNECT
   }
 
 fun WorkloadType.toApi(): ApiWorkloadType =
@@ -57,6 +58,7 @@ fun WorkloadType.toApi(): ApiWorkloadType =
     WorkloadType.DISCOVER -> ApiWorkloadType.DISCOVER
     WorkloadType.SPEC -> ApiWorkloadType.SPEC
     WorkloadType.SYNC -> ApiWorkloadType.SYNC
+    WorkloadType.CONNECT -> ApiWorkloadType.CONNECT
   }
 
 fun DomainWorkload.toApi(): ApiWorkload =

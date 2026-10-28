@@ -152,4 +152,10 @@ class WorkloadMapperKtTest {
         Arguments.of(1, WorkloadPriority.HIGH),
       )
   }
+
+  @Test
+  fun `test connect workload type round trips between api and domain`() {
+    assertEquals(WorkloadType.CONNECT, ApiWorkloadType.CONNECT.toDomain())
+    assertEquals(ApiWorkloadType.CONNECT, WorkloadType.CONNECT.toApi())
+  }
 }

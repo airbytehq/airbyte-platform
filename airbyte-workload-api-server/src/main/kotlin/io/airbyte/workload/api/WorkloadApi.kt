@@ -430,7 +430,7 @@ open class WorkloadApi(
     return WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
         longRunningWorkloadRequest.dataplane,
-        listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC),
+        listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC, WorkloadType.CONNECT),
         longRunningWorkloadRequest.createdBefore,
       ),
     )

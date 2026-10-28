@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pipeline.stages.model
 
+import io.airbyte.config.ConnectInput
 import io.airbyte.featureflag.Context
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
@@ -61,4 +62,8 @@ data class DiscoverCatalogPayload(
 
 data class SpecPayload(
   var input: SpecInput,
+) : WorkloadPayload()
+
+data class ConnectPayload(
+  var input: ConnectInput,
 ) : WorkloadPayload()

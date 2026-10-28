@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Context
 import io.airbyte.metrics.MetricClient
@@ -19,6 +20,7 @@ import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
@@ -91,8 +93,9 @@ open class BuildInputStage(
         SpecPayload(parsed)
       }
 
-      else -> {
-        throw NotImplementedError("Unimplemented workload type: $type")
+      WorkloadType.CONNECT -> {
+        val parsed: ConnectInput = deserializer.toConnectInput(rawPayload)
+        ConnectPayload(parsed)
       }
     }
 
@@ -102,5 +105,6 @@ open class BuildInputStage(
       is DiscoverCatalogPayload -> ffCtxMapper.map(payload.input)
       is SpecPayload -> ffCtxMapper.map(payload.input)
       is SyncPayload -> ffCtxMapper.map(payload.input)
+      is ConnectPayload -> ffCtxMapper.map(payload.input)
     }
 }

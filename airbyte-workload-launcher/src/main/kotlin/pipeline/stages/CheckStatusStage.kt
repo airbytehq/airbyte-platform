@@ -11,8 +11,10 @@ import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.airbyte.workload.launcher.pipeline.stages.model.StageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.opentelemetry.api.trace.Span
@@ -43,6 +45,8 @@ open class CheckStatusStage(
     Span.current().setAttribute("resource.name", "CheckStatusStage")
     return super.apply(input)
   }
+
+  override fun skipStage(input: StageIO): Boolean = super.skipStage(input) || (input as LaunchStageIO).payload is ConnectPayload
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val podExists = podClient.podsExistForAutoId(input.msg.autoId)

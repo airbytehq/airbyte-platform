@@ -127,6 +127,7 @@ enum class WorkloadType {
   CHECK,
   DISCOVER,
   SPEC,
+  CONNECT,
   ;
 
   override fun toString(): String = name.lowercase()

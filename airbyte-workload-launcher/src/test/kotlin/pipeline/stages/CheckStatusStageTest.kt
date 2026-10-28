@@ -5,12 +5,15 @@
 package io.airbyte.workload.launcher.pipeline.stages
 
 import fixtures.RecordFixtures
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.MetricClient
+import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
@@ -106,5 +109,23 @@ class CheckStatusStageTest {
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
 
     assertThrows<Exception> { checkStatusStage.applyStage(originalInput) }
+  }
+
+  @Test
+  fun `skips connect workloads`() {
+    val kubernetesClient: KubePodClient = mockk()
+    val checkStatusStage = CheckStatusStage(kubernetesClient, mockk(relaxed = true))
+
+    val connectInput =
+      ConnectInput(host = "db.example.com", port = 5432, workspaceId = UUID.randomUUID(), organizationId = UUID.randomUUID())
+    val originalInput =
+      LaunchStageIO(
+        msg = RecordFixtures.launcherInput(workloadType = WorkloadType.CONNECT),
+        payload = ConnectPayload(connectInput),
+      )
+    val result = checkStatusStage.apply(originalInput).block()!!
+
+    assert(!result.skip) { "Skip Launch flag should be false but it's true" }
+    verify(exactly = 0) { kubernetesClient.podsExistForAutoId(any()) }
   }
 }

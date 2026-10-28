@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher.pipeline.stages
 import com.fasterxml.jackson.databind.node.POJONode
 import fixtures.RecordFixtures
 import io.airbyte.config.ActorType
+import io.airbyte.config.ConnectInput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
@@ -24,6 +25,7 @@ import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
+import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
@@ -69,6 +71,7 @@ class BuildInputStageTest {
     every { ffCtxMapper.map(any<CheckConnectionInput>()) } returns Empty
     every { ffCtxMapper.map(any<DiscoverCatalogInput>()) } returns Empty
     every { ffCtxMapper.map(any<SpecInput>()) } returns Empty
+    every { ffCtxMapper.map(any<ConnectInput>()) } returns Empty
   }
 
   @Test
@@ -196,6 +199,25 @@ class BuildInputStageTest {
 
     val payload = (result.payload as SpecPayload)
     assertEquals(inputWrapper, payload.input)
+    assertEquals(context, result.ffContext)
+  }
+
+  @Test
+  fun `builds connect input and flag context`() {
+    val inputStr = "foo"
+    val connectInput =
+      ConnectInput(host = "db.example.com", port = 5432, workspaceId = UUID.randomUUID(), organizationId = UUID.randomUUID())
+    val context = Workspace("connect test")
+
+    every { deserializer.toConnectInput(inputStr) } returns connectInput
+    every { ffCtxMapper.map(connectInput) } returns context
+
+    val io = LaunchStageIO(msg = RecordFixtures.launcherInput(workloadInput = inputStr, workloadType = WorkloadType.CONNECT))
+
+    val result = stage.applyStage(io)
+
+    val payload = (result.payload as ConnectPayload)
+    assertEquals(connectInput, payload.input)
     assertEquals(context, result.ffContext)
   }
 }
