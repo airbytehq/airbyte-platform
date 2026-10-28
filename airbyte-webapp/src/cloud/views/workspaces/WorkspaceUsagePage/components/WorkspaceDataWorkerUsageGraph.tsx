@@ -281,7 +281,7 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
 
   const comparisonData = useMemo<WorkspaceComparisonDataBar[]>(
     () =>
-      Array.from({ length: Math.max(data.length, historicalData.length) }, (_, index) => {
+      Array.from({ length: data.length }, (_, index) => {
         const currentBucket = data[index];
         const historicalBucket = historicalData[index];
 

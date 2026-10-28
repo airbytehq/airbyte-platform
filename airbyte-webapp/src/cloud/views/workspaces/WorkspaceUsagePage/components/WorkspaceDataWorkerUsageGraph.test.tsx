@@ -503,7 +503,7 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     );
   });
 
-  it("retains surplus previous calendar-month buckets", async () => {
+  it("drops surplus previous calendar-month buckets beyond the current period", async () => {
     jest.setSystemTime(new Date("2026-03-28T12:34:00-07:00"));
     mockOrganizationUsage = workspaceUsage([{ date: "2026-03-28T19:15:00Z", used: 1 }]);
     mockHistoricalOrganizationUsage = workspaceUsage([{ date: "2026-02-27T19:15:00Z", used: 2 }]);
@@ -512,22 +512,16 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     fireEvent.click(screen.getByText("Compare to previous period"));
     fireEvent.click(screen.getByRole("radio", { name: "1M" }));
 
-    expect(lastChartProps().data).toHaveLength(31);
-    expect(lastChartProps().data[28]).toEqual(
+    expect(lastChartProps().data).toHaveLength(29);
+    expect(lastChartProps().data.at(-1)).toEqual(
       expect.objectContaining({
         date: "2026-03-28T07:00:00.000Z",
+        currentDate: "2026-03-28T07:00:00.000Z",
+        currentUsage: 1,
         previousDate: "2026-02-25T08:00:00.000Z",
       })
     );
-    expect(lastChartProps().data.at(-1)).toEqual(
-      expect.objectContaining({
-        date: "2026-02-27T08:00:00.000Z",
-        currentDate: undefined,
-        currentUsage: null,
-        previousDate: "2026-02-27T08:00:00.000Z",
-        previousUsage: 2,
-      })
-    );
+    expect(lastChartProps().data.every(({ currentDate }) => currentDate !== undefined)).toBe(true);
   });
 
   it("uses daily and weekly workspace peaks for both comparison periods", async () => {

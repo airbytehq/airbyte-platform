@@ -178,15 +178,15 @@ export const UsageByWorkspaceGraph = ({
 
   const comparisonData = useMemo<RegionComparisonDataBar[]>(
     () =>
-      Array.from({ length: Math.max(currentData.length, historicalData.length) }, (_, index) => {
+      Array.from({ length: currentData.length }, (_, index) => {
         const currentBucket = currentData[index];
         const historicalBucket = historicalData[index];
 
         return {
-          formattedDate: currentBucket?.formattedDate ?? historicalBucket.formattedDate,
-          currentDate: currentBucket?.formattedDate,
+          formattedDate: currentBucket.formattedDate,
+          currentDate: currentBucket.formattedDate,
           previousDate: historicalBucket?.formattedDate,
-          currentUsage: currentBucket?.maxWorkspaceUsage ?? null,
+          currentUsage: currentBucket.maxWorkspaceUsage,
           previousUsage: historicalBucket?.maxWorkspaceUsage ?? null,
         };
       }),

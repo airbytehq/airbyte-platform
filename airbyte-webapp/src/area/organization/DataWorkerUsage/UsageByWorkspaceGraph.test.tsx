@@ -401,7 +401,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     );
   });
 
-  it("null-fills missing daily buckets and retains Previous overflow", async () => {
+  it("null-fills missing daily buckets when the previous period is shorter", async () => {
     mockCurrentUsage = {
       regions: [
         {
@@ -451,7 +451,9 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
       expect.objectContaining({ currentUsage: 0, previousUsage: null, previousDate: undefined }),
       expect.objectContaining({ currentUsage: 0, previousUsage: null, previousDate: undefined }),
     ]);
+  });
 
+  it("drops previous buckets beyond the current period when the previous period is longer", async () => {
     mockCurrentUsage = {
       regions: [
         {
@@ -491,16 +493,18 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
 
     await renderGraph("1m", 4, true, shorterCurrentPeriod);
 
-    expect(lastChartProps().data).toHaveLength(31);
-    expect(lastChartProps().data.at(-1)).toEqual(
+    const { data } = lastChartProps();
+    expect(data).toHaveLength(28);
+    expect(data.at(-1)).toEqual(
       expect.objectContaining({
-        formattedDate: "2026-01-31T08:00:00.000Z",
-        currentDate: undefined,
-        previousDate: "2026-01-31T08:00:00.000Z",
-        currentUsage: null,
-        previousUsage: 9,
+        formattedDate: "2026-02-28T08:00:00.000Z",
+        currentDate: "2026-02-28T08:00:00.000Z",
+        previousDate: "2026-01-28T08:00:00.000Z",
+        currentUsage: 0,
+        previousUsage: 0,
       })
     );
+    expect(data.some(({ previousUsage }) => previousUsage === 9)).toBe(false);
   });
 
   it("preserves repeated DST hours in both comparison periods", async () => {
