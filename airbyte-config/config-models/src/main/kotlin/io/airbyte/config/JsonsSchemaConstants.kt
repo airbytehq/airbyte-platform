@@ -8,6 +8,9 @@ object JsonsSchemaConstants {
   const val TYPE = "type"
   const val FORMAT = "format"
   const val AIRBYTE_TYPE = "airbyte_type"
+
+  // The type the source reports for a column whose `type` was widened to a supertype.
+  const val AIRBYTE_SOURCE_TYPE = "airbyte_source_type"
   const val PROPERTIES = "properties"
   const val REQUIRED = "required"
   const val ADDITIONAL_PROPERTIES = "additionalProperties"

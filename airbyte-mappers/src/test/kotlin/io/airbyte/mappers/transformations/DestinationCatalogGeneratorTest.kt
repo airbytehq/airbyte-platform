@@ -11,6 +11,7 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
+import io.airbyte.config.JsonsSchemaConstants
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
 import io.airbyte.config.mapper.configs.TestConfig
@@ -59,6 +60,44 @@ class DestinationCatalogGeneratorTest {
       catalog.streams[0].stream.jsonSchema,
       catalogCopy.catalog.streams[0]
         .stream.jsonSchema,
+    )
+  }
+
+  @Test
+  fun `test generateDestinationCatalog drops airbyte_source_type`() {
+    val configuredUsersStream =
+      ConfiguredAirbyteStream(
+        stream =
+          AirbyteStream(
+            name = "users",
+            jsonSchema =
+              TEST_OBJECT_MAPPER.valueToTree(
+                mapOf(
+                  "type" to "object",
+                  "properties" to
+                    mapOf(
+                      "field1" to mapOf("type" to "string", JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE to "integer"),
+                    ),
+                ),
+              ),
+            supportedSyncModes = listOf(),
+          ),
+        fields =
+          listOf(
+            Field(name = "field1", type = FieldType.STRING),
+          ),
+      )
+
+    val catalog = ConfiguredAirbyteCatalog(streams = listOf(configuredUsersStream))
+
+    val catalogCopy = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalog)
+
+    assertEquals(
+      TEST_OBJECT_MAPPER.valueToTree<JsonNode>(mapOf("type" to "string")),
+      catalogCopy.catalog.streams[0]
+        .stream.jsonSchema
+        .get("properties")
+        .get("field1"),
     )
   }
 

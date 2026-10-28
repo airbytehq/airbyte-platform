@@ -4,11 +4,13 @@
 
 package io.airbyte.commons.converters
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.StreamMapperType
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
+import io.airbyte.config.JsonsSchemaConstants
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.mappers.helpers.createHashingMapper
 import io.airbyte.protocol.models.JsonSchemaType
@@ -168,5 +170,36 @@ class CatalogClientConvertersTest {
       val apiCatalog = catalogClientConverters.toAirbyteCatalogClientApi(catalog)
       assertEquals(isResumable, apiCatalog.streams[0].stream?.isResumable)
     }
+  }
+
+  @Test
+  fun testAirbyteSourceTypeSurvivesConversion() {
+    val jsonSchema =
+      CatalogHelpers.fieldsToJsonSchema(Field.of(ID_FIELD_NAME, JsonSchemaType.STRING)).also {
+        (it.get("properties").get(ID_FIELD_NAME) as ObjectNode).put(JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE, JsonsSchemaConstants.TYPE_INTEGER)
+      }
+
+    val stream =
+      AirbyteStream()
+        .withName(STREAM_NAME)
+        .withJsonSchema(jsonSchema)
+        .withSupportedSyncModes(listOf(SyncMode.FULL_REFRESH))
+
+    val clientCatalog = catalogClientConverters.toAirbyteCatalogClientApi(AirbyteCatalog().withStreams(listOf(stream)))
+    assertEquals(
+      jsonSchema,
+      clientCatalog.streams
+        .first()
+        .stream
+        ?.jsonSchema,
+    )
+
+    val configuredCatalog = catalogClientConverters.toConfiguredAirbyteInternal(clientCatalog)
+    assertEquals(
+      jsonSchema,
+      configuredCatalog.streams
+        .first()
+        .stream.jsonSchema,
+    )
   }
 }

@@ -20,6 +20,7 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.Field
 import io.airbyte.config.FieldSelectionData
 import io.airbyte.config.FieldType
+import io.airbyte.config.JsonsSchemaConstants
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.SyncMode
 import io.airbyte.config.mapper.configs.HashingConfig
@@ -341,6 +342,51 @@ internal class CatalogConverterTest {
     Assertions.assertEquals(DestinationSyncMode.APPEND, actualDestinationSyncMode)
   }
 
+  @Test
+  fun testAirbyteSourceTypeSurvivesRoundTrip() {
+    val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields().withSourceType(ConnectionHelpers.FIELD_NAME)
+
+    val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
+    val internalProperties =
+      internalCatalog.streams
+        .first()
+        .stream.jsonSchema
+        .get("properties")
+    Assertions.assertEquals(SOURCE_TYPE, internalProperties.get(ConnectionHelpers.FIELD_NAME).get(JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE)?.asText())
+    Assertions.assertFalse(internalProperties.get(ConnectionHelpers.SECOND_FIELD_NAME).has(JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE))
+
+    val roundTripped = catalogConverter.toApi(internalCatalog, FieldSelectionData())
+    Assertions.assertEquals(apiCatalog.streams.first().stream, roundTripped.streams.first().stream)
+  }
+
+  @Test
+  fun testAirbyteSourceTypeSurvivesFieldSelection() {
+    val apiCatalog =
+      ConnectionHelpers
+        .generateApiCatalogWithTwoFields()
+        .withSourceType(ConnectionHelpers.FIELD_NAME, ConnectionHelpers.SECOND_FIELD_NAME)
+        .withFirstConfig { it.selectFields(ConnectionHelpers.FIELD_NAME) }
+
+    val internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog)
+
+    val properties =
+      internalCatalog.streams
+        .first()
+        .stream.jsonSchema
+        .get("properties")
+    Assertions.assertEquals(1, properties.size())
+    Assertions.assertEquals(SOURCE_TYPE, properties.get(ConnectionHelpers.FIELD_NAME).get(JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE)?.asText())
+  }
+
+  private fun AirbyteCatalog.withSourceType(vararg fieldNames: String): AirbyteCatalog {
+    val first = streams[0]
+    val jsonSchema = first.stream!!.jsonSchema!!.deepCopy<ObjectNode>()
+    fieldNames.forEach {
+      (jsonSchema.get("properties").get(it) as ObjectNode).put(JsonsSchemaConstants.AIRBYTE_SOURCE_TYPE, SOURCE_TYPE)
+    }
+    return copy(streams = listOf(first.copy(stream = first.stream!!.copy(jsonSchema = jsonSchema))) + streams.drop(1))
+  }
+
   private fun AirbyteCatalog.withFirstConfig(config: (AirbyteStreamConfiguration) -> AirbyteStreamConfiguration): AirbyteCatalog {
     val first = streams[0]
     return copy(streams = listOf(first.copy(config = config(first.config!!))) + streams.drop(1))
@@ -351,4 +397,8 @@ internal class CatalogConverterTest {
       fieldSelectionEnabled = true,
       selectedFields = selectedFields.orEmpty() + fieldNames.map { SelectedFieldInfo(fieldPath = listOf(it)) },
     )
+
+  companion object {
+    private const val SOURCE_TYPE = JsonsSchemaConstants.TYPE_INTEGER
+  }
 }

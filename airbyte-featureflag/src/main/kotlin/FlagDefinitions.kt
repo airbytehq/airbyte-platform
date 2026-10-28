@@ -284,3 +284,9 @@ object AllowCustomDockerConnectors : Temporary<Boolean>(key = "platform.allow-cu
  * Workspace and organization limits, email protection, and manifest drift checks still apply.
  */
 object BypassDsrDeletionConnectionLimit : Temporary<Boolean>(key = "platform.bypass-dsr-deletion-connection-limit", default = false)
+
+/**
+ * When a column's type changes, keep it at a wider type the old and new values both fit in, and record the source's
+ * type in `airbyte_source_type`, instead of replacing the column. Evaluated with the organization and source definition.
+ */
+object WidenColumnTypes : Temporary<Boolean>(key = "platform.widen-column-types", default = false)
