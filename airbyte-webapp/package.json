@@ -29,6 +29,7 @@
     "pretypecheck:playwright": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client && node playwright/scripts/generate-mock-routes.js",
     "typecheck:playwright": "tsc --noEmit -p playwright",
     "stylelint": "stylelint 'src/**/*.{css,scss}'",
+    "verify": "pnpm test:ci && pnpm format && pnpm lint --max-warnings=0 && pnpm stylelint && tsc --noEmit",
     "stylelint-check": "stylelint-config-prettier-scss-check",
     "unused-code": "knip --production --reporter markdown || { echo '[^] The above files and dependencies are not used within the code base. Please delete them or explicitly ignore them in knip.jsonc.'; exit 1; }",
     "license-check": "node ./scripts/license-check.js",

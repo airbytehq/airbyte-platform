@@ -40,17 +40,20 @@ Please also check our [styleguide](./STYLEGUIDE.md) for details around code styl
 
 ## Verification
 
-Run the following commands from `oss/airbyte-webapp/` when verifying a webapp change:
+Run `pnpm verify` from `oss/airbyte-webapp/` before you declare a webapp change done.
+It runs these steps in order and stops at the first failure:
 
-```bash
-pnpm generate-client
-pnpm format
-pnpm lint
-pnpm exec tsc --noEmit
-pnpm test:ci
-```
+1. `pnpm test:ci`. Its `pretest:ci` hook regenerates the API client, and the Jest
+   global setup regenerates `src/core/utils/rbac/generated-intents.ts`. The later
+   steps need both.
+2. `pnpm format`, which rewrites files under `src/` in place.
+3. `pnpm lint --max-warnings=0`. The production build fails on any ESLint warning,
+   so a plain `pnpm lint` that reports only warnings is not a pass.
+4. `pnpm stylelint`.
+5. `tsc --noEmit`.
 
-Use `pnpm test:ci` for non-watch test runs. The `pnpm test` command is interactive
+While you iterate, run the narrowest command that covers the change. Use
+`pnpm test:ci` for non-watch test runs. The `pnpm test` command is interactive
 and does not exit on its own.
 
 ### Folder Structure
