@@ -12,7 +12,12 @@ import io.airbyte.api.server.generated.models.ConnectionUpdate
 import io.airbyte.api.server.generated.models.ListConnectionsForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.commons.server.handlers.ConnectionsHandler
+import io.airbyte.commons.server.handlers.helpers.widenColumnTypesContext
+import io.airbyte.commons.server.handlers.helpers.widenStream
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WidenColumnTypes
 import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
@@ -70,6 +75,8 @@ class ConnectionServiceImpl(
   private val connectionHandler: ConnectionsHandler,
   private val currentUserService: CurrentUserService,
   private val airbyteApiConfig: AirbyteApiConfig,
+  private val featureFlagClient: FeatureFlagClient,
+  private val workspaceHelper: WorkspaceHelper,
 ) : ConnectionService {
   /**
    * Creates a connection.
@@ -162,7 +169,7 @@ class ConnectionServiceImpl(
         connectionId,
         connectionPatchRequest,
         catalogId,
-        configuredCatalog,
+        configuredCatalog?.let { keepWidenedColumns(connectionId, workspaceId, it) },
       )
 
     // this is kept as a string to easily parse the error response to determine if a source or a
@@ -187,6 +194,34 @@ class ConnectionServiceImpl(
       log.error(e) { "Error while reading and converting to Connection Response" }
       throw UnexpectedProblem()
     }
+  }
+
+  /**
+   * [catalog] is built from the discovered catalog. With widening on, each stream's schema is merged column by column
+   * with the saved stream, so a column kept at a supertype isn't replaced by its discovered type.
+   */
+  private fun keepWidenedColumns(
+    connectionId: UUID,
+    workspaceId: UUID,
+    catalog: AirbyteCatalog,
+  ): AirbyteCatalog {
+    val savedConnection = connectionHandler.getConnection(connectionId)
+    val sourceDefinitionId = UUID.fromString(sourceService.getSource(savedConnection.sourceId, false).definitionId)
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
+    if (!featureFlagClient.boolVariation(WidenColumnTypes, widenColumnTypesContext(organizationId, sourceDefinitionId))) {
+      return catalog
+    }
+
+    val savedStreams = savedConnection.syncCatalog.streams.associateBy { it.stream!!.name to it.stream!!.namespace }
+    return catalog.copy(
+      streams =
+        catalog.streams.map { streamAndConfig ->
+          val stream = streamAndConfig.stream!!
+          val savedStream = savedStreams[stream.name to stream.namespace]?.stream ?: return@map streamAndConfig
+          // Key columns come from the new config, since that's what gets saved.
+          streamAndConfig.copy(stream = widenStream(savedStream, stream, streamAndConfig.config!!))
+        },
+    )
   }
 
   /**

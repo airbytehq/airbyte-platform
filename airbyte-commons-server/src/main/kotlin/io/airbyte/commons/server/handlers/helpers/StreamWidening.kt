@@ -35,6 +35,15 @@ internal fun widenStreamSchema(
   config: AirbyteStreamConfiguration,
 ): ColumnTypeWidening.MergeResult = ColumnTypeWidening.mergeStreamSchema(saved.jsonSchema!!, discovered.jsonSchema!!, keyColumns(config))
 
+/**
+ * [discovered] with each changed column kept at a supertype of its [saved] type, see [widenStreamSchema].
+ */
+fun widenStream(
+  saved: AirbyteStream,
+  discovered: AirbyteStream,
+  config: AirbyteStreamConfiguration,
+): AirbyteStream = discovered.copy(jsonSchema = widenStreamSchema(saved, discovered, config).jsonSchema)
+
 // The same columns CatalogDiffHelpers.fieldTransformBreaksConnection treats as breaking. Only top-level columns are
 // widened, so a nested key path counts as its top-level column.
 private fun keyColumns(config: AirbyteStreamConfiguration): Set<String> {
