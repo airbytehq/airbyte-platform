@@ -27,15 +27,10 @@ class BlockedAddressMatcher(
   }
 
   /**
-   * True only when [host] is an IP literal inside a blocked range. Never performs a DNS lookup; hostnames return false.
+   * True only when [host] is a valid IP literal inside a blocked range. Never performs a DNS lookup: hostnames and
+   * malformed literals return false.
    */
-  fun isBlockedLiteral(host: String): Boolean {
-    val literal = host.removePrefix("[").removeSuffix("]")
-    if (!isIpLiteral(literal)) {
-      return false
-    }
-    return isBlocked(InetAddress.getByName(literal))
-  }
+  fun isBlockedLiteral(host: String): Boolean = parseIpLiteral(host)?.let(::isBlocked) ?: false
 
   // IPv4-mapped IPv6 addresses are already unwrapped to Inet4Address by the JDK when parsed from bytes, but be explicit.
   private fun normalize(address: InetAddress): ByteArray {
@@ -51,8 +46,6 @@ class BlockedAddressMatcher(
       (0 until IPV4_MAPPED_PREFIX_ZEROES).all { bytes[it] == 0.toByte() } &&
       bytes[10] == 0xff.toByte() &&
       bytes[11] == 0xff.toByte()
-
-  private fun isIpLiteral(value: String): Boolean = IPV4_LITERAL.matches(value) || (value.contains(':') && IPV6_LITERAL.matches(value))
 
   private class CidrRange(
     private val network: ByteArray,
@@ -78,9 +71,7 @@ class BlockedAddressMatcher(
       fun parse(cidr: String): CidrRange {
         val parts = cidr.trim().split("/")
         require(parts.size == 2) { "Invalid CIDR '$cidr': expected <address>/<prefix-length>" }
-        val literal = parts[0].trim()
-        require(IPV4_LITERAL.matches(literal) || literal.contains(':')) { "Invalid CIDR '$cidr': address must be an IP literal" }
-        val address = InetAddress.getByName(literal)
+        val address = requireNotNull(parseIpLiteral(parts[0].trim())) { "Invalid CIDR '$cidr': address must be an IP literal" }
         val prefix = requireNotNull(parts[1].trim().toIntOrNull()) { "Invalid CIDR '$cidr': prefix length is not a number" }
         val maxPrefix = if (address is Inet4Address) IPV4_LENGTH * BITS_PER_BYTE else IPV6_LENGTH * BITS_PER_BYTE
         require(prefix in 0..maxPrefix) { "Invalid CIDR '$cidr': prefix length must be between 0 and $maxPrefix" }
@@ -120,7 +111,5 @@ class BlockedAddressMatcher(
     private const val IPV6_LENGTH = 16
     private const val IPV4_MAPPED_OFFSET = 12
     private const val IPV4_MAPPED_PREFIX_ZEROES = 10
-    private val IPV4_LITERAL = Regex("""\d{1,3}(\.\d{1,3}){3}""")
-    private val IPV6_LITERAL = Regex("""[0-9a-fA-F:.]+(%[\w.]+)?""")
   }
 }

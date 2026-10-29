@@ -52,4 +52,6 @@ class WorkloadIdGenerator {
   ): String = "${connectionId}_${jobId}_${attemptNumber}_sync"
 
   fun generateSpecWorkloadId(jobId: String): String = "${jobId}_spec"
+
+  fun generateConnectWorkloadId(commandId: String): String = "${commandId}_connect"
 }

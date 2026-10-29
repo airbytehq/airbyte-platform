@@ -283,6 +283,10 @@ abstract class CheckCommandAuthorizationHttpContract {
             airbyteConfig = mockk(),
             airbyteWorkerConfig = mockk(relaxed = true),
             featureFlagClient = mockk(),
+            blockedAddressMatcher = mockk(),
+            scopedConfigurationService = mockk(),
+            connectRateLimiter = mockk(),
+            dataplaneGroupService = mockk(),
             clock = java.time.Clock.systemUTC(),
           ),
         )

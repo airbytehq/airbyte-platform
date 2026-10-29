@@ -15,6 +15,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.airbyte.protocol)
   implementation(libs.apache.commons.codec)
+  implementation(libs.guava)
 
   // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
   implementation(libs.json.path)

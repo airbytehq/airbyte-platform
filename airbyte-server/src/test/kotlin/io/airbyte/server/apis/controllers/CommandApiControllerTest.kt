@@ -7,6 +7,7 @@ package io.airbyte.server.apis.controllers
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.api.server.generated.models.CancelCommandRequest
 import io.airbyte.api.server.generated.models.CancelCommandResponse
 import io.airbyte.api.server.generated.models.CheckCommandOutputRequest
@@ -14,6 +15,8 @@ import io.airbyte.api.server.generated.models.CheckCommandOutputResponse
 import io.airbyte.api.server.generated.models.CommandGetRequest
 import io.airbyte.api.server.generated.models.CommandStatusRequest
 import io.airbyte.api.server.generated.models.CommandStatusResponse
+import io.airbyte.api.server.generated.models.ConnectCommandOutputRequest
+import io.airbyte.api.server.generated.models.ConnectCommandOutputResponse
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputResponse
 import io.airbyte.api.server.generated.models.FailureOrigin
@@ -22,6 +25,8 @@ import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
 import io.airbyte.api.server.generated.models.ReplicateCommandOutputResponse
 import io.airbyte.api.server.generated.models.RunCheckCommandRequest
 import io.airbyte.api.server.generated.models.RunCheckCommandResponse
+import io.airbyte.api.server.generated.models.RunConnectCommandRequest
+import io.airbyte.api.server.generated.models.RunConnectCommandResponse
 import io.airbyte.api.server.generated.models.RunDiscoverCommandRequest
 import io.airbyte.api.server.generated.models.RunReplicateCommandRequest
 import io.airbyte.api.server.generated.models.RunSpecCommandRequest
@@ -35,6 +40,8 @@ import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ConnectErrorCode
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
@@ -55,6 +62,7 @@ import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.server.auth.OperationPermissions
 import io.airbyte.server.auth.ReadCommandRule
+import io.airbyte.server.auth.ReadConnectCommandRule
 import io.airbyte.server.auth.RunDiscoverCommandRule
 import io.airbyte.server.auth.RunReplicateCommandRule
 import io.airbyte.server.auth.RunSpecCommandRule
@@ -1273,5 +1281,112 @@ class CommandApiControllerTest {
         commandInput = any(),
       )
     }
+  }
+
+  @Test
+  fun `run connect delegates to the command service`() {
+    every { commandService.createConnectCommand(any(), any(), any(), any()) } returns true
+    val request = RunConnectCommandRequest(id = TEST_COMMAND_ID, workspaceId = TEST_WORKSPACE_ID, host = "db.example.com", port = 5432)
+
+    val output = controller.runConnectCommand(request)
+
+    assertEquals(RunConnectCommandResponse(id = TEST_COMMAND_ID), output)
+    verify { commandService.createConnectCommand(TEST_COMMAND_ID, TEST_WORKSPACE_ID, "db.example.com", 5432) }
+  }
+
+  @Test
+  fun `run connect returns the id if the command already existed`() {
+    every { commandService.createConnectCommand(any(), any(), any(), any()) } returns false
+
+    val output =
+      controller.runConnectCommand(
+        RunConnectCommandRequest(id = TEST_COMMAND_ID, workspaceId = TEST_WORKSPACE_ID, host = "db.example.com", port = 5432),
+      )
+
+    assertEquals(RunConnectCommandResponse(id = TEST_COMMAND_ID), output)
+  }
+
+  @Test
+  fun `getConnectCommandOutput returns the probe result`() {
+    every { commandService.getConnectOutput(TEST_COMMAND_ID) } returns
+      CommandService.ConnectJobOutput(
+        ConnectOutput(false, ConnectErrorCode.CONNECTION_REFUSED, "refused", listOf("203.0.113.9"), 42),
+        null,
+      )
+
+    val output = controller.getConnectCommandOutput(ConnectCommandOutputRequest(id = TEST_COMMAND_ID))
+
+    assertEquals(
+      ConnectCommandOutputResponse(
+        id = TEST_COMMAND_ID,
+        reachable = false,
+        errorCode = ConnectCommandOutputResponse.ErrorCode.CONNECTION_REFUSED,
+        message = "refused",
+        resolvedAddresses = listOf("203.0.113.9"),
+        connectLatencyMs = 42,
+      ),
+      output,
+    )
+  }
+
+  @Test
+  fun `getConnectCommandOutput maps every error code`() {
+    for (code in ConnectErrorCode.entries) {
+      every { commandService.getConnectOutput(TEST_COMMAND_ID) } returns
+        CommandService.ConnectJobOutput(ConnectOutput(code == ConnectErrorCode.NONE, code, "m", connectLatencyMs = 1), null)
+
+      val output = controller.getConnectCommandOutput(ConnectCommandOutputRequest(id = TEST_COMMAND_ID))
+
+      assertEquals(code.name, output.errorCode.name)
+    }
+  }
+
+  @Test
+  fun `getConnectCommandOutput includes the failure reason for platform failures`() {
+    every { commandService.getConnectOutput(TEST_COMMAND_ID) } returns
+      CommandService.ConnectJobOutput(
+        ConnectOutput(false, ConnectErrorCode.UNKNOWN, "service unavailable", connectLatencyMs = 0),
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+          .withExternalMessage("service unavailable")
+          .withTimestamp(1),
+      )
+
+    val output = controller.getConnectCommandOutput(ConnectCommandOutputRequest(id = TEST_COMMAND_ID))
+
+    assertEquals(ConnectCommandOutputResponse.ErrorCode.UNKNOWN, output.errorCode)
+    assertEquals("service unavailable", output.failureReason?.externalMessage)
+    assertEquals(FailureOrigin.AIRBYTE_PLATFORM, output.failureReason?.failureOrigin)
+  }
+
+  @Test
+  fun `getConnectCommandOutput responds with try again later while the command is running`() {
+    every { commandService.getConnectOutput(TEST_COMMAND_ID) } returns null
+
+    assertThrows<TryAgainLaterConflictProblem> {
+      controller.getConnectCommandOutput(ConnectCommandOutputRequest(id = TEST_COMMAND_ID))
+    }
+  }
+
+  @Test
+  fun `connect output authorization reads the command owner`() {
+    val data = mockk<SavedExecutionAuthorizationDataService>()
+    val rule = ReadConnectCommandRule(data, mockk(relaxed = true))
+    every { data.command(TEST_COMMAND_ID) } returns WorkspaceAndOrganization(TEST_WORKSPACE_ID, UUID(0, 2))
+
+    rule.authorize(Authentication.build("caller"), rule.readInput(arrayOf(ConnectCommandOutputRequest(id = TEST_COMMAND_ID))))
+
+    verify(exactly = 1) { data.command(TEST_COMMAND_ID) }
+    verify { commandService wasNot Called }
+  }
+
+  @Test
+  fun `connect output authorization rejects a blank id`() {
+    val data = mockk<SavedExecutionAuthorizationDataService>()
+    val rule = ReadConnectCommandRule(data, mockk())
+
+    assertThrows<BadRequestProblem> { rule.readInput(arrayOf(ConnectCommandOutputRequest(id = " "))) }
+    verify { data wasNot Called }
   }
 }

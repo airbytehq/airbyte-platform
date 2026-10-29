@@ -6,15 +6,25 @@ package io.airbyte.server.services
 
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.net.BlockedAddressMatcher
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
+import io.airbyte.config.ConfigScopeType
+import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.ConnectErrorCode
+import io.airbyte.config.ConnectInput
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Organization
@@ -27,13 +37,17 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSyncSummary
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.entities.Actor
 import io.airbyte.data.services.CatalogService
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
@@ -63,6 +77,7 @@ import io.airbyte.workload.services.ConflictException
 import io.airbyte.workload.services.InvalidStatusTransitionException
 import io.airbyte.workload.services.WorkloadService
 import io.micronaut.data.exceptions.DataAccessException
+import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -97,6 +112,10 @@ class CommandServiceTest {
   private lateinit var sourceService: SourceService
   private lateinit var destinationService: DestinationService
   private lateinit var actorDefinitionVersionHelper: io.airbyte.config.persistence.ActorDefinitionVersionHelper
+  private lateinit var workspaceService: WorkspaceService
+  private lateinit var scopedConfigurationService: ScopedConfigurationService
+  private lateinit var connectRateLimiter: ConnectRateLimiter
+  private lateinit var dataplaneGroupService: DataplaneGroupService
   private lateinit var service: CommandService
 
   @BeforeEach
@@ -119,34 +138,44 @@ class CommandServiceTest {
     sourceService = mockk(relaxed = true)
     destinationService = mockk(relaxed = true)
     actorDefinitionVersionHelper = mockk(relaxed = true)
-    service =
-      CommandService(
-        actorRepository = actorRepository,
-        catalogService = catalogService,
-        commandsRepository = commandsRepository,
-        jobInputService = jobInputService,
-        logClientManager = logClientManager,
-        organizationService = mockk(relaxed = true) { every { getOrganizationForWorkspaceId(any()) } returns Optional.of(ORGANIZATION) },
-        workloadService = workloadService,
-        workloadQueueService = workloadQueueService,
-        workloadOutputReader = workloadOutputReader,
-        workloadIdGenerator = WorkloadIdGenerator(),
-        workspaceService = mockk(relaxed = true),
-        secretSanitizer = mockk(relaxed = true),
-        configurationUpdate = mockk(relaxed = true),
-        sourceService = sourceService,
-        destinationService = destinationService,
-        actorDefinitionVersionHelper = actorDefinitionVersionHelper,
-        jsonSchemaValidator = JsonSchemaValidator(),
-        airbyteConfig = AirbyteConfig(workspaceRoot = "/test-root"),
-        airbyteWorkerConfig =
-          AirbyteWorkerConfig(
-            discover = AirbyteWorkerConfig.AirbyteWorkerDiscoverConfig(autoRefreshWindow = 0),
-          ),
-        featureFlagClient = featureFlagClient,
-        clock = null,
-      )
+    workspaceService = mockk(relaxed = true)
+    scopedConfigurationService = mockk(relaxed = true)
+    connectRateLimiter = mockk { every { tryAcquire(any()) } returns true }
+    dataplaneGroupService = mockk()
+    service = buildService()
   }
+
+  private fun buildService(edition: AirbyteEdition = AirbyteEdition.COMMUNITY): CommandService =
+    CommandService(
+      actorRepository = actorRepository,
+      catalogService = catalogService,
+      commandsRepository = commandsRepository,
+      jobInputService = jobInputService,
+      logClientManager = logClientManager,
+      organizationService = mockk(relaxed = true) { every { getOrganizationForWorkspaceId(any()) } returns Optional.of(ORGANIZATION) },
+      workloadService = workloadService,
+      workloadQueueService = workloadQueueService,
+      workloadOutputReader = workloadOutputReader,
+      workloadIdGenerator = WorkloadIdGenerator(),
+      workspaceService = workspaceService,
+      secretSanitizer = mockk(relaxed = true),
+      configurationUpdate = mockk(relaxed = true),
+      sourceService = sourceService,
+      destinationService = destinationService,
+      actorDefinitionVersionHelper = actorDefinitionVersionHelper,
+      jsonSchemaValidator = JsonSchemaValidator(),
+      airbyteConfig = AirbyteConfig(workspaceRoot = "/test-root", edition = edition),
+      airbyteWorkerConfig =
+        AirbyteWorkerConfig(
+          discover = AirbyteWorkerConfig.AirbyteWorkerDiscoverConfig(autoRefreshWindow = 0),
+        ),
+      featureFlagClient = featureFlagClient,
+      blockedAddressMatcher = BlockedAddressMatcher(),
+      scopedConfigurationService = scopedConfigurationService,
+      connectRateLimiter = connectRateLimiter,
+      dataplaneGroupService = dataplaneGroupService,
+      clock = null,
+    )
 
   @Test
   fun `cancel calls cancelWorkload`() {
@@ -1444,6 +1473,21 @@ class CommandServiceTest {
         updatedAt = OffsetDateTime.now(),
       )
 
+    val DATAPLANE_GROUP_ID: UUID = UUID.randomUUID()
+    const val CONNECT_COMMAND_ID = "connect-123"
+    const val CONNECT_WORKLOAD_ID = "connect-123_connect"
+    val connectCommand =
+      Command(
+        id = CONNECT_COMMAND_ID,
+        workloadId = CONNECT_WORKLOAD_ID,
+        commandType = CommandType.CONNECT.name,
+        commandInput = Jsons.deserialize("""{"host":"db.example.com"}"""),
+        workspaceId = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
     const val DISCOVER_COMMAND_ID = "discover-123"
     const val DISCOVER_WORKLOAD_ID = "workload-13-321"
     val defaultDiscoverCommand =
@@ -1594,5 +1638,246 @@ class CommandServiceTest {
     verify { commandsRepository.save(any()) }
     // But workload queue should not be called
     verify(exactly = 0) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  private fun stubConnectCommand(
+    host: String = "db.example.com",
+    port: Int = 5432,
+  ) {
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withDataplaneGroupId(DATAPLANE_GROUP_ID)
+    every { scopedConfigurationService.getScopedConfigurations(any(), any<Map<ConfigScopeType, UUID>>()) } returns emptyList()
+    every { commandsRepository.existsById(CONNECT_COMMAND_ID) } returns false
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+    every { logClientManager.fullLogPath(any()) } returns "/logs/path"
+  }
+
+  private fun createConnect(host: String = "db.example.com") = service.createConnectCommand(CONNECT_COMMAND_ID, WORKSPACE_ID, host, 5432)
+
+  private fun verifyNothingWritten() {
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { commandsRepository.save(any()) }
+    verify(exactly = 0) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `createConnectCommand creates a CONNECT workload, command and queue entry`() {
+    stubConnectCommand()
+    val workloadInput = slot<String>()
+    val workloadType = slot<WorkloadType>()
+    val priority = slot<WorkloadPriority>()
+    val dataplaneGroup = slot<String>()
+    every {
+      workloadService.createWorkload(
+        workloadId = CONNECT_WORKLOAD_ID,
+        labels = any(),
+        input = capture(workloadInput),
+        workspaceId = any(),
+        organizationId = any(),
+        logPath = any(),
+        mutexKey = null,
+        type = capture(workloadType),
+        autoId = any(),
+        deadline = null,
+        signalInput = null,
+        dataplaneGroup = capture(dataplaneGroup),
+        priority = capture(priority),
+      )
+    } returns mockk()
+    val command = slot<Command>()
+    every { commandsRepository.save(capture(command)) } returns mockk()
+
+    assertTrue(createConnect())
+
+    assertEquals(WorkloadType.CONNECT, workloadType.captured)
+    assertEquals(WorkloadPriority.HIGH, priority.captured)
+    assertEquals(DATAPLANE_GROUP_ID.toString(), dataplaneGroup.captured)
+    val input =
+      io.airbyte.commons.json.Jsons
+        .deserialize(workloadInput.captured, ConnectInput::class.java)
+    assertEquals(ConnectInput("db.example.com", 5432, WORKSPACE_ID, ORGANIZATION.organizationId), input)
+    assertEquals(CommandType.CONNECT.name, command.captured.commandType)
+    assertEquals(CONNECT_WORKLOAD_ID, command.captured.workloadId)
+    verify { connectRateLimiter.tryAcquire(WORKSPACE_ID) }
+    verify {
+      workloadQueueService.create(
+        CONNECT_WORKLOAD_ID,
+        any(),
+        any(),
+        any(),
+        any(),
+        WorkloadType.CONNECT,
+        any(),
+        WorkloadPriority.HIGH,
+        any(),
+      )
+    }
+  }
+
+  private fun dataplaneGroupOwnedBy(organizationId: UUID) {
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } returns
+      DataplaneGroup().withId(DATAPLANE_GROUP_ID).withOrganizationId(organizationId)
+  }
+
+  @ParameterizedTest
+  @CsvSource("127.0.0.1", "10.0.0.5", "169.254.169.254", "::1", "[::1]", "192.168.1.1")
+  fun `createConnectCommand rejects blocked IP literals on Airbyte-managed Cloud data planes`(host: String) {
+    stubConnectCommand()
+    dataplaneGroupOwnedBy(DEFAULT_ORGANIZATION_ID)
+    service = buildService(AirbyteEdition.CLOUD)
+
+    assertThrows<BadRequestProblem> { createConnect(host = host) }
+
+    verify(exactly = 0) { connectRateLimiter.tryAcquire(any()) }
+    verifyNothingWritten()
+  }
+
+  @ParameterizedTest
+  @CsvSource("127.0.0.1", "10.0.0.5", "169.254.169.254", "192.168.1.1")
+  fun `createConnectCommand allows internal IP literals on self-managed installs`(host: String) {
+    stubConnectCommand()
+
+    assertTrue(createConnect(host = host))
+
+    verify { dataplaneGroupService wasNot Called }
+  }
+
+  @Test
+  fun `createConnectCommand allows internal IP literals on customer-managed Cloud data planes`() {
+    stubConnectCommand()
+    dataplaneGroupOwnedBy(ORGANIZATION.organizationId)
+    service = buildService(AirbyteEdition.CLOUD)
+
+    assertTrue(createConnect(host = "10.0.0.5"))
+  }
+
+  @Test
+  fun `createConnectCommand does not resolve hostnames or look up the data plane group for them`() {
+    stubConnectCommand()
+    service = buildService(AirbyteEdition.CLOUD)
+
+    assertTrue(createConnect(host = "localhost"))
+
+    verify { dataplaneGroupService wasNot Called }
+  }
+
+  @Test
+  fun `createConnectCommand rejects workspaces with network security tokens`() {
+    stubConnectCommand()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any<Map<ConfigScopeType, UUID>>()) } returns listOf(mockk())
+
+    val problem = assertThrows<StateConflictProblem> { createConnect() }
+
+    assertTrue(problem.message!!.contains("Private Link"))
+    verify(exactly = 0) { connectRateLimiter.tryAcquire(any()) }
+    verifyNothingWritten()
+  }
+
+  @Test
+  fun `createConnectCommand rejects when rate limited`() {
+    stubConnectCommand()
+    every { connectRateLimiter.tryAcquire(WORKSPACE_ID) } returns false
+
+    assertThrows<TryAgainLaterConflictProblem> { createConnect() }
+
+    verifyNothingWritten()
+  }
+
+  @Test
+  fun `createConnectCommand returns false for an existing command without consuming quota`() {
+    stubConnectCommand()
+    every { commandsRepository.existsById(CONNECT_COMMAND_ID) } returns true
+
+    assertFalse(createConnect())
+
+    verify(exactly = 0) { connectRateLimiter.tryAcquire(any()) }
+    verifyNothingWritten()
+  }
+
+  @Test
+  fun `getConnectOutput returns the probe output`() {
+    val probeOutput = ConnectOutput(true, ConnectErrorCode.NONE, "ok", listOf("203.0.113.9"), 12)
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } returns probeOutput
+
+    val result = service.getConnectOutput(CONNECT_COMMAND_ID)
+
+    assertEquals(CommandService.ConnectJobOutput(probeOutput, null), result)
+    verify(exactly = 0) { workloadService.getWorkload(any()) }
+  }
+
+  @Test
+  fun `getConnectOutput reports a failed workload without the exception class prefix`() {
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } returns null
+    every { workloadService.getWorkload(CONNECT_WORKLOAD_ID) } returns
+      mockk(relaxed = true) {
+        every { status } returns WorkloadStatus.FAILURE
+        every { terminationReason } returns
+          "io.airbyte.workers.exception.WorkloadLauncherException: Connect service unavailable in this data plane"
+        every { terminationSource } returns "airbyte_platform"
+      }
+
+    val result = service.getConnectOutput(CONNECT_COMMAND_ID)!!
+
+    assertFalse(result.output.reachable)
+    assertEquals(ConnectErrorCode.UNKNOWN, result.output.errorCode)
+    assertEquals("Connect service unavailable in this data plane", result.output.message)
+    assertEquals("Connect service unavailable in this data plane", result.failureReason!!.externalMessage)
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM, result.failureReason.failureOrigin)
+  }
+
+  @Test
+  fun `getConnectOutput keeps messages that have no exception class prefix`() {
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } returns null
+    every { workloadService.getWorkload(CONNECT_WORKLOAD_ID) } returns
+      mockk(relaxed = true) {
+        every { status } returns WorkloadStatus.CANCELLED
+        every { terminationReason } returns "cancelled from the api: by user"
+        every { terminationSource } returns "api"
+      }
+
+    val result = service.getConnectOutput(CONNECT_COMMAND_ID)!!
+
+    assertEquals("cancelled from the api: by user", result.output.message)
+  }
+
+  @Test
+  fun `getConnectOutput reports a failure when a successful workload has no output`() {
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } returns null
+    every { workloadService.getWorkload(CONNECT_WORKLOAD_ID) } returns mockk(relaxed = true) { every { status } returns WorkloadStatus.SUCCESS }
+
+    val result = service.getConnectOutput(CONNECT_COMMAND_ID)!!
+
+    assertEquals("Failed to read the output", result.output.message)
+    assertNotNull(result.failureReason)
+  }
+
+  @ParameterizedTest
+  @CsvSource("PENDING", "CLAIMED", "LAUNCHED", "RUNNING")
+  fun `getConnectOutput returns null while the workload is not finished`(status: WorkloadStatus) {
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } returns null
+    every { workloadService.getWorkload(CONNECT_WORKLOAD_ID) } returns mockk(relaxed = true) { every { this@mockk.status } returns status }
+
+    assertNull(service.getConnectOutput(CONNECT_COMMAND_ID))
+  }
+
+  @Test
+  fun `getConnectOutput returns null for unknown command ids`() {
+    assertNull(service.getConnectOutput(UNKNOWN_COMMAND_ID))
+  }
+
+  @Test
+  fun `getConnectOutput propagates doc store failures`() {
+    every { commandsRepository.findById(CONNECT_COMMAND_ID) } returns Optional.of(connectCommand)
+    every { workloadOutputReader.readConnectOutput(CONNECT_WORKLOAD_ID) } throws DocStoreAccessException("boom", RuntimeException())
+
+    assertThrows<DocStoreAccessException> { service.getConnectOutput(CONNECT_COMMAND_ID) }
   }
 }

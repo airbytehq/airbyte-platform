@@ -56,6 +56,18 @@ class BlockedAddressMatcherTest {
     assertFalse(matcher.isBlockedLiteral(""))
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = ["999.0.0.1", "256.1.1.1", "1:2:3:4:5:6:7:8:9", "fe80::1%nope", "10.0.0", "[10.0.0.1"])
+  fun `malformed literals are not blocked and never resolved`(host: String) {
+    assertFalse(matcher.isBlockedLiteral(host))
+  }
+
+  @Test
+  fun `cidrs with malformed addresses are rejected`() {
+    assertThrows(IllegalArgumentException::class.java) { BlockedAddressMatcher(listOf("999.0.0.0/8")) }
+    assertThrows(IllegalArgumentException::class.java) { BlockedAddressMatcher(listOf("1:2:3:4:5:6:7:8:9/64")) }
+  }
+
   @Test
   fun `extra cidrs are blocked in addition to defaults`() {
     val extra = BlockedAddressMatcher(listOf("203.0.113.0/24", "2001:db8::/32", "198.51.100.7/32"))

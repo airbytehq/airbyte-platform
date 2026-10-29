@@ -25,6 +25,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.cache)
+  implementation(libs.guava)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.micronaut.jaxrs)

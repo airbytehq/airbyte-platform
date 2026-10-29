@@ -98,6 +98,7 @@ grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc_
 
 kohsuke-github-api = { module = "org.kohsuke:github-api", version = "1.330" }
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
+guava = { module = "com.google.guava:guava", version = "33.4.0-jre" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 http-client = { module = "org.apache.httpcomponents:httpclient", version = "4.5.13" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "fasterxml_version" }

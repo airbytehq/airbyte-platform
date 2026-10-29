@@ -8248,6 +8248,48 @@ paths:
                   id:
                     type: string
 
+  /v1/commands/run/connect:
+    post:
+      summary: Run a Connect command for a host and port
+      description: >
+        Tests whether a TCP connection can be opened from the workspace's data plane to the given host and port.
+      tags: [command]
+      operationId: runConnectCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunConnectCommandRequest
+              required: [id, workspace_id, host, port]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                workspace_id:
+                  type: string
+                  format: uuid
+                host:
+                  type: string
+                  minLength: 1
+                  maxLength: 253
+                port:
+                  type: integer
+                  minimum: 1
+                  maximum: 65535
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunConnectCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
   /v1/commands/run/replicate:
     post:
       summary: Run a Replicate command for a Connection
@@ -8381,6 +8423,61 @@ paths:
                     $ref: "#/components/schemas/FailureReason"
                   logs:
                     $ref: "#/components/schemas/JobLogs"
+
+  /v1/commands/output/connect:
+    post:
+      summary: Get the result of a connect command
+      description: Responds with a conflict problem while the command is still running.
+      tags: [command]
+      operationId: getConnectCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ConnectCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ConnectCommandOutputResponse
+                required:
+                  [
+                    id,
+                    reachable,
+                    error_code,
+                    message,
+                    resolved_addresses,
+                    connect_latency_ms,
+                  ]
+                properties:
+                  id:
+                    type: string
+                  reachable:
+                    type: boolean
+                  error_code:
+                    type: string
+                    enum:
+                      [none, dns_failed, connection_refused, timeout, unknown]
+                  message:
+                    type: string
+                  resolved_addresses:
+                    type: array
+                    items:
+                      type: string
+                  connect_latency_ms:
+                    type: integer
+                    format: int64
+                  failure_reason:
+                    $ref: "#/components/schemas/FailureReason"
+                    description: Only set when the command failed for platform reasons rather than producing a probe result.
 
   /v1/commands/output/discover:
     post:

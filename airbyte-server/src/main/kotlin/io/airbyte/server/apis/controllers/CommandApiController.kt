@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.api.server.generated.apis.CommandApi
 import io.airbyte.api.server.generated.models.CancelCommandRequest
 import io.airbyte.api.server.generated.models.CancelCommandResponse
@@ -13,6 +14,8 @@ import io.airbyte.api.server.generated.models.CommandGetRequest
 import io.airbyte.api.server.generated.models.CommandGetResponse
 import io.airbyte.api.server.generated.models.CommandStatusRequest
 import io.airbyte.api.server.generated.models.CommandStatusResponse
+import io.airbyte.api.server.generated.models.ConnectCommandOutputRequest
+import io.airbyte.api.server.generated.models.ConnectCommandOutputResponse
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputResponse
 import io.airbyte.api.server.generated.models.LogEvents
@@ -21,6 +24,8 @@ import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
 import io.airbyte.api.server.generated.models.ReplicateCommandOutputResponse
 import io.airbyte.api.server.generated.models.RunCheckCommandRequest
 import io.airbyte.api.server.generated.models.RunCheckCommandResponse
+import io.airbyte.api.server.generated.models.RunConnectCommandRequest
+import io.airbyte.api.server.generated.models.RunConnectCommandResponse
 import io.airbyte.api.server.generated.models.RunDiscoverCommandRequest
 import io.airbyte.api.server.generated.models.RunDiscoverCommandResponse
 import io.airbyte.api.server.generated.models.RunReplicateCommandRequest
@@ -41,6 +46,7 @@ import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
+import io.airbyte.config.ConnectErrorCode
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
@@ -49,8 +55,10 @@ import io.airbyte.protocol.models.Jsons
 import io.airbyte.server.apis.requireBody
 import io.airbyte.server.auth.CancelCommandRule
 import io.airbyte.server.auth.CheckCommandRule
+import io.airbyte.server.auth.ConnectCommandRule
 import io.airbyte.server.auth.ReadCheckCommandRule
 import io.airbyte.server.auth.ReadCommandRule
+import io.airbyte.server.auth.ReadConnectCommandRule
 import io.airbyte.server.auth.RunDiscoverCommandRule
 import io.airbyte.server.auth.RunReplicateCommandRule
 import io.airbyte.server.auth.RunSpecCommandRule
@@ -216,6 +224,34 @@ class CommandApiController(
     )
   }
 
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.SHARED,
+    rule = ReadConnectCommandRule::class,
+  )
+  override fun getConnectCommandOutput(
+    @Body connectCommandOutputRequestBody: ConnectCommandOutputRequest?,
+  ): ConnectCommandOutputResponse {
+    val connectCommandOutputRequest = connectCommandOutputRequestBody.requireBody()
+    val jobOutput =
+      commandService.getConnectOutput(connectCommandOutputRequest.id)
+        ?: throw TryAgainLaterConflictProblem("The connect test is still running. Try again shortly.", null)
+
+    val output = jobOutput.output
+    return ConnectCommandOutputResponse(
+      id = connectCommandOutputRequest.id,
+      reachable = output.reachable,
+      errorCode = output.errorCode.toApi(),
+      message = output.message,
+      resolvedAddresses = output.resolvedAddresses,
+      connectLatencyMs = output.connectLatencyMs,
+      failureReason = apiPojoConverters.failureReasonToApi(jobOutput.failureReason),
+    )
+  }
+
+  private fun ConnectErrorCode.toApi(): ConnectCommandOutputResponse.ErrorCode = convertTo<ConnectCommandOutputResponse.ErrorCode>()
+
   private fun StandardCheckConnectionOutput.Status.toApi(): CheckCommandOutputResponse.Status =
     when (this) {
       StandardCheckConnectionOutput.Status.SUCCEEDED -> CheckCommandOutputResponse.Status.SUCCEEDED
@@ -303,6 +339,25 @@ class CommandApiController(
     )
 
     return RunCheckCommandResponse(id = runCheckCommandRequest.id)
+  }
+
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    migration = RouteMigration.SHARED,
+    rule = ConnectCommandRule::class,
+  )
+  override fun runConnectCommand(
+    @Body runConnectCommandRequestBody: RunConnectCommandRequest?,
+  ): RunConnectCommandResponse {
+    val runConnectCommandRequest = runConnectCommandRequestBody.requireBody()
+    commandService.createConnectCommand(
+      commandId = runConnectCommandRequest.id,
+      workspaceId = runConnectCommandRequest.workspaceId,
+      host = runConnectCommandRequest.host,
+      port = runConnectCommandRequest.port,
+    )
+    return RunConnectCommandResponse(id = runConnectCommandRequest.id)
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)

@@ -417,6 +417,8 @@ airbyte:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
   server:
+    connect:
+      rate-limit-per-minute: ${CONNECT_RATE_LIMIT_PER_MINUTE:30}
     limits:
       connections: ${MAX_CONNECTION_PER_WORKSPACE:10000}
       sources: ${MAX_SOURCES_PER_WORKSPACE:10000}

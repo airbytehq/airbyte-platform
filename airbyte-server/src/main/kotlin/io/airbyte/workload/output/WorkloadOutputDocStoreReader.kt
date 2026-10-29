@@ -6,6 +6,7 @@ package io.airbyte.workload.output
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.metrics.MetricAttribute
@@ -52,5 +53,15 @@ class WorkloadOutputDocStoreReader(
         throw DocStoreAccessException("Unable to read output for $workloadId", e)
       }
     return output?.let { Jsons.deserialize(it, ReplicationOutput::class.java) }
+  }
+
+  fun readConnectOutput(workloadId: String): ConnectOutput? {
+    val output: String? =
+      try {
+        storageClient.read(workloadId)
+      } catch (e: Exception) {
+        throw DocStoreAccessException("Unable to read output for $workloadId", e)
+      }
+    return output?.let { Jsons.deserialize(it, ConnectOutput::class.java) }
   }
 }

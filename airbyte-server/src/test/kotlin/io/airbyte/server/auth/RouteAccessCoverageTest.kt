@@ -141,6 +141,9 @@ class RouteAccessCoverageTest {
           },
         )
         assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.migration == RouteMigration.SHARED })
+        for (path in listOf("run/connect", "output/connect")) {
+          assertTrue(entries.any { it.path == "/api/v1/commands/$path" && it.migration == RouteMigration.SHARED })
+        }
         for (path in listOf("save_stats", "save_stream_metadata")) {
           assertTrue(
             entries.any {

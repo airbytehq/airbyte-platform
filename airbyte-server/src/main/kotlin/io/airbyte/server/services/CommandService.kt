@@ -7,10 +7,14 @@ package io.airbyte.server.services
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.net.BlockedAddressMatcher
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.temporal.TemporalUtils
@@ -18,6 +22,11 @@ import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorType
 import io.airbyte.config.CatalogDiff
+import io.airbyte.config.ConfigScopeType
+import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.ConnectErrorCode
+import io.airbyte.config.ConnectInput
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
@@ -31,10 +40,13 @@ import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWit
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.CatalogService
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ReplicationCommandFallsBackToWorkloadStatus
@@ -77,6 +89,7 @@ enum class CommandStatus {
 enum class CommandType {
   CHECK,
   DISCOVER,
+  CONNECT,
   REPLICATE,
   SPEC,
 }
@@ -115,6 +128,10 @@ class CommandService(
   private val airbyteConfig: AirbyteConfig,
   airbyteWorkerConfig: AirbyteWorkerConfig,
   private val featureFlagClient: FeatureFlagClient,
+  private val blockedAddressMatcher: BlockedAddressMatcher,
+  private val scopedConfigurationService: ScopedConfigurationService,
+  private val connectRateLimiter: ConnectRateLimiter,
+  private val dataplaneGroupService: DataplaneGroupService,
   clock: Clock?,
 ) {
   private val clock: Clock = clock ?: Clock.systemUTC()
@@ -734,6 +751,70 @@ class CommandService(
     )
   }
 
+  /**
+   * Creates a connect command that tests TCP connectivity from the workspace's data plane to [host]:[port].
+   *
+   * Rejections run before any write: IP literals in blocked ranges (only on Airbyte-managed Cloud data planes),
+   * Private Link workspaces (not supported yet) and the per-workspace rate limit. An already existing command is returned as `false`
+   * before the rate limit so that idempotent retries do not consume quota.
+   *
+   * returns true if a command has been created, false if it already existed.
+   */
+  fun createConnectCommand(
+    commandId: String,
+    workspaceId: UUID,
+    host: String,
+    port: Int,
+  ): Boolean {
+    val dataplaneGroupId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).dataplaneGroupId
+    if (blockedAddressMatcher.isBlockedLiteral(host) && isAirbyteManagedDataplaneGroup(dataplaneGroupId)) {
+      throw BadRequestProblem("Destination is not allowed", null)
+    }
+
+    if (scopedConfigurationService.getScopedConfigurations(NetworkSecurityTokenKey, mapOf(ConfigScopeType.WORKSPACE to workspaceId)).isNotEmpty()) {
+      throw StateConflictProblem("Connect tests are not available for Private Link workspaces yet", null)
+    }
+
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
+    if (!connectRateLimiter.tryAcquire(workspaceId)) {
+      throw TryAgainLaterConflictProblem("Too many connect tests for this workspace. Wait a minute and retry.", null)
+    }
+
+    val organizationId = organizationService.getOrganizationForWorkspaceId(workspaceId).map { it.organizationId }.orElseThrow()
+    val workloadPayload =
+      WorkloadCreatePayload(
+        workloadId = workloadIdGenerator.generateConnectWorkloadId(commandId),
+        labels = listOf(WorkloadLabel(key = WorkloadLabels.WORKSPACE_LABEL_KEY, value = workspaceId.toString())),
+        workloadInput = Jsons.serialize(ConnectInput(host = host, port = port, workspaceId = workspaceId, organizationId = organizationId)),
+        logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(Path.of(airbyteConfig.workspaceRoot), commandId, 0)),
+        type = WorkloadType.CONNECT,
+        priority = WorkloadPriority.HIGH,
+        dataplaneGroupId = dataplaneGroupId,
+        signalInput = null,
+        mutexKey = null,
+      )
+
+    createCommand(
+      commandId = commandId,
+      commandType = CommandType.CONNECT.name,
+      commandInput = Jsons.jsonNode(mapOf("host" to host, "port" to port, "workspace_id" to workspaceId.toString())),
+      workspaceId = workspaceId,
+      workloadPayload = workloadPayload,
+    )
+    return true
+  }
+
+  /**
+   * Internal addresses are only blocked where they are Airbyte's network: Cloud data planes that Airbyte runs. On
+   * self-managed installs and customer-managed data planes, private addresses are where the user's databases live.
+   */
+  private fun isAirbyteManagedDataplaneGroup(dataplaneGroupId: UUID): Boolean =
+    airbyteConfig.edition == AirbyteEdition.CLOUD &&
+      dataplaneGroupService.getDataplaneGroup(dataplaneGroupId).organizationId == DEFAULT_ORGANIZATION_ID
+
   private fun createCommand(
     commandId: String,
     commandType: String,
@@ -1059,6 +1140,50 @@ class CommandService(
         }
       }.orElse(null)
 
+  /**
+   * Result of a connect command. [failureReason] is only set when the workload failed without producing a probe
+   * result; [output] then describes the failure as an unreachable result with [ConnectErrorCode.UNKNOWN].
+   * FailureReason is a Java config model, so its nullability is accepted at this interop boundary.
+   */
+  data class ConnectJobOutput(
+    val output: ConnectOutput,
+    val failureReason: FailureReason?,
+  )
+
+  /**
+   * Returns the connect result, or null when the command does not exist or its workload has not finished.
+   */
+  fun getConnectOutput(commandId: String): ConnectJobOutput? =
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        val probeOutput = workloadOutputReader.readConnectOutput(command.workloadId)
+        if (probeOutput != null) {
+          return@map ConnectJobOutput(output = probeOutput, failureReason = null)
+        }
+
+        val workload = workloadService.getWorkload(command.workloadId)
+        if (workload.status !in TERMINAL_WORKLOAD_STATUSES) {
+          return@map null
+        }
+
+        val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, null)
+        val message = failureReason.externalMessage?.removeExceptionClassPrefix() ?: "The connect test failed"
+        failureReason.externalMessage = message
+        ConnectJobOutput(
+          output =
+            ConnectOutput(
+              reachable = false,
+              errorCode = ConnectErrorCode.UNKNOWN,
+              message = message,
+              connectLatencyMs = 0,
+            ),
+          failureReason = failureReason,
+        )
+      }.orElse(null)
+
+  private fun String.removeExceptionClassPrefix(): String = replaceFirst(EXCEPTION_CLASS_PREFIX, "")
+
   private fun getConnectorJobOutput(
     commandId: String,
     failOnUnsuccessfulWorkload: Boolean = false,
@@ -1136,4 +1261,9 @@ class CommandService(
           .withTimestamp(clock.millis())
       }
     }
+
+  private companion object {
+    val TERMINAL_WORKLOAD_STATUSES = setOf(WorkloadStatus.SUCCESS, WorkloadStatus.FAILURE, WorkloadStatus.CANCELLED)
+    val EXCEPTION_CLASS_PREFIX = Regex("^(?:[A-Za-z_][\\w$]*\\.)+[A-Za-z_][\\w$]*: ")
+  }
 }

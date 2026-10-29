@@ -10,6 +10,7 @@ import io.airbyte.api.server.generated.models.CancelCommandRequest
 import io.airbyte.api.server.generated.models.CheckCommandOutputRequest
 import io.airbyte.api.server.generated.models.CommandGetRequest
 import io.airbyte.api.server.generated.models.CommandStatusRequest
+import io.airbyte.api.server.generated.models.ConnectCommandOutputRequest
 import io.airbyte.api.server.generated.models.DiscoverCommandOutputRequest
 import io.airbyte.api.server.generated.models.ReplicateCommandOutputRequest
 import io.airbyte.api.server.generated.models.RunDiscoverCommandRequest
@@ -46,6 +47,7 @@ abstract class SavedCommandRule(
         is CommandGetRequest -> body.id
         is CommandStatusRequest -> body.id
         is CheckCommandOutputRequest -> body.id
+        is ConnectCommandOutputRequest -> body.id
         is DiscoverCommandOutputRequest -> body.id
         is SpecCommandOutputRequest -> body.id
         is ReplicateCommandOutputRequest -> body.id
@@ -92,6 +94,12 @@ class ReadCommandRule(
 
 @Singleton
 class ReadCheckCommandRule(
+  data: SavedExecutionAuthorizationDataService,
+  permissions: OperationPermissions,
+) : SavedCommandRule(data, permissions, setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER), true)
+
+@Singleton
+class ReadConnectCommandRule(
   data: SavedExecutionAuthorizationDataService,
   permissions: OperationPermissions,
 ) : SavedCommandRule(data, permissions, setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER), true)
