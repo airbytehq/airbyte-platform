@@ -8,6 +8,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.WorkloadOutputWriteRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.metrics.MetricAttribute
@@ -67,6 +68,13 @@ class WorkloadOutputWriter(
     connectorJobOutput: ReplicationOutput,
   ) {
     writeOutputThroughServer(workloadId, connectorJobOutput)
+  }
+
+  fun writeConnectOutput(
+    workloadId: String,
+    output: ConnectOutput,
+  ) {
+    writeOutputThroughServer(workloadId, output)
   }
 
   private fun writeOutputThroughServer(

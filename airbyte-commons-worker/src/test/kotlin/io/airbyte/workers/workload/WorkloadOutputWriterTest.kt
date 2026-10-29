@@ -9,6 +9,8 @@ import io.airbyte.api.client.generated.WorkloadOutputApi
 import io.airbyte.api.client.model.generated.WorkloadOutputWriteRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.config.ConnectErrorCode
+import io.airbyte.config.ConnectOutput
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
@@ -105,6 +107,37 @@ internal class WorkloadOutputWriterTest {
     verifyOrder {
       apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, replicationOutputSerialized))
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
+    }
+  }
+
+  @Test
+  fun `properly create an output for connect`() {
+    val connectOutput =
+      ConnectOutput(
+        reachable = true,
+        errorCode = ConnectErrorCode.NONE,
+        message = "ok",
+        resolvedAddresses = listOf("8.8.8.8"),
+        connectLatencyMs = 12,
+      )
+
+    outputWriter.writeConnectOutput(workloadId, connectOutput)
+
+    verifyOrder {
+      apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, Jsons.serialize(connectOutput)))
+      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
+    }
+  }
+
+  @Test
+  fun `properly wrap writing error for connect`() {
+    every { apiClient.writeWorkloadOutput(any()) } throws Exception()
+
+    assertThrows<DocStoreAccessException> {
+      outputWriter.writeConnectOutput(
+        workloadId,
+        ConnectOutput(false, ConnectErrorCode.TIMEOUT, "timed out", connectLatencyMs = 5000),
+      )
     }
   }
 

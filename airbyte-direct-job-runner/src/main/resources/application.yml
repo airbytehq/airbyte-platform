@@ -1,0 +1,97 @@
+micronaut:
+  application:
+    name: airbyte-direct-job-runner
+  server:
+    port: 8080
+    idle-timeout: ${HTTP_IDLE_TIMEOUT:5m}
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
+      statsd:
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
+  security:
+    enabled: false
+  executors:
+    # Request handling for the HTTP API (a workload API lookup and status update per request).
+    io:
+      type: fixed
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+    # Direct jobs of every type. Jobs are short and I/O-bound, so extra work queues briefly.
+    direct-jobs:
+      type: fixed
+      n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT:50}
+airbyte:
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
+  version: ${AIRBYTE_VERSION:dev}
+  direct-job-runner:
+    connect:
+      blocked-cidrs: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS:}
+      overall-timeout: PT10S
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG}
+        state: ${STORAGE_BUCKET_STATE}
+        workload-output: ${STORAGE_BUCKET_WORKLOAD_OUTPUT}
+        activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
+        audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
+      azure:
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
+      gcs:
+        application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
+      minio:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        endpoint: ${MINIO_ENDPOINT:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+      s3:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        region: ${AWS_DEFAULT_REGION:}
+        secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  internal-api:
+    base-path: ${INTERNAL_API_HOST}/api
+    connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
+    auth:
+      type: DATAPLANE_ACCESS_TOKEN
+      token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
+      client-id: ${DATAPLANE_CLIENT_ID}
+      client-secret: ${DATAPLANE_CLIENT_SECRET}
+    retries:
+      delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
+      max: ${AIRBYTE_API_MAX_RETRIES:5}
+  control.plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data.plane:
+    service-account:
+      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  workload-api:
+    base-path: ${WORKLOAD_API_HOST:}
+    connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${WORKLOAD_API_READ_TIMEOUT_SECONDS:300}
+    retries:
+      delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
+      max: ${WORKLOAD_API_MAX_RETRIES:5}
+
+endpoints:
+  all:
+    enabled: false
+    port: 8085
+  health:
+    enabled: true
+    jdbc:
+      enabled: false
+    sensitive: false
+
+logger:
+  levels:
+    io.netty: INFO
