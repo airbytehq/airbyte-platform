@@ -187,6 +187,147 @@ visible content after
   });
 });
 
+const ADMONITION_TYPES = ["info", "warning", "note", "tip", "caution", "danger"] as const;
+
+describe("admonitions with a title", () => {
+  const md = `
+:::info Direct Load
+The body of the admonition.
+:::
+`;
+
+  it("should render as a box", () => {
+    const { queryByStyle } = render(<Markdown content={md} />);
+
+    expect(queryByStyle(admonitionStyles.admonition)).toBeInTheDocument();
+  });
+
+  it("should render as a box of its type", () => {
+    const { queryByStyle } = render(<Markdown content={md} />);
+
+    expect(queryByStyle(admonitionStyles["admonition--info"])).toBeInTheDocument();
+  });
+
+  it("should show the title as the heading of the box", () => {
+    const { queryByStyle } = render(<Markdown content={md} />);
+
+    expect(queryByStyle(admonitionStyles.admonition__title)).toHaveTextContent("Direct Load");
+  });
+
+  it("should show the body in the box", () => {
+    const { queryByStyle } = render(<Markdown content={md} />);
+
+    expect(queryByStyle(admonitionStyles.admonition)).toHaveTextContent("The body of the admonition.");
+  });
+
+  it("should not leave the raw syntax visible", () => {
+    const { container } = render(<Markdown content={md} />);
+
+    expect(container.textContent).not.toContain(":::");
+  });
+
+  it.each(ADMONITION_TYPES)("should render a titled %s admonition as a box of that type", (type) => {
+    const { queryByStyle } = render(<Markdown content={`\n:::${type} A title\nThe body.\n:::\n`} />);
+
+    expect(queryByStyle(admonitionStyles[`admonition--${type}`])).toBeInTheDocument();
+  });
+
+  it("should render inline code in the title", () => {
+    const { queryByStyle } = render(<Markdown content={"\n:::note Behavior change in `0.2.23`\nThe body.\n:::\n"} />);
+
+    expect(queryByStyle(admonitionStyles.admonition__title)?.querySelector("code")).toHaveTextContent("0.2.23");
+  });
+
+  it("should render a title containing double quotes in full", () => {
+    const { queryByStyle } = render(<Markdown content={'\n:::note Say "hello"\nThe body.\n:::\n'} />);
+
+    expect(queryByStyle(admonitionStyles.admonition__title)).toHaveTextContent(/^Say .hello.$/);
+  });
+
+  it("should not show a title for an admonition without one", () => {
+    const { queryByStyle } = render(<Markdown content={"\n:::info\nThe body.\n:::\n"} />);
+
+    expect(queryByStyle(admonitionStyles.admonition__title)).not.toBeInTheDocument();
+  });
+});
+
+describe("admonitions inside a list item", () => {
+  const listWith = (opening: string) => `
+1. First step.
+
+   ${opening}
+   Text of the admonition.
+   :::
+2. Second step.
+`;
+
+  describe("without a title", () => {
+    it("should render as a box inside the list item", () => {
+      const { container } = render(<Markdown content={listWith(":::note")} />);
+
+      expect(container.querySelector(`li .${admonitionStyles.admonition}`)).toBeInTheDocument();
+    });
+
+    it("should keep the list in one piece", () => {
+      const { container } = render(<Markdown content={listWith(":::note")} />);
+
+      expect(container.querySelectorAll("ol")).toHaveLength(1);
+    });
+
+    it("should not show a literal admonition tag", () => {
+      const { container } = render(<Markdown content={listWith(":::note")} />);
+
+      expect(container.textContent).not.toContain("</admonition>");
+    });
+
+    it("should show the text in the box", () => {
+      const { queryByStyle } = render(<Markdown content={listWith(":::note")} />);
+
+      expect(queryByStyle(admonitionStyles.admonition)).toHaveTextContent("Text of the admonition.");
+    });
+  });
+
+  describe("with a title", () => {
+    it("should render as a box inside the list item", () => {
+      const { container } = render(<Markdown content={listWith(":::note HubSpot Authentication issues")} />);
+
+      expect(container.querySelector(`li .${admonitionStyles.admonition}`)).toBeInTheDocument();
+    });
+
+    it("should show the title as the heading of the box", () => {
+      const { queryByStyle } = render(<Markdown content={listWith(":::note HubSpot Authentication issues")} />);
+
+      expect(queryByStyle(admonitionStyles.admonition__title)).toHaveTextContent("HubSpot Authentication issues");
+    });
+
+    it("should keep the list in one piece", () => {
+      const { container } = render(<Markdown content={listWith(":::note HubSpot Authentication issues")} />);
+
+      expect(container.querySelectorAll("ol")).toHaveLength(1);
+    });
+
+    it("should not leave the raw syntax visible", () => {
+      const { container } = render(<Markdown content={listWith(":::note HubSpot Authentication issues")} />);
+
+      expect(container.textContent).not.toContain(":::");
+    });
+  });
+
+  it("should render a callout indented under a bullet, as the HubSpot docs do", () => {
+    const md = `
+- (Recommended) Authenticate with OAuth.
+
+     :::note HubSpot Authentication issues
+     You may encounter an error during the authentication process.
+     :::
+- (Not Recommended) Use a Private App.
+`;
+    const { container } = render(<Markdown content={md} />);
+
+    expect(container.querySelector(`li .${admonitionStyles.admonition}`)).toBeInTheDocument();
+  });
+});
+
 describe("preprocessing markdown strings", () => {
   it("removes frontmatter", () => {
     const md = `---

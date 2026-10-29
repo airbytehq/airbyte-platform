@@ -48,4 +48,9 @@
   &--tip::before {
     content: "💡";
   }
+
+  &__title {
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
 }

@@ -37,10 +37,15 @@ export function preprocessMarkdown(markdown: string, additionalPlugins: Pluggabl
   // Tabs feature with MDX components, which must be imported.
   preprocessed = preprocessed.replace(/^(?:\n|import (?:{ ?)?[^ ]*(?: ?})? from [^ ]*\n)*/, "");
 
-  // Replace docusaurus-style admonitions with custom admonition component.
+  // Replace docusaurus-style admonitions, with an optional title (`:::note Title`) and
+  // optionally indented inside a list item, with custom admonition component. The closing
+  // tag is re-emitted at the opening indentation so it stays inside the list item.
   preprocessed = preprocessed.replace(
-    /:::(info|warning|note|tip|caution|danger)\s*\n([\s\S]*?)\n\s*:::\s*\n/g,
-    '<admonition type="$1">\n\n$2\n\n</admonition>\n'
+    /^([ \t]*):::(info|warning|note|tip|caution|danger)(?:[ \t]+([^\n]*?))?\s*\n([\s\S]*?)\n[ \t]*:::\s*\n/gm,
+    (_match, indent: string, type: string, title: string | undefined, body: string) => {
+      const titleAttribute = title ? ` title="${title.replaceAll('"', "&quot;")}"` : "";
+      return `${indent}<admonition type="${type}"${titleAttribute}>\n\n${body}\n\n${indent}</admonition>\n`;
+    }
   );
 
   // Add a zero-width space character before every character that looks like the start of a
