@@ -7,6 +7,21 @@ export interface GroupDetails {
   title?: string;
 }
 
+export interface SectionDetails {
+  id: string;
+  title: string;
+  description?: string;
+  order?: number;
+  /** Whether the connector checks the config when the user completes this section. */
+  check?: boolean;
+  groups: string[];
+}
+
+/**
+ * Top-level config key that asks the connector's CHECK to validate the config only up to the named section.
+ */
+export const CHECK_SECTION_KEY = "check-section";
+
 /**
  * When turning the JSON schema into `FormBlock`s,
  * some often used props are copied over for easy access.

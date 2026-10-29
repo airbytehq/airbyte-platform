@@ -8,8 +8,8 @@ import { FormBlock, GroupDetails } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
-import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID } from "../../useBuildForm";
 import { OrderComparator } from "../../utils";
+import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID } from "../Steps/specSections";
 
 export interface Section {
   blocks: FormBlock[];

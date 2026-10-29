@@ -191,7 +191,7 @@ export const JobFailure: React.FC<JobFailureProps> = (props) => {
                   <FormattedMessage id="jobs.failure.expandLogs" />
                 </Text>
                 <FlexContainer>
-                  <Tooltip control={<Button variant="secondary" icon="eye" onClick={openLogsModal} />}>
+                  <Tooltip control={<Button type="button" variant="secondary" icon="eye" onClick={openLogsModal} />}>
                     <FormattedMessage id="jobs.failure.viewLogs" />
                   </Tooltip>
                   <Tooltip

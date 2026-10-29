@@ -23,6 +23,7 @@ export interface Experiments {
   "connector.agentAssistedSetup": boolean;
   "connector.airbyteCloudIpAddressesByDataplane": Record<string, string[]>;
   "connector.allowSavingWithoutTesting": boolean;
+  "connector.sectionedSetupForm": boolean;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "connector.unifiedConnectorView": boolean;
@@ -82,6 +83,7 @@ export const defaultExperimentValues: Experiments = {
     ],
   },
   "connector.allowSavingWithoutTesting": false,
+  "connector.sectionedSetupForm": false,
   "connector.suggestedDestinationConnectors": "",
   "connector.suggestedSourceConnectors": "",
   "connector.unifiedConnectorView": false,

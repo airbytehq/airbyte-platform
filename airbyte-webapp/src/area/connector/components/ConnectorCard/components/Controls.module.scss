@@ -6,12 +6,6 @@
   @include mixins.visually-hidden;
 }
 
-.requiredFieldList {
-  padding-left: variables.$spacing-xl;
-  margin-top: variables.$spacing-sm;
-  margin-bottom: 0;
-}
-
 .footer {
   min-width: 0;
   margin: 0;

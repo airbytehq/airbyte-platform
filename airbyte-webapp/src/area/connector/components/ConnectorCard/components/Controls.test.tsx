@@ -8,10 +8,12 @@ import { render } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
 
 import { FormFooterSlotContext } from "area/connector/components/ConnectorDocumentationLayout/FormFooterSlotContext";
+import { SectionProgressProvider } from "area/connector/components/ConnectorForm/components/Steps/SectionProgress";
 
 import { Controls } from "./Controls";
 
 const FILL_REQUIRED_FIELDS = "Fill out required fields before saving";
+const COMPLETE_ALL_STEPS = "Complete all steps before saving";
 const FORM_ELEMENT_ID = "connector-form";
 
 const ControlsWithForm = ({
@@ -261,6 +263,80 @@ describe("Controls", () => {
 
     expect(screen.getByRole("button", { name: "Retest saved source" })).toBeEnabled();
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  describe("sections", () => {
+    const renderOnSection = (activeSectionIndex: number, sectionCount: number, emptyRequiredFields: string[] = []) =>
+      render(
+        <SectionProgressProvider value={{ activeSectionIndex, sectionCount }}>
+          <ControlsWithForm
+            onSaveDraft={jest.fn().mockResolvedValue(undefined)}
+            emptyRequiredFields={emptyRequiredFields}
+          />
+        </SectionProgressProvider>
+      );
+
+    it("disables Save & Test with a tooltip before the last section, even when no required field is empty", async () => {
+      await renderOnSection(0, 3);
+
+      const saveAndTest = screen.getByRole("button", { name: "Save & Test" });
+      expect(saveAndTest).toBeDisabled();
+      expect(saveAndTest).toHaveAccessibleDescription(COMPLETE_ALL_STEPS);
+      expect(screen.getByRole("button", { name: "Save as a draft" })).toBeEnabled();
+      expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+      await hoverTooltipTrigger(saveAndTest);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(COMPLETE_ALL_STEPS);
+    });
+
+    it("asks to complete the steps, not to fill the required fields, before the last section", async () => {
+      await renderOnSection(1, 3, ["Host"]);
+
+      expect(screen.getByRole("button", { name: "Save & Test" })).toHaveAccessibleDescription(COMPLETE_ALL_STEPS);
+      expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
+    });
+
+    it("enables Save & Test on the last section", async () => {
+      await renderOnSection(2, 3);
+
+      const saveAndTest = screen.getByRole("button", { name: "Save & Test" });
+      expect(saveAndTest).toBeEnabled();
+      expect(saveAndTest).not.toHaveAccessibleDescription();
+      expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
+    });
+
+    it("lists the empty required fields on the last section", async () => {
+      await renderOnSection(2, 3, ["Host"]);
+
+      const saveAndTest = screen.getByRole("button", { name: "Save & Test" });
+      expect(saveAndTest).toBeDisabled();
+      expect(saveAndTest).toHaveAccessibleDescription(`${FILL_REQUIRED_FIELDS}: Host`);
+    });
+
+    it("enables Save & Test in a form with one section", async () => {
+      await renderOnSection(0, 1);
+
+      expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
+      expect(screen.getByText("Step 1 of 1")).toBeInTheDocument();
+    });
+
+    it("disables the Save & Test dropdown and its caret before the last section", async () => {
+      mockExperiments({ "connector.allowSavingWithoutTesting": true });
+      await render(
+        <SectionProgressProvider value={{ activeSectionIndex: 0, sectionCount: 2 }}>
+          <ControlsWithForm onSubmitWithoutCheck={jest.fn().mockResolvedValue(undefined)} />
+        </SectionProgressProvider>
+      );
+
+      expect(screen.getByRole("button", { name: "Save & Test" })).toHaveAccessibleDescription(COMPLETE_ALL_STEPS);
+      expect(screen.getByTestId("create-source-button_dropdown-caret")).toBeDisabled();
+    });
+
+    it("shows no step counter outside a form with sections", async () => {
+      await render(<ControlsWithForm />);
+
+      expect(screen.queryByTestId("connector-form-section-progress")).not.toBeInTheDocument();
+    });
   });
 
   describe("footer slot", () => {

@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import isEqual from "lodash/isEqual";
 import { IntlProvider } from "react-intl";
 
 import { mockSource } from "test-utils";
@@ -23,14 +24,17 @@ const formValues = {
 const mockTrackTestConnectorFailure = jest.fn();
 const mockTrackTestConnectorStarted = jest.fn();
 const mockTrackTestConnectorSuccess = jest.fn();
+let mockOnCheckSection: ((values: typeof formValues) => Promise<unknown>) | undefined;
 
 jest.mock("area/connector/components/ConnectorForm", () => ({
   ConnectorForm: ({
     onSubmit,
+    onCheckSection,
     formHeader,
     renderFooter,
   }: {
     onSubmit: (values: typeof formValues) => Promise<void>;
+    onCheckSection: (values: typeof formValues) => Promise<unknown>;
     formHeader: React.ReactNode;
     renderFooter: (props: {
       dirty: boolean;
@@ -39,21 +43,24 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
       resetConnectorForm: jest.Mock;
       getValues: () => typeof formValues;
     }) => React.ReactNode;
-  }) => (
-    <>
-      {formHeader}
-      <button type="button" onClick={() => onSubmit(formValues).catch(() => undefined)}>
-        Submit form
-      </button>
-      {renderFooter({
-        dirty: true,
-        isSubmitting: false,
-        isValid: false,
-        resetConnectorForm: jest.fn(),
-        getValues: () => formValues,
-      })}
-    </>
-  ),
+  }) => {
+    mockOnCheckSection = onCheckSection;
+    return (
+      <>
+        {formHeader}
+        <button type="button" onClick={() => onSubmit(formValues).catch(() => undefined)}>
+          Submit form
+        </button>
+        {renderFooter({
+          dirty: true,
+          isSubmitting: false,
+          isValid: false,
+          resetConnectorForm: jest.fn(),
+          getValues: () => formValues,
+        })}
+      </>
+    );
+  },
 }));
 
 jest.mock("./components/Controls", () => ({
@@ -201,9 +208,9 @@ const newSourceCardProps = {
   onSubmit: jest.fn(),
 };
 
-const renderCard = (props: React.ComponentProps<typeof ConnectorCard>) => {
+const renderCard = (props: React.ComponentProps<typeof ConnectorCard>, testConnector = jest.fn()) => {
   mockUseTestConnectorCommand.mockReturnValue({
-    testConnector: jest.fn(),
+    testConnector,
     isTestConnectionInProgress: false,
     onStopTesting: jest.fn(),
     error: null,
@@ -313,5 +320,67 @@ describe("ConnectorCard while the spec loads", () => {
 
     expect(screen.getByText(/Taking too long\?/)).toHaveTextContent(/^Taking too long\? See here for support$/);
     expect(screen.getByRole("link", { name: "here" })).toBeInTheDocument();
+  });
+});
+
+describe("ConnectorCard section check", () => {
+  const sectionValues = {
+    ...formValues,
+    connectionConfiguration: { host: "db.example.com", "check-section": "connection" },
+  };
+
+  // ConnectorCard calls useTestConnectorCommand twice: with all its props for Save & Test, and with only the form type
+  // for the section check
+  const renderCardWithSectionCheck = (sectionTestConnector: jest.Mock) => {
+    const saveAndTestConnector = jest.fn();
+    mockUseTestConnectorCommand.mockImplementation((commandProps) => ({
+      testConnector: isEqual(commandProps, { formType: commandProps.formType })
+        ? sectionTestConnector
+        : saveAndTestConnector,
+      isTestConnectionInProgress: false,
+      onStopTesting: jest.fn(),
+      error: null,
+      reset: jest.fn(),
+      isSuccess: false,
+    }));
+
+    render(<ConnectorCard {...newSourceCardProps} />, {
+      wrapper: ({ children }) => (
+        <IntlProvider locale="en" messages={messages}>
+          {children}
+        </IntlProvider>
+      ),
+    });
+    return { saveAndTestConnector };
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockOnCheckSection = undefined;
+  });
+
+  it("checks the section values with the connector's service type in its own check, not in the Save & Test one", async () => {
+    const sectionTestConnector = jest.fn().mockResolvedValue({ id: "command-id", status: "succeeded" });
+    const { saveAndTestConnector } = renderCardWithSectionCheck(sectionTestConnector);
+
+    await mockOnCheckSection?.(sectionValues);
+    expect(sectionTestConnector).toHaveBeenCalledWith({
+      ...sectionValues,
+      serviceType: mockSourceDefinition.sourceDefinitionId,
+    });
+    expect(saveAndTestConnector).not.toHaveBeenCalled();
+  });
+
+  it("rejects with the error of a failed check", async () => {
+    const checkError = new Error("The host db.example.com is not reachable.");
+    renderCardWithSectionCheck(jest.fn().mockRejectedValue(checkError));
+
+    await expect(mockOnCheckSection?.(sectionValues)).rejects.toBe(checkError);
+  });
+
+  it("rejects with a generic message when the check was aborted", async () => {
+    renderCardWithSectionCheck(jest.fn().mockResolvedValue({ id: "command-id", status: "failed" }));
+
+    await expect(mockOnCheckSection?.(sectionValues)).rejects.toThrow(messages["connector.check.failed"]);
   });
 });

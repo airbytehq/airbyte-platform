@@ -12,15 +12,14 @@ import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/sour
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
-import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
+import { FormBlock, FormGroupItem, GroupDetails, SectionDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
+import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID, getSpecSections } from "./components/Steps/specSections";
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
 
 const NAME_GROUP_ID = "__name_group";
-export const DEFAULT_GROUP_ID = "default";
-export const ADVANCED_GROUP_ID = "advanced";
 
 interface ConnectorFormValuesWithAnyConfiguration extends ConnectorFormValues {
   // using unknown is incompatible with react-hook-form
@@ -32,6 +31,7 @@ export interface BuildFormHook {
   formFields: FormBlock[];
   validationSchema: AnySchema;
   groups: GroupDetails[];
+  sections?: SectionDetails[];
 }
 
 export function setDefaultValues(
@@ -83,6 +83,7 @@ export function useBuildForm(
     | SourceDefinitionSpecificationDraft
     | undefined,
   supportsResourceAllocation: boolean,
+  isSectionedSetupFormEnabled: boolean,
   initialValues?: Partial<ConnectorFormValues>
 ): BuildFormHook {
   const { formatMessage } = useIntl();
@@ -255,11 +256,20 @@ export function useBuildForm(
       ];
     }, [formatMessage, selectedConnectorDefinitionSpecification?.connectionSpecification, supportsResourceAllocation]);
 
+    const sections = useMemo(
+      () =>
+        isSectionedSetupFormEnabled && !isEditMode
+          ? getSpecSections(selectedConnectorDefinitionSpecification?.connectionSpecification)
+          : undefined,
+      [isEditMode, isSectionedSetupFormEnabled, selectedConnectorDefinitionSpecification?.connectionSpecification]
+    );
+
     return {
       initialValues: startValues,
       formFields: flattenedFormFields,
       validationSchema,
       groups,
+      sections,
     };
   } catch (e) {
     // catch and re-throw form-build errors to enrich them with the connector id

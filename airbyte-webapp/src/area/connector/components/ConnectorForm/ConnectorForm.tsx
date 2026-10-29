@@ -8,6 +8,7 @@ import {
   ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useFormChangeTrackerService, useUniqueFormId } from "core/services/FormChangeTracker";
 import { removeEmptyProperties } from "core/utils/form";
@@ -18,7 +19,7 @@ import { ConnectorFormValues } from "./types";
 import { useBuildForm } from "./useBuildForm";
 
 export interface ConnectorFormProps
-  extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure" | "formElementId"> {
+  extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure" | "formElementId" | "sections"> {
   formType: "source" | "destination";
   formId?: string;
   /**
@@ -42,6 +43,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
   const { clearFormChange } = useFormChangeTrackerService();
   const isResourceAllocationEnabled = useFeature(FeatureItem.ConnectorResourceAllocation);
+  const isSectionedSetupFormEnabled = useExperiment("connector.sectionedSetupForm");
   const formElementId = useId();
 
   const {
@@ -56,11 +58,12 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     formAutomation,
   } = props;
 
-  const { formFields, initialValues, validationSchema, groups } = useBuildForm(
+  const { formFields, initialValues, validationSchema, groups, sections } = useBuildForm(
     Boolean(isEditMode),
     formType,
     selectedConnectorDefinitionSpecification,
     isResourceAllocationEnabled,
+    isSectionedSetupFormEnabled,
     formValues
   );
 
@@ -112,6 +115,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
           formFields={formFields}
           castValues={castValues}
           groupStructure={groups}
+          sections={sections}
         />
         {formAutomation}
       </ConnectorFormContextProvider>

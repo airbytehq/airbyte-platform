@@ -1,20 +1,30 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { getAllByRole, getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
+import {
+  getAllByRole,
+  getByTestId,
+  screen,
+  waitFor,
+  getByRole,
+  getByText,
+  fireEvent,
+  queryByTestId,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 import { useFormContext } from "react-hook-form";
 
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
+import { mockExperiments } from "test-utils/mockExperiments";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { Controls } from "area/connector/components/ConnectorCard/components/Controls";
 import { ConnectorDocumentationLayout } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationLayout";
 import { ConnectorForm, ConnectorFormProps } from "area/connector/components/ConnectorForm";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
-import { useCompleteOAuth } from "core/api";
-import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
+import { CommandErrorWithJobInfo, useCompleteOAuth } from "core/api";
+import { DestinationDefinitionSpecificationRead, JobConfigType, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { FeatureItem } from "core/services/features";
@@ -27,6 +37,7 @@ import { DocumentationPanelContext } from "../ConnectorDocumentationLayout/Docum
 jest.mock("components/ui/Markdown", () => ({ children }: React.PropsWithChildren<unknown>) => <>{children}</>);
 
 jest.mock("core/api", () => ({
+  CommandErrorWithJobInfo: jest.requireActual("core/api/errors").CommandErrorWithJobInfo,
   useDestinationList: () => ({ destinations: [] }),
   useConsentUrls: () => ({
     getSourceConsentUrl: (): OAuthConsentRead => ({
@@ -311,6 +322,12 @@ describe("Connector form", () => {
     features,
     formAutomation,
     renderFooter = () => <button type="submit">Submit</button>,
+    onCheckSection,
+    title,
+    description,
+    onSubmit = async (values) => {
+      result = values;
+    },
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
@@ -318,18 +335,23 @@ describe("Connector form", () => {
     features?: FeatureItem[];
     formAutomation?: React.ReactNode;
     renderFooter?: ConnectorFormProps["renderFooter"];
+    onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
+    title?: string;
+    description?: React.ReactNode;
+    onSubmit?: ConnectorFormProps["onSubmit"];
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
         canEdit
         formType="source"
         formValues={{ name: "test-name", connectionConfiguration: { ...formValuesOverride } }}
-        onSubmit={async (values) => {
-          result = values;
-        }}
+        onSubmit={onSubmit}
         isEditMode={Boolean(formValuesOverride)}
         renderFooter={renderFooter}
         formAutomation={formAutomation}
+        onCheckSection={onCheckSection}
+        title={title}
+        description={description}
         selectedConnectorDefinition={connectorDefinition}
         selectedConnectorDefinitionSpecification={
           {
@@ -354,6 +376,7 @@ describe("Connector form", () => {
 
   beforeEach(async () => {
     result = undefined;
+    mockExperiments({ "connector.sectionedSetupForm": false });
   });
 
   beforeAll(() => {
@@ -1676,6 +1699,943 @@ describe("Connector form", () => {
       const optionalFields = screen.getAllByTestId("optional-fields");
       expect(optionalFields[0]).toHaveTextContent("Advanced");
       expect(optionalFields).toHaveLength(1);
+    });
+  });
+
+  describe("sections", () => {
+    const sectionedSpec = {
+      type: "object",
+      required: ["host", "port", "database", "username", "replication_method"],
+      groups: [{ id: "db" }, { id: "security" }, { id: "auth" }, { id: "sync" }, { id: "advanced", title: "Advanced" }],
+      sections: [
+        { id: "connection", title: "Connection", order: 0, check: true, groups: ["db", "security"] },
+        { id: "credentials", title: "Credentials", order: 1, check: true, groups: ["auth"] },
+        { id: "sync_method", title: "Sync method", order: 2, check: true, groups: ["sync"] },
+        { id: "review", title: "Review & set up", order: 3, groups: ["advanced"] },
+      ],
+      properties: {
+        host: { type: "string", title: "Host", group: "db", order: 0 },
+        port: { type: "integer", title: "Port", default: 5432, group: "db", order: 1 },
+        database: { type: "string", title: "Database name", group: "db", order: 2 },
+        ssl_mode: {
+          type: "string",
+          title: "SSL mode",
+          enum: ["disable", "require"],
+          default: "require",
+          group: "security",
+        },
+        username: { type: "string", title: "Username", group: "auth", order: 0 },
+        password: { type: "string", title: "Password", airbyte_secret: true, group: "auth", order: 1 },
+        replication_method: {
+          type: "object",
+          title: "Update method",
+          display_type: "radio",
+          group: "sync",
+          oneOf: [
+            { title: "Xmin", required: ["method"], properties: { method: { type: "string", const: "Xmin" } } },
+            {
+              title: "CDC",
+              required: ["method", "replication_slot", "publication"],
+              properties: {
+                method: { type: "string", const: "CDC" },
+                replication_slot: { type: "string", title: "Replication slot" },
+                publication: { type: "string", title: "Publication" },
+              },
+            },
+          ],
+        },
+        jdbc_url_params: { type: "string", title: "JDBC URL parameters", group: "advanced" },
+      },
+    } satisfies AirbyteJSONSchema & { groups: unknown[]; sections: unknown[] };
+    const sectionedSpecification = { connectionSpecification: sectionedSpec };
+
+    beforeEach(() => {
+      mockExperiments({ "connector.sectionedSetupForm": true });
+    });
+
+    const getSection = (sectionId: string) => screen.getByTestId(`connector-form-section-${sectionId}`);
+    const getSectionTitle = (sectionId: string) => getByRole(getSection(sectionId), "heading", { level: 2 });
+    const getEditButton = (sectionId: string, title: string) =>
+      getByRole(getSection(sectionId), "button", { name: `Edit ${title}` });
+    const clickSectionButton = (name: string) => userEvent.click(screen.getByRole("button", { name }));
+
+    async function completeConnectionSection(container: HTMLElement) {
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db.example.com");
+      await userEvent.type(getInputByName(container, "connectionConfiguration.database")!, "analytics");
+      await clickSectionButton("Continue");
+    }
+
+    it("shows only the first section's fields and keeps the other sections' fields mounted", async () => {
+      const container = await renderForm({ specificationOverride: sectionedSpecification });
+
+      expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.username")).toBeInTheDocument();
+      expect(getInputByName(container, "connectionConfiguration.username")).not.toBeVisible();
+      expect(getInputByName(container, "name")).not.toBeVisible();
+      expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
+    });
+
+    it("disables Continue until the required fields of the active section are filled", async () => {
+      const container = await renderForm({ specificationOverride: sectionedSpecification });
+      const continueButton = screen.getByRole("button", { name: "Continue" });
+
+      expect(continueButton).toBeDisabled();
+      expect(continueButton).toHaveAccessibleDescription(
+        "Fill out required fields before continuing: Host and Database name"
+      );
+
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db.example.com");
+      expect(continueButton).toHaveAccessibleDescription("Fill out required fields before continuing: Database name");
+
+      await userEvent.type(getInputByName(container, "connectionConfiguration.database")!, "analytics");
+      expect(continueButton).toBeEnabled();
+      await clickSectionButton("Continue");
+
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+      expect(getInputByName(container, "connectionConfiguration.host")).not.toBeVisible();
+      expect(getSection("credentials")).not.toHaveTextContent("Required");
+      expect(getSection("credentials")).toContainElement(screen.getByRole("button", { name: "Back" }));
+      expect(getSection("credentials")).toContainElement(screen.getByRole("button", { name: "Continue" }));
+    });
+
+    it("goes back and reopens a completed section with edit", async () => {
+      const container = await renderForm({ specificationOverride: sectionedSpecification });
+      await completeConnectionSection(container);
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+
+      await clickSectionButton("Back");
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible());
+      expect(getInputByName(container, "connectionConfiguration.host")).toHaveValue("db.example.com");
+
+      await completeConnectionSection(container);
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+      await userEvent.click(getEditButton("connection", "Connection"));
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible());
+    });
+
+    it("shows the form title above the steps, with its description in a tooltip", async () => {
+      await renderForm({
+        specificationOverride: sectionedSpecification,
+        title: "New source",
+        description: "Sources are where you pull data from.",
+      });
+      const formTitle = screen.getByRole("heading", { name: "New source" });
+
+      expect(formTitle.compareDocumentPosition(getSection("connection"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      await userEvent.hover(formTitle.nextElementSibling!);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent("Sources are where you pull data from.");
+    });
+
+    describe("with the connector.sectionedSetupForm experiment off", () => {
+      beforeEach(() => {
+        mockExperiments({ "connector.sectionedSetupForm": false });
+      });
+
+      it("renders a spec with sections as one page", async () => {
+        const container = await renderForm({ specificationOverride: sectionedSpecification });
+
+        expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+        expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible();
+        expect(screen.queryByTestId("connector-form-section-connection")).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+      });
+
+      it("ignores sections that are not valid", async () => {
+        const container = await renderForm({
+          specificationOverride: { connectionSpecification: { ...sectionedSpec, sections: [{ id: 1 }, "review"] } },
+        });
+
+        expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+        expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+      });
+    });
+
+    describe("focus", () => {
+      it("does not move focus when the form renders", async () => {
+        await renderForm({ specificationOverride: sectionedSpecification });
+
+        expect(getSectionTitle("connection")).not.toHaveFocus();
+      });
+
+      it("focuses the first field with an error when a section is not valid", async () => {
+        const container = await renderForm({
+          specificationOverride: {
+            connectionSpecification: {
+              ...sectionedSpec,
+              properties: {
+                ...sectionedSpec.properties,
+                host: { ...sectionedSpec.properties.host, pattern: "^[a-z.]+$" },
+              },
+            },
+          },
+        });
+        await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "DB.example.com");
+        await userEvent.type(getInputByName(container, "connectionConfiguration.database")!, "analytics");
+
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toHaveFocus());
+      });
+
+      it("moves focus to the title of the section that opens on Continue, Back and Edit", async () => {
+        const container = await renderForm({ specificationOverride: sectionedSpecification });
+        const scrollIntoView = jest.mocked(Element.prototype.scrollIntoView);
+        scrollIntoView.mockClear();
+
+        await completeConnectionSection(container);
+        await waitFor(() => expect(getSectionTitle("credentials")).toHaveFocus());
+        expect(scrollIntoView.mock.contexts).toEqual([getSectionTitle("credentials")]);
+
+        await clickSectionButton("Back");
+        await waitFor(() => expect(getSectionTitle("connection")).toHaveFocus());
+
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getSectionTitle("credentials")).toHaveFocus());
+
+        await userEvent.click(getEditButton("connection", "Connection"));
+        await waitFor(() => expect(getSectionTitle("connection")).toHaveFocus());
+      });
+    });
+
+    describe("accessibility", () => {
+      it("titles every step with a level 2 heading and marks the current and the completed steps", async () => {
+        const container = await renderForm({ specificationOverride: sectionedSpecification });
+
+        expect(getSectionTitle("connection")).toHaveAccessibleName("Connection current");
+        expect(getSectionTitle("connection")).toHaveAttribute("aria-current", "step");
+        expect(getSectionTitle("credentials")).toHaveAccessibleName("Credentials");
+        expect(getSectionTitle("credentials")).not.toHaveAttribute("aria-current");
+        expect(getSectionTitle("review")).toHaveAccessibleName("Review & set up");
+
+        await completeConnectionSection(container);
+
+        await waitFor(() => expect(getSectionTitle("connection")).toHaveAccessibleName("Connection completed"));
+        expect(getSectionTitle("connection")).not.toHaveAttribute("aria-current");
+        expect(getSectionTitle("credentials")).toHaveAccessibleName("Credentials current");
+        expect(getSectionTitle("credentials")).toHaveAttribute("aria-current", "step");
+      });
+
+      it("names each Edit button after its section", async () => {
+        const container = await renderForm({ specificationOverride: sectionedSpecification });
+        await completeConnectionSection(container);
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+        await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(getEditButton("credentials", "Credentials")).toBeInTheDocument());
+        expect(getEditButton("connection", "Connection")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+      });
+    });
+
+    it("shows the title of a titled group as a subheading, with the optional fields of each group in its block", async () => {
+      const container = await renderForm({
+        specificationOverride: {
+          connectionSpecification: {
+            ...sectionedSpec,
+            required: [...sectionedSpec.required, "ssl_mode"],
+            groups: sectionedSpec.groups.map((group) =>
+              group.id === "security" ? { ...group, title: "Network & security" } : group
+            ),
+            properties: {
+              ...sectionedSpec.properties,
+              schemas: { type: "string", title: "Schemas", group: "db" },
+            },
+          },
+        },
+      });
+      const connectionSection = getSection("connection");
+      const securityHeading = getByRole(connectionSection, "heading", { level: 3, name: "Network & security" });
+      const dbOptionalFields = getByTestId(connectionSection, "optional-fields");
+      const hostInput = getInputByName(container, "connectionConfiguration.host")!;
+
+      expect(securityHeading.compareDocumentPosition(getByText(connectionSection, "SSL mode"))).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+      let dbBlock = dbOptionalFields.parentElement;
+      while (dbBlock && !dbBlock.contains(hostInput)) {
+        dbBlock = dbBlock.parentElement;
+      }
+      expect(dbBlock).not.toContainElement(securityHeading);
+      expect(dbOptionalFields.compareDocumentPosition(securityHeading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it("requires the fields of the selected condition before leaving its section, then submits all sections", async () => {
+      const container = await renderForm({ specificationOverride: sectionedSpecification });
+      await completeConnectionSection(container);
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+      await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(screen.getByTestId("radio-option.1")).toBeVisible());
+
+      await userEvent.click(screen.getByTestId("radio-option.1"));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled());
+      expect(screen.getByRole("button", { name: "Continue" })).toHaveAccessibleDescription(
+        "Fill out required fields before continuing: Publication and Replication slot"
+      );
+
+      await userEvent.type(
+        getInputByName(container, "connectionConfiguration.replication_method.replication_slot")!,
+        "slot"
+      );
+      await userEvent.type(getInputByName(container, "connectionConfiguration.replication_method.publication")!, "pub");
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(getInputByName(container, "name")).toBeVisible());
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          host: "db.example.com",
+          port: 5432,
+          database: "analytics",
+          ssl_mode: "require",
+          username: "airbyte_reader",
+          replication_method: { method: "CDC", replication_slot: "slot", publication: "pub" },
+        },
+      });
+    });
+
+    it("opens the earliest section with an error when the final submit fails", async () => {
+      const ClearHost = () => {
+        const { setValue } = useFormContext<ConnectorFormValues>();
+        return (
+          <button type="button" onClick={() => setValue("connectionConfiguration.host", "")}>
+            Clear host
+          </button>
+        );
+      };
+      const container = await renderForm({
+        specificationOverride: sectionedSpecification,
+        formAutomation: <ClearHost />,
+      });
+      await completeConnectionSection(container);
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+      await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(getInputByName(container, "name")).toBeVisible());
+
+      await clickSectionButton("Clear host");
+      await submitForm(container);
+
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible());
+      expect(getSectionTitle("connection")).toHaveFocus();
+      expect(result).toBeUndefined();
+    });
+
+    it("locks Back and Edit while the final submit runs", async () => {
+      let finishSubmit: () => void = () => undefined;
+      const container = await renderForm({
+        specificationOverride: sectionedSpecification,
+        onSubmit: () =>
+          new Promise<void>((resolve) => {
+            finishSubmit = resolve;
+          }),
+      });
+      await completeConnectionSection(container);
+      await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+      await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+      await clickSectionButton("Continue");
+      await waitFor(() => expect(getInputByName(container, "name")).toBeVisible());
+
+      await submitForm(container);
+
+      await waitFor(() => expect(getEditButton("connection", "Connection")).toBeDisabled());
+      expect(getEditButton("credentials", "Credentials")).toBeDisabled();
+      expect(getEditButton("sync_method", "Sync method")).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+
+      finishSubmit();
+
+      await waitFor(() => expect(getEditButton("connection", "Connection")).toBeEnabled());
+      expect(screen.getByRole("button", { name: "Back" })).toBeEnabled();
+    });
+
+    describe("with OAuth", () => {
+      const oauthSectionedSpecification = {
+        connectionSpecification: {
+          type: "object",
+          required: ["credentials", "start_date"],
+          groups: [{ id: "auth" }, { id: "filters" }],
+          sections: [
+            { id: "connect", title: "Connect account", order: 0, groups: ["auth"] },
+            { id: "review", title: "Review & set up", order: 1, groups: ["filters"] },
+          ],
+          properties: {
+            credentials: {
+              type: "object",
+              group: "auth",
+              oneOf: [
+                {
+                  title: "OAuth",
+                  required: ["access_token"],
+                  properties: {
+                    auth_type: { type: "string", const: "oauth" },
+                    access_token: { type: "string", airbyte_secret: true },
+                  },
+                },
+              ],
+            },
+            start_date: { type: "string", title: "Start date", group: "filters" },
+          },
+        },
+        advancedAuth: {
+          authFlowType: "oauth2.0",
+          predicateKey: ["credentials", "auth_type"],
+          predicateValue: "oauth",
+          oauthConfigSpecification: {
+            completeOAuthOutputSpecification: {
+              type: "object",
+              properties: {
+                access_token: { type: "string", path_in_connector_config: ["credentials", "access_token"] },
+              },
+            },
+          },
+        },
+      } satisfies Partial<ConnectorDefinitionSpecificationRead>;
+      const withConnectSectionCheck = {
+        ...oauthSectionedSpecification,
+        connectionSpecification: {
+          ...oauthSectionedSpecification.connectionSpecification,
+          sections: oauthSectionedSpecification.connectionSpecification.sections.map((section) =>
+            section.id === "connect" ? { ...section, check: true } : section
+          ),
+        },
+      };
+
+      beforeEach(() => {
+        (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
+          completeDestinationOAuth: jest.fn(),
+          completeSourceOAuth: () =>
+            Promise.resolve({ request_succeeded: true, auth_payload: { access_token: "mytoken" } }),
+        });
+      });
+
+      it("does not block a section on fields that OAuth fills, and reopens it when the final submit needs them", async () => {
+        const container = await renderForm({ specificationOverride: oauthSectionedSpecification });
+        expect(getOAuthButton(container)).toBeVisible();
+
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.start_date")).toBeVisible());
+
+        await userEvent.type(getInputByName(container, "connectionConfiguration.start_date")!, "2024-01-01");
+        await submitForm(container);
+
+        await waitFor(() => expect(getOAuthButton(container)).toBeVisible());
+        expect(getSectionTitle("connect")).toHaveFocus();
+        expect(getSection("connect")).toHaveTextContent("Authentication required");
+        expect(result).toBeUndefined();
+      });
+
+      it("asks the user to authenticate instead of checking a section whose OAuth fields are empty", async () => {
+        const onCheckSection = jest.fn().mockResolvedValue(undefined);
+        const container = await renderForm({ specificationOverride: withConnectSectionCheck, onCheckSection });
+
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(getSection("connect")).toHaveTextContent("Authentication required"));
+        expect(document.activeElement).toHaveTextContent("Authentication required");
+        expect(getOAuthButton(container)).toBeVisible();
+        expect(onCheckSection).not.toHaveBeenCalled();
+
+        await executeOAuthFlow(container);
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.start_date")).toBeVisible());
+        expect(onCheckSection).toHaveBeenCalledTimes(1);
+        expect(onCheckSection.mock.calls[0][0].connectionConfiguration).toEqual(
+          expect.objectContaining({
+            credentials: expect.objectContaining({ access_token: "mytoken" }),
+            "check-section": "connect",
+          })
+        );
+      });
+    });
+
+    it("fails to build the form when a group is in two sections", async () => {
+      jest.spyOn(console, "error").mockImplementation(() => undefined);
+      const invalidSpec = {
+        ...sectionedSpec,
+        sections: [
+          { id: "one", title: "One", order: 0, groups: ["db"] },
+          { id: "two", title: "Two", order: 1, groups: ["db"] },
+        ],
+      };
+
+      await expect(renderForm({ specificationOverride: { connectionSpecification: invalidSpec } })).rejects.toThrow(
+        "connectorForm.error.invalidSections"
+      );
+    });
+
+    it("orders sections by their order, not by their place in the list", async () => {
+      const container = await renderForm({
+        specificationOverride: {
+          connectionSpecification: { ...sectionedSpec, sections: [...sectionedSpec.sections].reverse() },
+        },
+      });
+
+      expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+      expect(getInputByName(container, "name")).not.toBeVisible();
+    });
+
+    describe("footer", () => {
+      const COMPLETE_ALL_STEPS = "Complete all steps before saving";
+      const renderControlsFooter: ConnectorFormProps["renderFooter"] = ({
+        dirty,
+        isSubmitting,
+        isValid,
+        emptyRequiredFields,
+        formElementId,
+        canEdit,
+        isEditMode,
+      }) => (
+        <Controls
+          formType="source"
+          isSubmitting={isSubmitting}
+          isValid={isValid}
+          emptyRequiredFields={emptyRequiredFields}
+          dirty={dirty}
+          onCancelClick={jest.fn()}
+          onRetestClick={jest.fn()}
+          onCancelTesting={jest.fn()}
+          connectionTestSuccess={false}
+          hasDefinition
+          isEditMode={Boolean(isEditMode)}
+          formElementId={formElementId}
+          canEdit={canEdit}
+        />
+      );
+      const getSaveAndTest = () => screen.getByRole("button", { name: "Save & Test" });
+      const getStepCounter = () => screen.getByTestId("connector-form-section-progress");
+
+      it("keeps Save & Test out of the section cards on every section, and enables it only on the last section", async () => {
+        const container = await renderForm({
+          specificationOverride: sectionedSpecification,
+          renderFooter: renderControlsFooter,
+        });
+
+        expect(getStepCounter()).toHaveTextContent("Step 1 of 4");
+        expect(screen.getByText("Step 1 of 4")).toHaveAttribute("role", "status");
+        expect(getSaveAndTest()).toBeDisabled();
+        expect(getSaveAndTest()).toHaveAccessibleDescription(COMPLETE_ALL_STEPS);
+        expect(getSection("connection")).not.toContainElement(getSaveAndTest());
+
+        await completeConnectionSection(container);
+        await waitFor(() => expect(getStepCounter()).toHaveTextContent("Step 2 of 4"));
+        expect(getSaveAndTest()).toBeDisabled();
+
+        await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getStepCounter()).toHaveTextContent("Step 3 of 4"));
+        expect(getSaveAndTest()).toBeDisabled();
+
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getStepCounter()).toHaveTextContent("Step 4 of 4"));
+        expect(getSaveAndTest()).toBeEnabled();
+        expect(getSaveAndTest()).not.toHaveAccessibleDescription();
+        expect(getSection("review")).not.toContainElement(getSaveAndTest());
+        expect(getByRole(getSection("review"), "button", { name: "Back" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+
+        await clickSectionButton("Back");
+        await waitFor(() => expect(getStepCounter()).toHaveTextContent("Step 3 of 4"));
+        expect(getSaveAndTest()).toBeDisabled();
+
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getSaveAndTest()).toBeEnabled());
+        await userEvent.click(getSaveAndTest());
+        await waitFor(() => expect(result).toBeDefined());
+      });
+
+      it("shows no step counter and gates Save & Test only on required fields in a form without sections", async () => {
+        const container = await renderForm({
+          specificationOverride: {
+            connectionSpecification: {
+              type: "object",
+              required: ["host"],
+              properties: { host: { type: "string", title: "Host" } },
+            },
+          },
+          renderFooter: renderControlsFooter,
+        });
+
+        expect(screen.queryByTestId("connector-form-section-progress")).not.toBeInTheDocument();
+        expect(getSaveAndTest()).toBeDisabled();
+        expect(getSaveAndTest()).toHaveAccessibleDescription("Fill out required fields before saving: Host");
+
+        await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db.example.com");
+
+        await waitFor(() => expect(getSaveAndTest()).toBeEnabled());
+      });
+
+      it("shows no step counter and does not gate Save & Test on sections in edit mode", async () => {
+        await renderForm({
+          specificationOverride: sectionedSpecification,
+          formValuesOverride: {
+            host: "db.example.com",
+            port: 5432,
+            database: "analytics",
+            username: "airbyte_reader",
+            replication_method: { method: "Xmin" },
+          },
+          renderFooter: renderControlsFooter,
+        });
+
+        expect(screen.queryByTestId("connector-form-section-progress")).not.toBeInTheDocument();
+        expect(getSaveAndTest()).not.toHaveAccessibleDescription();
+      });
+    });
+
+    describe("section check", () => {
+      async function completeCredentialsSection(container: HTMLElement) {
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+        await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+        await clickSectionButton("Continue");
+      }
+
+      it("checks each section that is not the last with its id, and not the last section or the final submit", async () => {
+        const onCheckSection = jest.fn().mockResolvedValue(undefined);
+        const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+
+        await completeConnectionSection(container);
+
+        await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(1));
+        const connectionCheckValues: ConnectorFormValues = onCheckSection.mock.calls[0][0];
+        expect(connectionCheckValues.connectionConfiguration).toEqual(
+          expect.objectContaining({ host: "db.example.com", database: "analytics", "check-section": "connection" })
+        );
+        expect(connectionCheckValues.connectionConfiguration).not.toHaveProperty("username");
+
+        await completeCredentialsSection(container);
+        await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(2));
+        expect(onCheckSection.mock.calls[1][0].connectionConfiguration).toEqual(
+          expect.objectContaining({
+            host: "db.example.com",
+            database: "analytics",
+            username: "airbyte_reader",
+            "check-section": "credentials",
+          })
+        );
+
+        await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getInputByName(container, "name")).toBeVisible());
+        expect(onCheckSection).toHaveBeenCalledTimes(3);
+        expect(onCheckSection.mock.calls[2][0].connectionConfiguration["check-section"]).toBe("sync_method");
+        expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+        expect(getSection("review")).not.toContainElement(getSubmitButton(container) as HTMLElement);
+        expect(getSection("review")).toContainElement(screen.getByRole("button", { name: "Back" }));
+
+        await submitForm(container);
+
+        await waitFor(() => expect(result).toBeDefined());
+        expect(result?.connectionConfiguration).not.toHaveProperty("check-section");
+        expect(onCheckSection).toHaveBeenCalledTimes(3);
+      });
+
+      it("does not check a section without check: true", async () => {
+        const onCheckSection = jest.fn().mockResolvedValue(undefined);
+        const container = await renderForm({
+          specificationOverride: {
+            connectionSpecification: {
+              ...sectionedSpec,
+              sections: sectionedSpec.sections.map((section) =>
+                section.id === "credentials" ? { ...section, check: false } : section
+              ),
+            },
+          },
+          onCheckSection,
+        });
+        await completeConnectionSection(container);
+        await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(1));
+
+        await completeCredentialsSection(container);
+
+        await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+        expect(onCheckSection).toHaveBeenCalledTimes(1);
+      });
+
+      it("leaves the fields of later sections out of the check", async () => {
+        const onCheckSection = jest.fn().mockResolvedValue(undefined);
+        const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+        await completeConnectionSection(container);
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+        await userEvent.type(getInputByName(container, "connectionConfiguration.username")!, "airbyte_reader");
+
+        await clickSectionButton("Back");
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible());
+        await userEvent.clear(getInputByName(container, "connectionConfiguration.host")!);
+        await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "replica.example.com");
+        await clickSectionButton("Continue");
+
+        await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(2));
+        const connectionConfiguration = onCheckSection.mock.calls[1][0].connectionConfiguration;
+        expect(connectionConfiguration).toEqual(
+          expect.objectContaining({ host: "replica.example.com", "check-section": "connection" })
+        );
+        expect(connectionConfiguration).not.toHaveProperty("username");
+      });
+
+      it("keeps the user on the section and shows the message when the check fails, and Back still works", async () => {
+        const failure = "The 'credentials' section check requires the 'password' field.";
+        const onCheckSection = jest
+          .fn()
+          .mockResolvedValueOnce(undefined)
+          .mockRejectedValueOnce(new Error(failure))
+          .mockResolvedValueOnce(undefined);
+        const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+        await completeConnectionSection(container);
+
+        await completeCredentialsSection(container);
+
+        await waitFor(() => expect(getSection("credentials")).toHaveTextContent(failure));
+        expect(document.activeElement).toHaveTextContent(failure);
+        expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible();
+        expect(screen.queryByTestId("radio-option.0")).not.toBeVisible();
+
+        await clickSectionButton("Back");
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible());
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+
+        await clickSectionButton("Continue");
+        await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+        expect(getSection("credentials")).not.toHaveTextContent(failure);
+      });
+
+      it("shows the running check and locks the navigation until it ends", async () => {
+        let passCheck: () => void = () => undefined;
+        const onCheckSection = jest
+          .fn()
+          .mockResolvedValueOnce(undefined)
+          .mockImplementationOnce(
+            () =>
+              new Promise<void>((resolve) => {
+                passCheck = resolve;
+              })
+          );
+        const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+        await completeConnectionSection(container);
+
+        await completeCredentialsSection(container);
+        await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(2));
+        const continueButton = screen.getByRole("button", { name: "Continue" });
+        expect(continueButton).toBeDisabled();
+        await userEvent.click(continueButton);
+        expect(onCheckSection).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+        expect(getEditButton("connection", "Connection")).toBeDisabled();
+        expect(getByRole(getSection("credentials"), "status")).toHaveTextContent("Testing Credentials…");
+
+        passCheck();
+
+        await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+        expect(screen.getByRole("button", { name: "Back" })).toBeEnabled();
+        expect(getEditButton("connection", "Connection")).toBeEnabled();
+      });
+
+      it("shows the configuration check failure with its job details", async () => {
+        const onCheckSection = jest.fn().mockRejectedValueOnce(
+          new CommandErrorWithJobInfo("Could not connect", {
+            id: "command-id",
+            configType: JobConfigType.check_connection_source,
+            failureReason: { externalMessage: "The host db.example.com is not reachable.", timestamp: 0 },
+          })
+        );
+        const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+
+        await completeConnectionSection(container);
+
+        await waitFor(() => expect(getSection("connection")).toHaveTextContent("Configuration check failed"));
+        expect(getSection("connection")).toHaveTextContent("The host db.example.com is not reachable.");
+        expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+      });
+
+      describe("logs of a failed check", () => {
+        const failedCheckWithLogs = new CommandErrorWithJobInfo("Could not connect", {
+          id: "command-id",
+          configType: JobConfigType.check_connection_source,
+          logs: { logLines: ["Could not connect to db.example.com"] },
+        });
+
+        it("does not validate the later sections when the user views the logs", async () => {
+          const onCheckSection = jest.fn().mockRejectedValueOnce(failedCheckWithLogs).mockResolvedValue(undefined);
+          const container = await renderForm({ specificationOverride: sectionedSpecification, onCheckSection });
+          await completeConnectionSection(container);
+          await waitFor(() => expect(getSection("connection")).toHaveTextContent("Configuration check failed"));
+          await userEvent.click(getSection("connection").querySelector("[data-icon='eye']")!.closest("button")!);
+          await userEvent.click(await screen.findByTestId("close-modal-button"));
+
+          await clickSectionButton("Continue");
+
+          await waitFor(() => expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible());
+          expect(getSection("credentials")).not.toHaveTextContent("Required");
+        });
+      });
+
+      describe("check passed badge", () => {
+        const CHECK_PASSED_BADGE = "connector-form-section-check-passed";
+        const ChangeField = ({ path, value }: { path: "host" | "username"; value: string }) => {
+          const { setValue } = useFormContext<ConnectorFormValues>();
+          return (
+            <button type="button" onClick={() => setValue(`connectionConfiguration.${path}`, value)}>
+              Change {path}
+            </button>
+          );
+        };
+        const ChangeConfiguration = () => {
+          const { setValue, getValues } = useFormContext<ConnectorFormValues>();
+          return (
+            <button
+              type="button"
+              onClick={() =>
+                setValue("connectionConfiguration", {
+                  ...getValues().connectionConfiguration,
+                  host: "replica.example.com",
+                })
+              }
+            >
+              Change configuration
+            </button>
+          );
+        };
+
+        async function renderAtSyncMethodSection(spec = sectionedSpec) {
+          const onCheckSection = jest.fn().mockResolvedValue(undefined);
+          const container = await renderForm({
+            specificationOverride: { connectionSpecification: spec },
+            onCheckSection,
+            formAutomation: (
+              <>
+                <ChangeField path="host" value="replica.example.com" />
+                <ChangeField path="username" value="airbyte_admin" />
+                <ChangeConfiguration />
+              </>
+            ),
+          });
+          await completeConnectionSection(container);
+          await completeCredentialsSection(container);
+          await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+          return onCheckSection;
+        }
+
+        it("shows a badge on a completed section whose check passed, and none on a section without a check", async () => {
+          await renderAtSyncMethodSection({
+            ...sectionedSpec,
+            sections: sectionedSpec.sections.map((section) =>
+              section.id === "credentials" ? { ...section, check: false } : section
+            ),
+          });
+
+          expect(getByTestId(getSection("connection"), CHECK_PASSED_BADGE)).toHaveTextContent("Check passed");
+          expect(queryByTestId(getSection("credentials"), CHECK_PASSED_BADGE)).not.toBeInTheDocument();
+          expect(queryByTestId(getSection("sync_method"), CHECK_PASSED_BADGE)).not.toBeInTheDocument();
+        });
+
+        it("hides the badge of an open section", async () => {
+          await renderAtSyncMethodSection();
+
+          await userEvent.click(getEditButton("connection", "Connection"));
+
+          await waitFor(() => expect(getSectionTitle("connection")).toHaveAttribute("aria-current", "step"));
+          expect(queryByTestId(getSection("connection"), CHECK_PASSED_BADGE)).not.toBeInTheDocument();
+        });
+
+        it("clears the badges of the section whose field changes and of the sections after it", async () => {
+          await renderAtSyncMethodSection();
+          expect(getByTestId(getSection("connection"), CHECK_PASSED_BADGE)).toBeInTheDocument();
+          expect(getByTestId(getSection("credentials"), CHECK_PASSED_BADGE)).toBeInTheDocument();
+
+          await clickSectionButton("Change host");
+
+          await waitFor(() =>
+            expect(queryByTestId(getSection("connection"), CHECK_PASSED_BADGE)).not.toBeInTheDocument()
+          );
+          expect(queryByTestId(getSection("credentials"), CHECK_PASSED_BADGE)).not.toBeInTheDocument();
+        });
+
+        it("keeps the badges of the sections before the section whose field changes", async () => {
+          await renderAtSyncMethodSection();
+
+          await clickSectionButton("Change username");
+
+          await waitFor(() =>
+            expect(queryByTestId(getSection("credentials"), CHECK_PASSED_BADGE)).not.toBeInTheDocument()
+          );
+          expect(getByTestId(getSection("connection"), CHECK_PASSED_BADGE)).toBeInTheDocument();
+        });
+
+        it("continues without a new check from a section whose check passed and whose fields did not change", async () => {
+          const onCheckSection = await renderAtSyncMethodSection();
+
+          await userEvent.click(getEditButton("connection", "Connection"));
+          await waitFor(() => expect(getSectionTitle("connection")).toHaveAttribute("aria-current", "step"));
+          await clickSectionButton("Continue");
+          await waitFor(() => expect(getSectionTitle("credentials")).toHaveAttribute("aria-current", "step"));
+          await clickSectionButton("Continue");
+
+          await waitFor(() => expect(screen.getByTestId("radio-option.0")).toBeVisible());
+          expect(onCheckSection).toHaveBeenCalledTimes(2);
+          expect(getByTestId(getSection("connection"), CHECK_PASSED_BADGE)).toBeInTheDocument();
+          expect(getByTestId(getSection("credentials"), CHECK_PASSED_BADGE)).toBeInTheDocument();
+        });
+
+        it("checks every section again after the whole connector configuration changes", async () => {
+          const onCheckSection = await renderAtSyncMethodSection();
+
+          await clickSectionButton("Change configuration");
+          await waitFor(() =>
+            expect(queryByTestId(getSection("connection"), CHECK_PASSED_BADGE)).not.toBeInTheDocument()
+          );
+          await userEvent.click(getEditButton("connection", "Connection"));
+          await clickSectionButton("Continue");
+
+          await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(3));
+          expect(onCheckSection.mock.calls[2][0].connectionConfiguration).toEqual(
+            expect.objectContaining({ host: "replica.example.com", "check-section": "connection" })
+          );
+
+          await waitFor(() => expect(getSectionTitle("credentials")).toHaveAttribute("aria-current", "step"));
+          await clickSectionButton("Continue");
+
+          await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(4));
+          expect(onCheckSection.mock.calls[3][0].connectionConfiguration).toEqual(
+            expect.objectContaining({ host: "replica.example.com", "check-section": "credentials" })
+          );
+        });
+
+        it("shows the badge again after the check of a changed section passes again", async () => {
+          const onCheckSection = await renderAtSyncMethodSection();
+          await clickSectionButton("Change host");
+          await waitFor(() =>
+            expect(queryByTestId(getSection("connection"), CHECK_PASSED_BADGE)).not.toBeInTheDocument()
+          );
+
+          await userEvent.click(getEditButton("connection", "Connection"));
+          await clickSectionButton("Continue");
+
+          await waitFor(() => expect(getByTestId(getSection("connection"), CHECK_PASSED_BADGE)).toBeInTheDocument());
+          expect(onCheckSection).toHaveBeenCalledTimes(3);
+        });
+      });
+    });
+
+    it("renders edit mode as one page", async () => {
+      const container = await renderForm({
+        specificationOverride: sectionedSpecification,
+        formValuesOverride: { host: "db.example.com", port: 5432, database: "analytics", username: "airbyte_reader" },
+      });
+
+      expect(getInputByName(container, "connectionConfiguration.host")).toBeVisible();
+      expect(getInputByName(container, "connectionConfiguration.username")).toBeVisible();
+      expect(getSubmitButton(container)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
     });
   });
 });

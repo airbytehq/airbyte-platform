@@ -2,14 +2,15 @@ import uniq from "lodash/uniq";
 import React, { ReactNode, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
-import { AnySchema, ValidationError } from "yup";
 
 import { FlexContainer } from "components/ui/Flex";
 
-import { FormBlock, GroupDetails } from "core/form/types";
+import { FormBlock, GroupDetails, SectionDetails } from "core/form/types";
 
 import { FormSection } from "./components/Sections/FormSection";
+import { ConnectorFormSteps } from "./components/Steps/ConnectorFormSteps";
 import { useConnectorForm } from "./connectorFormContext";
+import { getEmptyRequiredFields } from "./requiredFields";
 import { ConnectorFormValues } from "./types";
 import { useAuthentication } from "./useAuthentication";
 
@@ -34,6 +35,9 @@ interface RenderFooterArgs {
 export interface FormRootProps {
   formFields: FormBlock[];
   groupStructure?: GroupDetails[];
+  sections?: SectionDetails[];
+  /** Create mode with sections only. See `ConnectorFormSteps`. */
+  onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
   connectionTestSuccess?: boolean;
   isTestConnectionInProgress?: boolean;
   bodyClassName?: string;
@@ -47,27 +51,6 @@ export interface FormRootProps {
   formElementId: string;
   canEdit: boolean;
 }
-
-interface EmptyRequiredField {
-  path: string;
-  label: string;
-}
-
-/** The label comes from the field's schema, which `buildYupFormForJsonSchema` sets to the title the user sees. */
-const getEmptyRequiredFields = (validationSchema: AnySchema, values: unknown): EmptyRequiredField[] => {
-  try {
-    validationSchema.validateSync(values, { abortEarly: false });
-    return [];
-  } catch (error) {
-    if (!ValidationError.isError(error)) {
-      throw error;
-    }
-    const errors = error.inner.length > 0 ? error.inner : [error];
-    return errors.flatMap(({ type, path, params }) =>
-      type === "required" && path ? [{ path, label: typeof params?.label === "string" ? params.label : path }] : []
-    );
-  }
-};
 
 // A separate component, so that watching every value re-renders only the footer and not the form body.
 const FormFooter: React.FC<{
@@ -95,6 +78,8 @@ export const FormRoot: React.FC<FormRootProps> = ({
   isTestConnectionInProgress = false,
   formFields,
   groupStructure,
+  sections,
+  onCheckSection,
   bodyClassName,
   headerBlock,
   formHeader,
@@ -110,7 +95,36 @@ export const FormRoot: React.FC<FormRootProps> = ({
   const isValid = form.formState.isValid;
   const { resetConnectorForm, isEditMode, formType } = useConnectorForm();
 
-  const formBody = (
+  const footer = renderFooter && (
+    <FormFooter
+      renderFooter={renderFooter}
+      footerProps={{
+        dirty,
+        isSubmitting,
+        isValid,
+        formElementId,
+        canEdit,
+        resetConnectorForm,
+        isEditMode,
+        formType,
+        getValues: () => castValues(form.getValues()),
+      }}
+    />
+  );
+
+  const formBody = sections ? (
+    <ConnectorFormSteps
+      blocks={formFields}
+      groupStructure={groupStructure}
+      sections={sections}
+      disabled={isSubmitting || isTestConnectionInProgress}
+      header={headerBlock}
+      title={props.title}
+      description={props.description}
+      footer={footer}
+      onCheckSection={onCheckSection}
+    />
+  ) : (
     <FormSection
       headerBlock={
         headerBlock || props.title || props.description
@@ -131,22 +145,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
     <FlexContainer direction="column" gap="xl">
       {formHeader}
       <div className={bodyClassName}>{formBody}</div>
-      {renderFooter && (
-        <FormFooter
-          renderFooter={renderFooter}
-          footerProps={{
-            dirty,
-            isSubmitting,
-            isValid,
-            formElementId,
-            canEdit,
-            resetConnectorForm,
-            isEditMode,
-            formType,
-            getValues: () => castValues(form.getValues()),
-          }}
-        />
-      )}
+      {!sections && footer}
     </FlexContainer>
   );
 };

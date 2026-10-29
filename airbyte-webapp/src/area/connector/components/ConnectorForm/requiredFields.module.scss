@@ -1,0 +1,7 @@
+@use "scss/variables";
+
+.requiredFieldList {
+  padding-left: variables.$spacing-xl;
+  margin-top: variables.$spacing-sm;
+  margin-bottom: 0;
+}

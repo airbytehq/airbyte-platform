@@ -9,6 +9,11 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useFormFooterSlot } from "area/connector/components/ConnectorDocumentationLayout/FormFooterSlotContext";
+import {
+  SectionProgress,
+  useSectionProgress,
+} from "area/connector/components/ConnectorForm/components/Steps/SectionProgress";
+import { useFillRequiredFieldsMessage } from "area/connector/components/ConnectorForm/requiredFields";
 import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 
@@ -46,45 +51,6 @@ interface IProps {
   formElementId: string;
   canEdit: boolean;
 }
-
-const MAX_LISTED_REQUIRED_FIELDS = 3;
-
-/** Returns undefined when no required field is empty. */
-const useFillRequiredFieldsMessage = (emptyRequiredFields: string[]) => {
-  const { formatMessage, formatList } = useIntl();
-  if (emptyRequiredFields.length === 0) {
-    return undefined;
-  }
-
-  const hiddenCount = emptyRequiredFields.length - MAX_LISTED_REQUIRED_FIELDS;
-  const listedFields =
-    hiddenCount > 0
-      ? [
-          ...emptyRequiredFields.slice(0, MAX_LISTED_REQUIRED_FIELDS),
-          formatMessage({ id: "connectorForm.fillRequiredFields.more" }, { count: hiddenCount }),
-        ]
-      : emptyRequiredFields;
-  return {
-    tooltip: (
-      <FormattedMessage
-        id="connectorForm.fillRequiredFields"
-        values={{
-          fields: (
-            <ul className={styles.requiredFieldList}>
-              {listedFields.map((field) => (
-                <li key={field}>{field}</li>
-              ))}
-            </ul>
-          ),
-        }}
-      />
-    ),
-    description: formatMessage(
-      { id: "connectorForm.fillRequiredFields" },
-      { fields: formatList(listedFields, { type: "conjunction" }) }
-    ),
-  };
-};
 
 /**
  * Renders in the form footer slot of `ConnectorDocumentationLayout` when there is one, else in place.
@@ -132,8 +98,17 @@ export const Controls: React.FC<IProps> = ({
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
   const fillRequiredFieldsMessage = useFillRequiredFieldsMessage(emptyRequiredFields);
+  const sectionProgress = useSectionProgress();
+  const isBeforeLastSection =
+    sectionProgress !== undefined && sectionProgress.activeSectionIndex < sectionProgress.sectionCount - 1;
+  const disabledSubmitMessage = isBeforeLastSection
+    ? {
+        tooltip: <FormattedMessage id="connectorForm.sections.completeAll" />,
+        description: formatMessage({ id: "connectorForm.sections.completeAll" }),
+      }
+    : fillRequiredFieldsMessage;
   const submitButtonDescribedBy = useId();
-  const submitBlocked = isSubmitting || fillRequiredFieldsMessage !== undefined;
+  const submitBlocked = isSubmitting || disabledSubmitMessage !== undefined;
 
   const submitButton =
     onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
@@ -143,7 +118,7 @@ export const Controls: React.FC<IProps> = ({
         data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
         isLoading={isSubmitting || isSubmittingWithoutCheck}
         disabled={submitBlocked || (isEditMode && !dirty)}
-        aria-describedby={fillRequiredFieldsMessage && submitButtonDescribedBy}
+        aria-describedby={disabledSubmitMessage && submitButtonDescribedBy}
         dropdown={{
           options: [
             {
@@ -176,7 +151,7 @@ export const Controls: React.FC<IProps> = ({
         data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
         isLoading={isSubmitting}
         disabled={submitBlocked || (isEditMode && !isDraftMode && !dirty)}
-        aria-describedby={fillRequiredFieldsMessage && submitButtonDescribedBy}
+        aria-describedby={disabledSubmitMessage && submitButtonDescribedBy}
       >
         <FormattedMessage id="connectorForm.saveAndTest" />
       </Button>
@@ -197,6 +172,7 @@ export const Controls: React.FC<IProps> = ({
       )}
       <FooterSlotButtonRow canEdit={canEdit}>
         {leftSlot}
+        {sectionProgress && <SectionProgress {...sectionProgress} />}
         <FlexItem grow>
           {isEditMode && (
             <Button variant="danger" type="button" onClick={onDeleteClick} data-id="open-delete-modal">
@@ -227,13 +203,13 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="connectorForm.saveDraft" />
           </Button>
         )}
-        <Tooltip control={submitButton} disabled={!fillRequiredFieldsMessage} placement="top" cursor="not-allowed">
-          {fillRequiredFieldsMessage?.tooltip}
+        <Tooltip control={submitButton} disabled={!disabledSubmitMessage} placement="top" cursor="not-allowed">
+          {disabledSubmitMessage?.tooltip}
         </Tooltip>
         {/* The screen-reader text for the disabled submit button, which cannot take focus to show the tooltip */}
-        {fillRequiredFieldsMessage && (
+        {disabledSubmitMessage && (
           <span id={submitButtonDescribedBy} className={styles.visuallyHidden}>
-            {fillRequiredFieldsMessage.description}
+            {disabledSubmitMessage.description}
           </span>
         )}
       </FooterSlotButtonRow>

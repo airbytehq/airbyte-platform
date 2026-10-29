@@ -5,6 +5,7 @@ import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Text } from "components/ui/Text";
 
 import { ArrayOfObjectsSection } from "area/connector/components/ArrayOfObjectsSection";
 import { ResourceAllocationMenu } from "area/connector/components/ResourceAllocationMenu";
@@ -52,6 +53,11 @@ interface FormSectionProps {
     description?: React.ReactNode;
   };
   disabled?: boolean;
+  /**
+   * Root level only: renders the groups for a stepped form's section card, which holds them, so without a card of
+   * their own. Group titles are subheadings of the section title.
+   */
+  insideSectionCard?: boolean;
 }
 
 export const FormSection: React.FC<FormSectionProps> = ({
@@ -62,6 +68,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
   disabled,
   rootLevel,
   headerBlock,
+  insideSectionCard,
 }) => {
   const { shouldShowAuthButton } = useAuthentication();
 
@@ -110,9 +117,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
     return (
       <FlexContainer key={index} direction="column" gap="xl">
         {sectionGroup.title && !collapsedNamedGroup && (
-          <Heading as="h2" size="sm">
-            {sectionGroup.title}
-          </Heading>
+          <GroupTitle title={sectionGroup.title} insideSectionCard={insideSectionCard} />
         )}
         <FlexItem>{sectionElements}</FlexItem>
       </FlexContainer>
@@ -124,15 +129,39 @@ export const FormSection: React.FC<FormSectionProps> = ({
     return <>{groupElements}</>;
   }
 
+  const groupList = (
+    <FlexContainer direction="column" gap="2xl">
+      {groupElements}
+    </FlexContainer>
+  );
+
+  if (insideSectionCard) {
+    return groupList;
+  }
+
   return (
     <Card title={headerBlock?.title} description={headerBlock?.description} titleWithBottomBorder>
       {headerBlock?.elements}
-      <FlexContainer direction="column" gap="2xl">
-        {groupElements}
-      </FlexContainer>
+      {groupList}
     </Card>
   );
 };
+
+interface GroupTitleProps {
+  title: string;
+  insideSectionCard?: boolean;
+}
+
+const GroupTitle: React.FC<GroupTitleProps> = ({ title, insideSectionCard }) =>
+  insideSectionCard ? (
+    <Text as="h3" bold>
+      {title}
+    </Text>
+  ) : (
+    <Heading as="h2" size="sm">
+      {title}
+    </Heading>
+  );
 
 interface SubSectionProps {
   displayType: DisplayType;

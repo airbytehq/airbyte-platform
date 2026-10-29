@@ -1,0 +1,13 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.segment {
+  width: variables.$spacing-xl;
+  height: variables.$spacing-xs;
+  border-radius: variables.$border-radius-pill;
+  background-color: colors.$grey-100;
+
+  &--filled {
+    background-color: colors.$blue;
+  }
+}
