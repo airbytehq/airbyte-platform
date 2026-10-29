@@ -11,5 +11,5 @@ enum class StageName {
   LOAD_SHED,
   MUTEX,
   ARCHITECTURE,
-  LAUNCH,
+  DISPATCH,
 }

@@ -29,7 +29,7 @@ class LaunchPipeline(
   @Named("check") private val check: LaunchStage,
   @Named("mutex") private val mutex: LaunchStage,
   @Named("architecture") private val architecture: LaunchStage,
-  @Named("launch") private val launch: LaunchStage,
+  @Named("dispatch") private val dispatch: LaunchStage,
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
   private val ingressAdapter: PipelineIngressAdapter,
@@ -75,7 +75,7 @@ class LaunchPipeline(
       .flatMap(check)
       .flatMap(mutex)
       .flatMap(architecture)
-      .flatMap(launch)
+      .flatMap(dispatch)
       .onErrorResume { e -> failureHandler.accept(e, io) }
       .doOnNext(successHandler::accept)
       .doFinally {
@@ -97,7 +97,7 @@ class LaunchPipeline(
       .flatMap(check)
       .flatMap(mutex)
       .flatMap(architecture)
-      .flatMap(launch)
+      .flatMap(dispatch)
       .onErrorContinue(failureHandler::accept)
       .doOnNext(successHandler::accept)
 }

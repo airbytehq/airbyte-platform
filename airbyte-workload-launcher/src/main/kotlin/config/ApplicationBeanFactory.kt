@@ -9,9 +9,11 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteKubernetesConfig
+import io.airbyte.workload.launcher.pipeline.dispatch.DIRECT_JOB_RUNNER_HTTP_CLIENT
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import okhttp3.OkHttpClient
 import okhttp3.internal.http2.StreamResetException
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -24,6 +26,16 @@ import kotlin.time.toJavaDuration
  */
 @Factory
 class ApplicationBeanFactory {
+  // Separate from the fabric8 Kubernetes client: the runner is a plain in-cluster HTTP service with short timeouts.
+  @Singleton
+  @Named(DIRECT_JOB_RUNNER_HTTP_CLIENT)
+  fun directJobRunnerHttpClient(): OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .connectTimeout(Duration.ofSeconds(5))
+      .readTimeout(Duration.ofSeconds(10))
+      .build()
+
   @Singleton
   @Named("kubeHttpErrorRetryPredicate")
   fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean =

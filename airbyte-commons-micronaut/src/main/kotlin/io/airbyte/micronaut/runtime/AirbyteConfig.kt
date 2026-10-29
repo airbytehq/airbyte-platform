@@ -1482,7 +1482,14 @@ data class AirbyteWorkloadLauncherConfig(
   val networkPolicyIntrospection: Boolean = DEFAULT_WORKLOAD_LAUNCHER_NETWORK_POLICY_INTROSPECTION,
   val parallelism: AirbyteWorkloadLauncherParallelismConfig = AirbyteWorkloadLauncherParallelismConfig(),
   val consumer: AirbyteWorkloadLauncherConsumerConfig = AirbyteWorkloadLauncherConsumerConfig(),
+  val directJobRunner: AirbyteWorkloadLauncherDirectJobRunnerConfig = AirbyteWorkloadLauncherDirectJobRunnerConfig(),
 ) {
+  /** Where the launcher sends direct jobs. Blank when this data plane doesn't run the direct job runner. */
+  @ConfigurationProperties("direct-job-runner")
+  data class AirbyteWorkloadLauncherDirectJobRunnerConfig(
+    val url: String = "",
+  )
+
   @ConfigurationProperties("parallelism")
   data class AirbyteWorkloadLauncherParallelismConfig(
     val defaultQueue: Int = DEFAULT_WORKLOAD_LAUNCHER_PARALLELISM,

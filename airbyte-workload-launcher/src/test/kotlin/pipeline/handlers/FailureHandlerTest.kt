@@ -48,7 +48,7 @@ class FailureHandlerTest {
       "BUILD",
       "LOAD_SHED",
       "MUTEX",
-      "LAUNCH",
+      "DISPATCH",
     ],
   )
   @ParameterizedTest

@@ -8,8 +8,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.workers.exception.WorkloadLauncherException
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory
+import io.airbyte.workload.launcher.pipeline.dispatch.DirectJobRunnerClient
 import io.airbyte.workload.launcher.pipeline.stages.model.CheckPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.ConnectPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.DiscoverCatalogPayload
@@ -25,27 +25,29 @@ import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 
 /**
- * Launches the pods for the workload, serializing and passing through input
- * values via the injected pod client.
+ * Sends the workload to where it runs. Pod workloads are launched through the injected pod client; direct jobs are
+ * handed to the always-on direct job runner and get no pod.
  */
 @Singleton
-@Named("launch")
-open class LaunchPodStage(
+@Named("dispatch")
+open class DispatchStage(
   private val launcher: KubePodClient,
   metricClient: MetricClient,
   private val fusionLaunchResolver: FusionLaunchResolver,
+  private val directJobRunnerClient: DirectJobRunnerClient,
 ) : LaunchStage(metricClient) {
   @WithSpan(MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
-    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "launch")],
+    tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "dispatch")],
   )
   override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
-    Span.current().setAttribute("resource.name", "LaunchPodStage")
+    Span.current().setAttribute("resource.name", "DispatchStage")
     return super.apply(input)
   }
 
+  // Every payload type has an arm here, so adding one forces a choice between a pod and the direct job runner.
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     when (val payload = input.payload!!) {
       is SyncPayload -> {
@@ -59,12 +61,11 @@ open class LaunchPodStage(
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
       is SpecPayload -> launcher.launchSpec(payload.input, input.msg)
-      // Connect workloads are never launched as pods. Until the direct job dispatcher ships, fail them.
-      is ConnectPayload -> throw WorkloadLauncherException("Connect is not supported by this data plane version")
+      is ConnectPayload -> directJobRunnerClient.submit(input.msg)
     }
 
     return input
   }
 
-  override fun getStageName(): StageName = StageName.LAUNCH
+  override fun getStageName(): StageName = StageName.DISPATCH
 }

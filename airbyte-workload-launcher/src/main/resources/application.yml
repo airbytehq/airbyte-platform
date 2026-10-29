@@ -117,6 +117,8 @@ airbyte:
       high-priority-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
       max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
     network-policy-introspection: false
+    direct-job-runner:
+      url: ${DIRECT_JOB_RUNNER_URL:}
     consumer:
       queue-task-cap: ${WORKLOAD_CONSUMER_QUEUE_TASK_CAP:5}
       default-queue:

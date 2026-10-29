@@ -139,6 +139,7 @@ object MetricTags {
   const val MUTEX_KEY_TAG: String = "mutex_key"
   const val PRIORITY_TAG: String = "priority"
   const val QUEUE_NAME_TAG: String = "queue_name"
+  const val RESULT_TAG: String = "result"
   const val STAGE_NAME_TAG: String = "stage_name"
   const val STATUS_TAG: String = "status"
   const val WORKLOAD_CANCEL_REASON_TAG: String = "cancel_reason"

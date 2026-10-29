@@ -464,6 +464,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_pods_cleaned",
     metricDescription = "Number of pods cleaned up by the pod sweeper",
   ),
+  DIRECT_JOB_DISPATCH(
+    metricName = "direct_job_dispatch",
+    metricDescription = "Number of direct jobs the workload launcher handed to the direct job runner, by result",
+  ),
   JOB_OUTPUT_WRITE(
     metricName = "job_output_write",
     metricDescription = "Write a job output in the output folder",

@@ -7,6 +7,8 @@ airbyte:
       high-priority-queue: 10
       max-surge: 100
     network-policy-introspection: true
+    direct-job-runner:
+      url: http://airbyte-direct-job-runner.jobs.svc:8080
     consumer:
       queue-task-cap: 100
       default-queue:
