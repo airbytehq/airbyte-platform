@@ -160,7 +160,7 @@ Do these steps before you report done:
 
 To run this webapp against production Cloud, a stock OSS backend (`abctl`),
 or a local backend, load the
-[`airbyte-cloud-e2e-testing`](https://github.com/airbytehq/ai-skills/blob/main/claude/plugins/shared-airbyte-skills/skills/airbyte-cloud-e2e-testing/SKILL.md)
+[`airbyte-cloud-e2e-testing`](https://github.com/airbytehq/ai-skills/blob/main/plugins/common-skills/skills/airbyte-cloud-e2e-testing/SKILL.md)
 skill from `airbytehq/ai-skills`. Production login only works behind the
 `cloud.airbyte.com` origin proxy described there; `https://localhost:3000`
 is rejected by production Keycloak.
