@@ -1,33 +1,30 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
+import { HideableBanner } from "cloud/components/CloudBannerGroup/components/HideableBanner";
 import { useAgentsProvisioningStatus } from "core/api";
-import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
 
-import { FusionUsageBanner } from "./FusionUsageBanner";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 const AgentsOptInBannerContent: React.FC = () => {
-  const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const organizationId = useCurrentOrganizationId();
-  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
+  const status = useAgentsProvisioningStatus({ enabled: showAgentsOptIn });
 
-  if (!isCloudApp || !showAgentsOptIn || !status || status.is_enrolled || !status.external_cloud_eligible) {
+  if (!showAgentsOptIn || !status || status.is_enrolled || !status.external_cloud_eligible) {
     return null;
   }
 
   const settingsUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`;
 
   return (
-    <AlertBanner
+    <HideableBanner
+      id="agents-opt-in"
       data-testid="agents-opt-in-banner"
-      color="info"
       message={
         <FormattedMessage
           id="cloud.agentsOptIn.banner"
@@ -43,7 +40,6 @@ const AgentsOptInBannerContent: React.FC = () => {
 export const AgentsOptInBanner: React.FC = () => {
   return (
     <React.Suspense>
-      <FusionUsageBanner />
       <AgentsOptInBannerContent />
     </React.Suspense>
   );

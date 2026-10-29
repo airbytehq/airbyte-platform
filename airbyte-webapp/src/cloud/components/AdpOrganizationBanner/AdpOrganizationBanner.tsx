@@ -1,10 +1,10 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId, useIsAdpOrganization } from "area/organization/utils";
+import { HideableBanner } from "cloud/components/CloudBannerGroup/components/HideableBanner";
 import { RoutePaths } from "pages/routePaths";
 
 const AdpOrganizationBannerContent: React.FC = () => {
@@ -18,9 +18,9 @@ const AdpOrganizationBannerContent: React.FC = () => {
   const contextLayerUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`;
 
   return (
-    <AlertBanner
+    <HideableBanner
+      id="adp-organization"
       data-testid="adp-organization-banner"
-      color="info"
       message={
         <FormattedMessage
           id="cloud.adpOrganization.banner"

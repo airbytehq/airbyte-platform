@@ -3,6 +3,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentOrganizationId, useIsAdpOrganization } from "area/organization/utils";
+import { BannerGroupContext } from "cloud/components/CloudBannerGroup/BannerGroupContext";
 
 import { AdpOrganizationBanner } from "./AdpOrganizationBanner";
 
@@ -66,5 +67,59 @@ describe("AdpOrganizationBanner", () => {
     renderWithIntl(<AdpOrganizationBanner />);
 
     expect(screen.getByTestId("adp-organization-banner")).toBeInTheDocument();
+  });
+  describe("registration with the banner group", () => {
+    const renderInGroup = (isBannerHidden = false) => {
+      const registerBanner = jest.fn();
+      renderWithIntl(
+        <BannerGroupContext.Provider
+          value={{ registerBanner, unregisterBanner: jest.fn(), checkIsBannerHidden: () => isBannerHidden }}
+        >
+          <AdpOrganizationBanner />
+        </BannerGroupContext.Provider>
+      );
+
+      return registerBanner;
+    };
+
+    it("should register when the organization is ADP", () => {
+      mockUseIsAdpOrganization.mockReturnValue(true);
+
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).toHaveBeenCalledWith("adp-organization");
+    });
+
+    it("should register only once", () => {
+      mockUseIsAdpOrganization.mockReturnValue(true);
+
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).toHaveBeenCalledTimes(1);
+    });
+
+    it("should register nothing when the organization is not ADP", () => {
+      mockUseIsAdpOrganization.mockReturnValue(false);
+
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).not.toHaveBeenCalled();
+    });
+
+    it("should not render while the group hides it", () => {
+      mockUseIsAdpOrganization.mockReturnValue(true);
+
+      renderInGroup(true);
+
+      expect(screen.queryByTestId("adp-organization-banner")).not.toBeInTheDocument();
+    });
+
+    it("should stay registered while the group hides it", () => {
+      mockUseIsAdpOrganization.mockReturnValue(true);
+
+      const registerBanner = renderInGroup(true);
+
+      expect(registerBanner).toHaveBeenCalledWith("adp-organization");
+    });
   });
 });

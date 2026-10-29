@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { mocked, render } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
 
+import { BannerGroupContext } from "cloud/components/CloudBannerGroup/BannerGroupContext";
 import {
   ISO8601DateTime,
   OrganizationInfoReadBillingAccountType,
@@ -243,5 +244,103 @@ describe("StatusBanner", () => {
     const wrapper = await render(<StatusBanner />);
     expect(wrapper.container.textContent).toContain("Upgrade now to keep your syncs going.");
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
+  });
+});
+
+describe("StatusBanner registration with the banner group", () => {
+  beforeEach(() => {
+    mockExperiments({ "billing.selfServePlusPlan": false });
+  });
+
+  const renderInGroup = async () => {
+    const registerBanner = jest.fn();
+    const wrapper = await render(
+      <BannerGroupContext.Provider
+        value={{ registerBanner, unregisterBanner: jest.fn(), checkIsBannerHidden: () => false }}
+      >
+        <StatusBanner />
+      </BannerGroupContext.Provider>
+    );
+
+    return { registerBanner, wrapper };
+  };
+
+  // Every info billing state shares one id, so moving between them does not reopen a collapsed group.
+  it.each([
+    ["pre-trial", { paymentStatus: "okay", trialStatus: "pre_trial" }],
+    ["post-trial", { paymentStatus: "uninitialized", trialStatus: "post_trial" }],
+  ] as const)("should register an info banner under the billing-status id (%s)", async (_name, state) => {
+    mockSubscriptionStatus({ subscriptionStatus: "subscribed", ...state });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).toHaveBeenCalledWith("billing-status");
+  });
+
+  it("should register an info banner only once", async () => {
+    mockSubscriptionStatus({ paymentStatus: "okay", subscriptionStatus: "subscribed", trialStatus: "pre_trial" });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["locked payment", { paymentStatus: "locked" }],
+    ["disabled payment", { paymentStatus: "disabled" }],
+    ["payment grace period", { paymentStatus: "grace_period", gracePeriodEndsAt: Date.now() + 86_400_000 }],
+  ] as const)("should not register a warning banner (%s)", async (_name, state) => {
+    mockSubscriptionStatus({ subscriptionStatus: "subscribed", ...state });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).not.toHaveBeenCalled();
+  });
+
+  it("should still show a warning banner that is not registered", async () => {
+    mockSubscriptionStatus({ paymentStatus: "locked", subscriptionStatus: "subscribed" });
+
+    const { wrapper } = await renderInGroup();
+
+    expect(wrapper.getByTestId("billing-status-banner")).toBeInTheDocument();
+  });
+
+  it("should not register the trial banner while it is a warning", async () => {
+    mockSubscriptionStatus({
+      paymentStatus: "uninitialized",
+      subscriptionStatus: "subscribed",
+      trialStatus: "in_trial",
+      trialDaysLeft: 5,
+      isStiggPlanEnabled: true,
+      isStandardTrialPlan: true,
+    });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).not.toHaveBeenCalled();
+  });
+
+  it("should not register the trial banner when it becomes an error within 24 hours of the trial ending", async () => {
+    mockSubscriptionStatus({
+      paymentStatus: "uninitialized",
+      subscriptionStatus: "subscribed",
+      trialStatus: "in_trial",
+      trialDaysLeft: 0,
+      isTrialEndingWithin24Hours: true,
+      isStiggPlanEnabled: true,
+      isStandardTrialPlan: true,
+    });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).not.toHaveBeenCalled();
+  });
+
+  it("should register nothing when there is no banner to show", async () => {
+    mockSubscriptionStatus({ paymentStatus: "okay", subscriptionStatus: "subscribed" });
+
+    const { registerBanner } = await renderInGroup();
+
+    expect(registerBanner).not.toHaveBeenCalled();
   });
 });

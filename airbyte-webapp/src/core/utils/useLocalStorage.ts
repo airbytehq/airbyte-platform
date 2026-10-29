@@ -35,6 +35,7 @@ interface AirbyteLocalStorage {
   "airbyte_support-chat-thread-id": string;
   "airbyte_capacity-reached-banner-dismissed": Record<string, boolean>;
   "airbyte_context-layer-skip-disable-confirmation": boolean;
+  "airbyte_banner-group-state": Record<string, { isCollapsed: boolean; seenIds: string[] }>;
 }
 
 /*

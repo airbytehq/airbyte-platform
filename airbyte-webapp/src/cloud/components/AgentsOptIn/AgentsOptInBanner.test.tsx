@@ -3,6 +3,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
+import { BannerGroupContext } from "cloud/components/CloudBannerGroup/BannerGroupContext";
 import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 
@@ -65,5 +66,55 @@ describe("AgentsOptInBanner", () => {
       "href",
       "/organization/test-org-123/context-layer"
     );
+  });
+  describe("registration with the banner group", () => {
+    const renderInGroup = () => {
+      const registerBanner = jest.fn();
+      render(
+        <IntlProvider locale="en" messages={messages}>
+          <MemoryRouter>
+            <BannerGroupContext.Provider
+              value={{ registerBanner, unregisterBanner: jest.fn(), checkIsBannerHidden: () => false }}
+            >
+              <AgentsOptInBanner />
+            </BannerGroupContext.Provider>
+          </MemoryRouter>
+        </IntlProvider>
+      );
+
+      return registerBanner;
+    };
+
+    it("should register when the organization is eligible", () => {
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).toHaveBeenCalledWith("agents-opt-in");
+    });
+
+    it("should register only once", () => {
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["already enrolled", { is_enrolled: true, external_cloud_eligible: true }],
+      ["not eligible", { is_enrolled: false, external_cloud_eligible: false }],
+      ["no provisioning status", undefined],
+    ])("should register nothing when %s", (_name, status) => {
+      mockUseAgentsProvisioningStatus.mockReturnValue(status as never);
+
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).not.toHaveBeenCalled();
+    });
+
+    it("should register nothing when the opt-in is not shown for this organization", () => {
+      mockUseShowAgentsOptIn.mockReturnValue(false);
+
+      const registerBanner = renderInGroup();
+
+      expect(registerBanner).not.toHaveBeenCalled();
+    });
   });
 });

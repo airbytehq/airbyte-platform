@@ -1,0 +1,27 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.toggleRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: variables.$spacing-xs;
+  width: 100%;
+  height: 30px;
+  border: none;
+  cursor: pointer;
+  background-color: colors.$blue;
+  color: colors.$white;
+  font: inherit;
+  font-size: variables.$font-size-sm;
+  line-height: 30px;
+
+  &:hover {
+    background-color: colors.$blue-500;
+  }
+
+  &:focus-visible {
+    outline: 2px solid colors.$white;
+    outline-offset: -4px;
+  }
+}

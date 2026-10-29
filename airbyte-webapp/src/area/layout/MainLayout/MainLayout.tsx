@@ -6,10 +6,8 @@ import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
 
 import { SideBar } from "area/layout/SideBar";
-import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
 import { AdpOrganizationAccessGuard } from "cloud/components/AdpOrganizationAccessGuard";
-import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
-import { AgentsOptInBanner } from "cloud/components/AgentsOptIn";
+import { CloudBannerGroup } from "cloud/components/CloudBannerGroup";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
 import { useIsCloudApp } from "core/utils/app";
@@ -23,9 +21,7 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
   return (
     <ForbiddenErrorBoundary>
       <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-        {isCloudApp && <StatusBanner />}
-        {isCloudApp && <AdpOrganizationBanner />}
-        {isCloudApp && <AgentsOptInBanner />}
+        {isCloudApp && <CloudBannerGroup />}
         <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
           <SideBar />
           <div className={styles.content}>

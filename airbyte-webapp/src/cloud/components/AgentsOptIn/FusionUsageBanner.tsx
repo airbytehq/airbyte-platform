@@ -1,3 +1,4 @@
+import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
@@ -5,7 +6,7 @@ import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { useFusionUsage } from "core/api/cloud";
 import { FusionUsageWindow } from "core/api/types/AirbyteClient";
 
-export const FusionUsageBanner: React.FC = () => {
+const FusionUsageBannerContent: React.FC = () => {
   const { formatDate } = useIntl();
   const { data, isEligible, isError } = useFusionUsage();
   if (!isEligible || isError || !data?.freeCapsApplicable) {
@@ -32,6 +33,12 @@ export const FusionUsageBanner: React.FC = () => {
     />
   );
 };
+
+export const FusionUsageBanner: React.FC = () => (
+  <React.Suspense>
+    <FusionUsageBannerContent />
+  </React.Suspense>
+);
 
 const isMonthlyAllowanceExhausted = (month: FusionUsageWindow): boolean =>
   month.used !== null &&

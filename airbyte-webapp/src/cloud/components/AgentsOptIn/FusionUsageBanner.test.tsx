@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import React from "react";
 import { IntlProvider } from "react-intl";
 
+import { BannerGroupContext } from "cloud/components/CloudBannerGroup/BannerGroupContext";
 import { useFusionUsage } from "core/api/cloud";
 import { FusionUsageRead } from "core/api/types/AirbyteClient";
 import messages from "locales/en.json";
@@ -57,5 +59,49 @@ describe("FusionUsageBanner", () => {
   ])("does not warn with %s", (_name, overrides) => {
     renderBanner(overrides);
     expect(screen.queryByTestId("fusion-usage-banner")).not.toBeInTheDocument();
+  });
+  it("should suspend inside its own boundary, so it cannot replace the layout around it", () => {
+    jest.mocked(useFusionUsage).mockImplementation(() => {
+      throw new Promise(() => undefined);
+    });
+
+    render(
+      <IntlProvider locale="en" messages={messages}>
+        <React.Suspense fallback={<div data-testid="outer-fallback" />}>
+          <FusionUsageBanner />
+        </React.Suspense>
+      </IntlProvider>
+    );
+
+    expect(screen.queryByTestId("outer-fallback")).not.toBeInTheDocument();
+  });
+
+  describe("when the group would hide every banner", () => {
+    let registerBanner: jest.Mock;
+
+    beforeEach(() => {
+      registerBanner = jest.fn();
+      jest
+        .mocked(useFusionUsage)
+        .mockReturnValue({ data, isEligible: true, isError: false } as ReturnType<typeof useFusionUsage>);
+
+      render(
+        <IntlProvider locale="en" messages={messages} timeZone="America/Los_Angeles">
+          <BannerGroupContext.Provider
+            value={{ registerBanner, unregisterBanner: jest.fn(), checkIsBannerHidden: () => true }}
+          >
+            <FusionUsageBanner />
+          </BannerGroupContext.Provider>
+        </IntlProvider>
+      );
+    });
+
+    it("should never register with the group, because a warning cannot be hidden", () => {
+      expect(registerBanner).not.toHaveBeenCalled();
+    });
+
+    it("should still render", () => {
+      expect(screen.getByTestId("fusion-usage-banner")).toBeInTheDocument();
+    });
   });
 });
