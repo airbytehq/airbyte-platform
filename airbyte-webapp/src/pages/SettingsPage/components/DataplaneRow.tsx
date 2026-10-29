@@ -78,7 +78,7 @@ export const DataplaneRow: React.FC<DataplaneRowProps> = ({
           </Text>
         )}
       </FlexContainer>
-      <FlexContainer alignItems="center" gap="lg">
+      <FlexContainer alignItems="center" gap="xs">
         {isHealthy ? (
           <>
             <DataplanePulseGraph heartbeats={recentHeartbeats} />

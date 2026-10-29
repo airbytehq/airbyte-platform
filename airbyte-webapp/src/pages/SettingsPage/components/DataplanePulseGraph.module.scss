@@ -9,4 +9,9 @@
   &:hover {
     opacity: 1;
   }
+
+  &__spike {
+    transition-property: transform, opacity;
+    transition-timing-function: linear;
+  }
 }
