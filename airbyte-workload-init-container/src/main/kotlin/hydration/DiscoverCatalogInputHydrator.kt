@@ -34,6 +34,7 @@ class DiscoverCatalogInputHydrator(
       .withConfigHash(rawInput.configHash)
       .withConnectorVersion(rawInput.connectorVersion)
       .withSourceId(rawInput.sourceId)
+      .withManual(rawInput.manual)
       .withConnectionConfiguration(fullConfig)
   }
 }

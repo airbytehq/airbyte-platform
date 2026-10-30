@@ -14,12 +14,14 @@ import io.airbyte.workers.hydration.SecretHydrationContext
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class DiscoverCatalogInputHydratorTest {
-  @Test
-  fun `hydrates from base hydrator and copies expected values over`() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `hydrates from base hydrator and copies expected values over`(manual: Boolean) {
     val base: ConnectorSecretsHydrator = mockk()
 
     val hydrator = DiscoverCatalogInputHydrator(base)
@@ -35,6 +37,7 @@ class DiscoverCatalogInputHydratorTest {
         .withConfigHash(UUID.randomUUID().toString())
         .withConnectorVersion("1.0.0")
         .withSourceId(UUID.randomUUID().toString())
+        .withManual(manual)
         .withConnectionConfiguration(unhydratedConfig.value)
 
     every {
@@ -53,6 +56,7 @@ class DiscoverCatalogInputHydratorTest {
     Assertions.assertEquals(input.configHash, result.configHash)
     Assertions.assertEquals(input.connectorVersion, result.connectorVersion)
     Assertions.assertEquals(input.sourceId, result.sourceId)
+    Assertions.assertEquals(manual, result.manual)
     Assertions.assertEquals(hydratedConfig, result.connectionConfiguration)
   }
 }

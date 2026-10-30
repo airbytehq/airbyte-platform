@@ -49,6 +49,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Path
 import java.util.stream.Stream
 import kotlin.time.TimeMark
@@ -439,6 +440,39 @@ internal class ConnectorWatchTest {
 
     assertTrue(exitCauseFileWasNotFound)
     verify { streamFactory.create(any(), any()) }
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `run for discover with file timeout uses applied timeout`(manual: Boolean) {
+    val discoverInput = StandardDiscoverCatalogInput().withManual(manual)
+    val expectedTimeout = if (manual) 42 else 43
+    val failureRequestSlot = CapturingSlot<WorkloadFailureRequest>()
+
+    every { sidecarInput.operationType } returns OperationType.DISCOVER
+    every { sidecarInput.discoverCatalogInput } returns discoverInput
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(
+        SidecarInput(checkInput, discoverInput, workloadId, IntegrationLauncherConfig(), OperationType.DISCOVER, ""),
+      )
+    every { connectorWatcher.areNeededFilesPresent() } returns false
+    val withinSyncSlot = CapturingSlot<Boolean>()
+    every { connectorWatcher.hasFileTimeoutReached(any(), capture(withinSyncSlot)) } returns true
+    every { connectorWatcher.handleException(any(), any()) } just Runs
+    every { connectorWatcher.exitFileNotFound() } throws RuntimeException("file timeout")
+    every { workloadApiClient.workloadFailure(capture(failureRequestSlot)) } returns Unit
+    every { logContextFactory.createConnectorContext(any()) } returns mapOf()
+    every { logContextFactory.inferLogSource() } returns LogSource.SOURCE
+    every { streamFactory.create(any(), any()) } returns Stream.empty()
+
+    connectorWatcher.run()
+
+    assertEquals(!manual, withinSyncSlot.captured)
+    assertTrue(
+      failureRequestSlot.captured.reason
+        .orEmpty()
+        .contains("$expectedTimeout minute(s)"),
+    )
   }
 
   @Test

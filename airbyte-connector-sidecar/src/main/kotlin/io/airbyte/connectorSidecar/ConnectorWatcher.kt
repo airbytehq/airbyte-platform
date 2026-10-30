@@ -139,7 +139,7 @@ class ConnectorWatcher(
 
         val message =
           "Failed to find output files from connector within timeout of " +
-            "${airbyteSidecarConfig.fileTimeoutMinutes} minute(s). Is the connector still running?"
+            "${getFileTimeoutMinutes(isWithinSync)} minute(s). Is the connector still running?"
         logger.warn { message }
         val failureReason =
           FailureReason()
@@ -327,9 +327,12 @@ class ConnectorWatcher(
     stopwatch: TimeMark,
     withinSync: Boolean,
   ): Boolean {
-    val timeoutMinutes = if (withinSync) airbyteSidecarConfig.fileTimeoutMinutesWithinSync else airbyteSidecarConfig.fileTimeoutMinutes
+    val timeoutMinutes = getFileTimeoutMinutes(withinSync)
     return stopwatch.elapsedNow().toJavaDuration() > Duration.ofMinutes(timeoutMinutes.toLong())
   }
+
+  private fun getFileTimeoutMinutes(withinSync: Boolean): Int =
+    if (withinSync) airbyteSidecarConfig.fileTimeoutMinutesWithinSync else airbyteSidecarConfig.fileTimeoutMinutes
 
   @InternalForTesting
   fun getFailedOutput(
