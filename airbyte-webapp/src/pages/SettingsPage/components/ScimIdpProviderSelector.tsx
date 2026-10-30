@@ -1,10 +1,8 @@
-import { Radio, RadioGroup } from "@headlessui/react";
-import classNames from "classnames";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
+
+import { SegmentedControl } from "components/ui/SegmentedControl";
 
 import { ScimIdpProvider } from "core/api/types/AirbyteClient";
-
-import styles from "./ScimIdpProviderSelector.module.scss";
 
 interface ScimIdpProviderSelectorProps {
   value?: ScimIdpProvider;
@@ -35,26 +33,16 @@ export const ScimIdpProviderSelector: React.FC<ScimIdpProviderSelectorProps> = (
   const { formatMessage } = useIntl();
 
   return (
-    <RadioGroup
-      value={value ?? null}
-      onChange={(provider: ScimIdpProvider | null) => {
-        if (provider !== null) {
-          onChange(provider);
-        }
-      }}
-      disabled={disabled}
+    <SegmentedControl<ScimIdpProvider>
+      options={PROVIDER_OPTIONS.map((provider) => ({
+        value: provider,
+        label: formatMessage({ id: PROVIDER_LABEL_IDS[provider] }),
+      }))}
+      selectedValue={value}
+      onSelect={onChange}
+      isDisabled={disabled}
       aria-label={formatMessage({ id: "settings.organizationSettings.scim.idpProvider.label" })}
-      className={classNames(
-        styles.scimIdpProviderSelector,
-        { [styles["scimIdpProviderSelector--disabled"]]: disabled },
-        className
-      )}
-    >
-      {PROVIDER_OPTIONS.map((provider) => (
-        <Radio key={provider} value={provider} className={styles.scimIdpProviderSelector__segment}>
-          <FormattedMessage id={PROVIDER_LABEL_IDS[provider]} />
-        </Radio>
-      ))}
-    </RadioGroup>
+      className={className}
+    />
   );
 };
