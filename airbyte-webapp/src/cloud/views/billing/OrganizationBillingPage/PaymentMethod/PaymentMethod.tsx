@@ -63,7 +63,10 @@ const CurrentPaymentMethod: React.FC<CurrentPaymentMethodProps> = ({ paymentMeth
 };
 
 export const PaymentMethod = () => {
-  const { redirecting, goToCustomerPortal } = useRedirectToCustomerPortal("payment_method");
+  const { redirecting: isAddRedirecting, goToCustomerPortal: goToAddPaymentMethod } =
+    useRedirectToCustomerPortal("payment_method");
+  const { redirecting: isUpdateRedirecting, goToCustomerPortal: goToFullCustomerPortal } =
+    useRedirectToCustomerPortal("portal");
   const organizationId = useCurrentOrganizationId();
   const {
     data: paymentInformation,
@@ -79,7 +82,7 @@ export const PaymentMethod = () => {
         </Heading>
 
         {paymentInformation?.customer?.defaultPaymentMethod && (
-          <UpdateButton isLoading={redirecting} onClick={goToCustomerPortal}>
+          <UpdateButton isLoading={isUpdateRedirecting} onClick={goToFullCustomerPortal}>
             <FormattedMessage id="settings.organization.billing.update" />
           </UpdateButton>
         )}
@@ -91,7 +94,7 @@ export const PaymentMethod = () => {
               <CurrentPaymentMethod paymentMethod={paymentInformation.customer.defaultPaymentMethod} />
             )}
             {!paymentInformation.customer?.defaultPaymentMethod && (
-              <Button isLoading={redirecting} onClick={goToCustomerPortal}>
+              <Button isLoading={isAddRedirecting} onClick={goToAddPaymentMethod}>
                 <FormattedMessage id="settings.organization.billing.paymentMethod.add" />
               </Button>
             )}
