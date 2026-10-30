@@ -204,9 +204,24 @@ object ScimUserRequestParser {
     return node.asBoolean()
   }
 
+  // Entra ID declares the enterprise extension on User requests; its attributes are still rejected by the top-level allowlist.
+  // ScimPatchProcessor.validateResourceSchema stays core-only: PATCH applies to completeResource(), whose schemas is always core.
+  private val acceptedSchemas = setOf(SCIM_USER_SCHEMA, SCIM_ENTERPRISE_USER_SCHEMA)
+
   private fun validateSchema(node: JsonNode?) {
-    if (node == null || !node.isArray || node.size() != 1 || !node[0].isTextual || node[0].asText() != SCIM_USER_SCHEMA) {
+    if (node == null || !node.isArray || node.isEmpty || node.any { !it.isTextual }) {
+      throw ScimErrors.invalidValue("User schemas must be a non-empty array of schema URIs")
+    }
+
+    val schemas = node.map { it.asText() }
+    if (SCIM_USER_SCHEMA !in schemas) {
       throw ScimErrors.invalidValue("User requires the core User schema")
+    }
+    if (schemas.any { it !in acceptedSchemas }) {
+      throw ScimErrors.invalidValue("User schemas contains an unsupported schema URI")
+    }
+    if (schemas.toSet().size != schemas.size) {
+      throw ScimErrors.invalidValue("User schemas contains a duplicate schema URI")
     }
   }
 

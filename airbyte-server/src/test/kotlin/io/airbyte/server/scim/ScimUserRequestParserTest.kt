@@ -142,14 +142,99 @@ class ScimUserRequestParserTest {
   }
 
   @Test
-  fun `requires exactly the advertised core schema`() {
+  fun `accepts the core schema alone or with the enterprise user extension declaration`() {
     listOf(
+      """["$SCIM_USER_SCHEMA"]""",
+      """["$SCIM_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA"]""",
+      """["$SCIM_ENTERPRISE_USER_SCHEMA","$SCIM_USER_SCHEMA"]""",
+    ).forEach { schemas ->
+      val result = ScimUserRequestParser.parse(json(userWithSchemas(schemas)))
+
+      assertThat(result.userName).isEqualTo("alice")
+      assertThat(result.primaryEmail).isEqualTo("a@example.com")
+    }
+  }
+
+  @Test
+  fun `accepts the Microsoft Entra ID create user request`() {
+    val result =
+      ScimUserRequestParser.parse(
+        json(
+          """
+          {
+            "schemas": ["$SCIM_USER_SCHEMA", "$SCIM_ENTERPRISE_USER_SCHEMA"],
+            "externalId": "0a21f0f2-8d2a-4f8e-bf98-7363c4aed4ef",
+            "userName": "Test_User_ab6490ee-1e48-479e-a20b-2d77186b5dd1",
+            "active": true,
+            "emails": [{"primary": true, "type": "work", "value": "Test_User_fd0ea19b-0777-472c-9f96-4f70d2226f2e@testuser.com"}],
+            "meta": {"resourceType": "User"},
+            "name": {"formatted": "givenName familyName", "familyName": "familyName", "givenName": "givenName"}
+          }
+          """.trimIndent(),
+        ),
+      )
+
+    assertThat(result.userName).isEqualTo("Test_User_ab6490ee-1e48-479e-a20b-2d77186b5dd1")
+    assertThat(result.externalId).isEqualTo("0a21f0f2-8d2a-4f8e-bf98-7363c4aed4ef")
+    assertThat(result.primaryEmail).isEqualTo("Test_User_fd0ea19b-0777-472c-9f96-4f70d2226f2e@testuser.com")
+    assertThat(result.active).isTrue()
+  }
+
+  @Test
+  fun `rejects a missing or malformed schemas array`() {
+    assertInvalidValue(
       """{"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}""",
-      """{"schemas":null,"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}""",
-      """{"schemas":[],"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}""",
-      """{"schemas":["wrong"],"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}""",
-      """{"schemas":["$SCIM_USER_SCHEMA","urn:example:extension"],"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}""",
-    ).forEach(::assertInvalidValue)
+      "User schemas must be a non-empty array of schema URIs",
+    )
+    listOf(
+      "null",
+      "\"$SCIM_USER_SCHEMA\"",
+      "[]",
+      """["$SCIM_USER_SCHEMA",1]""",
+      """["$SCIM_USER_SCHEMA",null]""",
+      """["$SCIM_USER_SCHEMA",{}]""",
+    ).forEach { assertInvalidValue(userWithSchemas(it), "User schemas must be a non-empty array of schema URIs") }
+  }
+
+  @Test
+  fun `rejects schemas without the core User schema`() {
+    listOf(
+      """["wrong"]""",
+      """["$SCIM_ENTERPRISE_USER_SCHEMA"]""",
+    ).forEach { assertInvalidValue(userWithSchemas(it), "User requires the core User schema") }
+  }
+
+  @Test
+  fun `matches schema URIs case-sensitively`() {
+    assertInvalidValue(userWithSchemas("""["${SCIM_USER_SCHEMA.uppercase()}"]"""), "User requires the core User schema")
+    assertInvalidValue(
+      userWithSchemas("""["$SCIM_USER_SCHEMA","${SCIM_ENTERPRISE_USER_SCHEMA.uppercase()}"]"""),
+      "User schemas contains an unsupported schema URI",
+    )
+  }
+
+  @Test
+  fun `rejects unsupported schema URIs alongside the core User schema`() {
+    listOf(
+      """["$SCIM_USER_SCHEMA","urn:example:extension"]""",
+      """["$SCIM_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA","urn:example:extension"]""",
+    ).forEach { assertInvalidValue(userWithSchemas(it), "User schemas contains an unsupported schema URI") }
+  }
+
+  @Test
+  fun `rejects duplicate schema URIs`() {
+    listOf(
+      """["$SCIM_USER_SCHEMA","$SCIM_USER_SCHEMA"]""",
+      """["$SCIM_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA"]""",
+    ).forEach { assertInvalidValue(userWithSchemas(it), "User schemas contains a duplicate schema URI") }
+  }
+
+  @Test
+  fun `rejects an enterprise user extension object even when its schema is declared`() {
+    listOf(
+      """{"schemas":["$SCIM_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA"],"userName":"alice","emails":[{"value":"a@example.com","type":"work"}],"$SCIM_ENTERPRISE_USER_SCHEMA":{"department":"Platform"}}""",
+      """{"schemas":["$SCIM_USER_SCHEMA","$SCIM_ENTERPRISE_USER_SCHEMA"],"userName":"alice","emails":[{"value":"a@example.com","type":"work"}],"$SCIM_ENTERPRISE_USER_SCHEMA":{}}""",
+    ).forEach { assertInvalidValue(it, "User contains an unsupported field") }
   }
 
   @Test
@@ -361,6 +446,17 @@ class ScimUserRequestParserTest {
     val exception = assertThrows<ScimException> { ScimUserRequestParser.parse(json(request)) }
     assertThat(exception.scimType).isEqualTo("invalidValue")
   }
+
+  private fun assertInvalidValue(
+    request: String,
+    detail: String,
+  ) {
+    val exception = assertThrows<ScimException> { ScimUserRequestParser.parse(json(request)) }
+    assertThat(exception.scimType).isEqualTo("invalidValue")
+    assertThat(exception.message).isEqualTo(detail)
+  }
+
+  private fun userWithSchemas(schemas: String) = """{"schemas":$schemas,"userName":"alice","emails":[{"value":"a@example.com","type":"work"}]}"""
 
   private fun json(value: String): ObjectNode = objectMapper.readTree(value) as ObjectNode
 }
