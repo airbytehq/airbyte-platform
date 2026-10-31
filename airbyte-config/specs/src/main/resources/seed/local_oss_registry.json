@@ -4914,6 +4914,375 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations",
+        "releaseCandidates": {
+          "4.0.6": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 100,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 100
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION-DATABRICKS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "oauth_config.json",
+                    "name": "SECRET_DESTINATION_DATABRICKS_OAUTH_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "pat_config.json",
+                    "name": "SECRET_DESTINATION_DATABRICKS_PERSONAL_ACCESS_TOKEN_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "072d5540-f236-4294-ba7c-ade8fd918496",
+            "dockerImageTag": "4.0.6",
+            "dockerRepository": "airbyte/destination-databricks",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks",
+            "externalDocumentationUrls": [
+              {
+                "title": "Release notes",
+                "type": "api_release_history",
+                "url": "https://docs.databricks.com/release-notes/index.html"
+              },
+              {
+                "title": "Authentication",
+                "type": "authentication_guide",
+                "url": "https://docs.databricks.com/dev-tools/auth.html"
+              },
+              {
+                "title": "Access control",
+                "type": "permissions_scopes",
+                "url": "https://docs.databricks.com/security/access-control/index.html"
+              },
+              {
+                "title": "SQL reference",
+                "type": "sql_reference",
+                "url": "https://docs.databricks.com/sql/language-manual/index.html"
+              },
+              {
+                "title": "Databricks Status",
+                "type": "status_page",
+                "url": "https://status.databricks.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Rodi Reich Zilberman",
+                "commit_author_email": "rodi@airbyte.io",
+                "commit_sha": "ba9cebebaaf5d07d9e42d15930dd168e4882a162",
+                "commit_timestamp": "2026-10-31T15:29:23-07:00"
+              },
+              "release": {
+                "attributed_to": "octavia-bot-admin",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "ba9cebebaaf5d07d9e42d15930dd168e4882a162",
+                "merged_at": "2026-10-31T22:29:24Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 867491,
+                "pr_author_login": "rodireich",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 89659,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/89659",
+                "released_at": "2026-10-31T22:29:24Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-databricks/4.0.6.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-databricks/4.0.6/metadata.yaml",
+                "metadata_last_modified": "2026-10-31T22:35:13.496003+00:00",
+                "registry_entry_generated_at": "2026-10-31T22:35:13.496003+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-databricks",
+            "icon": "databricks.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-databricks/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "Databricks Lakehouse",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "alpha",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "**This is a private preview version, Do not upgrade until you review the changes**.\\n This version is a rewrite of the community connector with support for Unity catalog, and staging files using Unity catalog volumes. This version also introduces [Destinations V2](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#what-is-destinations-v2), which provides better error handling, incremental delivery of data for large syncs, and improved final table structures. To review the breaking changes, see [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#quick-start-to-upgrading).\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations#2.0.0",
+                  "upgradeDeadline": "2025-01-31"
+                },
+                "3.0.0": {
+                  "message": "This version adds an `_airbyte_generation_id` column to the raw and final tables. If you ran a sync using 2.0.0, you MUST manually drop the raw and final tables and then clear (reset) your connection; this release will not automatically upgrade your tables.\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations#3.0.0",
+                  "upgradeDeadline": "2025-01-31"
+                },
+                "4.0.0": {
+                  "deadlineAction": "auto_upgrade",
+                  "message": "This version upgrades Destination Databricks to the [Direct-Load](https://docs.airbyte.com/platform/using-airbyte/core-concepts/direct-load-tables) paradigm, which improves performance and reduces warehouse spend. Raw tables (`_airbyte_raw_*`) are no longer produced. If you do not interact with the raw tables, you can safely upgrade. If you do, update any downstream dbt models or SQL queries to reference the final tables instead, then drop old raw tables after verifying.\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations#4.0.0",
+                  "upgradeDeadline": "2026-10-01"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "check_connection",
+                  "resourceRequirements": {
+                    "memory_limit": "600Mi",
+                    "memory_request": "600Mi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "groups": [
+                  {
+                    "id": "connection",
+                    "title": "Connection"
+                  },
+                  {
+                    "id": "sync_behavior",
+                    "title": "Sync Behavior"
+                  }
+                ],
+                "properties": {
+                  "accept_terms": {
+                    "default": false,
+                    "description": "You must agree to the Databricks JDBC Driver <a href=\"https://databricks.com/jdbc-odbc-driver-license\">Terms & Conditions</a> to use this connector.",
+                    "group": "connection",
+                    "order": 6,
+                    "title": "Agree to the Databricks JDBC Driver Terms & Conditions",
+                    "type": "boolean"
+                  },
+                  "authentication": {
+                    "description": "Determines the type of authentication used to connect to Databricks. OAuth2 is recommended for production use.",
+                    "group": "connection",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Authentication using OAuth2 client credentials.",
+                        "properties": {
+                          "auth_type": {
+                            "default": "OAUTH",
+                            "enum": [
+                              "OAUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "client_id": {
+                            "description": "Enter the OAuth2 client ID for your Databricks <a href=\"https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html\">service principal</a>.",
+                            "order": 1,
+                            "title": "Client ID",
+                            "type": "string"
+                          },
+                          "secret": {
+                            "airbyte_secret": true,
+                            "description": "Enter the OAuth2 secret associated with the client ID.",
+                            "order": 2,
+                            "title": "Secret",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "auth_type",
+                          "client_id",
+                          "secret"
+                        ],
+                        "title": "OAuth2 (Recommended)",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Authentication using a personal access token.",
+                        "properties": {
+                          "auth_type": {
+                            "default": "BASIC",
+                            "enum": [
+                              "BASIC"
+                            ],
+                            "type": "string"
+                          },
+                          "personal_access_token": {
+                            "airbyte_secret": true,
+                            "description": "Enter your Databricks <a href=\"https://docs.databricks.com/en/dev-tools/auth/pat.html\">personal access token</a>.",
+                            "order": 1,
+                            "title": "Personal Access Token",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "auth_type",
+                          "personal_access_token"
+                        ],
+                        "title": "Personal Access Token",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 5,
+                    "title": "Authentication",
+                    "type": "object"
+                  },
+                  "cdc_deletion_mode": {
+                    "always_show": true,
+                    "default": "Hard delete",
+                    "description": "Whether to execute CDC deletions as hard deletes (i.e. propagate source deletions to the destination), or soft deletes (i.e. leave a tombstone record in the destination). Defaults to hard deletes.",
+                    "enum": [
+                      "Hard delete",
+                      "Soft delete"
+                    ],
+                    "group": "sync_behavior",
+                    "order": 7,
+                    "title": "CDC deletion mode",
+                    "type": "string"
+                  },
+                  "database": {
+                    "description": "Enter the name of the <a href=\"https://docs.databricks.com/en/data-governance/unity-catalog/index.html\">Unity Catalog</a> that you want to sync data into.",
+                    "examples": [
+                      "AIRBYTE_DATABASE"
+                    ],
+                    "group": "connection",
+                    "order": 3,
+                    "title": "Databricks Unity Catalog Name",
+                    "type": "string"
+                  },
+                  "hostname": {
+                    "description": "Enter your Databricks workspace <a href=\"https://docs.databricks.com/en/integrations/compute-details.html\">server hostname</a> (e.g., abc-12345678-wxyz.cloud.databricks.com). You can find this in your cluster or SQL warehouse connection details.",
+                    "examples": [
+                      "abc-12345678-wxyz.cloud.databricks.com"
+                    ],
+                    "group": "connection",
+                    "order": 1,
+                    "title": "Server Hostname",
+                    "type": "string"
+                  },
+                  "http_path": {
+                    "description": "Enter the <a href=\"https://docs.databricks.com/en/integrations/compute-details.html\">HTTP path</a> for your Databricks SQL warehouse or cluster. You can find this in the connection details of your compute resource.",
+                    "examples": [
+                      "sql/1.0/warehouses/0000-1111111-abcd90"
+                    ],
+                    "group": "connection",
+                    "order": 2,
+                    "title": "HTTP Path",
+                    "type": "string"
+                  },
+                  "port": {
+                    "default": "443",
+                    "description": "Enter the port number for the Databricks cluster connection. The default port is 443 (HTTPS).",
+                    "examples": [
+                      "443"
+                    ],
+                    "group": "connection",
+                    "order": 9,
+                    "title": "Port",
+                    "type": "string"
+                  },
+                  "purge_staging_data": {
+                    "default": true,
+                    "description": "Whether to delete staging files and tables after data has been loaded. Disable this option for debugging purposes.",
+                    "group": "sync_behavior",
+                    "order": 8,
+                    "title": "Purge Staging Files and Tables",
+                    "type": "boolean"
+                  },
+                  "schema": {
+                    "default": "default",
+                    "description": "Enter the name of the default <a href=\"https://docs.databricks.com/en/sql/language-manual/sql-ref-schema.html\">schema</a> where tables will be written. If not specified, \"default\" will be used.",
+                    "examples": [
+                      "AIRBYTE_SCHEMA"
+                    ],
+                    "group": "connection",
+                    "order": 4,
+                    "title": "Default Schema",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "hostname",
+                  "http_path",
+                  "database",
+                  "authentication",
+                  "accept_terms"
+                ],
+                "title": "Databricks Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -5298,9 +5667,9 @@
     {
       "ab_internal": {
         "isEnterprise": false,
-        "ql": 100,
+        "ql": 300,
         "requireVersionIncrementsInPullRequests": false,
-        "sl": 100
+        "sl": 300
       },
       "connectorBuildOptions": {
         "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
@@ -5328,15 +5697,15 @@
       ],
       "custom": false,
       "destinationDefinitionId": "a7bcc9d8-13b3-4e49-b80d-d020b90045e3",
-      "dockerImageTag": "0.9.8",
+      "dockerImageTag": "0.9.9",
       "dockerRepository": "airbyte/destination-dev-null",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/dev-null",
       "generated": {
         "git": {
-          "commit_author": "Rodi Reich Zilberman",
-          "commit_author_email": "rodi@airbyte.io",
-          "commit_sha": "dd364035af4e644c7009e19dbe043024c55ace48",
-          "commit_timestamp": "2026-10-30T12:16:35-07:00"
+          "commit_author": "Sunil Kuruba",
+          "commit_author_email": "sunil.kuruba@airbyte.io",
+          "commit_sha": "1cb55283d6626bef47c11833752caad891bc5ff5",
+          "commit_timestamp": "2026-10-30T17:18:12-07:00"
         },
         "metrics": {
           "all": {
@@ -5355,25 +5724,25 @@
         "release": {
           "attributed_to": "octavia-bot-admin",
           "attributed_to_kind": "bot",
-          "merge_commit_sha": "dd364035af4e644c7009e19dbe043024c55ace48",
-          "merged_at": "2026-10-30T19:16:36Z",
+          "merge_commit_sha": "1cb55283d6626bef47c11833752caad891bc5ff5",
+          "merged_at": "2026-10-31T00:18:13Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 867491,
-          "pr_author_login": "rodireich",
+          "pr_author_id": 270477162,
+          "pr_author_login": "sunil-kuruba",
           "pr_author_type": "User",
           "pr_merged_by_login": "octavia-bot-admin",
           "pr_merged_by_type": "Bot",
-          "pr_number": 89655,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/89655",
-          "released_at": "2026-10-30T19:16:36Z",
+          "pr_number": 90277,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/90277",
+          "released_at": "2026-10-31T00:18:13Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-dev-null/0.9.8.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-dev-null/0.9.9.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-dev-null/latest/metadata.yaml",
-          "metadata_last_modified": "2026-10-30T19:22:26.734247+00:00",
-          "registry_entry_generated_at": "2026-10-30T19:22:26.734247+00:00"
+          "metadata_last_modified": "2026-10-31T00:21:52.340415+00:00",
+          "registry_entry_generated_at": "2026-10-31T00:21:52.340415+00:00"
         }
       },
       "githubIssueLabel": "destination-dev-null",
@@ -5384,7 +5753,7 @@
       "name": "End-to-End Testing (/dev/null)",
       "packageInfo": {},
       "public": true,
-      "releaseStage": "alpha",
+      "releaseStage": "generally_available",
       "releases": {
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
@@ -5630,7 +5999,7 @@
         "supportsIncremental": true,
         "supportsNormalization": false
       },
-      "supportLevel": "community",
+      "supportLevel": "certified",
       "supportsDataActivation": false,
       "supportsFileTransfer": true,
       "supportsRefreshes": true,
@@ -6700,7 +7069,12 @@
         "isEnterprise": false,
         "ql": 300,
         "requireVersionIncrementsInPullRequests": false,
-        "sl": 100
+        "sl": 300
+      },
+      "allowedHosts": {
+        "hosts": [
+          "storage.googleapis.com"
+        ]
       },
       "connectorBuildOptions": {
         "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
@@ -6738,7 +7112,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "ca8f6566-e555-4b40-943a-545bf123117a",
-      "dockerImageTag": "1.0.1",
+      "dockerImageTag": "1.0.2",
       "dockerRepository": "airbyte/destination-gcs",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/gcs",
       "externalDocumentationUrls": [
@@ -6775,10 +7149,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Rodi Reich Zilberman",
-          "commit_author_email": "rodi@airbyte.io",
-          "commit_sha": "8652af4a214763b74f2c5efb5e186eba512fb8d1",
-          "commit_timestamp": "2026-10-30T12:15:03-07:00"
+          "commit_author": "Sunil Kuruba",
+          "commit_author_email": "sunil.kuruba@airbyte.io",
+          "commit_sha": "b58d657d32fd918761afe05a234f6875187eeb46",
+          "commit_timestamp": "2026-10-30T16:54:36-07:00"
         },
         "metrics": {
           "all": {
@@ -6797,25 +7171,25 @@
         "release": {
           "attributed_to": "octavia-bot-admin",
           "attributed_to_kind": "bot",
-          "merge_commit_sha": "8652af4a214763b74f2c5efb5e186eba512fb8d1",
-          "merged_at": "2026-10-30T19:15:04Z",
+          "merge_commit_sha": "b58d657d32fd918761afe05a234f6875187eeb46",
+          "merged_at": "2026-10-30T23:54:37Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 867491,
-          "pr_author_login": "rodireich",
+          "pr_author_id": 270477162,
+          "pr_author_login": "sunil-kuruba",
           "pr_author_type": "User",
           "pr_merged_by_login": "octavia-bot-admin",
           "pr_merged_by_type": "Bot",
-          "pr_number": 89650,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/89650",
-          "released_at": "2026-10-30T19:15:04Z",
+          "pr_number": 90272,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/90272",
+          "released_at": "2026-10-30T23:54:37Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-gcs/1.0.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-gcs/1.0.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-gcs/latest/metadata.yaml",
-          "metadata_last_modified": "2026-10-30T19:22:06.127370+00:00",
-          "registry_entry_generated_at": "2026-10-30T19:22:06.127370+00:00"
+          "metadata_last_modified": "2026-10-30T23:59:29.595872+00:00",
+          "registry_entry_generated_at": "2026-10-30T23:59:29.595872+00:00"
         }
       },
       "githubIssueLabel": "destination-gcs",
@@ -6826,7 +7200,7 @@
       "name": "Google Cloud Storage (GCS)",
       "packageInfo": {},
       "public": true,
-      "releaseStage": "beta",
+      "releaseStage": "generally_available",
       "releases": {
         "breakingChanges": {
           "1.0.0": {
@@ -7380,7 +7754,7 @@
         "supportsIncremental": true,
         "supportsNormalization": false
       },
-      "supportLevel": "community",
+      "supportLevel": "certified",
       "supportsDataActivation": false,
       "supportsRefreshes": true,
       "tags": [
@@ -83671,15 +84045,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "release": {
@@ -88868,15 +89242,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           }
         },
@@ -92349,15 +92723,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
