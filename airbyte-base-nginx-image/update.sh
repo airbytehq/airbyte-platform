@@ -1,7 +1,7 @@
 #!/bin/bash
 
 git clone https://github.com/nginxinc/docker-nginx-unprivileged.git
-git -C docker-nginx-unprivileged co 1.27.3
+git -C docker-nginx-unprivileged checkout ecb8070 # mainline 1.31.8; upstream stopped tagging releases
 
 rm -rf ./src
 mkdir src

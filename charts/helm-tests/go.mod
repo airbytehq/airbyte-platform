@@ -1,6 +1,6 @@
 module github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests
 
-go 1.23.1
+go 1.26.10
 
 require (
 	github.com/gruntwork-io/terratest v0.47.2

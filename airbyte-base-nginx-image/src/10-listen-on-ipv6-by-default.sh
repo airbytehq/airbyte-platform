@@ -27,7 +27,7 @@ fi
 touch /$DEFAULT_CONF_FILE 2>/dev/null || { entrypoint_log "$ME: info: can not modify /$DEFAULT_CONF_FILE (read-only file system?)"; exit 0; }
 
 # check if the file is already modified, e.g. on a container restart
-grep -q "listen  \[::]\:8080;" /$DEFAULT_CONF_FILE && { entrypoint_log "$ME: info: IPv6 listen already enabled"; exit 0; }
+grep -q "listen  \[::\]:8080;" /$DEFAULT_CONF_FILE && { entrypoint_log "$ME: info: IPv6 listen already enabled"; exit 0; }
 
 if [ -f "/etc/os-release" ]; then
     . /etc/os-release
@@ -47,7 +47,7 @@ case "$ID" in
         }
         ;;
     "alpine")
-        CHECKSUM=$(apk manifest nginx 2>/dev/null| grep $DEFAULT_CONF_FILE | cut -d' ' -f 1 | cut -d ':' -f 2)
+        CHECKSUM=$(apk manifest --no-network nginx 2>/dev/null| grep $DEFAULT_CONF_FILE | cut -d' ' -f 1 | cut -d ':' -f 2)
         echo "$CHECKSUM  /$DEFAULT_CONF_FILE" | sha1sum -c - >/dev/null 2>&1 || {
             entrypoint_log "$ME: info: /$DEFAULT_CONF_FILE differs from the packaged version"
             exit 0
