@@ -3,12 +3,19 @@ FROM amazoncorretto:21
 WORKDIR /app
 
 RUN <<EOF
+set -e
 # Amazon Linux 2023 locks yum (an alias for dnf) to the release the upstream image was built from;
 # --releasever=latest moves to the newest release so security fixes published since then are installed.
 yum update -y --releasever=latest
 yum install -y --releasever=latest tar shadow-utils findutils
 yum clean all
 rm -rf /var/cache/dnf /var/cache/yum
+# Distrust the root that chains to the compromised eMudhra intermediates (CVE-2026-91403).
+# Their AAA Certificate Services cross-signs need no block: AL2023 does not trust that root for TLS.
+# Remove once Amazon Linux 2023 ships a ca-certificates update that distrusts it.
+d=/etc/pki/ca-trust/source/blocklist; [ -d $d ] || d=/etc/pki/ca-trust/source/blacklist
+trust extract --overwrite --format=pem-bundle --filter='pkcs11:object=emSign%20ECC%20Root%20CA%20-%20G3;type=cert' $d/emSign_ECC_Root_CA_-_G3.pem
+update-ca-trust
 groupadd --gid 1000 airbyte
 useradd --uid 1000 --gid airbyte --shell /bin/bash --create-home airbyte
 # Create mount point for secrets

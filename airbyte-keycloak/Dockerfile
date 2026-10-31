@@ -8,6 +8,13 @@ FROM airbyte/mirrored-keycloak:26.7.3
 
 WORKDIR /opt/keycloak
 
+# Distrust the root that chains to the compromised eMudhra intermediates (CVE-2026-91403).
+# This image has no p11-kit, so `trust` and `update-ca-trust` do not work. Remove the root from the Java trust store instead.
+# Remove once RHEL ships a ca-certificates update that distrusts it.
+USER root
+RUN keytool -delete -cacerts -storepass changeit -alias emsigneccrootca-g3
+USER 1000
+
 # Password blacklists. See password-blacklists/README.md for sources.
 COPY bin/password-blacklists/10k-most-common.txt data/password-blacklists/10k-most-common.txt
 COPY bin/password-blacklists/common-and-breached-passwords.txt data/password-blacklists/common-and-breached-passwords.txt

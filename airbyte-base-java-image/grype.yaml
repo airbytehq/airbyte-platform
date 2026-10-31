@@ -1,0 +1,9 @@
+# Findings the Java base image scan ignores.
+# Each rule pins the package version, so it stops matching when the package is upgraded.
+ignore:
+  # lz4-java is shaded inside dd-java-agent.jar. No dd-trace-java release ships the fix yet.
+  # https://github.com/DataDog/dd-trace-java/issues/12818
+  - vulnerability: GHSA-mcr4-qmvw-px4g
+    package:
+      name: lz4-java
+      version: 1.11.1
