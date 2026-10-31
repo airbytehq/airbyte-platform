@@ -1,8 +1,9 @@
-import React, { useImperativeHandle, useRef, useState } from "react";
+import React, { useId, useImperativeHandle, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
@@ -35,21 +36,21 @@ function isGoogleConnector(connectorDefinitionId: string): boolean {
   ).includes(connectorDefinitionId);
 }
 
-function getButtonComponent(connectorDefinitionId: string) {
+function getBrandedButtonComponent(connectorDefinitionId: string) {
   if (isGoogleConnector(connectorDefinitionId)) {
     return GoogleAuthButton;
   }
   if (connectorDefinitionId === ConnectorIds.Sources.QuickBooks) {
     return QuickBooksAuthButton;
   }
-  return Button;
+  return undefined;
 }
 
 function getAuthenticateMessageId(connectorDefinitionId: string): string {
   if (isGoogleConnector(connectorDefinitionId)) {
     return "connectorForm.signInWithGoogle";
   }
-  return "connectorForm.authenticate";
+  return "connectorForm.authenticate.button";
 }
 
 export const AuthButton: React.FC<{
@@ -60,10 +61,11 @@ export const AuthButton: React.FC<{
   const { hiddenAuthFieldErrors, canUseManualOAuthMode, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
-  const { loading, done, run } = useFormOauthAdapter(selectedConnectorDefinitionSpecification);
+  const { loading, done, hasRun, run } = useFormOauthAdapter(selectedConnectorDefinitionSpecification);
+  const statusId = useId();
 
   const definitionId = ConnectorSpecification.id(selectedConnectorDefinitionSpecification);
-  const Component = getButtonComponent(definitionId);
+  const BrandedButton = getBrandedButtonComponent(definitionId);
 
   if (manualOAuthMode) {
     return (
@@ -75,26 +77,72 @@ export const AuthButton: React.FC<{
     );
   }
 
+  const buttonLabel = done ? (
+    <FormattedMessage id="connectorForm.reauthenticate" />
+  ) : (
+    <FormattedMessage id={getAuthenticateMessageId(definitionId)} />
+  );
+
   return (
-    <FlexContainer direction="column" gap="lg" alignItems="flex-start">
-      <FlexContainer gap="lg" alignItems="center" justifyContent="space-between">
-        <Component isLoading={loading} type="button" data-testid="oauth-button" onClick={run}>
-          {done ? (
-            <FormattedMessage id="connectorForm.reauthenticate" />
-          ) : (
+    <FlexContainer direction="column" gap="lg" className={styles.oauthBlock}>
+      <div role="status" id={statusId}>
+        {hasRun ? (
+          <FlexContainer alignItems="center" gap="sm">
+            <Icon type="successFilled" color="success" />
+            <Text size="lg" bold color="green600">
+              <FormattedMessage id="connectorForm.authenticate.succeeded" />
+            </Text>
+          </FlexContainer>
+        ) : (
+          <Text size="lg" bold>
             <FormattedMessage
-              id={getAuthenticateMessageId(definitionId)}
+              id="connectorForm.authenticate"
               values={{ connector: selectedConnectorDefinition.name }}
             />
-          )}
-        </Component>
-
-        {canUseManualOAuthMode && (
-          <Button variant="clear" onClick={toggleManualOAuthMode}>
-            <FormattedMessage id="connectorForm.manualAuth.toggle" />
-          </Button>
+          </Text>
         )}
-      </FlexContainer>
+      </div>
+
+      {BrandedButton ? (
+        <FlexContainer justifyContent="center">
+          <BrandedButton
+            isLoading={loading}
+            type="button"
+            data-testid="oauth-button"
+            aria-describedby={statusId}
+            onClick={run}
+          >
+            {buttonLabel}
+          </BrandedButton>
+        </FlexContainer>
+      ) : (
+        <Button
+          full
+          variant={done ? "secondary" : "primary"}
+          isLoading={loading}
+          type="button"
+          data-testid="oauth-button"
+          aria-describedby={statusId}
+          onClick={run}
+        >
+          {buttonLabel}
+        </Button>
+      )}
+
+      {canUseManualOAuthMode && !hasRun && (
+        <Text size="sm" color="grey" align="center">
+          <FormattedMessage
+            id="connectorForm.manualAuth.toggle"
+            values={{
+              link: (link: React.ReactNode[]) => (
+                <Button type="button" variant="link" onClick={toggleManualOAuthMode}>
+                  {link}
+                </Button>
+              ),
+            }}
+          />
+        </Text>
+      )}
 
       {authRequiredError && (
         <Text as="div" size="lg" className={styles.error}>

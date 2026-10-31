@@ -5,6 +5,7 @@ import { TestWrapper } from "test-utils/testutils";
 import { useFormOauthAdapter } from "area/connector/components/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
 import { useConnectorForm } from "area/connector/components/ConnectorForm/connectorFormContext";
 import { useAuthentication } from "area/connector/components/ConnectorForm/useAuthentication";
+import { ConnectorIds } from "area/connector/utils";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 
 import { AuthButton } from "./AuthButton";
@@ -69,17 +70,19 @@ describe("auth button", () => {
       </TestWrapper>
     );
 
-    // correct button text
-    const button = screen.getByRole("button", { name: "Authenticate your Acme account" });
-    expect(button).toBeInTheDocument();
+    // correct heading and button text
+    expect(screen.getByText("Authenticate your Acme account")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Authenticate" });
+    expect(button).toHaveAccessibleDescription("Authenticate your Acme account");
 
     // no error message
     const errorMessage = screen.queryByText(/Authentication required/i);
     expect(errorMessage).not.toBeInTheDocument();
   });
 
-  it("after successful authentication, it renders with correct message and success message", () => {
-    // no auth errors
+  it("after authenticating in this session, it announces success, shows a secondary re-authenticate button and hides the manual setup link", () => {
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: {}, canUseManualOAuthMode: true });
+
     mockUseConnectorForm.mockImplementationOnce(() => {
       const { selectedConnectorDefinition } = baseUseConnectorFormValues;
 
@@ -104,9 +107,131 @@ describe("auth button", () => {
       </TestWrapper>
     );
 
-    // correct button text
+    // success message and secondary button
+    expect(screen.getByRole("status")).toHaveTextContent("Authentication successful");
     const button = screen.getByRole("button", { name: "Re-authenticate" });
-    expect(button).toBeInTheDocument();
+    expect(button).toHaveClass("button--secondary");
+    expect(button).toHaveAccessibleDescription("Authentication successful");
+    expect(screen.queryByRole("button", { name: "Set up manually" })).not.toBeInTheDocument();
+  });
+
+  it("with saved credentials and no authentication in this session, it keeps the heading and offers a secondary re-authenticate button", () => {
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: {}, canUseManualOAuthMode: true });
+
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    // saved credentials make done true, but no flow ran in this session
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done: true, hasRun: false, run, loading };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText("Authenticate your Acme account")).toBeInTheDocument();
+    expect(screen.queryByText("Authentication successful")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Re-authenticate" })).toHaveClass("button--secondary");
+    expect(screen.getByRole("button", { name: "Set up manually" })).toBeInTheDocument();
+  });
+
+  it("keeps the branded Google button after successful authentication", () => {
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    // done
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const done = true;
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done, run, loading, hasRun: done };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            { sourceDefinitionId: ConnectorIds.Sources.GoogleAds } as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText("Authentication successful")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Re-authenticate" });
+    expect(button).not.toHaveClass("button--secondary");
+    expect(button.querySelector("img")).toBeInTheDocument();
+  });
+
+  it("shows the branded Google sign-in button before authentication", () => {
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done: false, hasRun: false, run, loading };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            { sourceDefinitionId: ConnectorIds.Sources.GoogleAds } as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText("Authenticate your Acme account")).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Sign in with Google" });
+    expect(button).not.toHaveClass("button--primary");
+    expect(button.querySelector("img")).toBeInTheDocument();
+  });
+
+  it("shows the branded QuickBooks button", () => {
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done: false, hasRun: false, run, loading };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            { sourceDefinitionId: ConnectorIds.Sources.QuickBooks } as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    expect(screen.getByRole("button", { name: "Connect to QuickBook" })).toHaveClass("qbAuthButton");
+    expect(screen.getByText("Authenticate")).toBeInTheDocument();
   });
 
   it("renders an error if there are any auth fields with empty values", () => {
@@ -138,7 +263,7 @@ describe("auth button", () => {
     );
 
     // correct button
-    const button = screen.getByRole("button", { name: "Authenticate your Acme account" });
+    const button = screen.getByRole("button", { name: "Authenticate" });
     expect(button).toBeInTheDocument();
 
     // error message

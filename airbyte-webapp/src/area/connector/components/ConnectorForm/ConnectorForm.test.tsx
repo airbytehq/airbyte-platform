@@ -1535,6 +1535,9 @@ describe("Connector form", () => {
 
       await executeOAuthFlow(container);
 
+      expect(await screen.findByText("Authentication successful")).toBeInTheDocument();
+      expect(getOAuthButton(container)?.textContent).toEqual("Re-authenticate");
+
       const submit = getSubmitButton(container);
       await waitFor(() => userEvent.click(submit!));
 

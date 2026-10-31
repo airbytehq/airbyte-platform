@@ -2,6 +2,12 @@
 @use "scss/mixins";
 @use "scss/variables";
 
+.oauthBlock {
+  padding: variables.$spacing-lg;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$blue-30;
+}
+
 .error {
   margin-left: variables.$spacing-lg;
   color: colors.$red;

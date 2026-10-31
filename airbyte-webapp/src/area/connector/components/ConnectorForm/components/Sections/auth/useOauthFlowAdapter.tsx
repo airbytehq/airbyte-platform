@@ -26,9 +26,6 @@ export function useFormOauthAdapter(connector: ConnectorDefinitionSpecificationR
   const [hasRun, setHasRun] = useState(false);
 
   const { castValues } = useConnectorForm();
-  const { registerNotification } = useNotificationService();
-
-  const OAUTH_SUCCESS_ID = "connectorForm.authenticate.succeeded";
 
   const onDone = (authPayload: CompleteOAuthResponseAuthPayload) => {
     const oauthPaths = serverProvidedOauthPaths(connector);
@@ -47,12 +44,6 @@ export function useFormOauthAdapter(connector: ConnectorDefinitionSpecificationR
         // in the off-chance something is wrong with the oauth values, it will be flagged when the user tries to submit the form
         shouldValidate: false,
       });
-    });
-
-    registerNotification({
-      id: OAUTH_SUCCESS_ID,
-      text: <FormattedMessage id={OAUTH_SUCCESS_ID} />,
-      type: "success",
     });
 
     setHasRun(true);

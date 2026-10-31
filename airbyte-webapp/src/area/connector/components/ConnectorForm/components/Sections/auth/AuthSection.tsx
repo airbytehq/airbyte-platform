@@ -30,15 +30,13 @@ export const AuthSection: React.FC = () => {
   return (
     <SectionContainer>
       <FlexContainer direction="column" gap="xl">
-        <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
-          <AuthButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
-          {supportsRevokingTokens && hasAuthFieldValues && connectorId && (
-            <RevokeButton
-              sourceId={connectorId}
-              selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
-            />
-          )}
-        </FlexContainer>
+        <AuthButton selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification} />
+        {supportsRevokingTokens && hasAuthFieldValues && connectorId && (
+          <RevokeButton
+            sourceId={connectorId}
+            selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
+          />
+        )}
         {shouldShowRedirectUrlTooltip && (
           <Message text={<FormattedMessage id="connectorForm.redirectUrl" values={{ url: OAUTH_REDIRECT_URL }} />} />
         )}
