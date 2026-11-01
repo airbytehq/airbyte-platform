@@ -32858,15 +32858,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "high"
           }
         },
@@ -37817,15 +37817,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -44811,16 +44811,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -87564,15 +87564,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -90076,15 +90076,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-microsoft-onedrive/0.2.44.spdx.json",
@@ -93590,7 +93590,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mongodb-migrations",
         "releaseCandidates": {
-          "3.0.1": {
+          "3.0.2": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -93630,7 +93630,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "3.0.1",
+            "dockerImageTag": "3.0.2",
             "dockerRepository": "airbyte/source-mongodb",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/mongodb",
             "externalDocumentationUrls": [
@@ -93657,33 +93657,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Sunil Kuruba",
-                "commit_author_email": "sunil.kuruba@airbyte.io",
-                "commit_sha": "ab4b0b33c76f980584b52604b7c7f46732ee2a40",
-                "commit_timestamp": "2026-10-29T14:35:05-07:00"
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "4b1088e47b34aa29012ce75bec7da20eccb30758",
+                "commit_timestamp": "2026-11-01T16:52:56+00:00"
               },
               "release": {
-                "attributed_to": "octavia-bot-admin",
+                "attributed_to": "octavia-bot",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "ab4b0b33c76f980584b52604b7c7f46732ee2a40",
-                "merged_at": "2026-10-29T21:35:05Z",
+                "merge_commit_sha": "4b1088e47b34aa29012ce75bec7da20eccb30758",
+                "merged_at": "2026-11-01T16:52:56Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 270477162,
-                "pr_author_login": "sunil-kuruba",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 90162,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/90162",
-                "released_at": "2026-10-29T21:35:05Z",
+                "pr_number": 90322,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/90322",
+                "released_at": "2026-11-01T16:52:56Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mongodb/3.0.1.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mongodb/3.0.2.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-mongodb/3.0.1/metadata.yaml",
-                "metadata_last_modified": "2026-10-29T21:40:55.575920+00:00",
-                "registry_entry_generated_at": "2026-10-29T21:40:55.575920+00:00"
+                "metadata_file_path": "metadata/airbyte/source-mongodb/3.0.2/metadata.yaml",
+                "metadata_last_modified": "2026-11-01T16:57:00.884349+00:00",
+                "registry_entry_generated_at": "2026-11-01T16:57:00.884349+00:00"
               }
             },
             "githubIssueLabel": "source-mongodb",
@@ -106560,15 +106560,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -109920,7 +109920,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "4.2.1",
+      "dockerImageTag": "5.0.0",
       "dockerRepository": "airbyte/source-pipedrive",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/pipedrive",
       "externalDocumentationUrls": [
@@ -109979,8 +109979,8 @@
         "git": {
           "commit_author": "Baz",
           "commit_author_email": "22987674+bazarnov@users.noreply.github.com",
-          "commit_sha": "64495022325bd3f84599050cb8c6823bd8a93e41",
-          "commit_timestamp": "2026-10-28T16:40:51+02:00"
+          "commit_sha": "f32a836c6ba98ded43c445f1aa9c17b4c100e741",
+          "commit_timestamp": "2026-11-01T12:40:21+02:00"
         },
         "metrics": {
           "all": {
@@ -109999,25 +109999,25 @@
         "release": {
           "attributed_to": "bazarnov",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "64495022325bd3f84599050cb8c6823bd8a93e41",
-          "merged_at": "2026-10-28T14:40:52Z",
+          "merge_commit_sha": "f32a836c6ba98ded43c445f1aa9c17b4c100e741",
+          "merged_at": "2026-11-01T10:40:22Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 22987674,
           "pr_author_login": "bazarnov",
           "pr_author_type": "User",
           "pr_merged_by_login": "bazarnov",
           "pr_merged_by_type": "User",
-          "pr_number": 90148,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/90148",
-          "released_at": "2026-10-28T14:40:52Z",
+          "pr_number": 90177,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/90177",
+          "released_at": "2026-11-01T10:40:22Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pipedrive/4.2.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pipedrive/5.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-pipedrive/latest/metadata.yaml",
-          "metadata_last_modified": "2026-10-28T16:05:54.649679+00:00",
-          "registry_entry_generated_at": "2026-10-28T16:05:54.649679+00:00"
+          "metadata_last_modified": "2026-11-01T10:45:00.833240+00:00",
+          "registry_entry_generated_at": "2026-11-01T10:45:00.833240+00:00"
         }
       },
       "githubIssueLabel": "source-pipedrive",
@@ -110090,6 +110090,31 @@
               }
             ],
             "upgradeDeadline": "2026-10-20"
+          },
+          "5.0.0": {
+            "deadlineAction": "disable",
+            "message": "Version 5.0.0 types the remaining date and time fields and corrects declared shapes to match Pipedrive's API reference. Timestamps and dates on projects, tasks, mailThreads, call_logs, legacy_teams, deal_installments, deal_flow, goals and filters change from string to timestamp or date; the goals owner, assignee, pipeline and activity type ids change from number to integer; label_ids on leads and leads_archived, mailThreads.drafts_parties and deal_fields.show_in_pipelines get typed items or properties. If you sync any of these streams, refresh the source schema and run a sync; warehouses convert the columns in place, but on Postgres and Redshift drop views that select these columns first. On ClickHouse, clear projects, tasks, mailThreads and call_logs if they are in Full refresh | Append mode. On S3 Data Lake and GCS Data Lake, clear the affected streams that are not in Full refresh | Overwrite mode first. Clearing removes rows for records deleted in Pipedrive and earlier Append snapshots. See https://docs.airbyte.com/integrations/sources/pipedrive-migrations#upgrading-to-500.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/pipedrive-migrations#5.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "projects",
+                  "tasks",
+                  "mailThreads",
+                  "call_logs",
+                  "legacy_teams",
+                  "deal_installments",
+                  "deal_flow",
+                  "goals",
+                  "filters",
+                  "leads",
+                  "leads_archived",
+                  "deal_fields"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-11-15"
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/pipedrive-migrations",
@@ -110101,7 +110126,7 @@
             "strategy": "fast"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -153916,15 +153941,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
