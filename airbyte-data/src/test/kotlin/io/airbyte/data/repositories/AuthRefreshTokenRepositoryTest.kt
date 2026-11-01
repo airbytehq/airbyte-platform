@@ -7,6 +7,9 @@ package io.airbyte.data.repositories
 import io.airbyte.data.repositories.entities.AuthRefreshToken
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private const val TOKEN_VALUE_1 = "tokenValue1"
@@ -30,21 +33,21 @@ internal class AuthRefreshTokenRepositoryTest : AbstractConfigRepositoryTest() {
       )
 
     val countBeforeSave = authRefreshTokenRepository.count()
-    assert(countBeforeSave == 0L)
+    assertEquals(0L, countBeforeSave)
 
     val saveResult = authRefreshTokenRepository.save(authRefreshToken)
     val countAfterSave = authRefreshTokenRepository.count()
-    assert(countAfterSave == 1L)
+    assertEquals(1L, countAfterSave)
 
     val persistedAuthRefreshToken = authRefreshTokenRepository.findByValue(saveResult.value)!!
-    assert(persistedAuthRefreshToken.value == TOKEN_VALUE_1)
-    assert(persistedAuthRefreshToken.sessionId == SESSION_ID_1)
-    assert(!persistedAuthRefreshToken.revoked)
+    assertEquals(TOKEN_VALUE_1, persistedAuthRefreshToken.value)
+    assertEquals(SESSION_ID_1, persistedAuthRefreshToken.sessionId)
+    assertFalse(persistedAuthRefreshToken.revoked)
   }
 
   @Test
   fun `test find by sessionId`() {
-    assert(authRefreshTokenRepository.findBySessionId(SESSION_ID_1).isEmpty())
+    assertTrue(authRefreshTokenRepository.findBySessionId(SESSION_ID_1).isEmpty())
 
     val authRefreshToken1 =
       AuthRefreshToken(
@@ -70,8 +73,8 @@ internal class AuthRefreshTokenRepositoryTest : AbstractConfigRepositoryTest() {
     authRefreshTokenRepository.saveAll(listOf(authRefreshToken1, authRefreshToken2, authRefreshTokenOtherSession))
 
     val tokens = authRefreshTokenRepository.findBySessionId(SESSION_ID_1).map { it.value }
-    assert(tokens.size == 2)
-    assert(tokens.contains(authRefreshToken1.value))
-    assert(tokens.contains(authRefreshToken2.value))
+    assertEquals(2, tokens.size)
+    assertTrue(tokens.contains(authRefreshToken1.value))
+    assertTrue(tokens.contains(authRefreshToken2.value))
   }
 }

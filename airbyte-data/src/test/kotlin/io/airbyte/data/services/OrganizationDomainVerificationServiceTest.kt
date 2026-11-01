@@ -17,6 +17,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -67,10 +69,10 @@ class OrganizationDomainVerificationServiceTest {
         createdBy = UUID.randomUUID(),
       )
 
-    assert(result.id == testId)
-    assert(result.organizationId == testOrgId)
-    assert(result.domain == testDomain)
-    assert(result.status == DomainVerificationStatus.PENDING)
+    assertEquals(testId, result.id)
+    assertEquals(testOrgId, result.organizationId)
+    assertEquals(testDomain, result.domain)
+    assertEquals(DomainVerificationStatus.PENDING, result.status)
     verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
     verify { organizationDomainVerificationRepository.save(any()) }
   }
@@ -94,7 +96,7 @@ class OrganizationDomainVerificationServiceTest {
           createdBy = UUID.randomUUID(),
         )
       }
-    assert(exception.message == "Domain 'example.com' is already verified for this organization.")
+    assertEquals("Domain 'example.com' is already verified for this organization.", exception.message)
     verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
   }
 
@@ -118,7 +120,7 @@ class OrganizationDomainVerificationServiceTest {
         )
       }
 
-    assert(exception.message?.contains("expired") == true)
+    assertEquals(true, exception.message?.contains("expired"))
     verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
   }
 
@@ -131,7 +133,7 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.findByOrganizationId(testOrgId)
 
-    assert(result.size == 2)
+    assertEquals(2, result.size)
     verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) }
   }
 
@@ -142,7 +144,7 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.getDomainVerification(testId)
 
-    assert(result.id == testId)
+    assertEquals(testId, result.id)
     verify { organizationDomainVerificationRepository.findById(testId) }
   }
 
@@ -154,7 +156,7 @@ class OrganizationDomainVerificationServiceTest {
       assertThrows<IllegalArgumentException> {
         organizationDomainVerificationService.getDomainVerification(testId)
       }
-    assert(exception.message == "Domain verification not found with id: $testId")
+    assertEquals("Domain verification not found with id: $testId", exception.message)
   }
 
   @Test
@@ -169,8 +171,8 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.findByStatus(DomainVerificationStatus.PENDING)
 
-    assert(result.size == 1)
-    assert(result[0].status == DomainVerificationStatus.PENDING)
+    assertEquals(1, result.size)
+    assertEquals(DomainVerificationStatus.PENDING, result[0].status)
     verify(exactly = 1) { organizationDomainVerificationRepository.findByStatus(EntityDomainVerificationStatus.pending, false) }
   }
 
@@ -194,8 +196,8 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.updateVerificationStatus(testId, DomainVerificationStatus.VERIFIED)
 
-    assert(result.status == DomainVerificationStatus.VERIFIED)
-    assert(result.attempts == 6)
+    assertEquals(DomainVerificationStatus.VERIFIED, result.status)
+    assertEquals(6, result.attempts)
     verify { organizationDomainVerificationRepository.update(any()) }
   }
 
@@ -213,7 +215,7 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.VERIFIED)
+      assertEquals(DomainVerificationStatus.VERIFIED, result.status)
       verify { dnsVerificationService.checkDomainVerification("_airbyte-verification.$testDomain", "airbyte-domain-verification=$testToken") }
       verify { organizationDomainVerificationRepository.update(any()) }
     }
@@ -230,7 +232,7 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.FAILED)
+      assertEquals(DomainVerificationStatus.FAILED, result.status)
       verify { organizationDomainVerificationRepository.update(any()) }
     }
 
@@ -250,8 +252,8 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.PENDING)
-      assert(result.attempts == 4)
+      assertEquals(DomainVerificationStatus.PENDING, result.status)
+      assertEquals(4, result.attempts)
     }
 
     @Test
@@ -270,7 +272,7 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.EXPIRED)
+      assertEquals(DomainVerificationStatus.EXPIRED, result.status)
     }
 
     @Test
@@ -289,7 +291,7 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.VERIFIED)
+      assertEquals(DomainVerificationStatus.VERIFIED, result.status)
       verify { organizationEmailDomainService.createEmailDomain(any()) }
     }
 
@@ -308,7 +310,7 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.VERIFIED)
+      assertEquals(DomainVerificationStatus.VERIFIED, result.status)
       verify(exactly = 0) { organizationEmailDomainService.createEmailDomain(any()) }
     }
 
@@ -327,7 +329,7 @@ class OrganizationDomainVerificationServiceTest {
           organizationDomainVerificationService.checkAndUpdateVerification(testId)
         }
 
-      assert(exception.message?.contains("no DNS record name") == true)
+      assertEquals(true, exception.message?.contains("no DNS record name"))
     }
   }
 
@@ -339,8 +341,8 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.findByOrganizationId(testOrgId)
 
-    assert(result.size == 1)
-    assert(!result[0].tombstone)
+    assertEquals(1, result.size)
+    assertFalse(result[0].tombstone)
     verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) }
   }
 
@@ -354,7 +356,7 @@ class OrganizationDomainVerificationServiceTest {
 
     val result = organizationDomainVerificationService.findByOrganizationId(testOrgId, includeDeleted = true)
 
-    assert(result.size == 2)
+    assertEquals(2, result.size)
     verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, true) }
   }
 
@@ -383,7 +385,7 @@ class OrganizationDomainVerificationServiceTest {
         assertThrows<IllegalArgumentException> {
           organizationDomainVerificationService.deleteDomainVerification(testId)
         }
-      assert(exception.message == "Domain verification not found with id $testId")
+      assertEquals("Domain verification not found with id $testId", exception.message)
     }
 
     @Test
@@ -448,9 +450,9 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.resetDomainVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.PENDING)
-      assert(result.attempts == 0)
-      assert(result.expiresAt!!.isAfter(OffsetDateTime.now().plusDays(13)))
+      assertEquals(DomainVerificationStatus.PENDING, result.status)
+      assertEquals(0, result.attempts)
+      assertTrue(result.expiresAt!!.isAfter(OffsetDateTime.now().plusDays(13)))
       verify {
         organizationDomainVerificationRepository.update(
           match {
@@ -484,9 +486,9 @@ class OrganizationDomainVerificationServiceTest {
 
       val result = organizationDomainVerificationService.resetDomainVerification(testId)
 
-      assert(result.status == DomainVerificationStatus.PENDING)
-      assert(result.attempts == 0)
-      assert(result.expiresAt!!.isAfter(OffsetDateTime.now()))
+      assertEquals(DomainVerificationStatus.PENDING, result.status)
+      assertEquals(0, result.attempts)
+      assertTrue(result.expiresAt!!.isAfter(OffsetDateTime.now()))
       verify { organizationDomainVerificationRepository.update(any()) }
     }
 
@@ -498,7 +500,7 @@ class OrganizationDomainVerificationServiceTest {
         assertThrows<IllegalArgumentException> {
           organizationDomainVerificationService.resetDomainVerification(testId)
         }
-      assert(exception.message == "Domain verification not found with id $testId")
+      assertEquals("Domain verification not found with id $testId", exception.message)
     }
 
     @Test
@@ -515,7 +517,7 @@ class OrganizationDomainVerificationServiceTest {
         assertThrows<IllegalArgumentException> {
           organizationDomainVerificationService.resetDomainVerification(testId)
         }
-      assert(exception.message?.contains("already pending") == true)
+      assertEquals(true, exception.message?.contains("already pending"))
     }
   }
 

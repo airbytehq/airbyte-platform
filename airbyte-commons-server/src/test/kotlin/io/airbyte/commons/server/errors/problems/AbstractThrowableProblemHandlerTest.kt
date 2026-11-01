@@ -8,6 +8,8 @@ import io.airbyte.api.problems.AbstractThrowableProblem
 import io.airbyte.api.problems.ProblemResponse
 import io.airbyte.api.problems.model.generated.BaseProblemFields
 import io.airbyte.commons.json.Jsons
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 
 internal class AbstractThrowableProblemHandlerTest {
@@ -19,16 +21,16 @@ internal class AbstractThrowableProblemHandlerTest {
 
     val result = abstractThrowableProblemHandler.handle(null, exception)
 
-    assert(result != null)
-    assert(result?.status()?.code == 400)
+    assertNotNull(result)
+    assertEquals(400, result?.status()?.code)
 
     val parsedBody = Jsons.deserialize(result?.body() as String, BaseProblemFields::class.java)
-    assert(parsedBody.status == 400)
-    assert(parsedBody.title == "test-problem")
-    assert(parsedBody.detail == "test-problem-detail")
-    assert(parsedBody.type == "errors:problem/test")
-    assert(parsedBody.documentationUrl == "https://airbyte.com/docs")
-    assert(parsedBody.data == mapOf("test-key" to "test-val"))
+    assertEquals(400, parsedBody.status)
+    assertEquals("test-problem", parsedBody.title)
+    assertEquals("test-problem-detail", parsedBody.detail)
+    assertEquals("errors:problem/test", parsedBody.type)
+    assertEquals("https://airbyte.com/docs", parsedBody.documentationUrl)
+    assertEquals(mapOf("test-key" to "test-val"), parsedBody.data)
   }
 
   companion object {

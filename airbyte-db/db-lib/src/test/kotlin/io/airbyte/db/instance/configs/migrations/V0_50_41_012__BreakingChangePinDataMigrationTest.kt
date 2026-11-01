@@ -13,6 +13,7 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -114,8 +115,8 @@ internal class V0_50_41_012__BreakingChangePinDataMigrationTest : AbstractConfig
       assertNull(scopedConfig)
     } else {
       assertNotNull(scopedConfig)
-      assert(scopedConfig!!["value"] == actorVersionId.toString())
-      assert(scopedConfig["origin"] == expectedBCOrigin)
+      assertEquals(actorVersionId.toString(), scopedConfig!!["value"])
+      assertEquals(expectedBCOrigin, scopedConfig["origin"])
     }
   }
 

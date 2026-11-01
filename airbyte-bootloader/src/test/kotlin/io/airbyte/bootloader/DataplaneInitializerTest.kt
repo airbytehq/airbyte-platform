@@ -27,6 +27,7 @@ import io.mockk.slot
 import io.mockk.unmockkObject
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -321,8 +322,8 @@ class DataplaneInitializerTest {
     verify {
       groupService.writeDataplaneGroup(
         withArg {
-          assert(it.organizationId == DEFAULT_ORGANIZATION_ID)
-          assert(it.name == DEFAULT_DATAPLANE_GROUP)
+          assertEquals(DEFAULT_ORGANIZATION_ID, it.organizationId)
+          assertEquals(DEFAULT_DATAPLANE_GROUP, it.name)
         },
       )
     }
@@ -351,8 +352,8 @@ class DataplaneInitializerTest {
     verify {
       groupService.writeDataplaneGroup(
         withArg {
-          assert(it.organizationId == DEFAULT_ORGANIZATION_ID)
-          assert(it.name == "other")
+          assertEquals(DEFAULT_ORGANIZATION_ID, it.organizationId)
+          assertEquals("other", it.name)
         },
       )
     }

@@ -11,6 +11,7 @@ import io.airbyte.data.repositories.AbstractConfigRepositoryTest
 import io.airbyte.data.services.ServiceAccountsService
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,6 +71,6 @@ class ServiceAccountsServiceTest : AbstractConfigRepositoryTest() {
     assertNotNull(retrieved)
     assertEquals(account.id, retrieved.id)
     // the account secret should not equal the retrieved secret, since the db secret is encoded
-    assert(account.secret != retrieved.secret)
+    assertNotEquals(account.secret, retrieved.secret)
   }
 }

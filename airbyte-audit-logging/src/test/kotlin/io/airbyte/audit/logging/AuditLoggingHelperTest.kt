@@ -20,6 +20,7 @@ import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -202,9 +203,9 @@ class AuditLoggingHelperTest {
 
       val finalSummary = auditLoggingHelper.generateSummary(requestSummary, resultSummary)
 
-      assert(finalSummary.contains("result"))
-      assert(finalSummary.contains("targetUser"))
-      assert(finalSummary.contains("email"))
+      assertTrue(finalSummary.contains("result"))
+      assertTrue(finalSummary.contains("targetUser"))
+      assertTrue(finalSummary.contains("email"))
     }
 
     @Test
@@ -214,7 +215,7 @@ class AuditLoggingHelperTest {
 
       val finalSummary = auditLoggingHelper.generateSummary(requestSummary, resultSummary)
 
-      assert(finalSummary.contains("result"))
+      assertTrue(finalSummary.contains("result"))
     }
 
     @Test
@@ -224,7 +225,7 @@ class AuditLoggingHelperTest {
 
       val finalSummary = auditLoggingHelper.generateSummary(requestSummary, resultSummary)
 
-      assert(finalSummary == "{}")
+      assertEquals("{}", finalSummary)
     }
   }
 }

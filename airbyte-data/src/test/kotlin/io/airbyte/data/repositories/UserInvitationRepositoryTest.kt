@@ -14,6 +14,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
@@ -78,7 +79,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
   @Test
   fun `test db insertion`() {
     val saveResult = userInvitationRepository.save(userInvitation)
-    assert(userInvitationRepository.count() == 1L)
+    assertEquals(1L, userInvitationRepository.count())
 
     val persistedInvitation = userInvitationRepository.findById(saveResult.id!!).get()
 
@@ -203,14 +204,14 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
     // for each workspace invitation found, make sure that it has a match by calling assertInvitationEquals
     expectedWorkspaceMatches.forEach { expected ->
       val actual = actualWorkspaceInvites.find { it.id == expected.id }
-      assert(actual != null)
+      assertNotNull(actual)
       assertInvitationEquals(expected, actual!!)
     }
 
     // for each organization invitation found, make sure that it has a match by calling assertInvitationEquals
     expectedOrgMatches.forEach { expected ->
       val actual = actualOrgInvites.find { it.id == expected.id }
-      assert(actual != null)
+      assertNotNull(actual)
       assertInvitationEquals(expected, actual!!)
     }
   }
@@ -287,7 +288,7 @@ internal class UserInvitationRepositoryTest : AbstractConfigRepositoryTest() {
     // for each invitation found, make sure that it has a match by calling assertInvitationEquals
     expectedMatches.forEach { expected ->
       val actual = actualMatches.find { it.id == expected.id }
-      assert(actual != null)
+      assertNotNull(actual)
       assertInvitationEquals(expected, actual!!)
     }
   }

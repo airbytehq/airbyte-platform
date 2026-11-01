@@ -24,6 +24,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
@@ -52,7 +53,7 @@ class DataplaneGroupApiControllerTest {
       )
     val responseDataplaneGroups = dataplaneGroup
 
-    assert(responseDataplaneGroups.organizationId == MOCK_ORGANIZATION_ID)
+    assertEquals(MOCK_ORGANIZATION_ID, responseDataplaneGroups.organizationId)
   }
 
   @Test
@@ -93,9 +94,9 @@ class DataplaneGroupApiControllerTest {
       )
     val responseDataplaneGroups = updatedDataplaneGroup
 
-    assert(responseDataplaneGroups.dataplaneGroupId == mockDataplaneGroup.id)
-    assert(responseDataplaneGroups.name == newName)
-    assert(responseDataplaneGroups.enabled == newEnabled)
+    assertEquals(mockDataplaneGroup.id, responseDataplaneGroups.dataplaneGroupId)
+    assertEquals(newName, responseDataplaneGroups.name)
+    assertEquals(newEnabled, responseDataplaneGroups.enabled)
   }
 
   @Test
@@ -132,8 +133,8 @@ class DataplaneGroupApiControllerTest {
         DataplaneGroupUpdateRequestBody(dataplaneGroupId = mockDataplaneGroup.id, name = newName),
       )
 
-    assert(updated.name == newName)
-    assert(updated.enabled == originalEnabled)
+    assertEquals(newName, updated.name)
+    assertEquals(originalEnabled, updated.enabled)
   }
 
   @Test
@@ -156,8 +157,8 @@ class DataplaneGroupApiControllerTest {
         DataplaneGroupUpdateRequestBody(dataplaneGroupId = mockDataplaneGroup.id, enabled = newEnabled),
       )
 
-    assert(updated.enabled == newEnabled)
-    assert(updated.name == originalName)
+    assertEquals(newEnabled, updated.enabled)
+    assertEquals(originalName, updated.name)
   }
 
   @Test
@@ -216,9 +217,9 @@ class DataplaneGroupApiControllerTest {
     val dataplaneGroups = dataplaneGroupApiController.listDataplaneGroups(DataplaneGroupListRequestBody(organizationId = MOCK_ORGANIZATION_ID))
 
     val responseDataplaneGroups = dataplaneGroups.dataplaneGroups!!
-    assert(responseDataplaneGroups.size == 2)
-    assert(responseDataplaneGroups[0].dataplaneGroupId == dataplaneGroupId1)
-    assert(responseDataplaneGroups[1].dataplaneGroupId == dataplaneGroupId2)
+    assertEquals(2, responseDataplaneGroups.size)
+    assertEquals(dataplaneGroupId1, responseDataplaneGroups[0].dataplaneGroupId)
+    assertEquals(dataplaneGroupId2, responseDataplaneGroups[1].dataplaneGroupId)
   }
 
   private fun createDataplaneGroup(id: UUID? = null): DataplaneGroup =

@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -152,7 +153,7 @@ class DbPruneWorkflowTest {
     }
 
     // Duration should be a positive number even for failures
-    assert(gaugeSlot.captured > 0.0)
+    assertTrue(gaugeSlot.captured > 0.0, "expected ${gaugeSlot.captured} > 0.0")
   }
 
   @Test

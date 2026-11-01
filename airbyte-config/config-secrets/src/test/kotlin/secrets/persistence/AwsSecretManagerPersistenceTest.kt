@@ -343,9 +343,9 @@ class AwsSecretManagerPersistenceTest {
     verify {
       mockAwsClient.createSecret(
         withArg {
-          assert(it.kmsKeyId.equals("testKms"))
+          Assertions.assertEquals("testKms", it.kmsKeyId)
           val expectedTags = listOf<Tag>(Tag().withKey("key1").withValue("value1"), Tag().withKey("key2").withValue("value2"))
-          assert(it.tags.containsAll(expectedTags))
+          Assertions.assertTrue(it.tags.containsAll(expectedTags))
         },
       )
     }
@@ -374,7 +374,7 @@ class AwsSecretManagerPersistenceTest {
     verify {
       mockAwsClient.createSecret(
         withArg {
-          assert(it.kmsKeyId.equals("testKms"))
+          Assertions.assertEquals("testKms", it.kmsKeyId)
         },
       )
     }
@@ -401,7 +401,7 @@ class AwsSecretManagerPersistenceTest {
     verify(exactly = 1) {
       mockAwsClient.updateSecret(
         withArg {
-          assert(it.secretString.equals("secret value"))
+          Assertions.assertEquals("secret value", it.secretString)
         },
       )
     }
@@ -428,15 +428,15 @@ class AwsSecretManagerPersistenceTest {
     verify {
       mockAwsClient.deleteSecret(
         withArg {
-          assert(it.secretId.equals(coordinate.coordinateBase))
-          assert(it.forceDeleteWithoutRecovery.equals(true))
+          Assertions.assertEquals(coordinate.coordinateBase, it.secretId)
+          Assertions.assertEquals(true, it.forceDeleteWithoutRecovery)
         },
       )
 
       mockAwsClient.deleteSecret(
         withArg {
-          assert(it.secretId.equals(coordinate.fullCoordinate))
-          assert(it.forceDeleteWithoutRecovery.equals(true))
+          Assertions.assertEquals(coordinate.fullCoordinate, it.secretId)
+          Assertions.assertEquals(true, it.forceDeleteWithoutRecovery)
         },
       )
     }
@@ -461,17 +461,17 @@ class AwsSecretManagerPersistenceTest {
     verify {
       mockAwsClient.deleteSecret(
         withArg {
-          assert(it.secretId.equals(coordinate.coordinateBase))
-          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
-          assert(it.forceDeleteWithoutRecovery == null)
+          Assertions.assertEquals(coordinate.coordinateBase, it.secretId)
+          Assertions.assertEquals(recoveryWindowInDays, it.recoveryWindowInDays)
+          Assertions.assertNull(it.forceDeleteWithoutRecovery)
         },
       )
 
       mockAwsClient.deleteSecret(
         withArg {
-          assert(it.secretId.equals(coordinate.fullCoordinate))
-          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
-          assert(it.forceDeleteWithoutRecovery == null)
+          Assertions.assertEquals(coordinate.fullCoordinate, it.secretId)
+          Assertions.assertEquals(recoveryWindowInDays, it.recoveryWindowInDays)
+          Assertions.assertNull(it.forceDeleteWithoutRecovery)
         },
       )
     }

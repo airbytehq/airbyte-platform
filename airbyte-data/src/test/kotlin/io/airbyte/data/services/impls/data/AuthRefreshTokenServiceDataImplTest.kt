@@ -10,6 +10,7 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -44,7 +45,7 @@ internal class AuthRefreshTokenServiceDataImplTest {
         .withValue(TOKEN_VALUE)
         .withRevoked(false)
 
-    assert(result == expectedAuthRefreshToken)
+    assertEquals(expectedAuthRefreshToken, result)
   }
 
   @Test
@@ -66,7 +67,7 @@ internal class AuthRefreshTokenServiceDataImplTest {
         .withValue(TOKEN_VALUE)
         .withRevoked(false)
 
-    assert(result == expectedAuthRefreshToken)
+    assertEquals(expectedAuthRefreshToken, result)
   }
 
   @Test
@@ -116,8 +117,8 @@ internal class AuthRefreshTokenServiceDataImplTest {
         .withValue("someOtherValueForSameSession")
         .withRevoked(true)
 
-    assert(result.size == 2)
-    assert(result[0] == expectedAuthRefreshToken1)
-    assert(result[1] == expectedAuthRefreshToken2)
+    assertEquals(2, result.size)
+    assertEquals(expectedAuthRefreshToken1, result[0])
+    assertEquals(expectedAuthRefreshToken2, result[1])
   }
 }

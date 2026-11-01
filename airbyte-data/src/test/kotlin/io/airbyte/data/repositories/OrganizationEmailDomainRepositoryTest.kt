@@ -10,6 +10,10 @@ import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -56,20 +60,20 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
       )
 
     val countBeforeSave = organizationEmailDomainRepository.count()
-    assert(countBeforeSave == 0L)
+    assertEquals(0L, countBeforeSave)
 
     val saveResult = organizationEmailDomainRepository.save(orgEmailDomain)
     val countAfterSave = organizationEmailDomainRepository.count()
-    assert(countAfterSave == 1L)
+    assertEquals(1L, countAfterSave)
 
     val persistedOrgEmailDomain = organizationEmailDomainRepository.findById(saveResult.id!!).get()
-    assert(persistedOrgEmailDomain.organizationId == organizationId)
-    assert(persistedOrgEmailDomain.emailDomain == "airbyte.io")
+    assertEquals(organizationId, persistedOrgEmailDomain.organizationId)
+    assertEquals("airbyte.io", persistedOrgEmailDomain.emailDomain)
   }
 
   @Test
   fun `test find by email domain`() {
-    assert(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
+    assertTrue(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
 
     val organizationId = createOrganizationId()
     val orgEmailDomain =
@@ -89,9 +93,9 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
     organizationEmailDomainRepository.save(otherOrgEmailDomain)
 
     val orgEmailDomains = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io")
-    assert(orgEmailDomains.size == 1)
-    assert(orgEmailDomains[0].organizationId == organizationId)
-    assert(orgEmailDomains[0].emailDomain == "airbyte.io")
+    assertEquals(1, orgEmailDomains.size)
+    assertEquals(organizationId, orgEmailDomains[0].organizationId)
+    assertEquals("airbyte.io", orgEmailDomains[0].emailDomain)
   }
 
   @Test
@@ -107,21 +111,21 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
 
     // Search with lowercase should find the domain stored with mixed case
     val resultLowercase = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io")
-    assert(resultLowercase.size == 1)
-    assert(resultLowercase[0].organizationId == organizationId)
-    assert(resultLowercase[0].emailDomain == "Airbyte.IO")
+    assertEquals(1, resultLowercase.size)
+    assertEquals(organizationId, resultLowercase[0].organizationId)
+    assertEquals("Airbyte.IO", resultLowercase[0].emailDomain)
 
     // Search with uppercase should also find it
     val resultUppercase = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("AIRBYTE.IO")
-    assert(resultUppercase.size == 1)
-    assert(resultUppercase[0].organizationId == organizationId)
-    assert(resultUppercase[0].emailDomain == "Airbyte.IO")
+    assertEquals(1, resultUppercase.size)
+    assertEquals(organizationId, resultUppercase[0].organizationId)
+    assertEquals("Airbyte.IO", resultUppercase[0].emailDomain)
 
     // Search with different mixed case should also find it
     val resultMixed = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("AiRbYtE.iO")
-    assert(resultMixed.size == 1)
-    assert(resultMixed[0].organizationId == organizationId)
-    assert(resultMixed[0].emailDomain == "Airbyte.IO")
+    assertEquals(1, resultMixed.size)
+    assertEquals(organizationId, resultMixed[0].organizationId)
+    assertEquals("Airbyte.IO", resultMixed[0].emailDomain)
   }
 
   @Test
@@ -134,7 +138,7 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
       ),
     )
 
-    assert(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
+    assertTrue(organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io").isEmpty())
 
     val activeOrganizationId = createOrganizationId()
     organizationEmailDomainRepository.save(
@@ -145,8 +149,8 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
     )
 
     val result = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io")
-    assert(result.size == 1)
-    assert(result[0].organizationId == activeOrganizationId)
+    assertEquals(1, result.size)
+    assertEquals(activeOrganizationId, result[0].organizationId)
   }
 
   @Test
@@ -170,10 +174,10 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
 
     // both of the inserted domains should be deleted
     val emailDomains = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io")
-    assert(emailDomains.isEmpty())
+    assertTrue(emailDomains.isEmpty())
 
     val otherEmailDomains = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.com")
-    assert(otherEmailDomains.isEmpty())
+    assertTrue(otherEmailDomains.isEmpty())
   }
 
   @Test
@@ -188,16 +192,16 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
 
     // Should find the domain
     val found = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(organizationId, "airbyte.io")
-    assert(found != null)
-    assert(found!!.organizationId == organizationId)
-    assert(found.emailDomain == "airbyte.io")
+    assertNotNull(found)
+    assertEquals(organizationId, found!!.organizationId)
+    assertEquals("airbyte.io", found.emailDomain)
 
     // Should not find with wrong organization
     val notFound = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(UUID.randomUUID(), "airbyte.io")
-    assert(notFound == null)
+    assertNull(notFound)
 
     // Should not find with wrong domain
     val notFoundDomain = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(organizationId, "other.io")
-    assert(notFoundDomain == null)
+    assertNull(notFoundDomain)
   }
 }

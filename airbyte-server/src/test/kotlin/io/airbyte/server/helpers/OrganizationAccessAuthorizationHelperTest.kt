@@ -14,6 +14,8 @@ import io.airbyte.config.persistence.WorkspacePersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -113,7 +115,7 @@ class OrganizationAccessAuthorizationHelperTest {
       }
 
     // Should re-throw the original organization permission exception
-    assert(exception === forbiddenException)
+    assertSame(forbiddenException, exception)
     verify(exactly = 1) { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) }
     verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
   }
@@ -135,7 +137,7 @@ class OrganizationAccessAuthorizationHelperTest {
         authorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId)
       }
 
-    assert(exception.message == "User service error")
+    assertEquals("User service error", exception.message)
     verify(exactly = 1) { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) }
     verify(exactly = 1) { currentUserService.getCurrentUser() }
     verify(exactly = 0) { workspacePersistence.listWorkspacesInOrganizationByUserId(any(), any(), any()) }
@@ -159,7 +161,7 @@ class OrganizationAccessAuthorizationHelperTest {
         authorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId)
       }
 
-    assert(exception.message == "Workspace service error")
+    assertEquals("Workspace service error", exception.message)
     verify(exactly = 1) { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) }
     verify(exactly = 1) { currentUserService.getCurrentUser() }
     verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
@@ -174,7 +176,7 @@ class OrganizationAccessAuthorizationHelperTest {
         authorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId)
       }
 
-    assert(exception.message == "Role resolver error")
+    assertEquals("Role resolver error", exception.message)
     verify(exactly = 1) { roleResolver.newRequest() }
     verify(exactly = 0) { currentUserService.getCurrentUser() }
     verify(exactly = 0) { workspacePersistence.listWorkspacesInOrganizationByUserId(any(), any(), any()) }

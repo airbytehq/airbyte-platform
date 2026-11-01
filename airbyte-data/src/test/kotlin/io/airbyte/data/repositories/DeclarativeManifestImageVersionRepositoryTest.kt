@@ -7,6 +7,9 @@ package io.airbyte.data.repositories
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 @MicronautTest
@@ -28,7 +31,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
   @Test
   fun `test create declarative manifest image version and get by version`() {
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
-    assert(declarativeManifestImageVersionRepository.count() == 1L)
+    assertEquals(1L, declarativeManifestImageVersionRepository.count())
 
     val persistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersion)
@@ -36,7 +39,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
 
   @Test
   fun `test get for nonexistent version`() {
-    assert(declarativeManifestImageVersionRepository.findById(1).isEmpty)
+    assertTrue(declarativeManifestImageVersionRepository.findById(1).isEmpty)
   }
 
   @Test
@@ -67,7 +70,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion0)
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 
-    assert(declarativeManifestImageVersionRepository.count() == 2L)
+    assertEquals(2L, declarativeManifestImageVersionRepository.count())
 
     val persistedCdkVersion = declarativeManifestImageVersionRepository.findById(0).get()
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersion)
@@ -88,7 +91,7 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
     declarativeManifestImageVersionRepository.save(declarativeManifestImageVersion1)
 
     val persistedCdkVersions = declarativeManifestImageVersionRepository.findAll()
-    assert(persistedCdkVersions.size == 2)
+    assertEquals(2, persistedCdkVersions.size)
     assertVersionsAreEqual(declarativeManifestImageVersion0, persistedCdkVersions[0])
     assertVersionsAreEqual(declarativeManifestImageVersion1, persistedCdkVersions[1])
   }
@@ -97,8 +100,8 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
     expected: DeclarativeManifestImageVersion,
     actual: DeclarativeManifestImageVersion,
   ) {
-    assert(expected.majorVersion == actual.majorVersion)
-    assert(expected.imageVersion == actual.imageVersion)
+    assertEquals(expected.majorVersion, actual.majorVersion)
+    assertEquals(expected.imageVersion, actual.imageVersion)
   }
 
   /*
@@ -109,9 +112,9 @@ internal class DeclarativeManifestImageVersionRepositoryTest : AbstractConfigRep
     oldVersion: DeclarativeManifestImageVersion,
     newVersion: DeclarativeManifestImageVersion,
   ) {
-    assert(oldVersion.majorVersion == newVersion.majorVersion)
-    assert(oldVersion.imageVersion != newVersion.imageVersion)
-    assert(oldVersion.createdAt == newVersion.createdAt)
-    assert(oldVersion.updatedAt!! < newVersion.updatedAt!!)
+    assertEquals(oldVersion.majorVersion, newVersion.majorVersion)
+    assertNotEquals(oldVersion.imageVersion, newVersion.imageVersion)
+    assertEquals(oldVersion.createdAt, newVersion.createdAt)
+    assertTrue(oldVersion.updatedAt!! < newVersion.updatedAt!!, "expected ${oldVersion.updatedAt} < ${newVersion.updatedAt}")
   }
 }

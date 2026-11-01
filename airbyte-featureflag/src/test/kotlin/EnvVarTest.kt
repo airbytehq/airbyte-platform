@@ -4,6 +4,8 @@
 
 package io.airbyte.featureflag
 
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class EnvVarTest {
@@ -12,11 +14,11 @@ class EnvVarTest {
     val ctx = User("")
     // defaults to false, undefined in env-var
     EnvVar(envVar = "undefined").apply { fetcher = { null } }.also {
-      assert(!it.enabled(ctx))
+      assertFalse(it.enabled(ctx))
     }
     // defaults to true, undefined in env-var
     EnvVar(envVar = "undefined", default = true).apply { fetcher = { null } }.also {
-      assert(it.enabled(ctx))
+      assertTrue(it.enabled(ctx))
     }
   }
 
@@ -33,29 +35,29 @@ class EnvVarTest {
     // defaults to false, but defined as true in the env-var
     EnvVar(envVar = envTrue.first)
       .apply { fetcher = testFetcher }
-      .also { assert(it.enabled(ctx)) }
+      .also { assertTrue(it.enabled(ctx)) }
 
     // defaults to false, also defined as false in the env-var
     EnvVar(envVar = envFalse.first)
       .apply { fetcher = testFetcher }
-      .also { assert(!it.enabled(ctx)) }
+      .also { assertFalse(it.enabled(ctx)) }
 
     // defaults to true, but defined as false in the env-var
     EnvVar(envVar = envFalse.first, default = true)
       .apply { fetcher = testFetcher }
-      .also { assert(!it.enabled(ctx)) }
+      .also { assertFalse(it.enabled(ctx)) }
 
     // defaults to false, but defined incorrectly in env-var
     EnvVar(envVar = envX.first)
       .apply { fetcher = testFetcher }
-      .also { assert(!it.enabled(ctx)) }
+      .also { assertFalse(it.enabled(ctx)) }
 
     // defaults to true, but defined incorrectly in env-var
     EnvVar(envVar = envX.first, default = true)
       .apply { fetcher = testFetcher }
       .also {
         // any value that is defined but not defined explicitly as "true" will return false
-        assert(!it.enabled(ctx))
+        assertFalse(it.enabled(ctx))
       }
   }
 }

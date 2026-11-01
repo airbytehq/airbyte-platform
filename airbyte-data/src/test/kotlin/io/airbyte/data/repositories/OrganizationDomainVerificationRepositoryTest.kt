@@ -11,6 +11,12 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationMet
 import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationStatus
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -53,17 +59,17 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
       )
 
     val countBeforeSave = organizationDomainVerificationRepository.count()
-    assert(countBeforeSave == 0L)
+    assertEquals(0L, countBeforeSave)
 
     val saveResult = organizationDomainVerificationRepository.save(verification)
     val countAfterSave = organizationDomainVerificationRepository.count()
-    assert(countAfterSave == 1L)
+    assertEquals(1L, countAfterSave)
 
     val persisted = organizationDomainVerificationRepository.findById(saveResult.id!!).get()
-    assert(persisted.organizationId == organizationId)
-    assert(persisted.domain == "example.com")
-    assert(persisted.status == DomainVerificationStatus.pending)
-    assert(persisted.verificationMethod == DomainVerificationMethod.dns_txt)
+    assertEquals(organizationId, persisted.organizationId)
+    assertEquals("example.com", persisted.domain)
+    assertEquals(DomainVerificationStatus.pending, persisted.status)
+    assertEquals(DomainVerificationMethod.dns_txt, persisted.verificationMethod)
   }
 
   @Test
@@ -109,12 +115,12 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     )
 
     val org1Domains = organizationDomainVerificationRepository.findByOrganizationId(org1, false)
-    assert(org1Domains.size == 2)
-    assert(org1Domains.all { it.organizationId == org1 })
+    assertEquals(2, org1Domains.size)
+    assertTrue(org1Domains.all { it.organizationId == org1 })
 
     val org2Domains = organizationDomainVerificationRepository.findByOrganizationId(org2, false)
-    assert(org2Domains.size == 1)
-    assert(org2Domains[0].domain == "other.com")
+    assertEquals(1, org2Domains.size)
+    assertEquals("other.com", org2Domains[0].domain)
   }
 
   @Test
@@ -146,13 +152,13 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     )
 
     val found = organizationDomainVerificationRepository.findByOrganizationIdAndDomain(org1, "example.com", false)
-    assert(found.isNotEmpty())
-    assert(found.first().organizationId == org1)
-    assert(found.first().domain == "example.com")
-    assert(found.first().status == DomainVerificationStatus.verified)
+    assertTrue(found.isNotEmpty())
+    assertEquals(org1, found.first().organizationId)
+    assertEquals("example.com", found.first().domain)
+    assertEquals(DomainVerificationStatus.verified, found.first().status)
 
     val notFound = organizationDomainVerificationRepository.findByOrganizationIdAndDomain(org1, "test.com", false)
-    assert(notFound.isEmpty())
+    assertTrue(notFound.isEmpty())
   }
 
   @Test
@@ -196,15 +202,15 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     )
 
     val pending = organizationDomainVerificationRepository.findByStatus(DomainVerificationStatus.pending, false)
-    assert(pending.size == 2)
-    assert(pending.all { it.status == DomainVerificationStatus.pending })
+    assertEquals(2, pending.size)
+    assertTrue(pending.all { it.status == DomainVerificationStatus.pending })
 
     val verified = organizationDomainVerificationRepository.findByStatus(DomainVerificationStatus.verified, false)
-    assert(verified.size == 1)
-    assert(verified[0].domain == "verified.com")
+    assertEquals(1, verified.size)
+    assertEquals("verified.com", verified[0].domain)
 
     val expired = organizationDomainVerificationRepository.findByStatus(DomainVerificationStatus.expired, false)
-    assert(expired.isEmpty())
+    assertTrue(expired.isEmpty())
   }
 
   @Test
@@ -223,7 +229,7 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
           dnsRecordPrefix = "_airbyte-verification",
         ),
       )
-    assert(dnsTxt.verificationMethod == DomainVerificationMethod.dns_txt)
+    assertEquals(DomainVerificationMethod.dns_txt, dnsTxt.verificationMethod)
 
     val legacy =
       organizationDomainVerificationRepository.save(
@@ -234,7 +240,7 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
           status = DomainVerificationStatus.verified,
         ),
       )
-    assert(legacy.verificationMethod == DomainVerificationMethod.legacy)
+    assertEquals(DomainVerificationMethod.legacy, legacy.verificationMethod)
   }
 
   @Test
@@ -257,7 +263,7 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         )
       }
 
-    assert(
+    assertTrue(
       exception.message?.contains("check_dns_fields_required_for_dns_txt") == true ||
         exception.message?.contains("constraint") == true,
     )
@@ -281,14 +287,14 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         ),
       )
 
-    assert(legacy.id != null)
-    assert(legacy.verificationMethod == DomainVerificationMethod.legacy)
-    assert(legacy.verificationToken == null)
-    assert(legacy.dnsRecordName == null)
-    assert(legacy.dnsRecordPrefix == null)
+    assertNotNull(legacy.id)
+    assertEquals(DomainVerificationMethod.legacy, legacy.verificationMethod)
+    assertNull(legacy.verificationToken)
+    assertNull(legacy.dnsRecordName)
+    assertNull(legacy.dnsRecordPrefix)
 
     val retrieved = organizationDomainVerificationRepository.findById(legacy.id!!).get()
-    assert(retrieved.verificationMethod == DomainVerificationMethod.legacy)
+    assertEquals(DomainVerificationMethod.legacy, retrieved.verificationMethod)
   }
 
   @Test
@@ -336,14 +342,14 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     )
 
     val active = organizationDomainVerificationRepository.findByOrganizationId(orgId, includeDeleted = false)
-    assert(active.size == 2)
-    assert(active.none { it.tombstone })
-    assert(active.all { it.domain in listOf("active1.com", "active2.com") })
+    assertEquals(2, active.size)
+    assertTrue(active.none { it.tombstone })
+    assertTrue(active.all { it.domain in listOf("active1.com", "active2.com") })
 
     val all = organizationDomainVerificationRepository.findByOrganizationId(orgId, includeDeleted = true)
-    assert(all.size == 3)
-    assert(all.count { !it.tombstone } == 2)
-    assert(all.count { it.tombstone } == 1)
+    assertEquals(3, all.size)
+    assertEquals(2, all.count { !it.tombstone })
+    assertEquals(1, all.count { it.tombstone })
   }
 
   @Test
@@ -384,9 +390,9 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         "example.com",
         includeDeleted = false,
       )
-    assert(found.isNotEmpty())
-    assert(!found.first().tombstone)
-    assert(found.first().status == DomainVerificationStatus.verified)
+    assertTrue(found.isNotEmpty())
+    assertFalse(found.first().tombstone)
+    assertEquals(DomainVerificationStatus.verified, found.first().status)
 
     val foundWithDeleted =
       organizationDomainVerificationRepository.findByOrganizationIdAndDomain(
@@ -394,7 +400,7 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         "example.com",
         includeDeleted = true,
       )
-    assert(foundWithDeleted.isNotEmpty())
+    assertTrue(foundWithDeleted.isNotEmpty())
   }
 
   @Test
@@ -435,18 +441,18 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         DomainVerificationStatus.pending,
         includeDeleted = false,
       )
-    assert(activePending.size == 1)
-    assert(activePending[0].domain == "active-pending.com")
-    assert(!activePending[0].tombstone)
+    assertEquals(1, activePending.size)
+    assertEquals("active-pending.com", activePending[0].domain)
+    assertFalse(activePending[0].tombstone)
 
     val allPending =
       organizationDomainVerificationRepository.findByStatus(
         DomainVerificationStatus.pending,
         includeDeleted = true,
       )
-    assert(allPending.size == 2)
-    assert(allPending.count { !it.tombstone } == 1)
-    assert(allPending.count { it.tombstone } == 1)
+    assertEquals(2, allPending.size)
+    assertEquals(1, allPending.count { !it.tombstone })
+    assertEquals(1, allPending.count { it.tombstone })
   }
 
   @Test
@@ -468,14 +474,14 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
           tombstone = false,
         ),
       )
-    assert(firstRecord.id != null)
+    assertNotNull(firstRecord.id)
 
     // Soft-delete the first record
     val deletedRecord =
       organizationDomainVerificationRepository.update(
         firstRecord.copy(tombstone = true),
       )
-    assert(deletedRecord.tombstone)
+    assertTrue(deletedRecord.tombstone)
 
     // Insert second record with same organization_id and domain (should succeed)
     val secondRecord =
@@ -491,8 +497,8 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
           tombstone = false,
         ),
       )
-    assert(secondRecord.id != null)
-    assert(secondRecord.id != firstRecord.id)
+    assertNotNull(secondRecord.id)
+    assertNotEquals(secondRecord.id, firstRecord.id)
 
     // Verify both records exist when including deleted
     val allRecords =
@@ -501,9 +507,9 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         domain,
         includeDeleted = true,
       )
-    assert(allRecords.size == 2)
-    assert(allRecords.count { it.tombstone } == 1)
-    assert(allRecords.count { !it.tombstone } == 1)
+    assertEquals(2, allRecords.size)
+    assertEquals(1, allRecords.count { it.tombstone })
+    assertEquals(1, allRecords.count { !it.tombstone })
 
     // Verify only active record is returned when excluding deleted
     val activeRecords =
@@ -512,9 +518,9 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         domain,
         includeDeleted = false,
       )
-    assert(activeRecords.size == 1)
-    assert(activeRecords[0].id == secondRecord.id)
-    assert(!activeRecords[0].tombstone)
-    assert(activeRecords[0].status == DomainVerificationStatus.pending)
+    assertEquals(1, activeRecords.size)
+    assertEquals(secondRecord.id, activeRecords[0].id)
+    assertFalse(activeRecords[0].tombstone)
+    assertEquals(DomainVerificationStatus.pending, activeRecords[0].status)
   }
 }

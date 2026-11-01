@@ -14,6 +14,8 @@ import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
@@ -37,7 +39,7 @@ class CheckStatusStageTest {
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
+    assertTrue(outputFromCheckStatusStage.skip, "Skip Launch flag should be true but it's false")
   }
 
   @Test
@@ -67,7 +69,7 @@ class CheckStatusStageTest {
       )
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    assert(outputFromCheckStatusStage.skip) { "Skip Launch flag should be true but it's false" }
+    assertTrue(outputFromCheckStatusStage.skip, "Skip Launch flag should be true but it's false")
   }
 
   @Test
@@ -88,7 +90,7 @@ class CheckStatusStageTest {
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
     val outputFromCheckStatusStage = checkStatusStage.applyStage(originalInput)
 
-    assert(!outputFromCheckStatusStage.skip) { "Skip Launch flag should be false but it's true" }
+    assertFalse(outputFromCheckStatusStage.skip, "Skip Launch flag should be false but it's true")
   }
 
   @Test
@@ -125,7 +127,7 @@ class CheckStatusStageTest {
       )
     val result = checkStatusStage.apply(originalInput).block()!!
 
-    assert(!result.skip) { "Skip Launch flag should be false but it's true" }
+    assertFalse(result.skip, "Skip Launch flag should be false but it's true")
     verify(exactly = 0) { kubernetesClient.podsExistForAutoId(any()) }
   }
 }

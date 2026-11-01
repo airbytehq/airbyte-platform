@@ -13,6 +13,7 @@ import io.airbyte.commons.server.converters.OperationsConverter.DbtCloudOperatio
 import io.airbyte.commons.server.converters.OperationsConverter.populateOperatorConfigFromApi
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 internal class OperationsConverterTest {
@@ -52,7 +53,7 @@ internal class OperationsConverterTest {
 
     val expectedUrl = "https://test-case-url.us1.dbt.com/api/v2/accounts/834129412/jobs/398431/run/"
     val actualUrl = standardSyncOperation.getOperatorWebhook().executionUrl
-    assert(actualUrl == expectedUrl) { String.format("Expected: %s, Actual: %s", expectedUrl, actualUrl) }
+    assertEquals(expectedUrl, actualUrl, String.format("Expected: %s, Actual: %s", expectedUrl, actualUrl))
   }
 
   @Test
@@ -90,7 +91,7 @@ internal class OperationsConverterTest {
 
     val expectedUrl = "https://cloud.getdbt.com/api/v2/accounts/834129412/jobs/398431/run/"
     val actualUrl = standardSyncOperation.getOperatorWebhook().executionUrl
-    assert(actualUrl == expectedUrl) { String.format("Expected: %s, Actual: %s", expectedUrl, actualUrl) }
+    assertEquals(expectedUrl, actualUrl, String.format("Expected: %s, Actual: %s", expectedUrl, actualUrl))
   }
 
   @Test
@@ -100,8 +101,8 @@ internal class OperationsConverterTest {
         .OperatorWebhook()
         .withExecutionUrl("https://cloud.getdbt.com/api/v2/accounts/834129412/jobs/398431/run/")
     val result = parseFrom(operatorWebHook)
-    assert(result!!.accountId == 834129412L)
-    assert(result.jobId == 398431L)
+    assertEquals(834129412L, result!!.accountId)
+    assertEquals(398431L, result.jobId)
   }
 
   @Test
@@ -111,7 +112,7 @@ internal class OperationsConverterTest {
         .OperatorWebhook()
         .withExecutionUrl("https://test-case-url.us1.dbt.com/api/v2/accounts/34128473/jobs/3434535/run/")
     val result = parseFrom(operatorWebHook)
-    assert(result!!.accountId == 34128473L)
-    assert(result.jobId == 3434535L)
+    assertEquals(34128473L, result!!.accountId)
+    assertEquals(3434535L, result.jobId)
   }
 }

@@ -33,6 +33,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -520,7 +521,7 @@ class JobObservabilityServiceTest {
 
     // Verify the result
     assertEquals(1, result.size)
-    assert(result.containsKey("wal_size"))
+    assertTrue(result.containsKey("wal_size"))
 
     val scores = result["wal_size"]!!
 
@@ -534,8 +535,8 @@ class JobObservabilityServiceTest {
     // std = sqrt(((90-94.25)^2 + (95-94.25)^2 + (92-94.25)^2 + (100-94.25)^2) / 4)
     // std ≈ 3.86
     // z-score = (100 - 94.25) / 3.86 ≈ 1.49
-    assert(scores.std > 0)
-    assert(scores.zScore > 0)
+    assertTrue(scores.std > 0, "expected ${scores.std} > 0")
+    assertTrue(scores.zScore > 0, "expected ${scores.zScore} > 0")
   }
 
   @Test
@@ -567,22 +568,22 @@ class JobObservabilityServiceTest {
 
     // Verify both metrics are present
     assertEquals(2, result.size)
-    assert(result.containsKey("wal_size"))
-    assert(result.containsKey("replication_lag"))
+    assertTrue(result.containsKey("wal_size"))
+    assertTrue(result.containsKey("replication_lag"))
 
     // Verify wal_size scores
     val walSizeScores = result["wal_size"]!!
     assertEquals(100.0, walSizeScores.current, 0.001)
     assertEquals(94.25, walSizeScores.mean, 0.001) // (90 + 95 + 92 + 100) / 4 = 94.25
-    assert(walSizeScores.std > 0)
-    assert(walSizeScores.zScore > 0)
+    assertTrue(walSizeScores.std > 0, "expected ${walSizeScores.std} > 0")
+    assertTrue(walSizeScores.zScore > 0, "expected ${walSizeScores.zScore} > 0")
 
     // Verify replication_lag scores
     val repLagScores = result["replication_lag"]!!
     assertEquals(5.0, repLagScores.current, 0.001)
     assertEquals(3.875, repLagScores.mean, 0.001) // (3 + 4 + 3.5 + 5) / 4 = 3.875
-    assert(repLagScores.std > 0)
-    assert(repLagScores.zScore > 0)
+    assertTrue(repLagScores.std > 0, "expected ${repLagScores.std} > 0")
+    assertTrue(repLagScores.zScore > 0, "expected ${repLagScores.zScore} > 0")
   }
 
   @Test
@@ -602,15 +603,15 @@ class JobObservabilityServiceTest {
 
     // Verify wal_size is present
     assertEquals(1, result.size)
-    assert(result.containsKey("wal_size"))
+    assertTrue(result.containsKey("wal_size"))
 
     val scores = result["wal_size"]!!
 
     // Should only use values from syncs that had wal_size: 90, 95, 100
     assertEquals(100.0, scores.current, 0.001)
     assertEquals(95.0, scores.mean, 0.001) // (90 + 95 + 100) / 3 = 95.0
-    assert(scores.std > 0)
-    assert(scores.zScore > 0)
+    assertTrue(scores.std > 0, "expected ${scores.std} > 0")
+    assertTrue(scores.zScore > 0, "expected ${scores.zScore} > 0")
   }
 
   @Test
@@ -635,17 +636,17 @@ class JobObservabilityServiceTest {
 
     // Should only return scores for wal_size (the key in current)
     assertEquals(1, result.size)
-    assert(result.containsKey("wal_size"))
-    assert(!result.containsKey("other_metric"))
-    assert(!result.containsKey("another_metric"))
+    assertTrue(result.containsKey("wal_size"))
+    assertFalse(result.containsKey("other_metric"))
+    assertFalse(result.containsKey("another_metric"))
 
     val scores = result["wal_size"]!!
 
     // Should use all wal_size values: 90, 95, 92, 100
     assertEquals(100.0, scores.current, 0.001)
     assertEquals(94.25, scores.mean, 0.001) // (90 + 95 + 92 + 100) / 4 = 94.25
-    assert(scores.std > 0)
-    assert(scores.zScore > 0)
+    assertTrue(scores.std > 0, "expected ${scores.std} > 0")
+    assertTrue(scores.zScore > 0, "expected ${scores.zScore} > 0")
   }
 
   @Test
@@ -799,7 +800,7 @@ class JobObservabilityServiceTest {
 
     // Verify we have an evaluation for wal_size
     val walSizeEval = result.evaluations.find { it.name == "wal_size" }
-    assert(walSizeEval != null)
+    assertNotNull(walSizeEval)
     assertTrue(walSizeEval!!.isOutlier)
   }
 
@@ -883,8 +884,8 @@ class JobObservabilityServiceTest {
     val recordsEval = result.evaluations.find { it.name == "recordsLoaded" }
     val walSizeEval = result.evaluations.find { it.name == "wal_size" }
 
-    assert(recordsEval != null)
-    assert(walSizeEval != null)
+    assertNotNull(recordsEval)
+    assertNotNull(walSizeEval)
     assertTrue(recordsEval!!.isOutlier)
     assertTrue(walSizeEval!!.isOutlier)
   }
@@ -959,7 +960,7 @@ class JobObservabilityServiceTest {
 
     // Verify recordsLoaded outlier was detected
     val recordsEval = result.evaluations.find { it.name == "recordsLoaded" }
-    assert(recordsEval != null)
+    assertNotNull(recordsEval)
     assertTrue(recordsEval!!.isOutlier)
 
     // Verify additionalStats is empty in metrics
@@ -1175,18 +1176,17 @@ class JobObservabilityServiceTest {
     assertEquals(0L, result.metrics.recordsRejected, "recordsRejected should match")
 
     // Verify additionalStats includes both source and derived stats
-    assert(result.metrics.additionalStats.containsKey("sourceFieldsPopulated")) {
-      "additionalStats should contain sourceFieldsPopulated"
-    }
+    assertTrue(result.metrics.additionalStats.containsKey("sourceFieldsPopulated"), "additionalStats should contain sourceFieldsPopulated")
     assertEquals(
       BigDecimal("5000.0"),
       result.metrics.additionalStats["sourceFieldsPopulated"],
       "sourceFieldsPopulated should be 5000.0",
     )
 
-    assert(result.metrics.additionalStats.containsKey("sourceFieldsPopulatedPerRecord")) {
-      "additionalStats should contain derived stat sourceFieldsPopulatedPerRecord"
-    }
+    assertTrue(
+      result.metrics.additionalStats.containsKey("sourceFieldsPopulatedPerRecord"),
+      "additionalStats should contain derived stat sourceFieldsPopulatedPerRecord",
+    )
     assertEquals(
       BigDecimal("50.0"),
       result.metrics.additionalStats["sourceFieldsPopulatedPerRecord"],
@@ -1195,11 +1195,11 @@ class JobObservabilityServiceTest {
 
     // ========== Verify Evaluations list ==========
 
-    assert(result.evaluations.isNotEmpty()) { "Evaluations list should not be empty" }
+    assertTrue(result.evaluations.isNotEmpty(), "Evaluations list should not be empty")
 
     // Find the sourceFieldsPopulatedPerRecord evaluation
     val sourceFieldsEval = result.evaluations.find { it.name == "sourceFieldsPopulatedPerRecord" }
-    assert(sourceFieldsEval != null) { "Should have evaluation for sourceFieldsPopulatedPerRecord" }
+    assertNotNull(sourceFieldsEval, "Should have evaluation for sourceFieldsPopulatedPerRecord")
 
     // ========== Verify OutlierEvaluation fields ==========
 
@@ -1207,9 +1207,7 @@ class JobObservabilityServiceTest {
     assertEquals("sourceFieldsPopulatedPerRecord", sourceFieldsEval!!.name, "Evaluation name should match")
     assertTrue(sourceFieldsEval.isOutlier, "sourceFieldsPopulatedPerRecord should be flagged as outlier")
     assertEquals(3.0, sourceFieldsEval.threshold, 0.001, "Threshold should be 3.0 (from rule)")
-    assert(sourceFieldsEval.value > 3.0) {
-      "Value (percentage z-score) should be > 3.0, got ${sourceFieldsEval.value}"
-    }
+    assertTrue(sourceFieldsEval.value > 3.0, "Value (percentage z-score) should be > 3.0, got ${sourceFieldsEval.value}")
 
     // ========== Verify percentage z-score calculation ==========
     // The rule uses: |(current - mean) / (mean * 0.02)| > 3.0
@@ -1219,7 +1217,7 @@ class JobObservabilityServiceTest {
     // ========== Verify Scores object fields ==========
     // With debugScores parameter, we get the underlying dimension's scores for debugging context
 
-    assert(sourceFieldsEval.scores != null) { "Scores should be populated via debugScores parameter" }
+    assertNotNull(sourceFieldsEval.scores, "Scores should be populated via debugScores parameter")
 
     // Current value
     assertEquals(50.0, sourceFieldsEval.scores!!.current, 0.001, "Current value should be 50.0")
@@ -1228,15 +1226,11 @@ class JobObservabilityServiceTest {
     assertEquals(9.09, sourceFieldsEval.scores!!.mean, 0.1, "Mean should be approximately 9.09")
 
     // Standard deviation should be positive (variation exists)
-    assert(sourceFieldsEval.scores!!.std > 0) {
-      "Standard deviation should be positive, got ${sourceFieldsEval.scores!!.std}"
-    }
+    assertTrue(sourceFieldsEval.scores!!.std > 0, "Standard deviation should be positive, got ${sourceFieldsEval.scores!!.std}")
 
     // Z-score calculation: (current - mean) / std = (50 - 9.09) / std
     // Note: This is the traditional z-score, different from the percentage z-score (value field)
-    assert(sourceFieldsEval.scores!!.zScore > 3.0) {
-      "Z-score should be > 3.0, got ${sourceFieldsEval.scores!!.zScore}"
-    }
+    assertTrue(sourceFieldsEval.scores!!.zScore > 3.0, "Z-score should be > 3.0, got ${sourceFieldsEval.scores!!.zScore}")
 
     // Additional validation: verify z-score is calculated correctly
     val expectedZScore = (sourceFieldsEval.scores!!.current - sourceFieldsEval.scores!!.mean) / sourceFieldsEval.scores!!.std

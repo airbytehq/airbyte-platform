@@ -12,6 +12,8 @@ import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -92,22 +94,22 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(config)
-    assert(scopedConfigurationRepository.count() == 1L)
+    assertEquals(1L, scopedConfigurationRepository.count())
 
     val persistedConfig = scopedConfigurationRepository.findById(configId).get()
 
-    assert(persistedConfig.id == configId)
-    assert(persistedConfig.key == config.key)
-    assert(persistedConfig.value == config.value)
-    assert(persistedConfig.scopeType == config.scopeType)
-    assert(persistedConfig.scopeId == config.scopeId)
-    assert(persistedConfig.resourceType == config.resourceType)
-    assert(persistedConfig.resourceId == config.resourceId)
-    assert(persistedConfig.originType == config.originType)
-    assert(persistedConfig.origin == config.origin)
-    assert(persistedConfig.description == config.description)
-    assert(persistedConfig.referenceUrl == config.referenceUrl)
-    assert(persistedConfig.expiresAt == config.expiresAt)
+    assertEquals(configId, persistedConfig.id)
+    assertEquals(config.key, persistedConfig.key)
+    assertEquals(config.value, persistedConfig.value)
+    assertEquals(config.scopeType, persistedConfig.scopeType)
+    assertEquals(config.scopeId, persistedConfig.scopeId)
+    assertEquals(config.resourceType, persistedConfig.resourceType)
+    assertEquals(config.resourceId, persistedConfig.resourceId)
+    assertEquals(config.originType, persistedConfig.originType)
+    assertEquals(config.origin, persistedConfig.origin)
+    assertEquals(config.description, persistedConfig.description)
+    assertEquals(config.referenceUrl, persistedConfig.referenceUrl)
+    assertEquals(config.expiresAt, persistedConfig.expiresAt)
   }
 
   @Test
@@ -131,14 +133,14 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
 
     scopedConfigurationRepository.save(config)
     val persistedConfig = scopedConfigurationRepository.findById(configId)
-    assert(persistedConfig.get().value == initialValue)
+    assertEquals(initialValue, persistedConfig.get().value)
 
     val newValue = "new_config_value"
     config.value = newValue
     scopedConfigurationRepository.update(config)
 
     val updatedConfig = scopedConfigurationRepository.findById(configId)
-    assert(updatedConfig.get().value == newValue)
+    assertEquals(newValue, updatedConfig.get().value)
   }
 
   @Test
@@ -159,10 +161,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(config)
-    assert(scopedConfigurationRepository.count() == 1L)
+    assertEquals(1L, scopedConfigurationRepository.count())
 
     scopedConfigurationRepository.deleteById(configId)
-    assert(scopedConfigurationRepository.count() == 0L)
+    assertEquals(0L, scopedConfigurationRepository.count())
   }
 
   @Test
@@ -210,14 +212,14 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.saveAll(listOf(config, config2, config3))
-    assert(scopedConfigurationRepository.count() == 3L)
+    assertEquals(3L, scopedConfigurationRepository.count())
 
     scopedConfigurationRepository.deleteByIdInList(listOf(config.id, config2.id))
-    assert(scopedConfigurationRepository.count() == 1L)
+    assertEquals(1L, scopedConfigurationRepository.count())
 
-    assert(scopedConfigurationRepository.findById(config3.id).isPresent)
-    assert(scopedConfigurationRepository.findById(config2.id).isEmpty)
-    assert(scopedConfigurationRepository.findById(config.id).isEmpty)
+    assertTrue(scopedConfigurationRepository.findById(config3.id).isPresent)
+    assertTrue(scopedConfigurationRepository.findById(config2.id).isEmpty)
+    assertTrue(scopedConfigurationRepository.findById(config.id).isEmpty)
   }
 
   @Test
@@ -238,7 +240,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(config)
-    assert(scopedConfigurationRepository.count() == 1L)
+    assertEquals(1L, scopedConfigurationRepository.count())
 
     val config2 =
       ScopedConfiguration(
@@ -276,7 +278,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(config)
-    assert(scopedConfigurationRepository.count() == 1L)
+    assertEquals(1L, scopedConfigurationRepository.count())
 
     val persistedConfig =
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
@@ -286,8 +288,8 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         config.scopeType,
         config.scopeId,
       )
-    assert(persistedConfig?.id == configId)
-    assert(persistedConfig?.value == config.value)
+    assertEquals(configId, persistedConfig?.id)
+    assertEquals(config.value, persistedConfig?.value)
   }
 
   @Test
@@ -300,7 +302,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigScopeType.workspace,
         UUID.randomUUID(),
       )
-    assert(persistedConfig == null)
+    assertNull(persistedConfig)
   }
 
   @Test
@@ -356,24 +358,24 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(otherConfig)
-    assert(scopedConfigurationRepository.count() == 3L)
+    assertEquals(3L, scopedConfigurationRepository.count())
 
     val persistedConfigs = scopedConfigurationRepository.findByKey(config.key)
-    assert(persistedConfigs.size == 2)
+    assertEquals(2, persistedConfigs.size)
 
     val persistedIds = persistedConfigs.map { it.id }
 
-    assert(persistedIds.containsAll(listOf(configId, config2.id)))
-    assert(persistedIds.contains(otherConfig.id).not())
+    assertTrue(persistedIds.containsAll(listOf(configId, config2.id)))
+    assertFalse(persistedIds.contains(otherConfig.id))
 
     val persistedConfigs2 = scopedConfigurationRepository.findByKey(otherConfig.key)
-    assert(persistedConfigs2.size == 1)
+    assertEquals(1, persistedConfigs2.size)
 
     val persistedIds2 = persistedConfigs2.map { it.id }
 
-    assert(persistedIds2.containsAll(listOf(otherConfig.id)))
-    assert(persistedIds2.contains(configId).not())
-    assert(persistedIds2.contains(config2.id).not())
+    assertTrue(persistedIds2.containsAll(listOf(otherConfig.id)))
+    assertFalse(persistedIds2.contains(configId))
+    assertFalse(persistedIds2.contains(config2.id))
   }
 
   @Test
@@ -438,7 +440,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(otherConfig2)
-    assert(scopedConfigurationRepository.count() == 4L)
+    assertEquals(4L, scopedConfigurationRepository.count())
 
     val findConfigsResult =
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
@@ -448,10 +450,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigScopeType.workspace,
         listOf(config.scopeId, config2.scopeId),
       )
-    assert(findConfigsResult.size == 2)
+    assertEquals(2, findConfigsResult.size)
 
     val persistedIds = findConfigsResult.map { it.id }
-    assert(persistedIds.containsAll(listOf(config.id, config2.id)))
+    assertTrue(persistedIds.containsAll(listOf(config.id, config2.id)))
   }
 
   @Test
@@ -519,7 +521,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(config4)
-    assert(scopedConfigurationRepository.count() == 4L)
+    assertEquals(4L, scopedConfigurationRepository.count())
 
     val findConfigsResult =
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginInList(
@@ -529,10 +531,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigOriginType.user,
         listOf(originA, originB),
       )
-    assert(findConfigsResult.size == 3)
+    assertEquals(3, findConfigsResult.size)
 
     val persistedIds = findConfigsResult.map { it.id }
-    assert(persistedIds.containsAll(listOf(config.id, config2.id, config3.id)))
+    assertTrue(persistedIds.containsAll(listOf(config.id, config2.id, config3.id)))
   }
 
   @Test
@@ -569,14 +571,14 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
 
     scopedConfigurationRepository.save(config2)
 
-    assert(scopedConfigurationRepository.count() == 2L)
+    assertEquals(2L, scopedConfigurationRepository.count())
 
     val findConfigsResult =
       scopedConfigurationRepository.findByOriginType(ConfigOriginType.user)
-    assert(findConfigsResult.size == 1)
+    assertEquals(1, findConfigsResult.size)
 
     val persistedIds = findConfigsResult.map { it.id }
-    assert(persistedIds.containsAll(listOf(config.id)))
+    assertTrue(persistedIds.containsAll(listOf(config.id)))
   }
 
   @Test
@@ -674,7 +676,7 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
       )
 
     scopedConfigurationRepository.save(bcConfig4)
-    assert(scopedConfigurationRepository.count() == 6L)
+    assertEquals(6L, scopedConfigurationRepository.count())
 
     val findConfigsResult =
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
@@ -685,10 +687,10 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigOriginType.breaking_change,
         listOf(valueA, valueB),
       )
-    assert(findConfigsResult.size == 3)
+    assertEquals(3, findConfigsResult.size)
 
     val persistedIds = findConfigsResult.map { it.id }
-    assert(persistedIds.containsAll(listOf(bcConfig1.id, bcConfig2.id, bcConfig3.id)))
+    assertTrue(persistedIds.containsAll(listOf(bcConfig1.id, bcConfig2.id, bcConfig3.id)))
   }
 
   @Test
@@ -734,13 +736,14 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigScopeType.organization,
         organizationId,
       )
-    assert(organizationScopedConfigs.size == 1)
-    assert(
+    assertEquals(1, organizationScopedConfigs.size)
+    assertEquals(
+      valueA,
       organizationScopedConfigs
         .stream()
         .findFirst()
         .get()
-        .value == valueA,
+        .value,
     )
 
     val workspaceScopedConfigs =
@@ -750,13 +753,14 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
         ConfigScopeType.workspace,
         workspaceId,
       )
-    assert(workspaceScopedConfigs.size == 1)
-    assert(
+    assertEquals(1, workspaceScopedConfigs.size)
+    assertEquals(
+      valueB,
       workspaceScopedConfigs
         .stream()
         .findFirst()
         .get()
-        .value == valueB,
+        .value,
     )
   }
 }

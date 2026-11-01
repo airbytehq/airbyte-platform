@@ -24,6 +24,7 @@ import io.airbyte.micronaut.runtime.AirbyteWebappConfig
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -57,7 +58,7 @@ internal class WebBackendApiControllerTest {
     val sourceIdRequestBody = ConnectionIdRequestBody(connectionId = UUID.randomUUID())
     val result = controller.getStateType(sourceIdRequestBody)
 
-    assert(result == ConnectionStateType.STREAM)
+    assertEquals(ConnectionStateType.STREAM, result)
   }
 
   @Test
@@ -67,7 +68,7 @@ internal class WebBackendApiControllerTest {
 
     val result = controller.webBackendCheckUpdates()
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -83,7 +84,7 @@ internal class WebBackendApiControllerTest {
       )
     val result = controller.webBackendCreateConnection(sourceIdRequestBody)
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -95,7 +96,7 @@ internal class WebBackendApiControllerTest {
     val requestBody = WebBackendConnectionRequestBody(connectionId = UUID.randomUUID())
     val result = controller.webBackendGetConnection(requestBody)
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -106,7 +107,7 @@ internal class WebBackendApiControllerTest {
     val sourceIdRequestBody = WebBackendWorkspaceState(workspaceId = UUID.randomUUID())
     val result = controller.webBackendGetWorkspaceState(sourceIdRequestBody)
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -117,7 +118,7 @@ internal class WebBackendApiControllerTest {
     val sourceIdRequestBody = WebBackendConnectionListRequestBody(workspaceId = UUID.randomUUID())
     val result = controller.webBackendListConnectionsForWorkspace(sourceIdRequestBody)
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -128,7 +129,7 @@ internal class WebBackendApiControllerTest {
     val sourceIdRequestBody = WebBackendConnectionUpdate(connectionId = UUID.randomUUID())
     val result = controller.webBackendUpdateConnection(sourceIdRequestBody)
 
-    assert(result == expected)
+    assertEquals(expected, result)
   }
 
   @Test

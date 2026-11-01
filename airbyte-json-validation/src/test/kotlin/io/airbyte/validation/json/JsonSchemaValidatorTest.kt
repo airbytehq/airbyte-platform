@@ -280,7 +280,7 @@ internal class JsonSchemaValidatorTest {
     assertFalse(validator.testInitializedSchema(schemaName, badJson))
 
     val errorMessages: Set<String> = validator.validateInitializedSchema(schemaName, badJson)
-    assert(!errorMessages.isEmpty())
+    assertFalse(errorMessages.isEmpty())
   }
 
   companion object {

@@ -87,9 +87,9 @@ class DataplaneServiceTest {
         newEnabled,
       )
 
-    assert(updatedDataplane.id == mockDataplane.id)
-    assert(updatedDataplane.name == newName)
-    assert(updatedDataplane.enabled == newEnabled)
+    assertEquals(mockDataplane.id, updatedDataplane.id)
+    assertEquals(newName, updatedDataplane.name)
+    assertEquals(newEnabled, updatedDataplane.enabled)
   }
 
   @Test

@@ -11,6 +11,7 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -51,10 +52,10 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       )
 
     val saved = connectionTimelineEventRepository.save(event)
-    assert(connectionTimelineEventRepository.count() == initialCount + 1)
+    assertEquals(initialCount + 1, connectionTimelineEventRepository.count())
 
     val persistedEvent = connectionTimelineEventRepository.findById(saved.id!!).get()
-    assert(persistedEvent.connectionId == event.connectionId)
+    assertEquals(event.connectionId, persistedEvent.connectionId)
 
     connectionTimelineEventRepository.deleteById(saved.id!!)
   }
@@ -72,11 +73,11 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       )
 
     val saved = connectionTimelineEventRepository.save(event)
-    assert(connectionTimelineEventRepository.count() == initialCount + 1)
+    assertEquals(initialCount + 1, connectionTimelineEventRepository.count())
 
     val persistedEvent = connectionTimelineEventRepository.findById(saved.id!!).get()
-    assert(persistedEvent.connectionId == event.connectionId)
-    assert(persistedEvent.jobId == jobId)
+    assertEquals(event.connectionId, persistedEvent.connectionId)
+    assertEquals(jobId, persistedEvent.jobId)
 
     connectionTimelineEventRepository.deleteById(saved.id!!)
   }
@@ -171,9 +172,9 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 0,
         )
-      assert(connectionTimelineEventRepository.count() == 6L)
-      assert(res.size == 4)
-      assert(res[0].id == event4.id)
+      assertEquals(6L, connectionTimelineEventRepository.count())
+      assertEquals(4, res.size)
+      assertEquals(event4.id, res[0].id)
     }
 
     @Test
@@ -192,7 +193,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 0,
         )
-      assert(res.size == 2)
+      assertEquals(2, res.size)
     }
 
     @Test
@@ -215,7 +216,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 0,
         )
-      assert(res.size == 3)
+      assertEquals(3, res.size)
     }
 
     @Test
@@ -238,7 +239,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 0,
         )
-      assert(res.size == 2)
+      assertEquals(2, res.size)
     }
 
     @Test
@@ -252,7 +253,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 1,
           rowOffset = 0,
         )
-      assert(res.size == 1)
+      assertEquals(1, res.size)
     }
 
     @Test
@@ -266,7 +267,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           pageSize = 200,
           rowOffset = 2,
         )
-      assert(res.size == 2)
+      assertEquals(2, res.size)
     }
 
     @Test
@@ -305,8 +306,8 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           // now we should list total 2 events: [e2, e1]
           rowOffset = 1,
         )
-      assert(res.size == 2)
-      assert(res[0].id == event2.id)
+      assertEquals(2, res.size)
+      assertEquals(event2.id, res[0].id)
     }
 
     @Test
@@ -318,7 +319,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
           createdAtEnd = OffsetDateTime.of(2024, 9, 5, 0, 0, 0, 0, ZoneOffset.UTC),
         )
-      assert(res.size == 1)
+      assertEquals(1, res.size)
     }
 
     @Test
@@ -330,7 +331,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
           createdAtEnd = OffsetDateTime.of(2024, 9, 5, 0, 0, 0, 0, ZoneOffset.UTC),
         )
-      assert(res.size == 3)
+      assertEquals(3, res.size)
     }
 
     @Test
@@ -349,7 +350,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = OffsetDateTime.of(2023, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
           createdAtEnd = OffsetDateTime.of(2024, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC),
         )
-      assert(res.size == 6)
+      assertEquals(6, res.size)
     }
 
     @Test
@@ -368,7 +369,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
           createdAtEnd = OffsetDateTime.of(2024, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC),
         )
-      assert(res.size == 2)
+      assertEquals(2, res.size)
     }
   }
 
@@ -440,8 +441,8 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = event3.createdAt,
           jobId = jobId,
         )
-      assert(res.size == 2)
-      assert(res[0] == userId2)
+      assertEquals(2, res.size)
+      assertEquals(userId2, res[0])
     }
 
     @Test
@@ -453,7 +454,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = event1.createdAt,
           jobId = jobId,
         )
-      assert(res.isEmpty())
+      assertTrue(res.isEmpty())
     }
 
     @Test
@@ -465,8 +466,8 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
           createdAtStart = event3.createdAt,
           jobId = jobId,
         )
-      assert(res.size == 1)
-      assert(res[0] == null)
+      assertEquals(1, res.size)
+      assertNull(res[0])
     }
   }
 
@@ -518,23 +519,23 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
     @Test
     fun `should find events by jobId`() {
       val res = connectionTimelineEventRepository.findByJobId(jobId1)
-      assert(res.size == 2)
+      assertEquals(2, res.size)
       val eventIds = res.map { it.id }
-      assert(eventIds.contains(event1.id))
-      assert(eventIds.contains(event2.id))
+      assertTrue(eventIds.contains(event1.id))
+      assertTrue(eventIds.contains(event2.id))
     }
 
     @Test
     fun `should find single event by jobId`() {
       val res = connectionTimelineEventRepository.findByJobId(jobId2)
-      assert(res.size == 1)
-      assert(res[0].id == event3.id)
+      assertEquals(1, res.size)
+      assertEquals(event3.id, res[0].id)
     }
 
     @Test
     fun `should return empty list for non-existent jobId`() {
       val res = connectionTimelineEventRepository.findByJobId(9999L)
-      assert(res.isEmpty())
+      assertTrue(res.isEmpty())
     }
   }
 }

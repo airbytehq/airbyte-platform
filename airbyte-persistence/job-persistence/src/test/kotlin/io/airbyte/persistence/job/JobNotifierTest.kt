@@ -35,6 +35,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -215,8 +217,8 @@ internal class JobNotifierTest {
         .withSlackConfiguration(SlackNotificationConfiguration().withWebhook("http://someurl"))
     val connectionId = UUID.randomUUID()
     val metadata = jobNotifier.buildNotificationMetadata(connectionId, notificationItem)
-    assert(metadata["connection_id"].toString() == connectionId.toString())
-    assert(metadata.containsKey("notification_type"))
+    assertEquals(connectionId.toString(), metadata["connection_id"].toString())
+    assertTrue(metadata.containsKey("notification_type"))
   }
 
   companion object {

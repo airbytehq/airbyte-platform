@@ -18,6 +18,7 @@ import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.data.exceptions.EmptyResultException
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -59,11 +60,11 @@ class TagHandlerTest {
     every { tagService.getTagsByWorkspaceIds(listOf(MOCK_WORKSPACE_ID)) } returns listOf(MOCK_TAG_ONE, MOCK_TAG_TWO)
     val tags = tagHandler.getTagsForWorkspaces(listOf(MOCK_WORKSPACE_ID))
 
-    assert(tags.size == 2)
-    assert(tags[0].tagId == MOCK_TAG_ONE.tagId)
-    assert(tags[0].name == MOCK_TAG_ONE.name)
-    assert(tags[1].tagId == MOCK_TAG_TWO.tagId)
-    assert(tags[1].name == MOCK_TAG_TWO.name)
+    assertEquals(2, tags.size)
+    assertEquals(MOCK_TAG_ONE.tagId, tags[0].tagId)
+    assertEquals(MOCK_TAG_ONE.name, tags[0].name)
+    assertEquals(MOCK_TAG_TWO.tagId, tags[1].tagId)
+    assertEquals(MOCK_TAG_TWO.name, tags[1].name)
   }
 
   @Test
@@ -78,9 +79,9 @@ class TagHandlerTest {
         ),
       )
 
-    assert(tag.workspaceId == MOCK_TAG_ONE.workspaceId)
-    assert(tag.name == MOCK_TAG_ONE.name)
-    assert(tag.color == MOCK_TAG_ONE.color)
+    assertEquals(MOCK_TAG_ONE.workspaceId, tag.workspaceId)
+    assertEquals(MOCK_TAG_ONE.name, tag.name)
+    assertEquals(MOCK_TAG_ONE.color, tag.color)
   }
 
   @Test
@@ -156,10 +157,10 @@ class TagHandlerTest {
         ),
       )
 
-    assert(updatedTag.tagId == MOCK_TAG_ONE.tagId)
-    assert(updatedTag.workspaceId == MOCK_TAG_ONE.workspaceId)
-    assert(updatedTag.name == MOCK_TAG_ONE.name)
-    assert(updatedTag.color == MOCK_TAG_ONE.color)
+    assertEquals(MOCK_TAG_ONE.tagId, updatedTag.tagId)
+    assertEquals(MOCK_TAG_ONE.workspaceId, updatedTag.workspaceId)
+    assertEquals(MOCK_TAG_ONE.name, updatedTag.name)
+    assertEquals(MOCK_TAG_ONE.color, updatedTag.color)
   }
 
   @Test

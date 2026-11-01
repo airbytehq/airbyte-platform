@@ -48,6 +48,8 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -125,7 +127,7 @@ class ConnectorMessageProcessorTest {
 
     val traceMessage = ConnectorMessageProcessor.getTraceMessageFromMessagesByType(messageByType)
 
-    assert(traceMessage.isPresent)
+    assertTrue(traceMessage.isPresent)
     assertEquals(traceMessage.get().additionalProperties["trace"], "one")
 
     val messageByTypeNoTrace =
@@ -135,7 +137,7 @@ class ConnectorMessageProcessorTest {
 
     val noTraceMessage = ConnectorMessageProcessor.getTraceMessageFromMessagesByType(messageByTypeNoTrace)
 
-    assert(noTraceMessage.isEmpty)
+    assertTrue(noTraceMessage.isEmpty)
   }
 
   @Test
@@ -156,7 +158,7 @@ class ConnectorMessageProcessorTest {
 
     val successFullConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeSuccessfullConnection)
 
-    assert(successFullConnection.connectionStatus != null)
+    assertNotNull(successFullConnection.connectionStatus)
     assertEquals(AirbyteConnectionStatus.Status.SUCCEEDED, successFullConnection.connectionStatus!!.status)
 
     val messageByTypeFailedConnection =
@@ -175,7 +177,7 @@ class ConnectorMessageProcessorTest {
 
     val failedConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeFailedConnection)
 
-    assert(failedConnection.connectionStatus != null)
+    assertNotNull(failedConnection.connectionStatus)
     assertEquals(AirbyteConnectionStatus.Status.FAILED, failedConnection.connectionStatus!!.status)
 
     val messageByTypeMissingConnectionStatus =
@@ -185,7 +187,7 @@ class ConnectorMessageProcessorTest {
 
     val missingConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeMissingConnectionStatus)
 
-    assert(missingConnection.connectionStatus == null)
+    assertNull(missingConnection.connectionStatus)
   }
 
   @Test
@@ -210,7 +212,7 @@ class ConnectorMessageProcessorTest {
 
     val successFullConnection = ConnectorMessageProcessor.getDiscoveryResult(messageByTypeSuccessfullConnection)
 
-    assert(successFullConnection.catalog != null)
+    assertNotNull(successFullConnection.catalog)
     assertEquals(catalog.catalog, successFullConnection.catalog)
 
     val messageByTypeMissingConnectionStatus =
@@ -220,7 +222,7 @@ class ConnectorMessageProcessorTest {
 
     val missingConnection = ConnectorMessageProcessor.getConnectionStatus(messageByTypeMissingConnectionStatus)
 
-    assert(missingConnection.catalog == null)
+    assertNull(missingConnection.catalog)
   }
 
   @Test
@@ -241,7 +243,7 @@ class ConnectorMessageProcessorTest {
 
     val expectedSpecs = ConnectorMessageProcessor.getSpecResult(messageByTypeSuccessfullConnection)
 
-    assert(expectedSpecs.spec != null)
+    assertNotNull(expectedSpecs.spec)
     assertEquals(specsMessage.spec, expectedSpecs.spec)
 
     val messageByTypeMissingConnectionStatus =
@@ -251,7 +253,7 @@ class ConnectorMessageProcessorTest {
 
     val missingSpecs = ConnectorMessageProcessor.getSpecResult(messageByTypeMissingConnectionStatus)
 
-    assert(missingSpecs.spec == null)
+    assertNull(missingSpecs.spec)
   }
 
   data class ConnectorUpdateInput(
@@ -326,7 +328,7 @@ class ConnectorMessageProcessorTest {
       )
     }
 
-    assert(jobOutput.connectorConfigurationUpdated)
+    assertTrue(jobOutput.connectorConfigurationUpdated)
   }
 
   @Test
@@ -355,7 +357,7 @@ class ConnectorMessageProcessorTest {
       )
     }
 
-    assert(jobOutput.connectorConfigurationUpdated)
+    assertTrue(jobOutput.connectorConfigurationUpdated)
   }
 
   @Test

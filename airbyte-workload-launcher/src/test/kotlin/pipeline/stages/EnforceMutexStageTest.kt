@@ -13,6 +13,7 @@ import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class EnforceMutexStageTest {
@@ -35,7 +36,7 @@ class EnforceMutexStageTest {
       launcher.deleteMutexPods(mutexKey)
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -56,6 +57,6 @@ class EnforceMutexStageTest {
       launcher.deleteMutexPods(any())
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 }

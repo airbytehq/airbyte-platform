@@ -32,6 +32,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -278,11 +280,11 @@ class StateCheckSumErrorReporterTest {
         AirbyteContextConfig(jobId = jobId, attemptId = attemptNumber),
       )
 
-    assert(failureReason.failureOrigin == origin)
-    assert(failureReason.internalMessage == internalMessage)
-    assert(failureReason.externalMessage == externalMessage)
-    assert(failureReason.timestamp <= Instant.now().toEpochMilli())
-    assert(failureReason.stacktrace == ExceptionUtils.exceptionStackTrace(exception))
+    assertEquals(origin, failureReason.failureOrigin)
+    assertEquals(internalMessage, failureReason.internalMessage)
+    assertEquals(externalMessage, failureReason.externalMessage)
+    assertTrue(failureReason.timestamp <= Instant.now().toEpochMilli(), "expected timestamp ${failureReason.timestamp} <= now")
+    assertEquals(ExceptionUtils.exceptionStackTrace(exception), failureReason.stacktrace)
   }
 
   @Test
@@ -291,15 +293,15 @@ class StateCheckSumErrorReporterTest {
     val dockerImageTag = "0.1.0"
     val dockerImageName = stateCheckSumErrorReporter.getDockerImageName(dockerRepository, dockerImageTag)
 
-    assert(dockerImageName == "$dockerRepository:$dockerImageTag")
+    assertEquals("$dockerRepository:$dockerImageTag", dockerImageName)
   }
 
   @Test
   fun `test airbyteMetadata`() {
     val metadata = stateCheckSumErrorReporter.airbyteMetadata()
 
-    assert(metadata[JobErrorReporter.AIRBYTE_VERSION_META_KEY] == airbyteVersion)
-    assert(metadata[JobErrorReporter.AIRBYTE_EDITION_META_KEY] == airbyteEdition.name)
+    assertEquals(airbyteVersion, metadata[JobErrorReporter.AIRBYTE_VERSION_META_KEY])
+    assertEquals(airbyteEdition.name, metadata[JobErrorReporter.AIRBYTE_EDITION_META_KEY])
   }
 
   @Test
@@ -311,8 +313,8 @@ class StateCheckSumErrorReporterTest {
       }
     val metadata = stateCheckSumErrorReporter.getFailureReasonMetadata(failureReason)
 
-    assert(metadata[JobErrorReporter.FAILURE_ORIGIN_META_KEY] == "source")
-    assert(metadata[JobErrorReporter.FAILURE_TYPE_META_KEY] == "system_error")
+    assertEquals("source", metadata[JobErrorReporter.FAILURE_ORIGIN_META_KEY])
+    assertEquals("system_error", metadata[JobErrorReporter.FAILURE_TYPE_META_KEY])
   }
 
   @Test
@@ -323,10 +325,10 @@ class StateCheckSumErrorReporterTest {
     val releaseStage = ReleaseStage.BETA
     val metadata = stateCheckSumErrorReporter.getDefinitionMetadata(definitionId, name, dockerImage, releaseStage)
 
-    assert(metadata[JobErrorReporter.CONNECTOR_DEFINITION_ID_META_KEY] == definitionId.toString())
-    assert(metadata[JobErrorReporter.CONNECTOR_NAME_META_KEY] == name)
-    assert(metadata[JobErrorReporter.CONNECTOR_REPOSITORY_META_KEY] == "test-repo")
-    assert(metadata[JobErrorReporter.CONNECTOR_RELEASE_STAGE_META_KEY] == "beta")
+    assertEquals(definitionId.toString(), metadata[JobErrorReporter.CONNECTOR_DEFINITION_ID_META_KEY])
+    assertEquals(name, metadata[JobErrorReporter.CONNECTOR_NAME_META_KEY])
+    assertEquals("test-repo", metadata[JobErrorReporter.CONNECTOR_REPOSITORY_META_KEY])
+    assertEquals("beta", metadata[JobErrorReporter.CONNECTOR_RELEASE_STAGE_META_KEY])
   }
 
   @Test
@@ -338,8 +340,8 @@ class StateCheckSumErrorReporterTest {
 
     val metadata = stateCheckSumErrorReporter.getConnectionMetadata(workspaceId, connectionId)
 
-    assert(metadata[JobErrorReporter.CONNECTION_ID_META_KEY] == connectionId.toString())
-    assert(metadata[JobErrorReporter.CONNECTION_URL_META_KEY] == connectionUrl)
+    assertEquals(connectionId.toString(), metadata[JobErrorReporter.CONNECTION_ID_META_KEY])
+    assertEquals(connectionUrl, metadata[JobErrorReporter.CONNECTION_URL_META_KEY])
   }
 
   @Test
@@ -350,7 +352,7 @@ class StateCheckSumErrorReporterTest {
 
     val metadata = stateCheckSumErrorReporter.getWorkspaceMetadata(workspaceId)
 
-    assert(metadata[JobErrorReporter.WORKSPACE_ID_META_KEY] == workspaceId.toString())
-    assert(metadata[JobErrorReporter.WORKSPACE_URL_META_KEY] == workspaceUrl)
+    assertEquals(workspaceId.toString(), metadata[JobErrorReporter.WORKSPACE_ID_META_KEY])
+    assertEquals(workspaceUrl, metadata[JobErrorReporter.WORKSPACE_URL_META_KEY])
   }
 }

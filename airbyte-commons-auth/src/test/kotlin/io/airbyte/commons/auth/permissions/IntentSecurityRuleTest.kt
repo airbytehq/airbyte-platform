@@ -54,7 +54,10 @@ internal class IntentSecurityRuleTest {
 
   @Test
   fun `order is below micronaut security @Secured annotation`() {
-    assert(intentSecurityRule.order < SecuredAnnotationRule.ORDER)
+    assertTrue(
+      intentSecurityRule.order < SecuredAnnotationRule.ORDER,
+      "expected ${intentSecurityRule.order} < ${SecuredAnnotationRule.ORDER}",
+    )
   }
 
   @Test

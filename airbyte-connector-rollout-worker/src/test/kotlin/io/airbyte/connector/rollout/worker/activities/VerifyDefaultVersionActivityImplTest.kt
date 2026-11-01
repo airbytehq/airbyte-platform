@@ -17,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -185,6 +186,6 @@ internal class VerifyDefaultVersionActivityImplTest {
       }
 
     verify(atLeast = 1) { actorDefinitionVersionApi.getActorDefinitionVersionDefault(any()) }
-    assert(exception.message!!.contains("Timed out"))
+    assertTrue(exception.message!!.contains("Timed out"))
   }
 }

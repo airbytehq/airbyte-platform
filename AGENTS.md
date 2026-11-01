@@ -21,8 +21,11 @@ except `oss/airbyte-webapp/` — see its own AGENTS.md). Read the root
   by default, with AssertJ where a collection or exception assertion
   reads better. mockwebserver for HTTP fakes; Testcontainers where
   infra is required. Mockito, Hamcrest, Kotest, kotlintest,
-  `kotlin.test` and JUnit 4 are retired: `checkTestFrameworkImports`
-  (part of `check`) fails on their imports in test sources.
+  `kotlin.test`, JUnit 4 and Kotlin's `assert()` are retired in tests.
+  The root task `checkTestFrameworkImports` fails on their imports and
+  on `assert(` calls in Kotlin test sources. `:oss:check` and
+  `:cloud:check` run it, but a module-scoped `check` does not; run it
+  directly with `./gradlew checkTestFrameworkImports`.
 
 ## Module layout
 

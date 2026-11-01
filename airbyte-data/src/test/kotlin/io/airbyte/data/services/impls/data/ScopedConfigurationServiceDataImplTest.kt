@@ -24,6 +24,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -96,7 +98,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.findById(configId) } returns Optional.of(expectedConfig)
 
     val config = scopedConfigurationService.getScopedConfiguration(configId)
-    assert(config == expectedConfig.toConfigModel())
+    assertEquals(expectedConfig.toConfigModel(), config)
 
     verify { scopedConfigurationRepository.findById(configId) }
   }
@@ -149,7 +151,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         scopeId,
       )
 
-    assert(retrievedConfig.get() == config.toConfigModel())
+    assertEquals(config.toConfigModel(), retrievedConfig.get())
 
     verify {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
@@ -207,7 +209,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         scopeId,
       )
 
-    assert(retrievedConfig.get() == config.toConfigModel())
+    assertEquals(config.toConfigModel(), retrievedConfig.get())
 
     verify {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
@@ -259,7 +261,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         mapOf(ModelConfigScopeType.WORKSPACE to scopeId),
       )
 
-    assert(retrievedConfig == listOf(config.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel()), retrievedConfig)
 
     verify {
       scopedConfigurationRepository.findByKeyAndScopeTypeAndScopeId(
@@ -315,8 +317,8 @@ internal class ScopedConfigurationServiceDataImplTest {
       )
 
     val values = retrieved.map { it.value }.toSet()
-    assert(retrieved.size == 3) { "expected 3 rows, got ${retrieved.size} (values=$values)" }
-    assert(values == setOf("token-1", "token-2", "token-3")) { "expected all 3 token values, got $values" }
+    assertEquals(3, retrieved.size, "expected 3 rows, got ${retrieved.size} (values=$values)")
+    assertEquals(setOf("token-1", "token-2", "token-3"), values, "expected all 3 token values, got $values")
   }
 
   @Test
@@ -388,10 +390,10 @@ internal class ScopedConfigurationServiceDataImplTest {
         ModelConfigResourceType.ACTOR_DEFINITION,
       )
 
-    assert(retrievedConfig.size == 1)
+    assertEquals(1, retrievedConfig.size)
     val firstConfig1 = retrievedConfig.stream().findFirst().get()
-    assert(firstConfig1 == config1.toConfigModel())
-    assert(firstConfig1.scopeType == ModelConfigScopeType.WORKSPACE)
+    assertEquals(config1.toConfigModel(), firstConfig1)
+    assertEquals(ModelConfigScopeType.WORKSPACE, firstConfig1.scopeType)
 
     val retrievedConfig2 =
       scopedConfigurationService.getScopedConfigurations(
@@ -402,10 +404,10 @@ internal class ScopedConfigurationServiceDataImplTest {
         ModelConfigResourceType.ACTOR_DEFINITION,
       )
 
-    assert(retrievedConfig2.size == 1)
+    assertEquals(1, retrievedConfig2.size)
     val firstConfig2 = retrievedConfig2.stream().findFirst().get()
-    assert(firstConfig2 == config2.toConfigModel())
-    assert(firstConfig2.scopeType == ModelConfigScopeType.ORGANIZATION)
+    assertEquals(config2.toConfigModel(), firstConfig2)
+    assertEquals(ModelConfigScopeType.ORGANIZATION, firstConfig2.scopeType)
   }
 
   @Test
@@ -485,7 +487,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         ),
       )
 
-    assert(retrievedConfig.get() == config.toConfigModel())
+    assertEquals(config.toConfigModel(), retrievedConfig.get())
 
     verify {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
@@ -622,11 +624,11 @@ internal class ScopedConfigurationServiceDataImplTest {
       )
 
     // keys that have a config are in the result map, with the resolved config as the value
-    assert(retrievedConfigs[workspaceId1] == workspace1Config.toConfigModel())
-    assert(retrievedConfigs[workspaceId2] == orgConfig.toConfigModel())
+    assertEquals(workspace1Config.toConfigModel(), retrievedConfigs[workspaceId1])
+    assertEquals(orgConfig.toConfigModel(), retrievedConfigs[workspaceId2])
 
     // keys that don't have a config are not included in the result map
-    assert(!retrievedConfigs.containsKey(workspaceId3))
+    assertFalse(retrievedConfigs.containsKey(workspaceId3))
 
     verifyAll {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
@@ -690,7 +692,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         scopeId,
       )
 
-    assert(retrievedConfig.isEmpty)
+    assertTrue(retrievedConfig.isEmpty)
 
     verify {
       scopedConfigurationRepository.getByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeId(
@@ -730,7 +732,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         ),
       )
 
-    assert(retrievedConfig.isEmpty)
+    assertTrue(retrievedConfig.isEmpty)
 
     verify {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
@@ -774,7 +776,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.save(config) } returns config
 
     val res = scopedConfigurationService.writeScopedConfiguration(config.toConfigModel())
-    assert(res == config.toConfigModel())
+    assertEquals(config.toConfigModel(), res)
 
     verify {
       scopedConfigurationRepository.existsById(configId)
@@ -806,7 +808,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.update(config) } returns config
 
     val res = scopedConfigurationService.writeScopedConfiguration(config.toConfigModel())
-    assert(res == config.toConfigModel())
+    assertEquals(config.toConfigModel(), res)
 
     verify {
       scopedConfigurationRepository.existsById(configId)
@@ -849,7 +851,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.saveAll(listOf(config, config2)) } returns listOf(config, config2)
 
     val res = scopedConfigurationService.insertScopedConfigurations(listOf(config.toConfigModel(), config2.toConfigModel()))
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verifyAll {
       scopedConfigurationRepository.saveAll(listOf(config, config2))
@@ -859,7 +861,7 @@ internal class ScopedConfigurationServiceDataImplTest {
   @Test
   fun `test bulk insert empty list returns empty`() {
     val res = scopedConfigurationService.insertScopedConfigurations(emptyList())
-    assert(res.isEmpty())
+    assertTrue(res.isEmpty())
 
     verify(exactly = 0) { scopedConfigurationRepository.saveAll(any<List<ScopedConfiguration>>()) }
   }
@@ -1024,7 +1026,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.findAll() } returns listOf(config, config2)
 
     val res = scopedConfigurationService.listScopedConfigurations()
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verify {
       scopedConfigurationRepository.findAll()
@@ -1068,7 +1070,7 @@ internal class ScopedConfigurationServiceDataImplTest {
     every { scopedConfigurationRepository.findByKey("key") } returns listOf(config, config2)
 
     val res = scopedConfigurationService.listScopedConfigurations("key")
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verify {
       scopedConfigurationRepository.findByKey("key")
@@ -1123,7 +1125,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         ModelConfigScopeType.WORKSPACE,
         listOf(config.scopeId, config2.scopeId),
       )
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verify {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndScopeIdInList(
@@ -1186,7 +1188,7 @@ internal class ScopedConfigurationServiceDataImplTest {
         ModelConfigOriginType.USER,
         listOf(config.value, config2.value),
       )
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verify {
       scopedConfigurationRepository.findByKeyAndResourceTypeAndResourceIdAndScopeTypeAndOriginTypeAndValueInList(
@@ -1238,7 +1240,7 @@ internal class ScopedConfigurationServiceDataImplTest {
 
     val res =
       scopedConfigurationService.listScopedConfigurations(io.airbyte.config.ConfigOriginType.USER)
-    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+    assertEquals(listOf(config.toConfigModel(), config2.toConfigModel()), res)
 
     verify {
       scopedConfigurationRepository.findByOriginType(ConfigOriginType.user)

@@ -11,6 +11,7 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -34,7 +35,7 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
     every { declarativeManifestImageVersionRepository.save(version) } returns version
 
     val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(version)
-    assert(result == version)
+    assertEquals(version, result)
 
     verify {
       declarativeManifestImageVersionRepository.existsById(majorVersion)
@@ -52,7 +53,7 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
     every { declarativeManifestImageVersionRepository.update(newVersion) } returns newVersion
 
     val result = declarativeManifestImageVersionService.writeDeclarativeManifestImageVersion(newVersion)
-    assert(result == newVersion)
+    assertEquals(newVersion, result)
 
     verify {
       declarativeManifestImageVersionRepository.existsById(majorVersion)
@@ -69,7 +70,7 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
     every { declarativeManifestImageVersionRepository.findById(majorVersion) } returns Optional.of(version)
 
     val result = declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(majorVersion)
-    assert(result == version)
+    assertEquals(version, result)
 
     verify {
       declarativeManifestImageVersionRepository.findById(majorVersion)
@@ -104,6 +105,6 @@ internal class DeclarativeManifestImageVersionServiceDataImplTest {
       declarativeManifestImageVersionRepository.findAll()
     } returns listOf(declarativeManifestImageVersion0, declarativeManifestImageVersion1, declarativeManifestImageVersion2)
     val result = declarativeManifestImageVersionService.listDeclarativeManifestImageVersions()
-    assert(result == listOf(declarativeManifestImageVersion0, declarativeManifestImageVersion1, declarativeManifestImageVersion2))
+    assertEquals(listOf(declarativeManifestImageVersion0, declarativeManifestImageVersion1, declarativeManifestImageVersion2), result)
   }
 }

@@ -16,6 +16,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.reactivestreams.Publisher
@@ -33,7 +34,7 @@ internal class KeycloakTokenValidatorTest {
   fun setUp() {
     // Make sure we're covering the case where the token contains an underscore, since this used to
     // break in production.
-    assert(VALID_ACCESS_TOKEN.contains("_"))
+    assertTrue(VALID_ACCESS_TOKEN.contains("_"))
 
     airbyteKeycloakClient = mockk()
     authenticationFactory = mockk()

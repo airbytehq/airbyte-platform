@@ -9,6 +9,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.collections.iterator
 
@@ -49,10 +50,10 @@ class ContributionTemplatesTest {
     val readme = contributionTemplates.renderContributionReadmeMd(newConnectorContributionInfo)
 
     // Assert that the rendered readme contains the connector name
-    assert(readme.contains(newConnectorContributionInfo.connectorName))
+    assertTrue(readme.contains(newConnectorContributionInfo.connectorName))
 
     // Assert that the rendered readme contains the connector description
-    assert(readme.contains(newConnectorContributionInfo.connectorDescription))
+    assertTrue(readme.contains(newConnectorContributionInfo.connectorDescription))
   }
 
   @Test
@@ -65,15 +66,15 @@ class ContributionTemplatesTest {
 
     val docs = contributionTemplates.renderContributionDocsMd(newConnectorContributionInfo)
 
-    assert(docs.contains(newConnectorContributionInfo.connectorName))
-    assert(docs.contains(newConnectorContributionInfo.connectorDescription))
-    assert(docs.contains(newConnectorContributionInfo.versionTag))
-    assert(docs.contains(newConnectorContributionInfo.updateDate)) // Release date = updateDate
-    assert(docs.contains(newConnectorContributionInfo.changelogMessage))
+    assertTrue(docs.contains(newConnectorContributionInfo.connectorName))
+    assertTrue(docs.contains(newConnectorContributionInfo.connectorDescription))
+    assertTrue(docs.contains(newConnectorContributionInfo.versionTag))
+    assertTrue(docs.contains(newConnectorContributionInfo.updateDate)) // Release date = updateDate
+    assertTrue(docs.contains(newConnectorContributionInfo.changelogMessage))
 
     for (stream in manifestParser.streams) {
       // Assert that the rendered docs contains the stream name
-      assert(docs.contains("| ${stream["name"]} |"))
+      assertTrue(docs.contains("| ${stream["name"]} |"))
     }
 
     val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
@@ -81,7 +82,7 @@ class ContributionTemplatesTest {
 
     for (prop in properties) {
       // Assert that the rendered docs contains the spec name
-      assert(docs.contains("| `${prop.key}` |"))
+      assertTrue(docs.contains("| `${prop.key}` |"))
     }
   }
 
@@ -92,14 +93,14 @@ class ContributionTemplatesTest {
     val manifestParser = ManifestParser(jacksonYaml)
     val prDescription = contributionTemplates.renderContributionPullRequestDescription(newConnectorContributionInfo)
 
-    assert(prDescription.contains(newConnectorContributionInfo.connectorName))
-    assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
-    assert(prDescription.contains(newConnectorContributionInfo.connectorDescription))
-    assert(prDescription.contains(newConnectorContributionInfo.contributionDescription))
+    assertTrue(prDescription.contains(newConnectorContributionInfo.connectorName))
+    assertTrue(prDescription.contains(newConnectorContributionInfo.connectorImageName))
+    assertTrue(prDescription.contains(newConnectorContributionInfo.connectorDescription))
+    assertTrue(prDescription.contains(newConnectorContributionInfo.contributionDescription))
 
     for (stream in manifestParser.streams) {
       // Assert that the rendered PR description contains the stream name
-      assert(prDescription.contains("| ${stream["name"]} |"))
+      assertTrue(prDescription.contains("| ${stream["name"]} |"))
     }
 
     val connectionSpecification = manifestParser.spec["connection_specification"] as Map<String, Any>
@@ -107,7 +108,7 @@ class ContributionTemplatesTest {
 
     for (prop in properties) {
       // Assert that the rendered PR description contains the spec name
-      assert(prDescription.contains("| `${prop.key}` |"))
+      assertTrue(prDescription.contains("| `${prop.key}` |"))
     }
   }
 
@@ -117,9 +118,9 @@ class ContributionTemplatesTest {
     val contributionTemplates = ContributionTemplates()
     val prDescription = contributionTemplates.renderContributionPullRequestDescription(editConnectorContributionInfo)
 
-    assert(prDescription.contains(editConnectorContributionInfo.connectorName))
-    assert(prDescription.contains(editConnectorContributionInfo.connectorImageName))
-    assert(prDescription.contains(editConnectorContributionInfo.contributionDescription))
+    assertTrue(prDescription.contains(editConnectorContributionInfo.connectorName))
+    assertTrue(prDescription.contains(editConnectorContributionInfo.connectorImageName))
+    assertTrue(prDescription.contains(editConnectorContributionInfo.contributionDescription))
     assertFalse(prDescription.contains(editConnectorContributionInfo.connectorDescription))
   }
 

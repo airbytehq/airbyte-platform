@@ -47,6 +47,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -337,7 +338,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.deleteSsoConfig(orgId, providedCompanyIdentifier)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -357,7 +358,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.deleteSsoConfig(orgId, companyIdentifier)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -514,7 +515,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.createAndStoreSsoConfig(config)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -750,7 +751,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.activateSsoConfig(orgId)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -796,7 +797,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.activateSsoConfig(orgId)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -985,7 +986,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.createAndStoreSsoConfig(config)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()
@@ -1204,7 +1205,7 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
       }
 
-    assert(
+    assertTrue(
       exception.problem
         .getData()
         .toString()

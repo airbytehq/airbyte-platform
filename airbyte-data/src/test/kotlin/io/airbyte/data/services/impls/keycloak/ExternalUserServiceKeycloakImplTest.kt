@@ -255,6 +255,6 @@ class ExternalUserServiceKeycloakImplTest {
     verify(exactly = 1) { usersResource2.get(authUserId) }
 
     // should return realm21
-    assert(realm == realm2.realm)
+    assertEquals(realm2.realm, realm)
   }
 }

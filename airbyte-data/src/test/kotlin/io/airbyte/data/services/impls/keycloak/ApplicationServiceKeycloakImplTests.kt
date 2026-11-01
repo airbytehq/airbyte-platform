@@ -155,7 +155,7 @@ internal class ApplicationServiceKeycloakImplTests {
     Assertions.assertThrows(
       BadRequestException::class.java,
     ) { apiKeyServiceKeycloakImpl!!.createApplication(user, TEST_1) }
-    assert(
+    Assertions.assertTrue(
       apiKeyServiceKeycloakImpl!!
         .listApplicationsByUser(
           user,
@@ -257,7 +257,7 @@ internal class ApplicationServiceKeycloakImplTests {
       apiKeyServiceKeycloakImpl!!.listApplicationsByUser(
         user,
       )
-    assert(apiKeys.size == 1)
+    Assertions.assertEquals(1, apiKeys.size)
 
     every {
       apiKeyServiceKeycloakImpl!!.createApplication(user, TEST_2)
@@ -274,7 +274,7 @@ internal class ApplicationServiceKeycloakImplTests {
       apiKeyServiceKeycloakImpl!!.listApplicationsByUser(
         user,
       )
-    assert(apiKeys.size == 2)
+    Assertions.assertEquals(2, apiKeys.size)
   }
 
   @Test

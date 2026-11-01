@@ -11,6 +11,7 @@ import io.airbyte.api.server.generated.models.SlackNotificationConfiguration
 import io.airbyte.commons.server.handlers.NotificationsHandler
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -35,6 +36,6 @@ internal class NotificationApiControllerTest {
 
     val result = controller.tryNotificationWebhookConfig(requestBody)
 
-    assert(result.status == NotificationRead.Status.SUCCEEDED)
+    assertEquals(NotificationRead.Status.SUCCEEDED, result.status)
   }
 }

@@ -10,6 +10,7 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -39,7 +40,7 @@ internal class OrganizationEmailDomainServiceDataImplTest {
     every { organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io") } returns orgEmailDomains
 
     val result = organizationEmailDomainServiceDataImpl.findByEmailDomain("airbyte.io")
-    assert(result.size == 1)
+    assertEquals(1, result.size)
 
     val expectedOrgEmailDomain =
       io.airbyte.config
@@ -48,7 +49,7 @@ internal class OrganizationEmailDomainServiceDataImplTest {
         .withEmailDomain("airbyte.io")
         .withOrganizationId(orgId)
 
-    assert(result[0] == expectedOrgEmailDomain)
+    assertEquals(expectedOrgEmailDomain, result[0])
   }
 
   @Test
@@ -68,8 +69,8 @@ internal class OrganizationEmailDomainServiceDataImplTest {
     every { organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io") } returns orgEmailDomains
 
     val result = organizationEmailDomainServiceDataImpl.findByEmailDomain("airbyte.io")
-    assert(result.size == 1)
-    assert(result[0].emailDomain == "Airbyte.IO")
+    assertEquals(1, result.size)
+    assertEquals("Airbyte.IO", result[0].emailDomain)
   }
 
   @Test

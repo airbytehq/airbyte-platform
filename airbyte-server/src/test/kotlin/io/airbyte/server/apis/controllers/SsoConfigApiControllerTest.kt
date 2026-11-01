@@ -74,11 +74,11 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
 
-    assert(result.organizationId == orgId.value)
-    assert(result.companyIdentifier == "id")
-    assert(result.clientId == "client-id")
-    assert(result.clientSecret == "client-secret")
-    assert(result.emailDomains == listOf("domain"))
+    assertEquals(orgId.value, result.organizationId)
+    assertEquals("id", result.companyIdentifier)
+    assertEquals("client-id", result.clientId)
+    assertEquals("client-secret", result.clientSecret)
+    assertEquals(listOf("domain"), result.emailDomains)
   }
 
   @Test

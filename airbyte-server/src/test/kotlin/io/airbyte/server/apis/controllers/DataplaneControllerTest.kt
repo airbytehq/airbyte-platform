@@ -85,9 +85,9 @@ class DataplaneControllerTest {
         DataplaneUpdateRequestBody(dataplaneId = mockDataplane.id, name = newName, enabled = newEnabled),
       )
 
-    assert(updatedDataplane.dataplaneId == mockDataplane.id)
-    assert(updatedDataplane.name == newName)
-    assert(updatedDataplane.enabled == newEnabled)
+    Assertions.assertEquals(mockDataplane.id, updatedDataplane.dataplaneId)
+    Assertions.assertEquals(newName, updatedDataplane.name)
+    Assertions.assertEquals(newEnabled, updatedDataplane.enabled)
   }
 
   @Test
@@ -124,9 +124,9 @@ class DataplaneControllerTest {
     val dataplanes = dataplaneController.listDataplanes(DataplaneListRequestBody(dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID))
     val responseDataplanes = dataplanes.dataplanes!!
 
-    assert(responseDataplanes.size == 2)
-    assert(responseDataplanes[0].dataplaneId == dataplaneId1)
-    assert(responseDataplanes[1].dataplaneId == dataplaneId2)
+    Assertions.assertEquals(2, responseDataplanes.size)
+    Assertions.assertEquals(dataplaneId1, responseDataplanes[0].dataplaneId)
+    Assertions.assertEquals(dataplaneId2, responseDataplanes[1].dataplaneId)
   }
 
   @Test
@@ -140,7 +140,7 @@ class DataplaneControllerTest {
     val requestBody = DataplaneTokenRequestBody(clientId = clientId, clientSecret = clientSecret)
     val accessToken = dataplaneController.getDataplaneToken(requestBody)
 
-    assert(accessToken.accessToken == expectedToken)
+    Assertions.assertEquals(expectedToken, accessToken.accessToken)
   }
 
   @Test

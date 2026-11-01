@@ -70,7 +70,7 @@ class ConfigClientErrorHandlerTest {
     assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test")) }
 
     val conflict = assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(ConflictException("test")) }
-    assert(conflict.problem.getStatus() == 409)
+    assertEquals(409, conflict.problem.getStatus())
 
     assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException()) }
 

@@ -26,6 +26,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
@@ -82,7 +83,7 @@ class DispatchStageTest {
       launcher.launchReplication(payload, msg)
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -104,7 +105,7 @@ class DispatchStageTest {
       launcher.launchReset(payload, msg)
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -133,7 +134,7 @@ class DispatchStageTest {
       launcher.launchCheck(checkInput, msg)
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -160,7 +161,7 @@ class DispatchStageTest {
       launcher.launchDiscover(discoverInput, msg)
     }
 
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -176,7 +177,7 @@ class DispatchStageTest {
 
     verify(exactly = 1) { directJobRunnerClient.submit(msg) }
     verify { launcher wasNot Called }
-    assert(result.payload == payload)
+    assertEquals(payload, result.payload)
   }
 
   @Test
@@ -190,7 +191,7 @@ class DispatchStageTest {
 
     val error = assertThrows<WorkloadLauncherException> { stage.applyStage(io) }
 
-    assert(error.message == "Direct job runner unavailable in this data plane")
+    assertEquals("Direct job runner unavailable in this data plane", error.message)
     verify { launcher wasNot Called }
   }
 

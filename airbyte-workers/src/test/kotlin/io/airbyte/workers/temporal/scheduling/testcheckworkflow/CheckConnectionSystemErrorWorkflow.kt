@@ -9,10 +9,11 @@ import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 
 class CheckConnectionSystemErrorWorkflow : ConnectorCommandWorkflow {
   override fun run(input: ConnectorCommandInput): ConnectorJobOutput {
-    assert(input is CheckCommandApiInput)
+    assertInstanceOf(CheckCommandApiInput::class.java, input)
     return ConnectorJobOutput()
       .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
       .withFailureReason(FailureReason().withFailureType(FailureReason.FailureType.SYSTEM_ERROR))

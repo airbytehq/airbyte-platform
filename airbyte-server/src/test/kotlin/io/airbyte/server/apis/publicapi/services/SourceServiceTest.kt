@@ -81,9 +81,9 @@ class SourceServiceTest {
     verify(exactly = 0) { sourceHandler.partialUpdateSource(any<PartialSourceUpdate>()) }
 
     val captured = partialSourceUpdateSlot.captured
-    assert(captured.sourceId == sourceId)
-    assert(captured.secretId == secretId)
-    assert(captured.name == "updated-source")
+    assertEquals(sourceId, captured.sourceId)
+    assertEquals(secretId, captured.secretId)
+    assertEquals("updated-source", captured.name)
   }
 
   @Test
@@ -116,7 +116,7 @@ class SourceServiceTest {
     verify(exactly = 0) { sourceHandler.partialUpdateSource(any<PartialSourceUpdate>()) }
 
     val captured = partialSourceUpdateSlot.captured
-    assert(captured.connectionConfiguration == inlineOAuthConfiguration)
+    assertEquals(inlineOAuthConfiguration, captured.connectionConfiguration)
   }
 
   private companion object {

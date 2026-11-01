@@ -5,6 +5,7 @@
 package io.airbyte.featureflag
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
@@ -19,7 +20,7 @@ class MultiTest {
     val workspace = Workspace("workspace")
 
     Multi(listOf(source, workspace)).also {
-      assert(it.kind == "multi")
+      assertEquals("multi", it.kind)
     }
   }
 
@@ -55,8 +56,8 @@ class MultiTest {
     val user = User("user")
 
     Multi(listOf(user, destination, source, connection, workspace)).also {
-      assert(it.key.isEmpty())
-      assert(it.attrs.isEmpty())
+      assertTrue(it.key.isEmpty())
+      assertTrue(it.attrs.isEmpty())
     }
   }
 
@@ -114,9 +115,9 @@ class WorkspaceTest {
   @Test
   fun `verify data`() {
     Workspace("workspace key").also {
-      assert(it.kind == "workspace")
-      assert(it.key == "workspace key")
-      assert(it.attrs.isEmpty())
+      assertEquals("workspace", it.kind)
+      assertEquals("workspace key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }
@@ -125,9 +126,9 @@ class UserTest {
   @Test
   fun `verify data`() {
     User("user key").also {
-      assert(it.kind == "user")
-      assert(it.key == "user key")
-      assert(it.attrs.isEmpty())
+      assertEquals("user", it.kind)
+      assertEquals("user key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 
@@ -135,13 +136,13 @@ class UserTest {
   fun `verify data with email`() {
     val userId = UUID.randomUUID()
     User(userId, EmailAttribute("user@airbyte.io")).also {
-      assert(it.kind == "user")
-      assert(it.key == userId.toString())
+      assertEquals("user", it.kind)
+      assertEquals(userId.toString(), it.key)
 
       val emailAttr = it.attrs.firstOrNull()
-      assert(emailAttr?.key == "email")
-      assert(emailAttr?.value == "user@airbyte.io")
-      assert(emailAttr?.private == true)
+      assertEquals("email", emailAttr?.key)
+      assertEquals("user@airbyte.io", emailAttr?.value)
+      assertEquals(true, emailAttr?.private)
     }
   }
 }
@@ -150,9 +151,9 @@ class ConnectionTest {
   @Test
   fun `verify data`() {
     Connection("connection key").also {
-      assert(it.kind == "connection")
-      assert(it.key == "connection key")
-      assert(it.attrs.isEmpty())
+      assertEquals("connection", it.kind)
+      assertEquals("connection key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }
@@ -161,9 +162,9 @@ class SourceTest {
   @Test
   fun `verify data`() {
     Source("source key").also {
-      assert(it.kind == "source")
-      assert(it.key == "source key")
-      assert(it.attrs.isEmpty())
+      assertEquals("source", it.kind)
+      assertEquals("source key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }
@@ -172,9 +173,9 @@ class DestinationTest {
   @Test
   fun `verify data`() {
     Destination("destination key").also {
-      assert(it.kind == "destination")
-      assert(it.key == "destination key")
-      assert(it.attrs.isEmpty())
+      assertEquals("destination", it.kind)
+      assertEquals("destination key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }
@@ -183,9 +184,9 @@ class SourceDefinitionTest {
   @Test
   fun `verify data`() {
     SourceDefinition("source definition key").also {
-      assert(it.kind == "source-definition")
-      assert(it.key == "source definition key")
-      assert(it.attrs.isEmpty())
+      assertEquals("source-definition", it.kind)
+      assertEquals("source definition key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }
@@ -194,9 +195,9 @@ class DestinationDefinitionTest {
   @Test
   fun `verify data`() {
     DestinationDefinition("destination definition key").also {
-      assert(it.kind == "destination-definition")
-      assert(it.key == "destination definition key")
-      assert(it.attrs.isEmpty())
+      assertEquals("destination-definition", it.kind)
+      assertEquals("destination definition key", it.key)
+      assertTrue(it.attrs.isEmpty())
     }
   }
 }

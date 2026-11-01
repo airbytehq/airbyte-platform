@@ -11,6 +11,8 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class ClaimStageTest {
@@ -32,7 +34,7 @@ class ClaimStageTest {
 
     verify { workloadApiClient.claim(workloadId) }
 
-    assert(!outputFromClaimStage.skip) { "Skip Launch flag should be false but it's true" }
+    assertFalse(outputFromClaimStage.skip, "Skip Launch flag should be false but it's true")
   }
 
   @Test
@@ -53,6 +55,6 @@ class ClaimStageTest {
 
     verify { workloadApiClient.claim(workloadId) }
 
-    assert(outputFromClaimStage.skip) { "Skip Launch flag should be true but it's false" }
+    assertTrue(outputFromClaimStage.skip, "Skip Launch flag should be true but it's false")
   }
 }

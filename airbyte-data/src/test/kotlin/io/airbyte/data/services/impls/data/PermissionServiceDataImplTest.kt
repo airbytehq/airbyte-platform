@@ -1026,9 +1026,9 @@ class PermissionServiceDataImplTest {
       every { permissionRepository.getMemberCountByOrgIdList(orgIds) } returns listOf(OrgMemberCount(orgId, 1))
 
       val result = permissionService.getMemberCountsForOrganizationList(orgIds)
-      assert(result.size == 1)
-      assert(result[0].organizationId == orgId)
-      assert(result[0].count == 1)
+      assertEquals(1, result.size)
+      assertEquals(orgId, result[0].organizationId)
+      assertEquals(1, result[0].count)
 
       verify(exactly = 1) { permissionRepository.getMemberCountByOrgIdList(orgIds) }
     }

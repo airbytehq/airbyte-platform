@@ -42,6 +42,7 @@ import io.airbyte.protocol.models.v0.Field
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -181,7 +182,7 @@ class JobExplanationHandlerTest {
 
     val result = handler.getJobExplanation(jobId, workspaceId)
 
-    assert(result == "This is a mocked LLM response")
+    assertEquals("This is a mocked LLM response", result)
 
     verify {
       openAIService.getChatResponse(

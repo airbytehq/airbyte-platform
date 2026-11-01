@@ -322,7 +322,7 @@ class OutlierEvaluationsTest {
       )
 
     val result = rule.compute(context)
-    assert(result != null)
+    assertNotNull(result)
     assertEquals(10.0, result!!.toDouble(), 0.001)
   }
 

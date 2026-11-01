@@ -24,6 +24,7 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -65,7 +66,7 @@ internal class UserInvitationServiceDataImplTest {
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
 
     val invitation = userInvitationService.getUserInvitationByInviteCode(invitation.inviteCode)
-    assert(invitation == this.invitation.toConfigModel())
+    assertEquals(this.invitation.toConfigModel(), invitation)
 
     verify { userInvitationRepository.findByInviteCode(this@UserInvitationServiceDataImplTest.invitation.inviteCode) }
   }
@@ -86,7 +87,7 @@ internal class UserInvitationServiceDataImplTest {
     every { userInvitationRepository.save(invitation) } returns invitation
 
     val result = userInvitationService.createUserInvitation(invitation.toConfigModel())
-    assert(result == invitation.toConfigModel())
+    assertEquals(invitation.toConfigModel(), result)
 
     verify { userInvitationRepository.save(invitation) }
   }
@@ -166,7 +167,7 @@ internal class UserInvitationServiceDataImplTest {
 
     val result = userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId)
 
-    assert(result == expectedUpdatedInvitation.toConfigModel())
+    assertEquals(expectedUpdatedInvitation.toConfigModel(), result)
     verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }
 
@@ -230,8 +231,8 @@ internal class UserInvitationServiceDataImplTest {
     }
     confirmVerified(userInvitationRepository)
 
-    assert(workspaceResult == mockWorkspaceInvitations.map { it.toConfigModel() })
-    assert(organizationResult == mockOrganizationInvitations.map { it.toConfigModel() })
+    assertEquals(mockWorkspaceInvitations.map { it.toConfigModel() }, workspaceResult)
+    assertEquals(mockOrganizationInvitations.map { it.toConfigModel() }, organizationResult)
   }
 
   @Test
