@@ -22,7 +22,6 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(project(":oss:airbyte-config:config-persistence"))
 }

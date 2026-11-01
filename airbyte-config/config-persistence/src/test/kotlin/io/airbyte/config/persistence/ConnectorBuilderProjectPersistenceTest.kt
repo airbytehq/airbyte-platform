@@ -41,7 +41,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.Optional
@@ -215,7 +215,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
   @Test
   fun testReadNotExists() {
-    Assert.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       connectorBuilderService!!.getConnectorBuilderProject(
@@ -484,7 +484,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     val deleted = connectorBuilderService!!.deleteBuilderProject(project1!!.builderProjectId)
     org.junit.jupiter.api.Assertions
       .assertTrue(deleted)
-    Assert.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       connectorBuilderService!!.getConnectorBuilderProject(
@@ -511,7 +511,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
   @Test
   fun givenProjectDoesNotExistWhenGetVersionedConnectorBuilderProjectThenThrowException() {
-    Assert.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       connectorBuilderService!!.getVersionedConnectorBuilderProject(
@@ -533,7 +533,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       null,
       null,
     )
-    Assert.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       connectorBuilderService!!.getVersionedConnectorBuilderProject(

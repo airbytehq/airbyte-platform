@@ -46,5 +46,4 @@ dependencies {
   testImplementation(libs.kotlin.coroutines.test)
   testImplementation(libs.mockk)
 
-  testImplementation(libs.junit.pioneer)
 }

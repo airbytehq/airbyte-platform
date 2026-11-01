@@ -38,7 +38,6 @@ dependencies {
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
 

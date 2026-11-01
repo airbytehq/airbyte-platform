@@ -236,7 +236,6 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkStatic
 import io.mockk.verify
-import org.junit.Assert
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -1128,7 +1127,7 @@ internal class ConnectionsHandlerTest {
             ),
         )
 
-      Assert.assertThrows(IllegalArgumentException::class.java) {
+      assertThrows(IllegalArgumentException::class.java) {
         connectionsHandler.createConnection(connectionCreate)
       }
     }

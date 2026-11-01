@@ -5,13 +5,16 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Organization
-import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.inject.qualifiers.Qualifiers
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.transaction.TransactionOperations
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -48,11 +51,11 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
     billingNotificationSettingsRepository.upsert(organizationId, "alerts@example.com", BigDecimal("12.5"), BigDecimal("300"))
 
     val saved = billingNotificationSettingsRepository.findById(organizationId).get()
-    saved.recipientEmail shouldBe "alerts@example.com"
-    saved.syncCreditThreshold.compareTo(BigDecimal("12.5")) shouldBe 0
-    saved.invoiceAmountThreshold.compareTo(BigDecimal("300")) shouldBe 0
-    saved.createdAt.shouldNotBeNull()
-    saved.updatedAt.shouldNotBeNull()
+    assertEquals("alerts@example.com", saved.recipientEmail)
+    assertEquals(0, saved.syncCreditThreshold.compareTo(BigDecimal("12.5")))
+    assertEquals(0, saved.invoiceAmountThreshold.compareTo(BigDecimal("300")))
+    assertNotNull(saved.createdAt)
+    assertNotNull(saved.updatedAt)
   }
 
   @Test
@@ -62,13 +65,13 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
 
     billingNotificationSettingsRepository.upsert(organizationId, null, BigDecimal.ZERO, BigDecimal("42"))
 
-    billingNotificationSettingsRepository.count() shouldBe 1L
+    assertEquals(1L, billingNotificationSettingsRepository.count())
     val second = billingNotificationSettingsRepository.findById(organizationId).get()
-    second.recipientEmail shouldBe null
-    second.syncCreditThreshold.compareTo(BigDecimal.ZERO) shouldBe 0
-    second.invoiceAmountThreshold.compareTo(BigDecimal("42")) shouldBe 0
-    second.createdAt shouldBe first.createdAt
-    (second.updatedAt!! >= first.updatedAt!!) shouldBe true
+    assertNull(second.recipientEmail)
+    assertEquals(0, second.syncCreditThreshold.compareTo(BigDecimal.ZERO))
+    assertEquals(0, second.invoiceAmountThreshold.compareTo(BigDecimal("42")))
+    assertEquals(first.createdAt, second.createdAt)
+    assertTrue(second.updatedAt!! >= first.updatedAt!!)
   }
 
   @Test
@@ -76,9 +79,9 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
     billingNotificationSettingsRepository.upsert(organizationId, null, BigDecimal.ZERO, BigDecimal.ZERO)
 
     val saved = billingNotificationSettingsRepository.findById(organizationId).get()
-    saved.recipientEmail shouldBe null
-    saved.syncCreditThreshold.compareTo(BigDecimal.ZERO) shouldBe 0
-    saved.invoiceAmountThreshold.compareTo(BigDecimal.ZERO) shouldBe 0
+    assertNull(saved.recipientEmail)
+    assertEquals(0, saved.syncCreditThreshold.compareTo(BigDecimal.ZERO))
+    assertEquals(0, saved.invoiceAmountThreshold.compareTo(BigDecimal.ZERO))
   }
 
   @Test
@@ -86,7 +89,7 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
     assertThrows<DataAccessException> {
       billingNotificationSettingsRepository.upsert(organizationId, null, BigDecimal("-1"), BigDecimal.ZERO)
     }
-    billingNotificationSettingsRepository.count() shouldBe 0L
+    assertEquals(0L, billingNotificationSettingsRepository.count())
   }
 
   @Test
@@ -102,12 +105,12 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
             configTransactionOperations.executeWrite { _ ->
               billingNotificationSettingsRepository.upsert(organizationId, "first@example.com", BigDecimal.ONE, BigDecimal.ZERO)
               firstHasWritten.countDown()
-              allowFirstCommit.await(10, TimeUnit.SECONDS) shouldBe true
+              assertTrue(allowFirstCommit.await(10, TimeUnit.SECONDS))
               billingNotificationSettingsRepository.findById(organizationId).get().recipientEmail
             }
           },
         )
-      firstHasWritten.await(10, TimeUnit.SECONDS) shouldBe true
+      assertTrue(firstHasWritten.await(10, TimeUnit.SECONDS))
 
       val second =
         executor.submit(
@@ -121,9 +124,9 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
       assertThrows<TimeoutException> { second.get(500, TimeUnit.MILLISECONDS) }
 
       allowFirstCommit.countDown()
-      first.get(10, TimeUnit.SECONDS) shouldBe "first@example.com"
-      second.get(10, TimeUnit.SECONDS) shouldBe "second@example.com"
-      billingNotificationSettingsRepository.findById(organizationId).get().recipientEmail shouldBe "second@example.com"
+      assertEquals("first@example.com", first.get(10, TimeUnit.SECONDS))
+      assertEquals("second@example.com", second.get(10, TimeUnit.SECONDS))
+      assertEquals("second@example.com", billingNotificationSettingsRepository.findById(organizationId).get().recipientEmail)
     } finally {
       allowFirstCommit.countDown()
       executor.shutdownNow()
@@ -132,6 +135,6 @@ internal class BillingNotificationSettingsRepositoryTest : AbstractConfigReposit
 
   @Test
   fun `findById returns empty for an organization without settings`() {
-    billingNotificationSettingsRepository.findById(UUID.randomUUID()).isPresent shouldBe false
+    assertFalse(billingNotificationSettingsRepository.findById(UUID.randomUUID()).isPresent)
   }
 }

@@ -13,6 +13,8 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
@@ -22,8 +24,6 @@ import java.sql.Date
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 @Suppress("ktlint:standard:class-naming")
 @Disabled
@@ -114,7 +114,7 @@ internal class V0_50_41_012__BreakingChangePinDataMigrationTest : AbstractConfig
       assertNull(scopedConfig)
     } else {
       assertNotNull(scopedConfig)
-      assert(scopedConfig["value"] == actorVersionId.toString())
+      assert(scopedConfig!!["value"] == actorVersionId.toString())
       assert(scopedConfig["origin"] == expectedBCOrigin)
     }
   }

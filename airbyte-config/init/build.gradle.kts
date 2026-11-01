@@ -33,10 +33,8 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(libs.mockk)
-  testImplementation(libs.kotlin.test.runner.junit5)
 }
 
 tasks.processResources {

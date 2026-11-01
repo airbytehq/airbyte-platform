@@ -10,7 +10,7 @@ import io.airbyte.config.DestinationCatalogWithId
 import io.airbyte.config.DestinationOperation
 import io.airbyte.config.DestinationSyncMode
 import io.airbyte.domain.models.DestinationCatalogId
-import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -53,12 +53,12 @@ class DestinationCatalogConvertersTest {
 
       val result = catalogWithId.toApi()
 
-      result.catalogId shouldBe catalogId
-      result.catalog.operations.size shouldBe 1
-      result.catalog.operations[0].objectName shouldBe objectName
-      result.catalog.operations[0].syncMode shouldBe ApiDestinationSyncMode.APPEND
-      result.catalog.operations[0].schema shouldBe jsonSchema
-      result.catalog.operations[0].matchingKeys shouldBe matchingKeys
+      assertEquals(catalogId, result.catalogId)
+      assertEquals(1, result.catalog.operations.size)
+      assertEquals(objectName, result.catalog.operations[0].objectName)
+      assertEquals(ApiDestinationSyncMode.APPEND, result.catalog.operations[0].syncMode)
+      assertEquals(jsonSchema, result.catalog.operations[0].schema)
+      assertEquals(matchingKeys, result.catalog.operations[0].matchingKeys)
     }
 
     @Test
@@ -72,8 +72,8 @@ class DestinationCatalogConvertersTest {
 
       val result = catalogWithId.toApi()
 
-      result.catalogId shouldBe catalogId
-      result.catalog.operations shouldBe emptyList()
+      assertEquals(catalogId, result.catalogId)
+      assertEquals(emptyList<Any>(), result.catalog.operations)
     }
   }
 
@@ -101,12 +101,12 @@ class DestinationCatalogConvertersTest {
 
       val result = catalog.toApi()
 
-      result.operations.size shouldBe 2
-      result.operations[0].objectName shouldBe "table1"
-      result.operations[0].syncMode shouldBe ApiDestinationSyncMode.APPEND_DEDUP
-      result.operations[1].objectName shouldBe "table2"
-      result.operations[1].syncMode shouldBe ApiDestinationSyncMode.OVERWRITE
-      result.operations[1].matchingKeys shouldBe emptyList()
+      assertEquals(2, result.operations.size)
+      assertEquals("table1", result.operations[0].objectName)
+      assertEquals(ApiDestinationSyncMode.APPEND_DEDUP, result.operations[0].syncMode)
+      assertEquals("table2", result.operations[1].objectName)
+      assertEquals(ApiDestinationSyncMode.OVERWRITE, result.operations[1].syncMode)
+      assertEquals(emptyList<Any>(), result.operations[1].matchingKeys)
     }
 
     @Test
@@ -115,7 +115,7 @@ class DestinationCatalogConvertersTest {
 
       val result = catalog.toApi()
 
-      result.operations shouldBe emptyList()
+      assertEquals(emptyList<Any>(), result.operations)
     }
   }
 
@@ -133,10 +133,10 @@ class DestinationCatalogConvertersTest {
 
       val result = operation.toApi()
 
-      result.objectName shouldBe objectName
-      result.syncMode shouldBe ApiDestinationSyncMode.OVERWRITE
-      result.schema shouldBe jsonSchema
-      result.matchingKeys shouldBe matchingKeys
+      assertEquals(objectName, result.objectName)
+      assertEquals(ApiDestinationSyncMode.OVERWRITE, result.syncMode)
+      assertEquals(jsonSchema, result.schema)
+      assertEquals(matchingKeys, result.matchingKeys)
     }
 
     @Test
@@ -151,10 +151,10 @@ class DestinationCatalogConvertersTest {
 
       val result = operation.toApi()
 
-      result.objectName shouldBe objectName
-      result.syncMode shouldBe ApiDestinationSyncMode.APPEND
-      result.schema shouldBe jsonSchema
-      result.matchingKeys shouldBe emptyList()
+      assertEquals(objectName, result.objectName)
+      assertEquals(ApiDestinationSyncMode.APPEND, result.syncMode)
+      assertEquals(jsonSchema, result.schema)
+      assertEquals(emptyList<Any>(), result.matchingKeys)
     }
 
     @Test
@@ -176,10 +176,10 @@ class DestinationCatalogConvertersTest {
 
       val result = operation.toApi()
 
-      result.objectName shouldBe "complex_table"
-      result.syncMode shouldBe ApiDestinationSyncMode.APPEND_DEDUP
-      result.schema shouldBe jsonSchema
-      result.matchingKeys shouldBe complexMatchingKeys
+      assertEquals("complex_table", result.objectName)
+      assertEquals(ApiDestinationSyncMode.APPEND_DEDUP, result.syncMode)
+      assertEquals(jsonSchema, result.schema)
+      assertEquals(complexMatchingKeys, result.matchingKeys)
     }
   }
 }

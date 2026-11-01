@@ -22,7 +22,6 @@ dependencies {
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.bundles.micronaut.test)
 
   testRuntimeOnly(libs.junit.jupiter.engine)

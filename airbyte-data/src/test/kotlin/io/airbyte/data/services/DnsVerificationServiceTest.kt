@@ -4,7 +4,10 @@
 
 package io.airbyte.data.services
 
-import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -21,7 +24,7 @@ class DnsVerificationServiceTest {
           expectedValue = "airbyte-domain-verification=abc123",
         )
 
-      result shouldBe DnsVerificationResult.NotFound
+      assertEquals(DnsVerificationResult.NotFound, result)
     }
 
     @Test
@@ -32,7 +35,7 @@ class DnsVerificationServiceTest {
           expectedValue = "airbyte-domain-verification=abc123",
         )
 
-      result shouldBe DnsVerificationResult.NotFound
+      assertEquals(DnsVerificationResult.NotFound, result)
     }
   }
 
@@ -42,14 +45,14 @@ class DnsVerificationServiceTest {
     fun `should return empty list when domain has no TXT records`() {
       val records = service.lookupTxtRecords("_airbyte-nonexistent.example.com")
 
-      records shouldBe emptyList()
+      assertEquals(emptyList<Any>(), records)
     }
 
     @Test
     fun `should handle invalid domain names gracefully`() {
       val records = service.lookupTxtRecords("not a valid domain!")
 
-      records shouldBe emptyList()
+      assertEquals(emptyList<Any>(), records)
     }
   }
 
@@ -80,8 +83,8 @@ class DnsVerificationServiceTest {
 
       variations.forEach { variation ->
         val parsed = service.parseRfc1464Record(variation)
-        (parsed != null) shouldBe true
-        service.recordsMatch(baseRecord, parsed!!) shouldBe true
+        assertTrue(parsed != null)
+        assertTrue(service.recordsMatch(baseRecord, parsed!!))
       }
     }
 
@@ -90,7 +93,7 @@ class DnsVerificationServiceTest {
       val record1 = Pair("airbyte-domain-verification", "token123")
       val record2 = Pair("airbyte-domain-verification", "differentToken")
 
-      service.recordsMatch(record1, record2) shouldBe false
+      assertFalse(service.recordsMatch(record1, record2))
     }
 
     @Test
@@ -98,7 +101,7 @@ class DnsVerificationServiceTest {
       val record1 = Pair("airbyte-domain-verification", "token123")
       val record2 = Pair("different-attribute", "token123")
 
-      service.recordsMatch(record1, record2) shouldBe false
+      assertFalse(service.recordsMatch(record1, record2))
     }
   }
 
@@ -108,14 +111,14 @@ class DnsVerificationServiceTest {
     fun `should parse valid attribute=value format`() {
       val result = service.parseRfc1464Record("airbyte-domain-verification=abc123")
 
-      result shouldBe Pair("airbyte-domain-verification", "abc123")
+      assertEquals(Pair("airbyte-domain-verification", "abc123"), result)
     }
 
     @Test
     fun `should handle spaces around equals sign`() {
       val result = service.parseRfc1464Record("airbyte-domain-verification = abc123")
 
-      result shouldBe Pair("airbyte-domain-verification ", " abc123")
+      assertEquals(Pair("airbyte-domain-verification ", " abc123"), result)
       // Normalization will trim these spaces during comparison
     }
 
@@ -124,28 +127,28 @@ class DnsVerificationServiceTest {
       val expected = Pair("airbyte-domain-verification", "abc123")
       val actual = Pair("airbyte-domain-verification ", " abc123")
 
-      service.recordsMatch(expected, actual) shouldBe true
+      assertTrue(service.recordsMatch(expected, actual))
     }
 
     @Test
     fun `should handle quoted equals in attribute name`() {
       val result = service.parseRfc1464Record("attr`=name=value123")
 
-      result shouldBe Pair("attr`=name", "value123")
+      assertEquals(Pair("attr`=name", "value123"), result)
     }
 
     @Test
     fun `should ignore records without equals sign`() {
       val result = service.parseRfc1464Record("no-equals-sign-here")
 
-      result shouldBe null
+      assertNull(result)
     }
 
     @Test
     fun `should ignore records starting with equals`() {
       val result = service.parseRfc1464Record("=invalid")
 
-      result shouldBe null
+      assertNull(result)
     }
 
     @Test
@@ -153,7 +156,7 @@ class DnsVerificationServiceTest {
       val expected = Pair("airbyte-domain-verification", "abc123")
       val actual = Pair("AIRBYTE-DOMAIN-VERIFICATION", "abc123")
 
-      service.recordsMatch(expected, actual) shouldBe true
+      assertTrue(service.recordsMatch(expected, actual))
     }
 
     @Test
@@ -162,14 +165,14 @@ class DnsVerificationServiceTest {
       val expected = Pair("airbyte-domain-verification", "abc123")
       val actual = Pair("airbyte-domain-verification", "ABC123")
 
-      service.recordsMatch(expected, actual) shouldBe false
+      assertFalse(service.recordsMatch(expected, actual))
     }
 
     @Test
     fun `should remove surrounding quotes from record`() {
       val result = service.parseRfc1464Record("\"airbyte-domain-verification=abc123\"")
 
-      result shouldBe Pair("airbyte-domain-verification", "abc123")
+      assertEquals(Pair("airbyte-domain-verification", "abc123"), result)
     }
 
     @Test
@@ -179,14 +182,14 @@ class DnsVerificationServiceTest {
       val expected = Pair("attr=name", "value")
       val actual = Pair("attr`=name", "value")
 
-      service.recordsMatch(expected, actual) shouldBe true
+      assertTrue(service.recordsMatch(expected, actual))
     }
 
     @Test
     fun `should handle multiple equals signs (takes first unquoted)`() {
       val result = service.parseRfc1464Record("attribute=value=with=more=equals")
 
-      result shouldBe Pair("attribute", "value=with=more=equals")
+      assertEquals(Pair("attribute", "value=with=more=equals"), result)
     }
   }
 }

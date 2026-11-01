@@ -24,12 +24,12 @@ import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
-import io.kotest.matchers.shouldNotBe
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -179,9 +179,9 @@ class SecretPersistenceServiceTest {
 
       // Each non-environment storage gets its own runtime persistence from the factory.
       verify(exactly = 2) { runtimeSecretPersistenceFactory.create(any()) }
-      persistenceMap[secretStorageId] shouldNotBe persistenceMap[secretStorageId2]
-      persistenceMap[secretStorageId] shouldNotBe defaultSecretPersistence
-      persistenceMap[secretStorageId2] shouldNotBe defaultSecretPersistence
+      assertNotEquals(persistenceMap[secretStorageId2], persistenceMap[secretStorageId])
+      assertNotEquals(defaultSecretPersistence, persistenceMap[secretStorageId])
+      assertNotEquals(defaultSecretPersistence, persistenceMap[secretStorageId2])
 
       verify {
         secretStorageService.getById(SecretStorageId(secretStorageId))
@@ -215,7 +215,7 @@ class SecretPersistenceServiceTest {
 
       val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
       assertNotNull(persistenceMap[null])
-      persistenceMap shouldNotBe defaultSecretPersistence
+      assertNotEquals(defaultSecretPersistence, persistenceMap)
 
       verify { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value) }
     }

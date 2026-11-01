@@ -20,7 +20,6 @@ dependencies {
 
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.junit)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(libs.temporal.testing)
   // this is temporarily needed because temporal.testing uses InProcessBuilder which is included in on grpc-core 1.52.2

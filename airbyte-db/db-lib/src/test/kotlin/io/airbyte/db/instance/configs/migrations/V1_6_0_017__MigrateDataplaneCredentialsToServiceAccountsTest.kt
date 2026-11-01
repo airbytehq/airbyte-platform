@@ -13,10 +13,10 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.UUID
-import kotlin.test.Test
-import kotlin.test.assertNotNull
 
 @Suppress("ktlint:standard:class-naming")
 class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractConfigsDatabaseTest() {
@@ -145,7 +145,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
 
     assertNotNull(result)
     // The second client ID is used, because it is the most recent.
-    assertEquals(clientId2, result.get("id"))
+    assertEquals(clientId2, result!!.get("id"))
     assertEquals("client-secret-2", result.get("secret"))
     assertEquals("dataplane-$dataplaneId", result.get("name"))
 
@@ -165,7 +165,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         .fetchOne()
 
     assertNotNull(permission)
-    assertEquals(clientId2, permission.get("service_account_id"))
+    assertEquals(clientId2, permission!!.get("service_account_id"))
     assertEquals(V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts.PermissionType.DATAPLANE, permission.get("permission_type"))
 
     V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts.fillDataplaneServiceAccountsColumn(ctx, creds)
@@ -177,7 +177,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         .fetchOne()
 
     assertNotNull(dataplane)
-    assertEquals(clientId2, dataplane.get("service_account_id"))
+    assertEquals(clientId2, dataplane!!.get("service_account_id"))
   }
 
   private fun clearCredsTable(ctx: DSLContext) {

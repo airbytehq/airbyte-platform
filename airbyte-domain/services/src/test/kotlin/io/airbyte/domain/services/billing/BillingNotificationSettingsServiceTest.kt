@@ -9,8 +9,6 @@ import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.billing.BillingNotificationSettingsValidationException
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.shouldBe
 import io.micronaut.transaction.TransactionCallback
 import io.micronaut.transaction.TransactionDefinition
 import io.micronaut.transaction.TransactionOperations
@@ -18,7 +16,12 @@ import io.micronaut.transaction.TransactionStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
 import java.sql.Connection
 import java.util.Optional
@@ -37,11 +40,11 @@ internal class BillingNotificationSettingsServiceTest {
 
     val settings = service.get(organizationId)
 
-    settings.organizationId shouldBe organizationId
-    settings.configured shouldBe false
-    settings.recipientEmail shouldBe null
-    settings.syncCreditThreshold shouldBe BigDecimal.ZERO
-    settings.invoiceAmountThreshold shouldBe BigDecimal.ZERO
+    assertEquals(organizationId, settings.organizationId)
+    assertFalse(settings.configured)
+    assertNull(settings.recipientEmail)
+    assertEquals(BigDecimal.ZERO, settings.syncCreditThreshold)
+    assertEquals(BigDecimal.ZERO, settings.invoiceAmountThreshold)
   }
 
   @Test
@@ -51,10 +54,10 @@ internal class BillingNotificationSettingsServiceTest {
 
     val settings = service.get(organizationId)
 
-    settings.configured shouldBe true
-    settings.recipientEmail shouldBe "alerts@example.com"
-    settings.syncCreditThreshold shouldBe BigDecimal("5")
-    settings.invoiceAmountThreshold shouldBe BigDecimal("250")
+    assertTrue(settings.configured)
+    assertEquals("alerts@example.com", settings.recipientEmail)
+    assertEquals(BigDecimal("5"), settings.syncCreditThreshold)
+    assertEquals(BigDecimal("250"), settings.invoiceAmountThreshold)
   }
 
   @Test
@@ -65,7 +68,7 @@ internal class BillingNotificationSettingsServiceTest {
     val saved = service.save(organizationId, " alerts@example.com ", BigDecimal("7"), BigDecimal.ZERO)
 
     verify(exactly = 1) { repository.upsert(organizationId.value, "alerts@example.com", BigDecimal("7"), BigDecimal.ZERO) }
-    saved.recipientEmail shouldBe "alerts@example.com"
+    assertEquals("alerts@example.com", saved.recipientEmail)
   }
 
   @Test
@@ -89,7 +92,7 @@ internal class BillingNotificationSettingsServiceTest {
   @Test
   fun `save accepts an email at the column limit`() {
     val email = "a".repeat(256 - "@example.com".length) + "@example.com"
-    email.length shouldBe 256
+    assertEquals(256, email.length)
     every { repository.findById(organizationId.value) } returns Optional.of(entity(email = email, sync = "0", invoice = "0"))
 
     service.save(organizationId, email, BigDecimal.ZERO, BigDecimal.ZERO)
@@ -100,9 +103,9 @@ internal class BillingNotificationSettingsServiceTest {
   @Test
   fun `save rejects an email longer than the column before writing`() {
     val email = "a".repeat(257 - "@example.com".length) + "@example.com"
-    email.length shouldBe 257
+    assertEquals(257, email.length)
 
-    shouldThrow<BillingNotificationSettingsValidationException> {
+    assertThrows<BillingNotificationSettingsValidationException> {
       service.save(organizationId, email, BigDecimal.ZERO, BigDecimal.ZERO)
     }
     verify(exactly = 0) { repository.upsert(any(), any(), any(), any()) }
@@ -110,7 +113,7 @@ internal class BillingNotificationSettingsServiceTest {
 
   @Test
   fun `save rejects a malformed email before writing`() {
-    shouldThrow<BillingNotificationSettingsValidationException> {
+    assertThrows<BillingNotificationSettingsValidationException> {
       service.save(organizationId, "not-an-email", BigDecimal.ZERO, BigDecimal.ZERO)
     }
     verify(exactly = 0) { repository.upsert(any(), any(), any(), any()) }
@@ -118,7 +121,7 @@ internal class BillingNotificationSettingsServiceTest {
 
   @Test
   fun `save rejects a negative sync credit threshold before writing`() {
-    shouldThrow<BillingNotificationSettingsValidationException> {
+    assertThrows<BillingNotificationSettingsValidationException> {
       service.save(organizationId, null, BigDecimal("-1"), BigDecimal.ZERO)
     }
     verify(exactly = 0) { repository.upsert(any(), any(), any(), any()) }
@@ -126,7 +129,7 @@ internal class BillingNotificationSettingsServiceTest {
 
   @Test
   fun `save rejects a negative invoice amount threshold before writing`() {
-    shouldThrow<BillingNotificationSettingsValidationException> {
+    assertThrows<BillingNotificationSettingsValidationException> {
       service.save(organizationId, null, BigDecimal.ZERO, BigDecimal("-0.01"))
     }
     verify(exactly = 0) { repository.upsert(any(), any(), any(), any()) }
@@ -136,7 +139,7 @@ internal class BillingNotificationSettingsServiceTest {
   fun `save fails loudly when the row is missing after the upsert`() {
     every { repository.findById(organizationId.value) } returns Optional.empty()
 
-    shouldThrow<IllegalStateException> {
+    assertThrows<IllegalStateException> {
       service.save(organizationId, null, BigDecimal.ZERO, BigDecimal.ZERO)
     }
   }
@@ -146,14 +149,14 @@ internal class BillingNotificationSettingsServiceTest {
     every { organizationRepository.findByIdAndTombstoneFalse(organizationId.value) } returns
       Optional.of(Organization(id = organizationId.value, name = "Example & Partners", email = "owner@example.com"))
 
-    service.organizationName(organizationId) shouldBe "Example & Partners"
+    assertEquals("Example & Partners", service.organizationName(organizationId))
   }
 
   @Test
   fun `organizationName fails loudly when the organization is missing or deleted`() {
     every { organizationRepository.findByIdAndTombstoneFalse(organizationId.value) } returns Optional.empty()
 
-    shouldThrow<IllegalStateException> { service.organizationName(organizationId) }
+    assertThrows<IllegalStateException> { service.organizationName(organizationId) }
   }
 
   private fun entity(

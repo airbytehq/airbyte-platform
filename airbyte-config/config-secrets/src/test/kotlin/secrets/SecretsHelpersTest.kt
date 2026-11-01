@@ -25,7 +25,6 @@ import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.kotlintest.matchers.string.shouldStartWith
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
@@ -116,7 +115,10 @@ internal class SecretsHelpersTest {
     // check every key starts with the custom secret prefix
     splitConfig.getCoordinateToPayload().keys.forEach(
       Consumer { key: SecretCoordinate ->
-        key.fullCoordinate.shouldStartWith("airbyte_$customSecretPrefix${SecretsTestCase.WORKSPACE_ID}")
+        Assertions.assertTrue(
+          key.fullCoordinate.startsWith("airbyte_$customSecretPrefix${SecretsTestCase.WORKSPACE_ID}"),
+          key.fullCoordinate,
+        )
       },
     )
   }

@@ -11,12 +11,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import javax.sql.DataSource
-import kotlin.test.assertIs
 
 private const val CONNECT_TIMEOUT = "connectTimeout"
 
@@ -36,8 +36,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         connectionProperties = connectionProperties,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(61000, dataSource.hikariConfigMXBean.connectionTimeout)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(61000, hikariDataSource.hikariConfigMXBean.connectionTimeout)
   }
 
   @Test
@@ -52,8 +52,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         connectionProperties = connectionProperties,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(30000, dataSource.hikariConfigMXBean.connectionTimeout)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(30000, hikariDataSource.hikariConfigMXBean.connectionTimeout)
   }
 
   @Test
@@ -68,8 +68,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         connectionProperties = connectionProperties,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(Int.MAX_VALUE.toLong(), dataSource.hikariConfigMXBean.connectionTimeout)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(Int.MAX_VALUE.toLong(), hikariDataSource.hikariConfigMXBean.connectionTimeout)
   }
 
   @Test
@@ -84,8 +84,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         connectionProperties = connectionProperties,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(10000, dataSource.hikariConfigMXBean.connectionTimeout)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(10000, hikariDataSource.hikariConfigMXBean.connectionTimeout)
   }
 
   @Test
@@ -98,8 +98,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         jdbcConnectionString = jdbcUrl,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(10, dataSource.hikariConfigMXBean.maximumPoolSize)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(10, hikariDataSource.hikariConfigMXBean.maximumPoolSize)
   }
 
   @Test
@@ -115,8 +115,8 @@ internal class DataSourceFactoryTest : CommonFactoryTest() {
         connectionProperties = connectionProperties,
       )
     assertNotNull(dataSource)
-    assertIs<HikariDataSource>(dataSource)
-    assertEquals(10, dataSource.hikariConfigMXBean.maximumPoolSize)
+    val hikariDataSource = assertInstanceOf(HikariDataSource::class.java, dataSource)
+    assertEquals(10, hikariDataSource.hikariConfigMXBean.maximumPoolSize)
   }
 
   @Test

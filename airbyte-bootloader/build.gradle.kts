@@ -49,9 +49,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
-  testImplementation(libs.bundles.kotest)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

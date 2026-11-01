@@ -56,7 +56,6 @@ dependencies {
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.json.assert)
   testImplementation(libs.mockk)
-  testImplementation(kotlin("test"))
 }
 
 tasks.named<Test>("test") {

@@ -17,9 +17,12 @@ except `oss/airbyte-webapp/` — see its own AGENTS.md). Read the root
   - `io.airbyte.gradle.kube-reload` — local kube hot-reload
 - **Dependency catalog**: `oss/deps.toml` (referenced as `libs.*` in
   `build.gradle.kts` files). Add new deps there, not inline.
-- **Tests**: JUnit 5 + **MockK** (not Mockito) + AssertJ +
-  `kotlin.test.runner.junit5` + junit-pioneer + mockwebserver for HTTP
-  fakes. Testcontainers where infra is required.
+- **Tests**: JUnit 5 + **MockK** (not Mockito) + JUnit `Assertions`
+  by default, with AssertJ where a collection or exception assertion
+  reads better. mockwebserver for HTTP fakes; Testcontainers where
+  infra is required. Mockito, Hamcrest, Kotest, kotlintest,
+  `kotlin.test` and JUnit 4 are retired: `checkTestFrameworkImports`
+  (part of `check`) fails on their imports in test sources.
 
 ## Module layout
 

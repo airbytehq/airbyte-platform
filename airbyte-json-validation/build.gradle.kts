@@ -22,7 +22,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
 
-  testImplementation(libs.junit.pioneer)
 }
 
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.

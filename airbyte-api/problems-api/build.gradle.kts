@@ -35,9 +35,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.jackson)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
-  testImplementation(libs.kotlin.test.runner.junit5)
 }
 
 val airbyteApiProblemsSpecFile = "$projectDir/src/main/openapi/api-problems.yaml"

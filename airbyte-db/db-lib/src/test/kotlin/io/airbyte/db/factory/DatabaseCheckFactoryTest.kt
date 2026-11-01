@@ -20,9 +20,9 @@ import io.mockk.mockk
 import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import kotlin.test.assertIs
 
 /**
  * Test suite for the [DatabaseCheckFactory] class.
@@ -35,10 +35,10 @@ internal class DatabaseCheckFactoryTest {
     val check = createConfigsDatabaseAvailabilityCheck(dslContext, timeoutMs)
 
     assertNotNull(check)
-    assertIs<ConfigsDatabaseAvailabilityCheck>(check)
-    assertEquals(timeoutMs, check.timeoutMs)
-    assertNotNull(check.dslContext)
-    assertEquals(dslContext, check.dslContext)
+    val configsDatabaseAvailabilityCheck = assertInstanceOf(ConfigsDatabaseAvailabilityCheck::class.java, check)
+    assertEquals(timeoutMs, configsDatabaseAvailabilityCheck.timeoutMs)
+    assertNotNull(configsDatabaseAvailabilityCheck.dslContext)
+    assertEquals(dslContext, configsDatabaseAvailabilityCheck.dslContext)
   }
 
   @Test
@@ -48,10 +48,10 @@ internal class DatabaseCheckFactoryTest {
     val check = createJobsDatabaseAvailabilityCheck(dslContext, timeoutMs)
 
     assertNotNull(check)
-    assertIs<JobsDatabaseAvailabilityCheck>(check)
-    assertEquals(timeoutMs, check.timeoutMs)
-    assertNotNull(check.dslContext)
-    assertEquals(dslContext, check.dslContext)
+    val jobsDatabaseAvailabilityCheck = assertInstanceOf(JobsDatabaseAvailabilityCheck::class.java, check)
+    assertEquals(timeoutMs, jobsDatabaseAvailabilityCheck.timeoutMs)
+    assertNotNull(jobsDatabaseAvailabilityCheck.dslContext)
+    assertEquals(dslContext, jobsDatabaseAvailabilityCheck.dslContext)
   }
 
   @Test
@@ -63,13 +63,13 @@ internal class DatabaseCheckFactoryTest {
     val check = createConfigsDatabaseMigrationCheck(dslContext, flyway, minimumMigrationVersion, timeoutMs)
 
     assertNotNull(check)
-    assertIs<ConfigsDatabaseMigrationCheck>(check)
-    assertNotNull(check.databaseAvailabilityCheck)
-    assertIs<ConfigsDatabaseAvailabilityCheck>(check.databaseAvailabilityCheck)
-    assertEquals(minimumMigrationVersion, check.minimumFlywayVersion)
-    assertEquals(timeoutMs, check.timeoutMs)
-    assertNotNull(check.flyway)
-    assertEquals(flyway, check.flyway)
+    val configsDatabaseMigrationCheck = assertInstanceOf(ConfigsDatabaseMigrationCheck::class.java, check)
+    assertNotNull(configsDatabaseMigrationCheck.databaseAvailabilityCheck)
+    assertInstanceOf(ConfigsDatabaseAvailabilityCheck::class.java, configsDatabaseMigrationCheck.databaseAvailabilityCheck)
+    assertEquals(minimumMigrationVersion, configsDatabaseMigrationCheck.minimumFlywayVersion)
+    assertEquals(timeoutMs, configsDatabaseMigrationCheck.timeoutMs)
+    assertNotNull(configsDatabaseMigrationCheck.flyway)
+    assertEquals(flyway, configsDatabaseMigrationCheck.flyway)
   }
 
   @Test
@@ -81,13 +81,13 @@ internal class DatabaseCheckFactoryTest {
     val check = createJobsDatabaseMigrationCheck(dslContext, flyway, minimumMigrationVersion, timeoutMs)
 
     assertNotNull(check)
-    assertIs<JobsDatabaseMigrationCheck>(check)
-    assertNotNull(check.databaseAvailabilityCheck)
-    assertIs<JobsDatabaseAvailabilityCheck>(check.databaseAvailabilityCheck)
-    assertEquals(minimumMigrationVersion, check.minimumFlywayVersion)
-    assertEquals(timeoutMs, check.timeoutMs)
-    assertNotNull(check.flyway)
-    assertEquals(flyway, check.flyway)
+    val jobsDatabaseMigrationCheck = assertInstanceOf(JobsDatabaseMigrationCheck::class.java, check)
+    assertNotNull(jobsDatabaseMigrationCheck.databaseAvailabilityCheck)
+    assertInstanceOf(JobsDatabaseAvailabilityCheck::class.java, jobsDatabaseMigrationCheck.databaseAvailabilityCheck)
+    assertEquals(minimumMigrationVersion, jobsDatabaseMigrationCheck.minimumFlywayVersion)
+    assertEquals(timeoutMs, jobsDatabaseMigrationCheck.timeoutMs)
+    assertNotNull(jobsDatabaseMigrationCheck.flyway)
+    assertEquals(flyway, jobsDatabaseMigrationCheck.flyway)
   }
 
   @Test
@@ -98,13 +98,13 @@ internal class DatabaseCheckFactoryTest {
     val initializer = createConfigsDatabaseInitializer(dslContext, timeoutMs, initialSchema)
 
     assertNotNull(initializer)
-    assertIs<ConfigsDatabaseInitializer>(initializer)
-    assertNotNull(initializer.databaseAvailabilityCheck)
-    assertIs<ConfigsDatabaseAvailabilityCheck>(initializer.databaseAvailabilityCheck)
-    assertEquals(timeoutMs, initializer.databaseAvailabilityCheck.timeoutMs)
-    assertNotNull(initializer.dslContext)
-    assertEquals(dslContext, initializer.dslContext)
-    assertEquals(initialSchema, initializer.initialSchema)
+    val configsDatabaseInitializer = assertInstanceOf(ConfigsDatabaseInitializer::class.java, initializer)
+    assertNotNull(configsDatabaseInitializer.databaseAvailabilityCheck)
+    assertInstanceOf(ConfigsDatabaseAvailabilityCheck::class.java, configsDatabaseInitializer.databaseAvailabilityCheck)
+    assertEquals(timeoutMs, configsDatabaseInitializer.databaseAvailabilityCheck.timeoutMs)
+    assertNotNull(configsDatabaseInitializer.dslContext)
+    assertEquals(dslContext, configsDatabaseInitializer.dslContext)
+    assertEquals(initialSchema, configsDatabaseInitializer.initialSchema)
   }
 
   @Test
@@ -115,12 +115,12 @@ internal class DatabaseCheckFactoryTest {
     val initializer = createJobsDatabaseInitializer(dslContext, timeoutMs, initialSchema)
 
     assertNotNull(initializer)
-    assertIs<JobsDatabaseInitializer>(initializer)
-    assertNotNull(initializer.databaseAvailabilityCheck)
-    assertIs<JobsDatabaseAvailabilityCheck>(initializer.databaseAvailabilityCheck)
-    assertEquals(timeoutMs, initializer.databaseAvailabilityCheck.timeoutMs)
-    assertNotNull(initializer.dslContext)
-    assertEquals(dslContext, initializer.dslContext)
-    assertEquals(initialSchema, initializer.initialSchema)
+    val jobsDatabaseInitializer = assertInstanceOf(JobsDatabaseInitializer::class.java, initializer)
+    assertNotNull(jobsDatabaseInitializer.databaseAvailabilityCheck)
+    assertInstanceOf(JobsDatabaseAvailabilityCheck::class.java, jobsDatabaseInitializer.databaseAvailabilityCheck)
+    assertEquals(timeoutMs, jobsDatabaseInitializer.databaseAvailabilityCheck.timeoutMs)
+    assertNotNull(jobsDatabaseInitializer.dslContext)
+    assertEquals(dslContext, jobsDatabaseInitializer.dslContext)
+    assertEquals(initialSchema, jobsDatabaseInitializer.initialSchema)
   }
 }

@@ -15,10 +15,12 @@ import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
-import io.kotest.matchers.shouldBe
 import io.micronaut.context.env.Environment
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
@@ -82,12 +84,21 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
           output = Jsons.jsonNode(mapOf("private" to "unread-output")),
         ),
       )
-    jobsRepository.findAuthorizationMetadataById(job.id).orElseThrow() shouldBe JobAuthorizationMetadata(job.id, JobConfigType.sync, scope)
-    context.getBean(JobService::class.java).findJobMetadataById(job.id).orElseThrow() shouldBe JobMetadata(job.id, JobConfig.ConfigType.SYNC, scope)
-    attemptsRepository.findAuthorizationMetadata(job.id, 0L).orElseThrow() shouldBe AttemptAuthorizationMetadata(attempt.id!!, job.id, 0L)
-    jobsRepository.findAuthorizationMetadataById(Long.MAX_VALUE).isEmpty shouldBe true
-    attemptsRepository.findAuthorizationMetadata(job.id, 1L).isEmpty shouldBe true
-    attemptsRepository.findAuthorizationMetadata(Long.MAX_VALUE, 0L).isEmpty shouldBe true
+    assertEquals(
+      JobAuthorizationMetadata(job.id, JobConfigType.sync, scope),
+      jobsRepository.findAuthorizationMetadataById(job.id).orElseThrow(),
+    )
+    assertEquals(
+      JobMetadata(job.id, JobConfig.ConfigType.SYNC, scope),
+      context.getBean(JobService::class.java).findJobMetadataById(job.id).orElseThrow(),
+    )
+    assertEquals(
+      AttemptAuthorizationMetadata(attempt.id!!, job.id, 0L),
+      attemptsRepository.findAuthorizationMetadata(job.id, 0L).orElseThrow(),
+    )
+    assertTrue(jobsRepository.findAuthorizationMetadataById(Long.MAX_VALUE).isEmpty)
+    assertTrue(attemptsRepository.findAuthorizationMetadata(job.id, 1L).isEmpty)
+    assertTrue(attemptsRepository.findAuthorizationMetadata(Long.MAX_VALUE, 0L).isEmpty)
   }
 
   @AfterEach
@@ -117,10 +128,10 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
   ).also { nextCreatedAt = nextCreatedAt.plusDays(1) }
 
   private fun assertHealthSummary(summary: LatestJobHealthSummaryRow) {
-    summary.sourceDefinitionVersionId.shouldBe(sourceDefinitionVersionId)
-    summary.destinationDefinitionVersionId.shouldBe(destinationDefinitionVersionId)
-    summary.sourceDockerImageIsDefault.shouldBe(true)
-    summary.destinationDockerImageIsDefault.shouldBe(false)
+    assertEquals(sourceDefinitionVersionId, summary.sourceDefinitionVersionId)
+    assertEquals(destinationDefinitionVersionId, summary.destinationDefinitionVersionId)
+    assertEquals(true, summary.sourceDockerImageIsDefault)
+    assertEquals(false, summary.destinationDockerImageIsDefault)
   }
 
   @Nested
@@ -142,7 +153,7 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
 
       val result = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope1)
 
-      result.shouldBe(2)
+      assertEquals(2, result)
     }
 
     @Test
@@ -163,7 +174,7 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
 
       val result = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope1)
 
-      result.shouldBe(4)
+      assertEquals(4, result)
     }
   }
 
@@ -192,9 +203,9 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       val resultScope2 = jobsRepository.lastSuccessfulJobForScope(scope2)
       val resultScope3 = jobsRepository.lastSuccessfulJobForScope(scope3)
 
-      resultScope1?.id.shouldBe(4)
-      resultScope2?.id.shouldBe(5)
-      resultScope3.shouldBe(null)
+      assertEquals(4, resultScope1?.id)
+      assertEquals(5, resultScope2?.id)
+      assertNull(resultScope3)
     }
   }
 
@@ -220,9 +231,9 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       val result2 = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope2, 6, JobStatus.succeeded)
       val result3 = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope3, 8, JobStatus.succeeded)
 
-      result1?.id.shouldBe(1)
-      result2?.id.shouldBe(4)
-      result3.shouldBe(null)
+      assertEquals(1, result1?.id)
+      assertEquals(4, result2?.id)
+      assertNull(result3)
     }
   }
 
@@ -256,13 +267,13 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       // - scope1: job 2 (created Jan 2)
       // - scope2: job 3 (created Jan 3)
       // - scope3: job 5 (created Jan 5)
-      result.size.shouldBe(3)
+      assertEquals(3, result.size)
 
-      result.map { it.scope }.toSet().shouldBe(setOf(scope1, scope2, scope3))
+      assertEquals(setOf(scope1, scope2, scope3), result.map { it.scope }.toSet())
       result.forEach(::assertHealthSummary)
-      result.find { it.scope == scope1 }!!.status.shouldBe(JobStatus.succeeded)
-      result.find { it.scope == scope2 }!!.status.shouldBe(JobStatus.running)
-      result.find { it.scope == scope3 }!!.status.shouldBe(JobStatus.succeeded)
+      assertEquals(JobStatus.succeeded, result.find { it.scope == scope1 }!!.status)
+      assertEquals(JobStatus.running, result.find { it.scope == scope2 }!!.status)
+      assertEquals(JobStatus.succeeded, result.find { it.scope == scope3 }!!.status)
     }
 
     @Test
@@ -284,8 +295,8 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
         )
 
       // scope2 only has reset_connection, which was not requested
-      result.map { it.scope }.shouldBe(listOf(scope1))
-      result[0].status.shouldBe(JobStatus.failed)
+      assertEquals(listOf(scope1), result.map { it.scope })
+      assertEquals(JobStatus.failed, result[0].status)
       assertHealthSummary(result[0])
     }
 
@@ -307,9 +318,9 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
         )
 
       // sync was not requested, so scope1 drops out; scope2's fields come from config->'refresh'
-      result.map { it.scope }.toSet().shouldBe(setOf(scope2))
+      assertEquals(setOf(scope2), result.map { it.scope }.toSet())
       result.forEach(::assertHealthSummary)
-      result[0].status.shouldBe(JobStatus.failed)
+      assertEquals(JobStatus.failed, result[0].status)
     }
 
     @Test
@@ -334,12 +345,12 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
           createdAtStart = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
         )
 
-      result.size.shouldBe(1)
-      result[0].status.shouldBe(JobStatus.succeeded)
-      result[0].sourceDefinitionVersionId.shouldBe(null)
-      result[0].destinationDefinitionVersionId.shouldBe(null)
-      result[0].sourceDockerImageIsDefault.shouldBe(null)
-      result[0].destinationDockerImageIsDefault.shouldBe(null)
+      assertEquals(1, result.size)
+      assertEquals(JobStatus.succeeded, result[0].status)
+      assertNull(result[0].sourceDefinitionVersionId)
+      assertNull(result[0].destinationDefinitionVersionId)
+      assertNull(result[0].sourceDockerImageIsDefault)
+      assertNull(result[0].destinationDockerImageIsDefault)
     }
   }
 
@@ -374,12 +385,12 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     // - scope1: job 2 (created Jan 2)
     // - scope2: job 3 (created Jan 3)
     // - scope3: job 5 (created Jan 5)
-    result.size.shouldBe(3)
+    assertEquals(3, result.size)
 
-    result.map { it.scope }.toSet().shouldBe(setOf(scope1, scope2, scope3))
+    assertEquals(setOf(scope1, scope2, scope3), result.map { it.scope }.toSet())
     result.forEach(::assertHealthSummary)
-    result.find { it.scope == scope1 }!!.status.shouldBe(JobStatus.succeeded)
-    result.find { it.scope == scope2 }!!.status.shouldBe(JobStatus.running)
-    result.find { it.scope == scope3 }!!.status.shouldBe(JobStatus.failed)
+    assertEquals(JobStatus.succeeded, result.find { it.scope == scope1 }!!.status)
+    assertEquals(JobStatus.running, result.find { it.scope == scope2 }!!.status)
+    assertEquals(JobStatus.failed, result.find { it.scope == scope3 }!!.status)
   }
 }

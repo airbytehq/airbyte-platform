@@ -24,7 +24,11 @@ import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
@@ -32,10 +36,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempFile
 import kotlin.io.path.writeText
-import kotlin.test.Ignore
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 /** workspaceId used across multiple tests */
 private val workspaceId = UUID.randomUUID()
@@ -67,10 +67,10 @@ internal class ConfigFileClientTest {
     val ctx = Workspace(workspaceId)
 
     with(client) {
-      assertTrue { boolVariation(testTrue, ctx) }
-      assertFalse { boolVariation(testFalse, ctx) }
-      assertFalse { boolVariation(testNotBool, ctx) }
-      assertFalse { boolVariation(testBoolDne, ctx) }
+      assertTrue(boolVariation(testTrue, ctx))
+      assertFalse(boolVariation(testFalse, ctx))
+      assertFalse(boolVariation(testNotBool, ctx))
+      assertFalse(boolVariation(testBoolDne, ctx))
       assertEquals("example", stringVariation(testStringExample, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
       assertEquals(1234, intVariation(testIntExample, ctx))
@@ -89,8 +89,8 @@ internal class ConfigFileClientTest {
 
     val ctx = Workspace(workspaceId)
     with(client) {
-      assertTrue { boolVariation(defaultTrue, ctx) }
-      assertFalse { boolVariation(defaultFalse, ctx) }
+      assertTrue(boolVariation(defaultTrue, ctx))
+      assertFalse(boolVariation(defaultFalse, ctx))
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
       assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
@@ -108,8 +108,8 @@ internal class ConfigFileClientTest {
 
     val ctx = Workspace(workspaceId)
     with(client) {
-      assertTrue { boolVariation(defaultTrue, ctx) }
-      assertFalse { boolVariation(defaultFalse, ctx) }
+      assertTrue(boolVariation(defaultTrue, ctx))
+      assertFalse(boolVariation(defaultFalse, ctx))
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
       assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
@@ -127,8 +127,8 @@ internal class ConfigFileClientTest {
 
     val ctx = Workspace(workspaceId)
     with(client) {
-      assertTrue { boolVariation(defaultTrue, ctx) }
-      assertFalse { boolVariation(defaultFalse, ctx) }
+      assertTrue(boolVariation(defaultTrue, ctx))
+      assertFalse(boolVariation(defaultFalse, ctx))
       assertEquals(defaultResponse.default, stringVariation(defaultResponse, ctx))
       assertEquals(defaultInt.default, intVariation(defaultInt, ctx))
     }
@@ -143,7 +143,7 @@ internal class ConfigFileClientTest {
    * TODO: move this to a different test suite
    */
   @Test
-  @Ignore
+  @Disabled
   fun `verify config-file reload capabilities`() {
     val contents0 =
       """flags:
@@ -180,9 +180,9 @@ internal class ConfigFileClientTest {
 
     // verify pre-updated values
     with(client) {
-      assertTrue { boolVariation(testTrue, ctx) }
-      assertFalse { boolVariation(testFalse, ctx) }
-      assertFalse { boolVariation(testDne, ctx) }
+      assertTrue(boolVariation(testTrue, ctx))
+      assertFalse(boolVariation(testFalse, ctx))
+      assertFalse(boolVariation(testDne, ctx))
     }
     // update the config and wait a few seconds (enough time for the file-watcher to pick up the change)
     tmpConfig.writeText(contents1)
@@ -190,9 +190,9 @@ internal class ConfigFileClientTest {
 
     // verify post-updated values
     with(client) {
-      assertFalse { boolVariation(testTrue, ctx) }
-      assertTrue { boolVariation(testFalse, ctx) }
-      assertFalse("undefined flag should still be false") { boolVariation(testDne, ctx) }
+      assertFalse(boolVariation(testTrue, ctx))
+      assertTrue(boolVariation(testFalse, ctx))
+      assertFalse(boolVariation(testDne, ctx), "undefined flag should still be false")
     }
   }
 
@@ -210,10 +210,10 @@ internal class ConfigFileClientTest {
     val ctx = User("test")
 
     with(client) {
-      assertTrue { boolVariation(evTrue, ctx) }
-      assertFalse { boolVariation(evFalse, ctx) }
-      assertFalse { boolVariation(evEmpty, ctx) }
-      assertFalse { boolVariation(evNull, ctx) }
+      assertTrue(boolVariation(evTrue, ctx))
+      assertFalse(boolVariation(evFalse, ctx))
+      assertFalse(boolVariation(evEmpty, ctx))
+      assertFalse(boolVariation(evNull, ctx))
     }
   }
 
@@ -244,9 +244,9 @@ internal class ConfigFileClientTest {
     val multiFindFirst = Multi(listOf(ctxAAAA, ctxBBBB))
 
     with(client) {
-      assertFalse("aaaa should be false") { boolVariation(flagCtxBoolean, ctxAAAA) }
-      assertTrue("bbbb should be true") { boolVariation(flagCtxBoolean, ctxBBBB) }
-      assertTrue("cccc should be true") { boolVariation(flagCtxBoolean, ctxCCCC) }
+      assertFalse(boolVariation(flagCtxBoolean, ctxAAAA), "aaaa should be false")
+      assertTrue(boolVariation(flagCtxBoolean, ctxBBBB), "bbbb should be true")
+      assertTrue(boolVariation(flagCtxBoolean, ctxCCCC), "cccc should be true")
       assertEquals("aaaa", stringVariation(flagCtxString, ctxAAAA), "aaab should be bbbb")
       assertEquals("bbbb", stringVariation(flagCtxString, ctxBBBB), "bbbb should be bbbb")
       assertEquals("all", stringVariation(flagCtxString, ctxCCCC), "cccc should be all (not included anywhere)")
@@ -406,9 +406,9 @@ class LaunchDarklyClientTest {
 
     val client: FeatureFlagClient = LaunchDarklyClient(ldClient)
     with(client) {
-      assertTrue { boolVariation(testTrue, ctx) }
-      assertFalse { boolVariation(testFalse, ctx) }
-      assertFalse { boolVariation(testBoolDne, ctx) }
+      assertTrue(boolVariation(testTrue, ctx))
+      assertFalse(boolVariation(testFalse, ctx))
+      assertFalse(boolVariation(testBoolDne, ctx))
       assertEquals("pretend override", stringVariation(testStringExample, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
       assertEquals(intFlagValue, intVariation(testInt, ctx))
@@ -439,10 +439,10 @@ class LaunchDarklyClientTest {
     val ctx = User("test")
 
     with(client) {
-      assertTrue { boolVariation(evTrue, ctx) }
-      assertFalse { boolVariation(evFalse, ctx) }
-      assertFalse { boolVariation(evEmpty, ctx) }
-      assertFalse { boolVariation(evNull, ctx) }
+      assertTrue(boolVariation(evTrue, ctx))
+      assertFalse(boolVariation(evFalse, ctx))
+      assertFalse(boolVariation(evEmpty, ctx))
+      assertFalse(boolVariation(evNull, ctx))
     }
 
     // EnvVar flags should not interact with the LDClient
@@ -535,9 +535,9 @@ class TestClientTest {
 
     val client: FeatureFlagClient = TestClient(values)
     with(client) {
-      assertTrue { boolVariation(testTrue.first, ctx) }
-      assertFalse { boolVariation(testFalse.first, ctx) }
-      assertFalse { boolVariation(testBoolDne, ctx) }
+      assertTrue(boolVariation(testTrue.first, ctx))
+      assertFalse(boolVariation(testFalse.first, ctx))
+      assertFalse(boolVariation(testBoolDne, ctx))
       assertEquals("non-default", stringVariation(testStringExample.first, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
       assertEquals(nonDefaultIntValue, intVariation(testInt.first, ctx))
@@ -552,9 +552,9 @@ class TestClientTest {
     values[testInt.first.key] = anotherNonDefaultIntValue
 
     with(client) {
-      assertFalse { boolVariation(testTrue.first, ctx) }
-      assertTrue { boolVariation(testFalse.first, ctx) }
-      assertFalse("undefined flags should always return false") { boolVariation(testBoolDne, ctx) }
+      assertFalse(boolVariation(testTrue.first, ctx))
+      assertTrue(boolVariation(testFalse.first, ctx))
+      assertFalse(boolVariation(testBoolDne, ctx), "undefined flags should always return false")
       assertEquals("a different value", stringVariation(testStringExample.first, ctx))
       assertEquals(testStringDne.default, stringVariation(testStringDne, ctx))
       assertEquals(anotherNonDefaultIntValue, intVariation(testInt.first, ctx))
@@ -578,9 +578,9 @@ class TestClientTest {
     val client: FeatureFlagClient = TestClient(values)
 
     with(client) {
-      assertTrue { boolVariation(evTrue, ctx) }
-      assertFalse { boolVariation(evFalse, ctx) }
-      assertFalse { boolVariation(evEmpty, ctx) }
+      assertTrue(boolVariation(evTrue, ctx))
+      assertFalse(boolVariation(evFalse, ctx))
+      assertFalse(boolVariation(evEmpty, ctx))
     }
 
     // modify the value, ensure the client reports the new modified value
@@ -588,9 +588,9 @@ class TestClientTest {
     values[evFalse.key] = true
 
     with(client) {
-      assertFalse { boolVariation(evTrue, ctx) }
-      assertTrue { boolVariation(evFalse, ctx) }
-      assertFalse("undefined flags should always return false") { boolVariation(evEmpty, ctx) }
+      assertFalse(boolVariation(evTrue, ctx))
+      assertTrue(boolVariation(evFalse, ctx))
+      assertFalse(boolVariation(evEmpty, ctx), "undefined flags should always return false")
     }
   }
 
@@ -634,21 +634,21 @@ class InjectTest {
 
   @Test
   fun `ConfigFileClient loads if no client property defined`() {
-    assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) }
+    assertTrue(featureFlagClient is ConfigFileClient)
+    assertTrue(featureFlagClient.boolVariation(flag, context))
   }
 
   @Test
   fun `ConfigFileClient loads if client property is not set`() {
-    assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) }
+    assertTrue(featureFlagClient is ConfigFileClient)
+    assertTrue(featureFlagClient.boolVariation(flag, context))
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = "configfile")
   @Test
   fun `ConfigFileClient loads if client property is not ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
-    assertTrue { featureFlagClient is ConfigFileClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) }
+    assertTrue(featureFlagClient is ConfigFileClient)
+    assertTrue(featureFlagClient.boolVariation(flag, context))
   }
 
   @Property(name = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
@@ -656,8 +656,8 @@ class InjectTest {
   fun `LaunchDarklyClient loads if client is defined as ${CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY}`() {
     every { ldClient.boolVariation(flag.key, any<LDContext>(), flag.default) } returns flag.default
 
-    assertTrue { featureFlagClient is LaunchDarklyClient }
-    assertTrue { featureFlagClient.boolVariation(flag, context) }
+    assertTrue(featureFlagClient is LaunchDarklyClient)
+    assertTrue(featureFlagClient.boolVariation(flag, context))
   }
 }
 
@@ -673,7 +673,7 @@ class NonMockBeanTest {
 
   @Test
   fun `ensure ConfigFileClient is injected when no MockBean is defined`() {
-    assertTrue { dummy.ffClient is ConfigFileClient }
+    assertTrue(dummy.ffClient is ConfigFileClient)
   }
 }
 
@@ -689,7 +689,7 @@ class MockBeanTest {
 
   @Test
   fun `ensure MockBean is injected when @MockBean is defined`() {
-    assertTrue { dummy.ffClient is TestClient }
+    assertTrue(dummy.ffClient is TestClient)
   }
 
   @MockBean(FeatureFlagClient::class)

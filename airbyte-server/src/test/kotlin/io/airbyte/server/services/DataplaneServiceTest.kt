@@ -15,8 +15,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
-import org.junit.Assert.assertEquals
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

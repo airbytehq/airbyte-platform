@@ -35,7 +35,6 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
 
-  testImplementation(libs.junit.pioneer)
 }
 
 airbyte {

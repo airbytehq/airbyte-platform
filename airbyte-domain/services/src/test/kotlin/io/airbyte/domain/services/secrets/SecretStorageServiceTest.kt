@@ -26,16 +26,16 @@ import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.EnableDefaultSecretStorage
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
-import io.kotest.matchers.string.shouldNotContain
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 import java.util.UUID
 import io.airbyte.data.services.OrganizationService as OrganizationRepository
@@ -77,14 +77,14 @@ class SecretStorageServiceTest {
       val secretStorage = mockk<SecretStorage>()
       every { secretStorageRepository.findById(secretStorageId) } returns secretStorage
 
-      service.getById(secretStorageId) shouldBe secretStorage
+      assertEquals(secretStorage, service.getById(secretStorageId))
     }
 
     @Test
     fun `should throw ResourceNotFound problem when ID does not exist`() {
       every { secretStorageRepository.findById(secretStorageId) } returns null
 
-      shouldThrow<ResourceNotFoundProblem> { service.getById(secretStorageId) }
+      assertThrows<ResourceNotFoundProblem> { service.getById(secretStorageId) }
     }
   }
 
@@ -109,7 +109,7 @@ class SecretStorageServiceTest {
         }
       every { secretStorageRepository.create(secretStorageCreate) } returns secretStorage
 
-      service.createSecretStorage(secretStorageCreate, storageConfig) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(secretStorageCreate, storageConfig))
 
       verify {
         secretStorageRepository.create(secretStorageCreate)
@@ -134,7 +134,7 @@ class SecretStorageServiceTest {
         }
       every { secretStorageRepository.create(secretStorageCreate) } returns secretStorage
 
-      service.createSecretStorage(secretStorageCreate, null) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(secretStorageCreate, null))
 
       verify {
         secretStorageRepository.create(secretStorageCreate)
@@ -153,7 +153,7 @@ class SecretStorageServiceTest {
           createdBy = userId,
         )
 
-      shouldThrow<IllegalArgumentException> {
+      assertThrows<IllegalArgumentException> {
         service.createSecretStorage(secretStorageCreate, null)
       }
     }
@@ -182,7 +182,7 @@ class SecretStorageServiceTest {
       val secretStorage = mockk<SecretStorage>()
       every { secretStorageRepository.create(create) } returns secretStorage
 
-      service.createSecretStorage(create, Jsons.jsonNode(validAzureConfig + ("extraKey" to "allowed"))) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, Jsons.jsonNode(validAzureConfig + ("extraKey" to "allowed"))))
     }
 
     @Test
@@ -199,18 +199,30 @@ class SecretStorageServiceTest {
         )
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, wrappedConfig)
         }
-      problem.problem.getData().toString() shouldContain "configuration"
-      problem.problem.getData().toString() shouldNotContain "super-secret-value"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("configuration"),
+        problem.problem.getData().toString(),
+      )
+      assertFalse(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("super-secret-value"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
     fun `should reject config that is not a JSON object`() {
       val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
 
-      shouldThrow<BadRequestProblem> {
+      assertThrows<BadRequestProblem> {
         service.createSecretStorage(create, Jsons.jsonNode("just a string"))
       }
     }
@@ -221,10 +233,16 @@ class SecretStorageServiceTest {
       val config = Jsons.jsonNode(validAzureConfig + ("someFlag" to true))
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "someFlag"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("someFlag"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -233,11 +251,23 @@ class SecretStorageServiceTest {
       val config = Jsons.jsonNode(validAzureConfig - "tenantId" - "clientSecret")
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "clientSecret"
-      problem.problem.getData().toString() shouldContain "tenantId"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("clientSecret"),
+        problem.problem.getData().toString(),
+      )
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("tenantId"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -248,7 +278,7 @@ class SecretStorageServiceTest {
 
       val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token", "prefix" to "abc"))
 
-      service.createSecretStorage(create, config) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, config))
     }
 
     @Test
@@ -259,7 +289,7 @@ class SecretStorageServiceTest {
 
       val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token", "prefix" to ""))
 
-      service.createSecretStorage(create, config) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, config))
     }
 
     @Test
@@ -268,10 +298,16 @@ class SecretStorageServiceTest {
       val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token"))
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "prefix"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("prefix"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -280,10 +316,16 @@ class SecretStorageServiceTest {
       val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "", "prefix" to "abc"))
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "token"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("token"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -301,7 +343,7 @@ class SecretStorageServiceTest {
           ),
         )
 
-      service.createSecretStorage(create, config) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, config))
     }
 
     @Test
@@ -316,11 +358,23 @@ class SecretStorageServiceTest {
         )
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "awsAccessKey"
-      problem.problem.getData().toString() shouldContain "awsSecretAccessKey"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("awsAccessKey"),
+        problem.problem.getData().toString(),
+      )
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("awsSecretAccessKey"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -339,7 +393,7 @@ class SecretStorageServiceTest {
           ),
         )
 
-      service.createSecretStorage(create, config) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, config))
     }
 
     @Test
@@ -355,11 +409,23 @@ class SecretStorageServiceTest {
         )
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "externalId"
-      problem.problem.getData().toString() shouldContain "roleArn"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("externalId"),
+        problem.problem.getData().toString(),
+      )
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("roleArn"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -374,12 +440,30 @@ class SecretStorageServiceTest {
         )
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "ACESS_KEY"
-      problem.problem.getData().toString() shouldContain "ACCESS_KEY"
-      problem.problem.getData().toString() shouldContain "IAM_ROLE"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("ACESS_KEY"),
+        problem.problem.getData().toString(),
+      )
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("ACCESS_KEY"),
+        problem.problem.getData().toString(),
+      )
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("IAM_ROLE"),
+        problem.problem.getData().toString(),
+      )
     }
 
     @Test
@@ -396,7 +480,7 @@ class SecretStorageServiceTest {
           ),
         )
 
-      service.createSecretStorage(create, config) shouldBe secretStorage
+      assertEquals(secretStorage, service.createSecretStorage(create, config))
     }
 
     @Test
@@ -405,10 +489,16 @@ class SecretStorageServiceTest {
       val config = Jsons.jsonNode(mapOf("gcpProjectId" to "my-project"))
 
       val problem =
-        shouldThrow<BadRequestProblem> {
+        assertThrows<BadRequestProblem> {
           service.createSecretStorage(create, config)
         }
-      problem.problem.getData().toString() shouldContain "gcpCredentialsJson"
+      assertTrue(
+        problem.problem
+          .getData()
+          .toString()
+          .contains("gcpCredentialsJson"),
+        problem.problem.getData().toString(),
+      )
     }
   }
 
@@ -419,7 +509,7 @@ class SecretStorageServiceTest {
       val secretStorage = mockk<SecretStorage>()
       every { secretStorageRepository.patch(secretStorageId, tombstone = true.toPatch(), updatedBy = userId) } returns secretStorage
 
-      service.deleteSecretStorage(secretStorageId, userId) shouldBe secretStorage
+      assertEquals(secretStorage, service.deleteSecretStorage(secretStorageId, userId))
 
       verify { secretStorageRepository.patch(secretStorageId, tombstone = true.toPatch(), updatedBy = userId) }
     }
@@ -443,7 +533,7 @@ class SecretStorageServiceTest {
         secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value)
       } returns listOf(secretStorage)
 
-      service.getByWorkspaceId(workspaceId) shouldBe secretStorage
+      assertEquals(secretStorage, service.getByWorkspaceId(workspaceId))
     }
 
     @Test
@@ -461,7 +551,7 @@ class SecretStorageServiceTest {
         secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value)
       } returns listOf(orgSecretStorage)
 
-      service.getByWorkspaceId(workspaceId) shouldBe orgSecretStorage
+      assertEquals(orgSecretStorage, service.getByWorkspaceId(workspaceId))
     }
 
     @Test
@@ -482,7 +572,7 @@ class SecretStorageServiceTest {
         featureFlagClient.boolVariation(eq(EnableDefaultSecretStorage), any())
       } returns true
 
-      service.getByWorkspaceId(workspaceId) shouldBe expected
+      assertEquals(expected, service.getByWorkspaceId(workspaceId))
     }
   }
 
@@ -493,7 +583,7 @@ class SecretStorageServiceTest {
       val secretStorage = mockk<SecretStorage>()
       every { secretStorage.configuredFromEnvironment } returns true
 
-      shouldThrow<UnsupportedOperationException> { service.hydrateStorageConfig(secretStorage) }
+      assertThrows<UnsupportedOperationException> { service.hydrateStorageConfig(secretStorage) }
     }
 
     @Test
@@ -505,7 +595,7 @@ class SecretStorageServiceTest {
         secretReferenceRepository.listByScopeTypeAndScopeId(SecretReferenceScopeType.SECRET_STORAGE, secretStorageId.value)
       } returns emptyList()
 
-      shouldThrow<ResourceNotFoundProblem> { service.hydrateStorageConfig(secretStorage) }
+      assertThrows<ResourceNotFoundProblem> { service.hydrateStorageConfig(secretStorage) }
     }
 
     @Test
@@ -519,7 +609,7 @@ class SecretStorageServiceTest {
         secretReferenceRepository.listByScopeTypeAndScopeId(SecretReferenceScopeType.SECRET_STORAGE, secretStorageId.value)
       } returns listOf(secretRef1, secretRef2)
 
-      shouldThrow<IllegalStateException> { service.hydrateStorageConfig(secretStorage) }
+      assertThrows<IllegalStateException> { service.hydrateStorageConfig(secretStorage) }
     }
 
     @Test
@@ -534,7 +624,7 @@ class SecretStorageServiceTest {
       every { secretRef.secretConfigId } returns secretConfigId
       every { secretConfigService.getById(secretConfigId) } throws ResourceNotFoundProblem()
 
-      shouldThrow<ResourceNotFoundProblem> { service.hydrateStorageConfig(secretStorage) }
+      assertThrows<ResourceNotFoundProblem> { service.hydrateStorageConfig(secretStorage) }
     }
 
     @Test
@@ -560,7 +650,7 @@ class SecretStorageServiceTest {
       every { secretsRepositoryReader.fetchJsonSecretFromDefaultSecretPersistence(any()) } returns fetchedConfig
 
       val result = service.hydrateStorageConfig(secretStorage)
-      result shouldBe SecretStorageWithConfig(secretStorage, fetchedConfig)
+      assertEquals(SecretStorageWithConfig(secretStorage, fetchedConfig), result)
     }
   }
 }

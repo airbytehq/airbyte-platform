@@ -10,6 +10,5 @@ dependencies {
   implementation(libs.snakeyaml)
 
   testImplementation(libs.bundles.junit)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
 }

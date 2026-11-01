@@ -15,13 +15,14 @@ import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.UserId
 import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
 import io.airbyte.micronaut.runtime.SecretPersistenceType
-import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifySequence
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -74,12 +75,12 @@ class SecretStorageInitializerTest {
     }
 
     val captured = createSlot.captured
-    captured.scopeType shouldBe SecretStorageScopeType.ORGANIZATION
-    captured.scopeId shouldBe defaultOrgId
-    captured.descriptor shouldBe defaultDescriptor
-    captured.storageType shouldBe SecretStorageType.AWS_SECRETS_MANAGER
-    captured.configuredFromEnvironment shouldBe true
-    captured.createdBy shouldBe UserId(defaultUserId)
+    assertEquals(SecretStorageScopeType.ORGANIZATION, captured.scopeType)
+    assertEquals(defaultOrgId, captured.scopeId)
+    assertEquals(defaultDescriptor, captured.descriptor)
+    assertEquals(SecretStorageType.AWS_SECRETS_MANAGER, captured.storageType)
+    assertTrue(captured.configuredFromEnvironment)
+    assertEquals(UserId(defaultUserId), captured.createdBy)
   }
 
   @Test

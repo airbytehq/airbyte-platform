@@ -8,14 +8,14 @@ import io.airbyte.data.repositories.OrganizationPaymentConfigRepository
 import io.airbyte.data.repositories.entities.OrganizationPaymentConfig
 import io.airbyte.db.instance.configs.jooq.generated.enums.PaymentStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.UsageCategoryOverride
-import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
@@ -53,9 +53,9 @@ internal class OrganizationPaymentConfigServiceDataImplTest {
   @Test
   fun `test find by organization id`() {
     val result = organizationPaymentConfigService.findByOrganizationId(testOrganizationId)
-    result.shouldNotBeNull()
-    result.organizationId shouldBe testOrganizationId
-    result.paymentProviderId shouldBe "provider-id"
+    assertNotNull(result)
+    assertEquals(testOrganizationId, result!!.organizationId)
+    assertEquals("provider-id", result.paymentProviderId)
     verify { organizationPaymentConfigRepository.findById(testOrganizationId) }
   }
 
@@ -63,7 +63,7 @@ internal class OrganizationPaymentConfigServiceDataImplTest {
   fun `test find by non-existent organization id`() {
     val nonExistentId = UUID.randomUUID()
     val result = organizationPaymentConfigService.findByOrganizationId(nonExistentId)
-    result.shouldBeNull()
+    assertNull(result)
     verify { organizationPaymentConfigRepository.findById(nonExistentId) }
   }
 }

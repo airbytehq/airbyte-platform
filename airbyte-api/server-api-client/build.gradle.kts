@@ -32,10 +32,8 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.jackson)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(libs.mockwebserver)
-  testImplementation(libs.kotlin.test.runner.junit5)
   testImplementation(project(":oss:airbyte-commons-auth"))
 }
 

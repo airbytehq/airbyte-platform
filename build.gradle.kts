@@ -186,3 +186,8 @@ taskNames.forEach { taskName ->
     dependsOn(subprojects.flatMap { it.getTasksByName(taskName, true) })
   }
 }
+
+// Retired test frameworks (Mockito, Kotest, kotlin.test, JUnit 4, ...) must not come back; the scan lives in the root build.
+tasks.named("check") {
+  dependsOn(rootProject.tasks.named("checkTestFrameworkImports"))
+}

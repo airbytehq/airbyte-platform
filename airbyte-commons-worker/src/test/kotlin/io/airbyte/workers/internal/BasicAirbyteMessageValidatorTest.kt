@@ -20,7 +20,7 @@ import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.testutils.AirbyteMessageUtils.createConfigControlMessage
 import io.airbyte.workers.testutils.AirbyteMessageUtils.createRecordMessage
 import io.airbyte.workers.testutils.AirbyteMessageUtils.createStateMessage
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.Optional
 
@@ -30,7 +30,7 @@ internal class BasicAirbyteMessageValidatorTest {
     val bad: Optional<AirbyteMessage> = tryDeserializeExact("{}", AirbyteMessage::class.java)
 
     val m: Optional<AirbyteMessage> = validate(bad.get(), Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isEmpty)
+    Assertions.assertTrue(m.isEmpty)
   }
 
   @Test
@@ -38,8 +38,8 @@ internal class BasicAirbyteMessageValidatorTest {
     val rec: AirbyteMessage = createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE)
 
     val m: Optional<AirbyteMessage> = validate(rec, Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isPresent)
-    Assert.assertEquals(rec, m.get())
+    Assertions.assertTrue(m.isPresent)
+    Assertions.assertEquals(rec, m.get())
   }
 
   @Test
@@ -47,7 +47,7 @@ internal class BasicAirbyteMessageValidatorTest {
     val bad: Optional<AirbyteMessage> = tryDeserializeExact("{\"type\": \"RECORD\", \"record\": {}}", AirbyteMessage::class.java)
 
     val m: Optional<AirbyteMessage> = validate(bad.get(), Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isEmpty)
+    Assertions.assertTrue(m.isEmpty)
   }
 
   @Test
@@ -55,8 +55,8 @@ internal class BasicAirbyteMessageValidatorTest {
     val rec = createStateMessage(1)
 
     val m: Optional<AirbyteMessage> = validate(rec, Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isPresent)
-    Assert.assertEquals(rec, m.get())
+    Assertions.assertTrue(m.isPresent)
+    Assertions.assertEquals(rec, m.get())
   }
 
   @Test
@@ -64,7 +64,7 @@ internal class BasicAirbyteMessageValidatorTest {
     val bad: Optional<AirbyteMessage> = tryDeserializeExact("{\"type\": \"STATE\", \"control\": {}}", AirbyteMessage::class.java)
 
     val m: Optional<AirbyteMessage> = validate(bad.get(), Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isEmpty)
+    Assertions.assertTrue(m.isEmpty)
   }
 
   @Test
@@ -72,8 +72,8 @@ internal class BasicAirbyteMessageValidatorTest {
     val rec = createConfigControlMessage(Config(), 1000.0)
 
     val m: Optional<AirbyteMessage> = validate(rec, Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isPresent)
-    Assert.assertEquals(rec, m.get())
+    Assertions.assertTrue(m.isPresent)
+    Assertions.assertEquals(rec, m.get())
   }
 
   @Test
@@ -81,7 +81,7 @@ internal class BasicAirbyteMessageValidatorTest {
     val bad: Optional<AirbyteMessage> = tryDeserializeExact("{\"type\": \"CONTROL\", \"state\": {}}", AirbyteMessage::class.java)
 
     val m: Optional<AirbyteMessage> = validate(bad.get(), Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isEmpty)
+    Assertions.assertTrue(m.isEmpty)
   }
 
   @Test
@@ -97,8 +97,8 @@ internal class BasicAirbyteMessageValidatorTest {
           ),
         )
     val m: Optional<AirbyteMessage> = validate(message, Optional.empty<ConfiguredAirbyteCatalog>(), MessageOrigin.SOURCE)
-    Assert.assertTrue(m.isPresent)
-    Assert.assertEquals(message, m.get())
+    Assertions.assertTrue(m.isPresent)
+    Assertions.assertEquals(message, m.get())
   }
 
   @Test
@@ -113,7 +113,7 @@ internal class BasicAirbyteMessageValidatorTest {
         ),
         MessageOrigin.SOURCE,
       )
-    Assert.assertTrue(m.isPresent)
+    Assertions.assertTrue(m.isPresent)
   }
 
   @Test
@@ -128,7 +128,7 @@ internal class BasicAirbyteMessageValidatorTest {
         ),
         MessageOrigin.SOURCE,
       )
-    Assert.assertTrue(m.isPresent)
+    Assertions.assertTrue(m.isPresent)
   }
 
   @Test
@@ -143,7 +143,7 @@ internal class BasicAirbyteMessageValidatorTest {
         ),
         MessageOrigin.SOURCE,
       )
-    Assert.assertTrue(m.isPresent)
+    Assertions.assertTrue(m.isPresent)
 
     m =
       validate(
@@ -153,14 +153,14 @@ internal class BasicAirbyteMessageValidatorTest {
         ),
         MessageOrigin.SOURCE,
       )
-    Assert.assertTrue(m.isPresent)
+    Assertions.assertTrue(m.isPresent)
   }
 
   @Test
   fun testInvalidPk() {
     val bad: AirbyteMessage = createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE)
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
       SourceException::class.java,
       {
         validate(
@@ -178,7 +178,7 @@ internal class BasicAirbyteMessageValidatorTest {
   fun testValidPkInAnotherStream() {
     val bad: AirbyteMessage = createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE)
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
       SourceException::class.java,
       {
         validate(

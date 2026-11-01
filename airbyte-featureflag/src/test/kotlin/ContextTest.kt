@@ -4,13 +4,13 @@
 
 package io.airbyte.featureflag
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class MultiTest {
   @Test
@@ -29,7 +29,7 @@ class MultiTest {
     val workspace = Workspace("workspace")
     val multi = Multi(listOf(source, workspace))
 
-    assertFailsWith<IllegalArgumentException> {
+    assertThrows<IllegalArgumentException> {
       Multi(listOf(source, workspace, multi))
     }
   }
@@ -41,9 +41,9 @@ class MultiTest {
     val workspace = Workspace("workspace")
     val multi = Multi(listOf(source1, source2, workspace))
 
-    assertEquals(listOf(source1, source2), multi.fetchContexts(), "two source contexts")
-    assertEquals(listOf(workspace), multi.fetchContexts(), "one workspace context")
-    assertEquals(listOf(), multi.fetchContexts<Connection>(), "should be empty as no connection context was provided")
+    assertEquals(listOf(source1, source2), multi.fetchContexts<Source>(), "two source contexts")
+    assertEquals(listOf(workspace), multi.fetchContexts<Workspace>(), "one workspace context")
+    assertEquals(listOf<Connection>(), multi.fetchContexts<Connection>(), "should be empty as no connection context was provided")
   }
 
   @Test
@@ -62,7 +62,7 @@ class MultiTest {
 
   @Test
   fun `no contexts is an exception`() {
-    assertFailsWith<IllegalArgumentException> {
+    assertThrows<IllegalArgumentException> {
       Multi(listOf())
     }
   }

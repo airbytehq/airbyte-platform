@@ -14,16 +14,16 @@ import io.airbyte.config.OrganizationPaymentConfig.SubscriptionStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.OrganizationId
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 import io.airbyte.data.services.ConnectionService as ConnectionRepository
 import io.airbyte.data.services.OrganizationPaymentConfigService as OrganizationPaymentConfigRepository
@@ -68,14 +68,14 @@ class OrganizationServiceTest {
     @Test
     fun `should throw if orgPaymentConfig is not found`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
-      shouldThrow<ResourceNotFoundProblem> { service.handlePaymentGracePeriodEnded(organizationId) }
+      assertThrows<ResourceNotFoundProblem> { service.handlePaymentGracePeriodEnded(organizationId) }
     }
 
     @Test
     fun `should throw if organization is not in a grace period`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns
         OrganizationPaymentConfig().apply { paymentStatus = PaymentStatus.OKAY }
-      shouldThrow<StateConflictProblem> { service.handlePaymentGracePeriodEnded(organizationId) }
+      assertThrows<StateConflictProblem> { service.handlePaymentGracePeriodEnded(organizationId) }
     }
 
     @Test
@@ -96,7 +96,7 @@ class OrganizationServiceTest {
       service.handlePaymentGracePeriodEnded(organizationId)
 
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-      orgPaymentConfigSlot.captured.paymentStatus shouldBe PaymentStatus.DISABLED
+      assertEquals(PaymentStatus.DISABLED, orgPaymentConfigSlot.captured.paymentStatus)
     }
 
     @Test
@@ -147,7 +147,7 @@ class OrganizationServiceTest {
     @Test
     fun `should throw if orgPaymentConfig is not found`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
-      shouldThrow<ResourceNotFoundProblem> { service.handleUncollectibleInvoice(organizationId) }
+      assertThrows<ResourceNotFoundProblem> { service.handleUncollectibleInvoice(organizationId) }
     }
 
     @Test
@@ -163,7 +163,7 @@ class OrganizationServiceTest {
       service.handleUncollectibleInvoice(organizationId)
 
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-      orgPaymentConfigSlot.captured.paymentStatus shouldBe PaymentStatus.LOCKED
+      assertEquals(PaymentStatus.LOCKED, orgPaymentConfigSlot.captured.paymentStatus)
     }
 
     @Test
@@ -191,7 +191,7 @@ class OrganizationServiceTest {
     @Test
     fun `should throw if orgPaymentConfig is not found`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
-      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionStarted(organizationId, "test-plan", false) }
+      assertThrows<ResourceNotFoundProblem> { service.handleSubscriptionStarted(organizationId, "test-plan", false) }
     }
 
     @Test
@@ -222,7 +222,7 @@ class OrganizationServiceTest {
 
       service.handleSubscriptionStarted(organizationId, "test-plan", false)
 
-      slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
+      assertEquals(SubscriptionStatus.SUBSCRIBED, slotConfig.captured.subscriptionStatus)
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
       verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
     }
@@ -233,7 +233,7 @@ class OrganizationServiceTest {
     @Test
     fun `should throw if orgPaymentConfig is not found`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
-      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionEnded(organizationId) }
+      assertThrows<ResourceNotFoundProblem> { service.handleSubscriptionEnded(organizationId) }
     }
 
     @Test
@@ -283,7 +283,7 @@ class OrganizationServiceTest {
 
       service.handleSubscriptionEnded(organizationId)
 
-      slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.UNSUBSCRIBED
+      assertEquals(SubscriptionStatus.UNSUBSCRIBED, slotConfig.captured.subscriptionStatus)
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
 
       verify {

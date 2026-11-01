@@ -19,7 +19,6 @@ keycloak-client = "26.7.3" # should be kept in sync with airbyte-keycloak/Docker
 # The admin-client version won't match keycloak-client directly, but should correspond to the major version:
 # https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client
 keycloak-admin-client = "26.0.12"
-kotest = "5.9.1"
 kotlin-logging = "7.0.14"
 kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.6.1"
@@ -132,13 +131,11 @@ junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter"
 junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "2.3.0" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak-client" }
-kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutine" }
 kotlin-coroutines-sl4j = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j", version.ref = "kotlinx-coroutine" }
 kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutine" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "2.1.0" }
-kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 kubernetes-client = { module = "io.fabric8:kubernetes-client", version.ref = "kubernetes-client" }
 kubernetes-client-api = { module = "io.fabric8:kubernetes-client-api", version.ref = "kubernetes-client" }
 kubernetes-httpclient-okhttp = { module = "io.fabric8:kubernetes-httpclient-okhttp", version.ref = "kubernetes-client" }
@@ -259,7 +256,6 @@ flyway = ["flyway-core", "flyway-postgresql"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat-yml", "jackson-dataformat-xml", "jackson-datatype", "jackson-jdk-datatype", "jackson-kotlin"]
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params"]
 keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
-kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
 logback = ["logback-classic", "logback-core"]
 micronaut = [

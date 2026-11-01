@@ -8,9 +8,11 @@ import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.migrations.V0_50_33_009__DropKeycloakTables.Companion.dropTables
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 @Suppress("ktlint:standard:class-naming")
 @Disabled
@@ -115,7 +117,7 @@ class V0_50_33_009__DropKeycloakTablesTest : AbstractConfigsDatabaseTest() {
       )
 
     for (tableName in tablesToDelete) {
-      Assert.assertTrue("Table $tableName should exist before dropping", tableExists(context, tableName))
+      assertTrue(tableExists(context, tableName), "Table $tableName should exist before dropping")
     }
 
     val tablesBeforeMigration = fetchAllTableNames(context)
@@ -125,7 +127,7 @@ class V0_50_33_009__DropKeycloakTablesTest : AbstractConfigsDatabaseTest() {
 
     // Verify that each table does not exist after the drop operation
     for (tableName in tablesToDelete) {
-      Assert.assertFalse("Table $tableName should not exist after dropping", tableExists(context, tableName))
+      assertFalse(tableExists(context, tableName), "Table $tableName should not exist after dropping")
     }
 
     val tablesAfterMigration: List<String> = fetchAllTableNames(context)
@@ -133,7 +135,7 @@ class V0_50_33_009__DropKeycloakTablesTest : AbstractConfigsDatabaseTest() {
     tablesBeforeMigration.removeAll(tablesToDelete)
 
     // Verify that no other tables except Keycloak tables were dropped
-    Assert.assertEquals(tablesBeforeMigration, tablesAfterMigration)
+    assertEquals(tablesBeforeMigration, tablesAfterMigration)
   }
 
   private fun fetchAllTableNames(ctx: DSLContext): MutableList<String> =

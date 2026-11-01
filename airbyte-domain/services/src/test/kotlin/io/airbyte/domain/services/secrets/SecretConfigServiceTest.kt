@@ -7,12 +7,12 @@ package io.airbyte.domain.services.secrets
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.domain.models.SecretConfig
 import io.airbyte.domain.models.SecretConfigId
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 import io.airbyte.data.services.SecretConfigService as SecretConfigRepository
 
@@ -28,7 +28,7 @@ class SecretConfigServiceTest {
       val secretConfig = mockk<SecretConfig>()
       every { secretConfigRepository.findById(id) } returns secretConfig
 
-      service.getById(id) shouldBe secretConfig
+      assertEquals(secretConfig, service.getById(id))
     }
 
     @Test
@@ -36,7 +36,7 @@ class SecretConfigServiceTest {
       val id = SecretConfigId(UUID.randomUUID())
       every { secretConfigRepository.findById(id) } returns null
 
-      shouldThrow<ResourceNotFoundProblem> { service.getById(id) }
+      assertThrows<ResourceNotFoundProblem> { service.getById(id) }
     }
   }
 }

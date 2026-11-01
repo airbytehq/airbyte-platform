@@ -8,11 +8,11 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.server.generated.models.OrganizationPaymentConfigUpdateRequestBody
 import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.data.services.OrganizationPaymentConfigService
-import io.kotest.assertions.throwables.shouldThrow
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class OrganizationPaymentConfigControllerTest {
@@ -29,7 +29,7 @@ class OrganizationPaymentConfigControllerTest {
   fun `should throw for config not found on get`() {
     val orgId = UUID.randomUUID()
     every { organizationPaymentConfigService.findByOrganizationId(orgId) } returns null
-    shouldThrow<ResourceNotFoundProblem> {
+    assertThrows<ResourceNotFoundProblem> {
       controller.getOrganizationPaymentConfig(orgId)
     }
   }
@@ -38,7 +38,7 @@ class OrganizationPaymentConfigControllerTest {
   fun `should throw for config not found on update`() {
     val orgId = UUID.randomUUID()
     every { organizationPaymentConfigService.findByOrganizationId(orgId) } returns null
-    shouldThrow<ResourceNotFoundProblem> {
+    assertThrows<ResourceNotFoundProblem> {
       controller.updateOrganizationPaymentConfig(
         OrganizationPaymentConfigUpdateRequestBody(
           organizationId = orgId,

@@ -11,7 +11,6 @@ import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import io.airbyte.workload.launcher.ClaimedProcessor
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
-import io.kotlintest.milliseconds
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -26,8 +25,8 @@ import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.toJavaDuration
-import kotlin.time.toKotlinDuration
 
 class ClaimedProcessorTest {
   private lateinit var claimedProcessor: ClaimedProcessor
@@ -52,8 +51,8 @@ class ClaimedProcessorTest {
         AirbyteWorkloadLauncherConfig(
           parallelism = AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(defaultQueue = 10),
         ),
-        backoffDuration = 1.milliseconds.toKotlinDuration().toJavaDuration(),
-        backoffMaxDelay = 2.milliseconds.toKotlinDuration().toJavaDuration(),
+        backoffDuration = 1.milliseconds.toJavaDuration(),
+        backoffMaxDelay = 2.milliseconds.toJavaDuration(),
       )
   }
 

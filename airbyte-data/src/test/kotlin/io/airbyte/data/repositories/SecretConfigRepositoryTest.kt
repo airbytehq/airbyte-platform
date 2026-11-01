@@ -12,13 +12,12 @@ import io.airbyte.data.repositories.entities.Workspace
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretReferenceScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageType
-import io.kotest.matchers.equality.shouldBeEqualToIgnoringFields
-import io.kotest.matchers.nulls.shouldBeNull
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -213,7 +212,7 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
 
       val result = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(persistedSecretStorage.id!!, externalCoordinate)
 
-      result.shouldBeNull()
+      assertNull(result)
     }
 
     @Test
@@ -234,7 +233,7 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
 
       val result = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(persistedSecretStorage.id!!, externalCoordinate)!!
 
-      result.shouldBeEqualToIgnoringFields(persistedSecretConfig, SecretConfig::createdAt, SecretConfig::updatedAt)
+      assertThat(result).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(persistedSecretConfig)
     }
   }
 

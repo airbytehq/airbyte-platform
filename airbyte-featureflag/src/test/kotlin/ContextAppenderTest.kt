@@ -4,10 +4,11 @@
 
 package io.airbyte.featureflag
 
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class ContextAppenderTest {
   @Test
@@ -22,13 +23,13 @@ class ContextAppenderTest {
     val multi = Multi(setOf(Connection(UUID.randomUUID()), Workspace(UUID.randomUUID())))
     val actualContext = interceptor.intercept(multi)
 
-    assertTrue(actualContext is Multi)
-    val contexts = actualContext.contexts
+    val actualMulti = assertInstanceOf(Multi::class.java, actualContext)
+    val contexts = actualMulti.contexts
     assertTrue(contexts.containsAll(multi.contexts))
     assertTrue(contexts.containsAll(contextsToAppend))
 
     // This should verify that we didn't mutate the multi passed on the input
-    assertNotEquals(multi.toLDContext(), actualContext.toLDContext())
+    assertNotEquals(multi.toLDContext(), actualMulti.toLDContext())
   }
 
   @Test
@@ -43,8 +44,8 @@ class ContextAppenderTest {
     val context = Connection(UUID.randomUUID())
     val actualContext = interceptor.intercept(context)
 
-    assertTrue(actualContext is Multi)
-    val contexts = actualContext.contexts
+    val actualMulti = assertInstanceOf(Multi::class.java, actualContext)
+    val contexts = actualMulti.contexts
     assertTrue(contexts.contains(context))
     assertTrue(contexts.containsAll(contextsToAppend))
   }

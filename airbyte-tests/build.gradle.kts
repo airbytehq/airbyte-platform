@@ -104,7 +104,6 @@ dependencies {
   testImplementation(libs.kotlin.coroutines)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.kotlin.coroutines.test)
 }
 

@@ -32,7 +32,6 @@ import io.airbyte.featureflag.PersistSecretConfigsAndReferences
 import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
-import io.kotest.matchers.shouldBe
 import io.micronaut.data.exceptions.DataAccessException
 import io.mockk.Runs
 import io.mockk.every
@@ -345,24 +344,28 @@ class SecretReferenceServiceTest {
           actorId.value,
         )
 
-      result shouldBe createdPasswordRef.id
+      assertEquals(createdPasswordRef.id, result)
 
-      createConfigSlot.captured shouldBe
+      assertEquals(
         SecretConfigCreate(
           secretStorageId = secretStorageId,
           descriptor = airbyteManagedPasswordCoordinate,
           externalCoordinate = airbyteManagedPasswordCoordinate,
           airbyteManaged = true,
           createdBy = currentUserId,
-        )
+        ),
+        createConfigSlot.captured,
+      )
 
-      createRefSlot.captured shouldBe
+      assertEquals(
         SecretReferenceCreate(
           secretConfigId = createdPasswordConfig.id,
           hydrationPath = "$.password",
           scopeType = SecretReferenceScopeType.ACTOR,
           scopeId = actorId.value,
-        )
+        ),
+        createRefSlot.captured,
+      )
     }
 
     @Test
@@ -393,8 +396,8 @@ class SecretReferenceServiceTest {
           actorId.value,
         )
 
-      result shouldBe createdPasswordRef.id
-      createRefSlot.captured.secretConfigId shouldBe expectedConfigId
+      assertEquals(createdPasswordRef.id, result)
+      assertEquals(expectedConfigId, createRefSlot.captured.secretConfigId)
 
       verify(exactly = 0) {
         secretConfigRepository.create(any())
@@ -468,7 +471,7 @@ class SecretReferenceServiceTest {
           currentUserId,
         )
 
-      result.value shouldBe
+      assertEquals(
         Jsons.jsonNode(
           mapOf(
             "username" to "bob",
@@ -479,7 +482,9 @@ class SecretReferenceServiceTest {
               ),
             "password" to mapOf("_secret_reference_id" to createdPasswordRef.id.value.toString(), "_secret" to airbyteManagedPasswordCoordinate),
           ),
-        )
+        ),
+        result.value,
+      )
     }
   }
 
@@ -761,7 +766,7 @@ class SecretReferenceServiceTest {
 
       val result = secretReferenceService.getReferencedSecretConfigIds(scopeId, SecretReferenceScopeType.ACTOR)
 
-      result shouldBe setOf(configId1, configId2)
+      assertEquals(setOf(configId1, configId2), result)
     }
   }
 }

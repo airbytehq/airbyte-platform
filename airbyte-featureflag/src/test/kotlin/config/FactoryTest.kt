@@ -11,9 +11,9 @@ import io.airbyte.micronaut.runtime.FEATURE_FLAG_PREFIX
 import io.micronaut.context.annotation.Property
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 internal const val CONFIG_FF_APIKEY = "${FEATURE_FLAG_PREFIX}.api-key"
 

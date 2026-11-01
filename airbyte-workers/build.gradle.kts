@@ -109,7 +109,6 @@ dependencies {
   testImplementation(libs.bundles.bouncycastle)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.retrofit.mock)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
@@ -118,7 +117,6 @@ dependencies {
   kspIntegrationTest(libs.bundles.micronaut.test.annotation.processor)
 
   integrationTestImplementation(libs.bundles.junit)
-  integrationTestImplementation(libs.junit.pioneer)
   integrationTestImplementation(libs.bundles.micronaut.test)
 
   airbyteProtocol(libs.airbyte.protocol) {

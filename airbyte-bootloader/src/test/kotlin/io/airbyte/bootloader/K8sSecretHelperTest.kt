@@ -9,12 +9,11 @@ import io.fabric8.kubernetes.api.model.Secret
 import io.fabric8.kubernetes.api.model.SecretBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.dsl.NamespaceableResource
-import io.kotest.assertions.asClue
-import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class K8sSecretHelperTest {
@@ -43,10 +42,9 @@ class K8sSecretHelperTest {
     K8sSecretHelper.createOrUpdateSecret(kubernetesClient, "my-secret", secretData)
 
     verify { creator.create() }
-    resourceSlot.captured.asClue {
-      it.data.size shouldBe 1
-      it.data["key1"] shouldBe base64Encode("value1")
-    }
+    val createdSecret = resourceSlot.captured
+    assertEquals(1, createdSecret.data.size)
+    assertEquals(base64Encode("value1"), createdSecret.data["key1"])
   }
 
   @Test
@@ -86,11 +84,10 @@ class K8sSecretHelperTest {
     K8sSecretHelper.createOrUpdateSecret(kubernetesClient, "my-secret", secretData)
 
     verify { updater.update() }
-    resourceSlot.captured.asClue {
-      it.data.size shouldBe 3
-      it.data["key1"] shouldBe "unchangedValue"
-      it.data["key2"] shouldBe base64Encode("updatedValue")
-      it.data["key3"] shouldBe base64Encode("newValue")
-    }
+    val updatedSecret = resourceSlot.captured
+    assertEquals(3, updatedSecret.data.size)
+    assertEquals("unchangedValue", updatedSecret.data["key1"])
+    assertEquals(base64Encode("updatedValue"), updatedSecret.data["key2"])
+    assertEquals(base64Encode("newValue"), updatedSecret.data["key3"])
   }
 }

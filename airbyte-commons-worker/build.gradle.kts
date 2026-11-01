@@ -72,7 +72,6 @@ dependencies {
   testImplementation(libs.reactor.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.bundles.logback)
   testImplementation(libs.kotlin.coroutines.test)
 

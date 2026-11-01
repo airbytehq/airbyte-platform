@@ -11,15 +11,15 @@ import io.airbyte.data.repositories.entities.NON_TERMINAL_STATUSES
 import io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
-import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.shouldBe
 import io.micronaut.context.env.Environment
 import io.micronaut.inject.qualifiers.Qualifiers
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.micronaut.transaction.TransactionOperations
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -81,7 +81,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
 
     val result = dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(targetOrganizationId)
 
-    result.shouldBe((14.0) plusOrMinus 0.0001)
+    assertEquals(14.0, result, 0.0001)
   }
 
   @Test
@@ -90,7 +90,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
 
     val result = dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId)
 
-    result.shouldBe(0.0)
+    assertEquals(0.0, result)
   }
 
   @ParameterizedTest
@@ -112,7 +112,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
 
     val result = dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId)
 
-    result.shouldBe(expected plusOrMinus 0.0001)
+    assertEquals(expected, result, 0.0001)
   }
 
   @ParameterizedTest
@@ -131,9 +131,9 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result.map { it.jobId } shouldBe listOf(1L)
-    result.single().organizationId shouldBe organizationId
-    result.single().terminalAt.toInstant() shouldBe terminalAt.toInstant()
+    assertEquals(listOf(1L), result.map { it.jobId })
+    assertEquals(organizationId, result.single().organizationId)
+    assertEquals(terminalAt.toInstant(), result.single().terminalAt.toInstant())
   }
 
   @ParameterizedTest
@@ -152,7 +152,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result shouldBe emptyList()
+    assertEquals(emptyList<Any>(), result)
   }
 
   @Test
@@ -181,7 +181,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result.map { it.jobId } shouldBe listOf(1L)
+    assertEquals(listOf(1L), result.map { it.jobId })
   }
 
   @Test
@@ -211,7 +211,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result.map { it.jobId } shouldBe listOf(1L)
+    assertEquals(listOf(1L), result.map { it.jobId })
   }
 
   @Test
@@ -233,7 +233,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 3,
       )
 
-    result.map { it.jobId } shouldBe listOf(2L, 4L, 3L)
+    assertEquals(listOf(2L, 4L, 3L), result.map { it.jobId })
   }
 
   @Test
@@ -260,7 +260,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result.map { it.jobId } shouldBe listOf(3L, 4L)
+    assertEquals(listOf(3L, 4L), result.map { it.jobId })
   }
 
   @Test
@@ -280,7 +280,7 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         limit = 100,
       )
 
-    result shouldBe emptyList()
+    assertEquals(emptyList<Any>(), result)
   }
 
   @Test
@@ -299,17 +299,19 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
         executor.submit(
           Callable {
             configTransactionOperations.executeWrite { _ ->
-              dataWorkerUsageReservationRepository
-                .findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
-                .isPresent shouldBe true
-              dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) shouldBe 1L
+              assertTrue(
+                dataWorkerUsageReservationRepository
+                  .findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+                  .isPresent,
+              )
+              assertEquals(1L, dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId))
               firstHasDeleted.countDown()
-              allowFirstCommit.await(10, TimeUnit.SECONDS) shouldBe true
+              assertTrue(allowFirstCommit.await(10, TimeUnit.SECONDS))
               true
             }
           },
         )
-      firstHasDeleted.await(10, TimeUnit.SECONDS) shouldBe true
+      assertTrue(firstHasDeleted.await(10, TimeUnit.SECONDS))
 
       val second =
         executor.submit(
@@ -322,12 +324,12 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
             }
           },
         )
-      secondStarted.await(10, TimeUnit.SECONDS) shouldBe true
+      assertTrue(secondStarted.await(10, TimeUnit.SECONDS))
       assertThrows(TimeoutException::class.java) { second.get(300, TimeUnit.MILLISECONDS) }
 
       allowFirstCommit.countDown()
-      first.get(10, TimeUnit.SECONDS) shouldBe true
-      second.get(10, TimeUnit.SECONDS) shouldBe false
+      assertTrue(first.get(10, TimeUnit.SECONDS))
+      assertFalse(second.get(10, TimeUnit.SECONDS))
       assertFalse(dataWorkerUsageReservationRepository.existsById(jobId))
     } finally {
       allowFirstCommit.countDown()
@@ -343,8 +345,8 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
 
     val inserted = insertReservationIfActive(jobId, organizationId)
 
-    inserted shouldBe 1
-    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe true
+    assertEquals(1, inserted)
+    assertTrue(dataWorkerUsageReservationRepository.existsById(jobId))
   }
 
   @ParameterizedTest
@@ -356,16 +358,16 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
 
     val inserted = insertReservationIfActive(jobId, organizationId)
 
-    inserted shouldBe 0
-    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe false
+    assertEquals(0, inserted)
+    assertFalse(dataWorkerUsageReservationRepository.existsById(jobId))
   }
 
   @Test
   fun `insertReservationIfJobActive does not insert when the job does not exist`() {
     val inserted = insertReservationIfActive(jobId = 42L, organizationId = UUID.randomUUID())
 
-    inserted shouldBe 0
-    dataWorkerUsageReservationRepository.existsById(42L) shouldBe false
+    assertEquals(0, inserted)
+    assertFalse(dataWorkerUsageReservationRepository.existsById(42L))
   }
 
   @Test
@@ -374,9 +376,9 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
     val jobId = 1L
     jobsRepository.save(createJob(jobId, JobStatus.running))
 
-    insertReservationIfActive(jobId, organizationId) shouldBe 1
-    insertReservationIfActive(jobId, organizationId) shouldBe 0
-    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe true
+    assertEquals(1, insertReservationIfActive(jobId, organizationId))
+    assertEquals(0, insertReservationIfActive(jobId, organizationId))
+    assertTrue(dataWorkerUsageReservationRepository.existsById(jobId))
   }
 
   private fun insertReservationIfActive(
@@ -431,10 +433,12 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
     jobId: Long,
     updatedAt: OffsetDateTime,
   ) {
-    jooqDslContext
-      .update(JOBS)
-      .set(JOBS.UPDATED_AT, updatedAt)
-      .where(JOBS.ID.eq(jobId))
-      .execute() shouldBe 1
+    val updated =
+      jooqDslContext
+        .update(JOBS)
+        .set(JOBS.UPDATED_AT, updatedAt)
+        .where(JOBS.ID.eq(jobId))
+        .execute()
+    assertEquals(1, updated)
   }
 }

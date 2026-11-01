@@ -43,7 +43,6 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
-  testImplementation(libs.bundles.kotest)
 
   // TODO: flip this import - MockData should live in airbyte-data's testFixtures
   // and be imported in this manner by config-persistence

@@ -6,13 +6,14 @@ package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.DataWorkerAllocatedCapacity
 import io.airbyte.db.instance.configs.jooq.generated.Tables
-import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
 import io.micronaut.context.env.Environment
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
@@ -36,9 +37,9 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
   fun `save populates the id and both timestamps`() {
     val saved = dataWorkerAllocatedCapacityRepository.save(allocation(usRegionId, 10.0))
 
-    saved.id.shouldNotBeNull()
-    saved.createdAt.shouldNotBeNull()
-    saved.updatedAt.shouldNotBeNull()
+    assertNotNull(saved.id)
+    assertNotNull(saved.createdAt)
+    assertNotNull(saved.updatedAt)
   }
 
   @Test
@@ -54,13 +55,13 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val found = dataWorkerAllocatedCapacityRepository.findByOrganizationId(organizationId)
 
-    found.map { it.dataplaneGroupId }.toSet() shouldBe setOf(usRegionId, euRegionId)
-    found.sumOf { it.allocatedCapacity }.shouldBe(13.0 plusOrMinus TOLERANCE)
+    assertEquals(setOf(usRegionId, euRegionId), found.map { it.dataplaneGroupId }.toSet())
+    assertEquals(13.0, found.sumOf { it.allocatedCapacity }, TOLERANCE)
   }
 
   @Test
   fun `findByOrganizationId returns empty when the organization has no rows`() {
-    dataWorkerAllocatedCapacityRepository.findByOrganizationId(UUID.randomUUID()) shouldBe emptyList()
+    assertEquals(emptyList<Any>(), dataWorkerAllocatedCapacityRepository.findByOrganizationId(UUID.randomUUID()))
   }
 
   @Test
@@ -69,15 +70,15 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val found = dataWorkerAllocatedCapacityRepository.findByOrganizationIdAndDataplaneGroupId(organizationId, usRegionId)
 
-    found.shouldNotBeNull()
-    found.allocatedCapacity.shouldBe(7.5 plusOrMinus TOLERANCE)
+    assertNotNull(found)
+    assertEquals(7.5, found!!.allocatedCapacity, TOLERANCE)
   }
 
   @Test
   fun `findByOrganizationIdAndDataplaneGroupId returns null when the region has no row`() {
     dataWorkerAllocatedCapacityRepository.save(allocation(usRegionId, 7.5))
 
-    dataWorkerAllocatedCapacityRepository.findByOrganizationIdAndDataplaneGroupId(organizationId, euRegionId) shouldBe null
+    assertNull(dataWorkerAllocatedCapacityRepository.findByOrganizationIdAndDataplaneGroupId(organizationId, euRegionId))
   }
 
   @Test
@@ -102,8 +103,8 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val updated = dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 3.0)
 
-    updated shouldBe 1
-    capacityOf(usRegionId).shouldBe(7.0 plusOrMinus TOLERANCE)
+    assertEquals(1, updated)
+    assertEquals(7.0, capacityOf(usRegionId), TOLERANCE)
   }
 
   @Test
@@ -112,8 +113,8 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val updated = dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 10.0)
 
-    updated shouldBe 1
-    capacityOf(usRegionId).shouldBe(0.0 plusOrMinus TOLERANCE)
+    assertEquals(1, updated)
+    assertEquals(0.0, capacityOf(usRegionId), TOLERANCE)
   }
 
   @Test
@@ -122,13 +123,13 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val updated = dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 5.0)
 
-    updated shouldBe 0
-    capacityOf(usRegionId).shouldBe(2.0 plusOrMinus TOLERANCE)
+    assertEquals(0, updated)
+    assertEquals(2.0, capacityOf(usRegionId), TOLERANCE)
   }
 
   @Test
   fun `subtractCapacityIfSufficient reports no change when the region has no row`() {
-    dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, euRegionId, 1.0) shouldBe 0
+    assertEquals(0, dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, euRegionId, 1.0))
   }
 
   @Test
@@ -141,18 +142,18 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
       ),
     )
 
-    dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 4.0) shouldBe 1
+    assertEquals(1, dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 4.0))
 
-    capacityOf(usRegionId).shouldBe(6.0 plusOrMinus TOLERANCE)
-    capacityOf(usRegionId, otherOrganizationId).shouldBe(10.0 plusOrMinus TOLERANCE)
+    assertEquals(6.0, capacityOf(usRegionId), TOLERANCE)
+    assertEquals(10.0, capacityOf(usRegionId, otherOrganizationId), TOLERANCE)
   }
 
   @Test
   fun `addCapacity creates the row when the region has none`() {
     val written = dataWorkerAllocatedCapacityRepository.addCapacity(organizationId, euRegionId, 3.0)
 
-    written shouldBe 1
-    capacityOf(euRegionId).shouldBe(3.0 plusOrMinus TOLERANCE)
+    assertEquals(1, written)
+    assertEquals(3.0, capacityOf(euRegionId), TOLERANCE)
   }
 
   @Test
@@ -161,9 +162,9 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     val written = dataWorkerAllocatedCapacityRepository.addCapacity(organizationId, euRegionId, 2.5)
 
-    written shouldBe 1
-    capacityOf(euRegionId).shouldBe(5.5 plusOrMinus TOLERANCE)
-    dataWorkerAllocatedCapacityRepository.findByOrganizationId(organizationId).size shouldBe 1
+    assertEquals(1, written)
+    assertEquals(5.5, capacityOf(euRegionId), TOLERANCE)
+    assertEquals(1, dataWorkerAllocatedCapacityRepository.findByOrganizationId(organizationId).size)
   }
 
   @Test
@@ -173,7 +174,7 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     dataWorkerAllocatedCapacityRepository.addCapacity(organizationId, euRegionId, 1.0)
 
-    (updatedAtOf(euRegionId) > backdated) shouldBe true
+    assertTrue(updatedAtOf(euRegionId) > backdated)
   }
 
   @Test
@@ -183,7 +184,7 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
 
     dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(organizationId, usRegionId, 1.0)
 
-    (updatedAtOf(usRegionId) > backdated) shouldBe true
+    assertTrue(updatedAtOf(usRegionId) > backdated)
   }
 
   /**
@@ -204,21 +205,22 @@ internal class DataWorkerAllocatedCapacityRepositoryTest : AbstractConfigReposit
     return updatedAtOf(dataplaneGroupId)
   }
 
-  private fun updatedAtOf(dataplaneGroupId: UUID): OffsetDateTime =
-    dataWorkerAllocatedCapacityRepository
-      .findByOrganizationIdAndDataplaneGroupId(organizationId, dataplaneGroupId)
-      .shouldNotBeNull()
-      .updatedAt
-      .shouldNotBeNull()
+  private fun updatedAtOf(dataplaneGroupId: UUID): OffsetDateTime {
+    val row = dataWorkerAllocatedCapacityRepository.findByOrganizationIdAndDataplaneGroupId(organizationId, dataplaneGroupId)
+    assertNotNull(row)
+    val updatedAt = row!!.updatedAt
+    assertNotNull(updatedAt)
+    return updatedAt!!
+  }
 
   private fun capacityOf(
     dataplaneGroupId: UUID,
     organizationId: UUID = this.organizationId,
-  ): Double =
-    dataWorkerAllocatedCapacityRepository
-      .findByOrganizationIdAndDataplaneGroupId(organizationId, dataplaneGroupId)
-      .shouldNotBeNull()
-      .allocatedCapacity
+  ): Double {
+    val row = dataWorkerAllocatedCapacityRepository.findByOrganizationIdAndDataplaneGroupId(organizationId, dataplaneGroupId)
+    assertNotNull(row)
+    return row!!.allocatedCapacity
+  }
 
   private fun allocation(
     dataplaneGroupId: UUID,

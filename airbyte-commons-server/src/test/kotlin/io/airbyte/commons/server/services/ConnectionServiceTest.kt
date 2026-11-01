@@ -18,13 +18,13 @@ import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
-import io.kotest.matchers.booleans.shouldBeFalse
-import io.kotest.matchers.booleans.shouldBeTrue
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -197,7 +197,7 @@ class ConnectionServiceTest {
         every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.empty()
         every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.empty()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { connectionRepository.getStandardSync(any()) }
         verify(exactly = 0) { connectionRepository.writeStandardSync(any()) }
@@ -213,7 +213,7 @@ class ConnectionServiceTest {
         every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(firstJob)
         every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(lastJob)
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { connectionRepository.getStandardSync(any()) }
         verify(exactly = 0) { connectionRepository.writeStandardSync(any()) }
@@ -246,7 +246,7 @@ class ConnectionServiceTest {
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
         every { connectionService.disableConnections(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeTrue()
+        assertTrue(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify {
           connectionService.disableConnections(
@@ -285,7 +285,7 @@ class ConnectionServiceTest {
         every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
       }
@@ -320,7 +320,7 @@ class ConnectionServiceTest {
         every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
       }
@@ -354,7 +354,7 @@ class ConnectionServiceTest {
         every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 1) { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
       }
@@ -388,7 +388,7 @@ class ConnectionServiceTest {
         every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
       }
@@ -428,7 +428,7 @@ class ConnectionServiceTest {
         every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
         every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { jobNotifier.autoDisableConnectionWarning(mostRecentJob, any()) }
       }
@@ -457,7 +457,7 @@ class ConnectionServiceTest {
         every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
         every { connectionRepository.getStandardSync(connectionId) } returns sync
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { connectionRepository.writeStandardSync(any()) }
         verify(exactly = 0) { jobNotifier.autoDisableConnection(any(), any()) }
@@ -487,7 +487,7 @@ class ConnectionServiceTest {
         every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
         every { connectionRepository.getStandardSync(connectionId) } returns sync
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { connectionRepository.writeStandardSync(any()) }
         verify(exactly = 0) { jobNotifier.autoDisableConnection(any(), any()) }
@@ -532,7 +532,7 @@ class ConnectionServiceTest {
         every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(mostRecentJob)
         every { connectionRepository.getStandardSync(connectionId) } returns sync
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { jobNotifier.autoDisableConnectionWarning(any(), any()) }
       }
@@ -551,7 +551,7 @@ class ConnectionServiceTest {
         every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), 1L, JobStatus.FAILED) } returns null
         every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
 
-        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+        assertFalse(helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp))
 
         verify(exactly = 0) { connectionRepository.writeStandardSync(any()) }
       }

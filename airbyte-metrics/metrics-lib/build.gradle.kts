@@ -29,7 +29,6 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
   testImplementation(libs.junit.jupiter.system.stubs)
-  testImplementation(libs.junit.pioneer)
 }
 
 tasks.named<Test>("test") {

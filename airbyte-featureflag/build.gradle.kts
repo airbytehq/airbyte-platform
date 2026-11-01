@@ -21,8 +21,6 @@ dependencies {
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
-  testImplementation(kotlin("test"))
-  testImplementation(kotlin("test-junit5"))
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.junit)

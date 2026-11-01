@@ -27,8 +27,6 @@ dependencies {
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
-  testImplementation(libs.kotlin.test.runner.junit5)
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

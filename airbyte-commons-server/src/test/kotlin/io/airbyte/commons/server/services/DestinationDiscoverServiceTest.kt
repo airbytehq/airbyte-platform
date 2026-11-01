@@ -25,10 +25,11 @@ import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.DestinationCatalogId
 import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
-import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -110,7 +111,7 @@ class DestinationDiscoverServiceTest {
         assertThrows<ActorNotReadyProblem> {
           service.getDestinationCatalog(destinationId)
         }
-      problem.problem.getStatus() shouldBe 409
+      assertEquals(409, problem.problem.getStatus())
 
       verify(exactly = 0) { synchronousSchedulerClient.createDestinationDiscoverJob(any(), any(), any()) }
     }
@@ -142,8 +143,8 @@ class DestinationDiscoverServiceTest {
 
       val result = service.getDestinationCatalog(destinationId)
 
-      result.catalogId shouldBe DestinationCatalogId(catalogId)
-      result.catalog shouldBe mockCatalog.toModel()
+      assertEquals(DestinationCatalogId(catalogId), result.catalogId)
+      assertEquals(mockCatalog.toModel(), result.catalog)
     }
 
     @Test
@@ -176,8 +177,8 @@ class DestinationDiscoverServiceTest {
 
       val result = service.getDestinationCatalog(destinationId)
 
-      result.catalogId shouldBe DestinationCatalogId(catalogId)
-      result.catalog shouldBe mockCatalog.toModel()
+      assertEquals(DestinationCatalogId(catalogId), result.catalogId)
+      assertEquals(mockCatalog.toModel(), result.catalog)
 
       verify {
         catalogService.getActorCatalog(destinationId.value, "1.0.0", any())
@@ -278,8 +279,8 @@ class DestinationDiscoverServiceTest {
 
       val result = service.getDestinationCatalog(connectionId)
 
-      result.catalogId shouldBe DestinationCatalogId(catalogId)
-      result.catalog shouldBe mockCatalog.toModel()
+      assertEquals(DestinationCatalogId(catalogId), result.catalogId)
+      assertEquals(mockCatalog.toModel(), result.catalog)
     }
   }
 
@@ -306,7 +307,7 @@ class DestinationDiscoverServiceTest {
 
       val result = service.getDestinationCatalogIfSupported(destinationId)
 
-      result shouldBe null
+      assertNull(result)
     }
   }
 
@@ -323,7 +324,7 @@ class DestinationDiscoverServiceTest {
 
       val res = service.writeDiscoverCatalogResult(destinationId, mockCatalog.toModel(), configHash, destinationVersion)
 
-      res shouldBe catalogId
+      assertEquals(catalogId, res)
 
       verify {
         catalogService.writeActorCatalogWithFetchEvent(
