@@ -10,6 +10,7 @@ import {
   ISO8601DateTime,
 } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { wholeDaysUntil } from "core/utils/time";
 
 export interface UseOrganizationSubscriptionStatusReturn {
   // Organization plan information
@@ -71,7 +72,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
       return 0;
     }
     try {
-      return Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0);
+      return wholeDaysUntil(trialStatus.trialEndsAt);
     } catch {
       return 0;
     }

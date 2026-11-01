@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 
 import { TestWrapper } from "test-utils";
 
-import { moveTimeToFutureByPeriod, useFormatLengthOfTime } from "./time";
+import { moveTimeToFutureByPeriod, useFormatLengthOfTime, wholeDaysUntil } from "./time";
 
 describe("moveTimeToFutureByPeriod", () => {
   it("does nothing if the time is already in the future", () => {
@@ -62,14 +62,14 @@ describe("moveTimeToFutureByPeriod", () => {
         const now = Date.now();
         const past = dayjs(now).subtract(2, "year");
         const future = moveTimeToFutureByPeriod(past, 4, "year");
-        expect(future.diff(now, "day")).toBe(730); // 2 years = 730 days, dayjs's diff does _things_ that makes 370 days return 1 year
+        expect(wholeDaysUntil(future, now)).toBe(730); // 2 years = 730 days
       }
 
       {
         const now = Date.now();
         const past = dayjs(now).subtract(6 * 4 + 1, "year");
         const future = moveTimeToFutureByPeriod(past, 4, "year");
-        expect(future.diff(now, "days")).toBe(365 * 3 - 6); // 6*4=24 years worth, including 6 leaps days
+        expect(wholeDaysUntil(future, now)).toBe(365 * 3 - 6); // 6*4=24 years worth, including 6 leaps days
       }
     });
   });
@@ -124,5 +124,21 @@ describe("useFormatLengthOfTime", () => {
     expect(renderHook(() => useFormatLengthOfTime(10 * 1000), { wrapper: TestWrapper }).result.current).toBe("10s");
 
     expect(renderHook(() => useFormatLengthOfTime(1 * 1000), { wrapper: TestWrapper }).result.current).toBe("1s");
+  });
+});
+
+describe("wholeDaysUntil", () => {
+  it("floors whole elapsed days and never goes negative", () => {
+    const from = "2026-06-15T12:00:00Z";
+    expect(wholeDaysUntil("2026-06-16T13:00:00Z", from)).toBe(1);
+    expect(wholeDaysUntil("2026-06-16T11:59:00Z", from)).toBe(0);
+    expect(wholeDaysUntil("2026-06-14T12:00:00Z", from)).toBe(0);
+  });
+
+  it("is not shifted by a daylight saving change (tests run in US/Pacific)", () => {
+    // 24.5 hours across the fall-back on 2026-11-01: a calendar-day diff gives 0.
+    expect(wholeDaysUntil("2026-11-01T19:43:00Z", "2026-10-31T19:13:00Z")).toBe(1);
+    // 47.5 hours across the spring-forward on 2026-03-08: a calendar-day diff gives 2.
+    expect(wholeDaysUntil("2026-03-09T18:43:00Z", "2026-03-07T19:13:00Z")).toBe(1);
   });
 });

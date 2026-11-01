@@ -260,7 +260,15 @@ module.exports = {
     "no-octal": "warn",
     "no-octal-escape": "warn",
     "no-regex-spaces": "warn",
-    "no-restricted-syntax": ["warn", "WithStatement"],
+    "no-restricted-syntax": [
+      "error",
+      "WithStatement",
+      {
+        selector: 'CallExpression[callee.property.name="diff"][arguments.1.value=/^(d|day|days|w|week|weeks)$/]',
+        message:
+          "dayjs diff in day or week units subtracts the UTC-offset change between the two instants, so the result shifts by an hour across a daylight saving change. Count elapsed hours instead (wholeDaysUntil in core/utils/time), or compare startOf('day') values when you mean calendar days.",
+      },
+    ],
     "no-script-url": "warn",
     "no-self-assign": "warn",
     "no-self-compare": "warn",

@@ -113,23 +113,49 @@ describe("StatusBanner", () => {
     expect(wrapper.getByRole("link")).toHaveAttribute("href", "/organization/test-organization-id/settings/billing");
   });
 
-  it.each([
-    ["without link (1 day)", 25, false],
-    ["without link (very soon)", 5, false],
-    ["with link (1 day)", 25, true],
-    ["with link (very soon)", 5, true],
-  ])("should render grace period banner %s", async (_scenario, hours, canManageOrganizationBilling) => {
-    mockSubscriptionStatus({
-      paymentStatus: "grace_period",
-      subscriptionStatus: "subscribed",
-      gracePeriodEndsAt: dayjs().add(hours, "hours").valueOf(),
-      canManageOrganizationBilling,
+  describe("grace period", () => {
+    beforeAll(() => {
+      jest.useFakeTimers();
     });
-    const wrapper = await render(<StatusBanner />);
-    expect(wrapper.container.textContent).toContain(
-      hours === 25 ? "your syncs will be disabled in 1 day" : "your syncs will be disabled very soon"
-    );
-    expect(wrapper.queryByRole("link") !== null).toBe(canManageOrganizationBilling);
+
+    beforeEach(() => {
+      jest.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
+    it.each([
+      ["without link (1 day)", 25, false],
+      ["without link (very soon)", 5, false],
+      ["with link (1 day)", 25, true],
+      ["with link (very soon)", 5, true],
+    ])("should render grace period banner %s", async (_scenario, hours, canManageOrganizationBilling) => {
+      mockSubscriptionStatus({
+        paymentStatus: "grace_period",
+        subscriptionStatus: "subscribed",
+        gracePeriodEndsAt: dayjs().add(hours, "hours").valueOf(),
+        canManageOrganizationBilling,
+      });
+      const wrapper = await render(<StatusBanner />);
+      expect(wrapper.container.textContent).toContain(
+        hours === 25 ? "your syncs will be disabled in 1 day" : "your syncs will be disabled very soon"
+      );
+      expect(wrapper.queryByRole("link") !== null).toBe(canManageOrganizationBilling);
+    });
+
+    it("counts whole elapsed days when the grace period crosses a daylight saving change", async () => {
+      // Tests run in US/Pacific, which falls back one hour at 02:00 on 2026-11-01.
+      jest.setSystemTime(new Date("2026-10-31T19:13:00Z"));
+      mockSubscriptionStatus({
+        paymentStatus: "grace_period",
+        subscriptionStatus: "subscribed",
+        gracePeriodEndsAt: dayjs().add(24, "hours").add(30, "minutes").valueOf(),
+      });
+      const wrapper = await render(<StatusBanner />);
+      expect(wrapper.container.textContent).toContain("your syncs will be disabled in 1 day");
+    });
   });
 
   it("should not render banner when billing is undefined", async () => {

@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import React from "react";
 import { FormattedTime, useIntl } from "react-intl";
 
@@ -6,6 +5,7 @@ import { ExternalLink, Link } from "components/ui/Link";
 
 import { useExperiment } from "core/services/Experiment";
 import { links } from "core/utils/links";
+import { wholeDaysUntil } from "core/utils/time";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { useLinkToBillingPage } from "./useLinkToBillingPage";
@@ -92,7 +92,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   }
 
   if (paymentStatus === "grace_period") {
-    const gracePeriodDaysLeft = gracePeriodEndsAt ? Math.max(dayjs(gracePeriodEndsAt).diff(dayjs(), "days"), 0) : 0;
+    const gracePeriodDaysLeft = gracePeriodEndsAt ? wholeDaysUntil(gracePeriodEndsAt) : 0;
     return {
       level: "warning",
       content: formatMessage(

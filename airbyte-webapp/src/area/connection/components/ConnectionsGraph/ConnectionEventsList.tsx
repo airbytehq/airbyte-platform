@@ -81,7 +81,8 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
     return alphabeticallySortedGroups;
   }, [events]);
 
-  const windowIsLessThanOneDay = Math.abs(dayjs(end).diff(dayjs(start), "day")) < 1;
+  // Windows are built with dayjs add(), so compare against a calendar day: 23 or 25 hours on a daylight saving day.
+  const windowIsLessThanOneDay = dayjs(end).isBefore(dayjs(start).add(1, "day"));
 
   return (
     <Box px="lg">

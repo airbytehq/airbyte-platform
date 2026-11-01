@@ -1,5 +1,4 @@
 import { renderHook } from "@testing-library/react";
-import dayjs from "dayjs";
 
 import { useOrganizationTrialStatus, useOrgInfo, useCurrentOrganizationInfo } from "core/api";
 import {
@@ -15,7 +14,6 @@ import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscription
 // Mock dependencies
 jest.mock("core/api");
 jest.mock("core/utils/rbac");
-jest.mock("dayjs");
 
 const mockUseOrgInfo = useOrgInfo as jest.MockedFunction<typeof useOrgInfo>;
 const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.MockedFunction<
@@ -25,7 +23,6 @@ const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof 
 const mockUseOrganizationTrialStatus = useOrganizationTrialStatus as jest.MockedFunction<
   typeof useOrganizationTrialStatus
 >;
-const mockDayjs = dayjs as jest.MockedFunction<typeof dayjs>;
 
 // Test data fixtures
 const mockOrganizationId = "test-org-id";
@@ -53,9 +50,18 @@ const createMockOrgInfo = (
 });
 
 describe("useOrganizationSubscriptionStatus", () => {
+  beforeAll(() => {
+    jest.useFakeTimers();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
+    jest.setSystemTime(new Date("2024-01-10T00:00:00Z"));
 
     // Setup default mocks
     mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
@@ -68,12 +74,10 @@ describe("useOrganizationSubscriptionStatus", () => {
     });
     mockUseGeneratedIntent.mockReturnValue(true);
     mockUseOrganizationTrialStatus.mockReturnValue(undefined);
-    mockDayjs.mockReturnValue({ diff: jest.fn().mockReturnValue(0) } as unknown as dayjs.Dayjs);
   });
 
   describe("Trial state", () => {
     it("calculates remaining trial days", () => {
-      mockDayjs.mockReturnValue({ diff: jest.fn().mockReturnValue(5) } as unknown as dayjs.Dayjs);
       mockUseOrganizationTrialStatus.mockReturnValue(createMockTrialStatus("in_trial", mockTrialEndDate));
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
       expect(result.current.trialDaysLeft).toBe(5);
@@ -81,11 +85,18 @@ describe("useOrganizationSubscriptionStatus", () => {
     });
 
     it("detects a trial ending within 24 hours", () => {
-      const diff = jest.fn().mockReturnValueOnce(0).mockReturnValueOnce(20);
-      mockDayjs.mockReturnValue({ diff } as unknown as dayjs.Dayjs);
-      mockUseOrganizationTrialStatus.mockReturnValue(createMockTrialStatus("in_trial", mockTrialEndDate));
+      mockUseOrganizationTrialStatus.mockReturnValue(createMockTrialStatus("in_trial", "2024-01-10T20:00:00Z"));
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
       expect(result.current.isTrialEndingWithin24Hours).toBe(true);
+      expect(result.current.trialDaysLeft).toBe(0);
+    });
+
+    it("counts whole elapsed days when the trial crosses a daylight saving change", () => {
+      // Tests run in US/Pacific, which falls back one hour at 02:00 on 2026-11-01.
+      jest.setSystemTime(new Date("2026-10-31T19:13:00Z"));
+      mockUseOrganizationTrialStatus.mockReturnValue(createMockTrialStatus("in_trial", "2026-11-01T19:43:00Z"));
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+      expect(result.current.trialDaysLeft).toBe(1);
     });
 
     it("does not calculate trial state outside a trial", () => {

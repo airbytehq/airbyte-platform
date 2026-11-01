@@ -1,4 +1,4 @@
-import type { Dayjs, ManipulateType } from "dayjs";
+import type { ConfigType, Dayjs, ManipulateType } from "dayjs";
 
 import dayjs from "dayjs";
 import { useState } from "react";
@@ -23,6 +23,16 @@ export const moveTimeToFutureByPeriod = (time: Dayjs, value: number, unit: Manip
   }
   return time;
 };
+
+/**
+ * Whole days from `from` (default: now) until `to`, floored and never negative.
+ *
+ * Counts elapsed hours rather than calendar days. dayjs's day and week diffs subtract the
+ * UTC-offset change between the two instants, so across a daylight saving change a 25-hour
+ * span can come out as 0 days and a 47-hour span as 2.
+ */
+export const wholeDaysUntil = (to: ConfigType, from: ConfigType = Date.now()): number =>
+  Math.max(Math.floor(dayjs(to).diff(dayjs(from), "hours") / 24), 0);
 
 export const useFormatLengthOfTime = (lengthOfTimeMs: number | undefined) => {
   const { formatMessage } = useIntl();
