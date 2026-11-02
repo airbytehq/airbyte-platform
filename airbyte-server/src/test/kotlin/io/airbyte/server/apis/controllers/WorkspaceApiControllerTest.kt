@@ -20,9 +20,14 @@ import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.assertStatus
+import io.airbyte.server.auth.AuthorizedRequest
+import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.WorkspaceCreateRule
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpRequest
@@ -36,6 +41,7 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.Optional
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -61,6 +67,23 @@ internal class WorkspaceApiControllerTest {
     context.registerSingleton(CurrentUserService::class.java, currentUserService)
     workspacesHandler = mockk()
     context.registerSingleton(WorkspacesHandler::class.java, workspacesHandler)
+
+    val data = mockk<AuthorizationDataService>()
+    every { data.organization(any()) } answers { firstArg() }
+    every { data.existingWorkspaceAndOrganization(any()) } returns Optional.empty()
+    context.registerSingleton(
+      WorkspaceCreateRule::class.java,
+      WorkspaceCreateRule(data, OperationPermissions(mockk(), mockk(), false), permissionHandler, currentUserService, false),
+    )
+    val authorization = AuthorizedRequest(context, false)
+    every { context.getBean(AuthorizedRequest::class.java).execute(any()) } answers {
+      val invocation = firstArg<MethodInvocationContext<Any, Any>>()
+      if (invocation.methodName in setOf("createWorkspace", "createWorkspaceIfNotExist")) {
+        authorization.execute(invocation)
+      } else {
+        invocation.proceed()
+      }
+    }
   }
 
   @Test
@@ -92,8 +115,8 @@ internal class WorkspaceApiControllerTest {
 
     val path = "/api/v1/workspaces/create_if_not_exist"
 
-    // no org id, expect 200
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceCreateWithId(id = UUID.randomUUID(), name = "name"))))
+    // no org id, expect 400
+    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(path, WorkspaceCreateWithId(id = UUID.randomUUID(), name = "name"))))
     // org id present, permission check succeeds, expect 200
     assertStatus(
       HttpStatus.OK,

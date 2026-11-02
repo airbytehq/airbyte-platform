@@ -5,21 +5,25 @@
 package io.airbyte.server.auth
 
 import io.airbyte.api.server.generated.models.OrganizationInfoRead
-import io.airbyte.api.server.generated.models.PermissionCheckRead
 import io.airbyte.api.server.generated.models.WorkspaceRead
 import io.airbyte.api.server.generated.models.WorkspaceReadList
-import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
+import io.airbyte.commons.server.support.CommunityCurrentUserService
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.PermissionService
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.apis.controllers.WorkspaceApiController
+import io.micronaut.security.token.DefaultRolesFinder
+import io.micronaut.security.token.config.TokenConfigurationProperties
+import io.micronaut.security.utils.DefaultSecurityService
 import io.micronaut.security.utils.SecurityService
 import io.mockk.Called
 import io.mockk.Runs
@@ -39,6 +43,149 @@ abstract class RemainingWorkspaceAuthorizationHttpContract {
   protected open val cloud = false
 
   protected open fun configureDependency(instance: Any) = Unit
+
+  @Test
+  fun `workspace creation without authentication preserves the default user permission check`() {
+    for (path in listOf("/create", "/create_if_not_exist")) {
+      exerciseCreation(path, security = false, granted = true, expected = 200)
+      exerciseCreation(path, security = false, granted = false, expected = 403)
+    }
+  }
+
+  @Test
+  fun `workspace creation accepts internal callers without human records or administrator labels`() {
+    for (path in listOf("/create", "/create_if_not_exist")) {
+      exerciseCreation(path, token = "internal-without-roles", userExists = false, expected = 200)
+    }
+  }
+
+  @Test
+  fun `workspace creation preserves controller exception mapping for ordinary and internal callers`() {
+    for (path in listOf("/create", "/create_if_not_exist")) {
+      exerciseCreation(path, businessConflict = true, expected = 500)
+      exerciseCreation(path, businessConflict = true, token = "internal", expected = if (cloud) 409 else 500)
+    }
+  }
+
+  @Test
+  fun `workspace creation requires organization administration even with administrator labels`() {
+    for (path in listOf("/create", "/create_if_not_exist")) {
+      exerciseCreation(path, expected = 200)
+      exerciseCreation(path, granted = false, token = "user", expected = 403)
+    }
+  }
+
+  @Test
+  fun `workspace recreation checks the existing owner as well as the requested organization`() {
+    exerciseCreation("/create_if_not_exist", foreignExisting = true, expected = 403)
+    exerciseCreation("/create_if_not_exist", foreignExisting = true, token = "internal", userExists = false, expected = 200)
+    exerciseCreation("/create_if_not_exist", foreignExisting = true, security = false, expected = 200)
+  }
+
+  @Test
+  fun `workspace recreation without an organization stays a bad request in every auth mode`() {
+    exerciseCreation("/create_if_not_exist", omitOrganization = true, expected = 400)
+    exerciseCreation("/create_if_not_exist", omitOrganization = true, security = false, expected = 400)
+  }
+
+  @Test
+  fun `workspace creation preserves no auth permission dependency errors`() {
+    for (path in listOf("/create", "/create_if_not_exist")) {
+      exerciseCreation(path, security = false, permissionLookupFailure = true, expected = 500)
+    }
+  }
+
+  private fun exerciseCreation(
+    path: String,
+    security: Boolean = true,
+    granted: Boolean = true,
+    token: String = "user-without-roles",
+    userExists: Boolean = true,
+    businessConflict: Boolean = false,
+    foreignExisting: Boolean = false,
+    omitOrganization: Boolean = false,
+    permissionLookupFailure: Boolean = false,
+    expected: Int,
+  ) {
+    val data = mockk<AuthorizationDataService>()
+    every { data.organization(ORGANIZATION) } returns ORGANIZATION
+    every { data.existingWorkspaceAndOrganization(WORKSPACE) } returns
+      if (foreignExisting) Optional.of(WorkspaceAndOrganization(WORKSPACE, OTHER_ORGANIZATION)) else Optional.empty()
+    val grants = mockk<PermissionService>()
+    val permissions =
+      if (granted) {
+        listOf(
+          Permission()
+            .withPermissionId(UUID(0, 19))
+            .withUserId(USER)
+            .withOrganizationId(ORGANIZATION)
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN),
+        )
+      } else {
+        emptyList()
+      }
+    every { grants.getPermissionsByAuthUserId("caller") } returns permissions
+    every { grants.getEffectivePermissionsForUser(USER) } returns permissions
+    if (permissionLookupFailure) every { grants.getEffectivePermissionsForUser(USER) } throws java.io.IOException("permission storage unavailable")
+    val users = mockk<UserPersistence>()
+    every { users.getDefaultUser() } returns
+      if (userExists) Optional.of(AuthenticatedUser().withUserId(USER).withAuthUserId("caller")) else Optional.empty()
+    val controller = if (cloud) Class.forName("io.airbyte.server.wrapped.apis.WorkspaceApiWrappedController") else WorkspaceApiController::class.java
+    RemainingOperationHttpSupport(cloud, listOf(controller), setOf(WorkspaceCreateRule::class.java.name), security).run(
+      configure = { context, business ->
+        business.filterIsInstance<WorkspacesHandler>().forEach { handler ->
+          every { handler.createWorkspace(match { it.organizationId == ORGANIZATION && it.name == "fixture" }) } returns workspace()
+          every { handler.createWorkspaceIfNotExist(match { it.id == WORKSPACE && it.organizationId == ORGANIZATION }) } returns workspace()
+          if (businessConflict) {
+            every { handler.createWorkspace(any()) } throws IllegalStateException("workspace conflict")
+            every { handler.createWorkspaceIfNotExist(any()) } throws IllegalStateException("workspace conflict")
+          }
+        }
+        context.registerSingleton(AuthorizationDataService::class.java, data)
+        context.registerSingleton(CurrentUserService::class.java, CommunityCurrentUserService(users))
+        context.registerSingleton(PermissionHandler::class.java, PermissionHandler(mockk(), mockk(), { UUID.randomUUID() }, grants))
+        context.registerSingleton(SecurityService::class.java, DefaultSecurityService(DefaultRolesFinder(TokenConfigurationProperties())))
+        context.registerSingleton(
+          OperationPermissions::class.java,
+          OperationPermissions(grants, RoleResolver(mockk(), mockk(), mockk(), mockk()), security),
+        )
+      },
+      check = { _, server, business ->
+        val body =
+          when {
+            path == "/create" -> """{"organizationId":"$ORGANIZATION","name":"fixture"}"""
+            omitOrganization -> """{"id":"$WORKSPACE","name":"fixture"}"""
+            else -> """{"id":"$WORKSPACE","organizationId":"$ORGANIZATION","name":"fixture"}"""
+          }
+        val response = RemainingOperationHttpSupport.request(server, "POST", "/api/v1/workspaces$path", body, if (security) token else "")
+        assertEquals(expected, response.statusCode(), response.body())
+        if (expected == 403 || expected == 400) {
+          if (!security && expected == 403) {
+            assertEquals(
+              "User does not have permission to create a workspace in organization $ORGANIZATION",
+              Jsons
+                .deserialize(response.body())
+                .path("data")
+                .path("message")
+                .asText(),
+            )
+          }
+          RemainingOperationHttpSupport.requireNoBusiness(business)
+        } else if (expected == 200) {
+          assertEquals(WORKSPACE.toString(), Jsons.deserialize(response.body()).path("workspaceId").asText())
+        } else if (expected == 409) {
+          assertEquals("Could not fulfill request: workspace conflict", Jsons.deserialize(response.body()).path("message").asText())
+        } else if (expected == 500) {
+          assertTrue(Jsons.deserialize(response.body()).hasNonNull("errorId"), response.body())
+          if (permissionLookupFailure) RemainingOperationHttpSupport.requireNoBusiness(business)
+        }
+        if (security) {
+          verify(exactly = 0) { users.getDefaultUser() }
+          verify(exactly = 0) { grants.getEffectivePermissionsForUser(any()) }
+        }
+      },
+    )
+  }
 
   @Test
   fun `workspace reads reject workload credentials before reading configuration despite administrator labels`() {
@@ -294,9 +441,7 @@ abstract class RemainingWorkspaceAuthorizationHttpContract {
               every { instance.setFeedbackDone(match { it.workspaceId == WORKSPACE }) } just Runs
               every { instance.deleteWorkspace(match { it.workspaceId == WORKSPACE }) } just Runs
             }
-            is PermissionHandler -> every { instance.checkPermissions(any()) } returns PermissionCheckRead(PermissionCheckRead.Status.SUCCEEDED)
             is CurrentUserService -> every { instance.getCurrentUser() } returns AuthenticatedUser().withUserId(USER).withAuthUserId("caller")
-            is SecurityService -> every { instance.hasRole(AuthRoleConstants.ADMIN) } returns true
           }
           configureDependency(instance)
         }
@@ -337,6 +482,10 @@ abstract class RemainingWorkspaceAuthorizationHttpContract {
           }
         every { grants.getPermissionsByAuthUserId("caller") } returns permissions
         every { grants.getPermissionsByServiceAccountId(UUID(0, 9)) } returns permissions
+        every { grants.getEffectivePermissionsForUser(USER) } returns
+          listOf(Permission().withPermissionId(UUID(0, 19)).withUserId(USER).withPermissionType(Permission.PermissionType.INSTANCE_ADMIN))
+        context.registerSingleton(PermissionHandler::class.java, PermissionHandler(mockk(), mockk(), { UUID.randomUUID() }, grants))
+        context.registerSingleton(SecurityService::class.java, DefaultSecurityService(DefaultRolesFinder(TokenConfigurationProperties())))
         context.registerSingleton(AuthorizationDataService::class.java, data)
         context.registerSingleton(
           OperationPermissions::class.java,

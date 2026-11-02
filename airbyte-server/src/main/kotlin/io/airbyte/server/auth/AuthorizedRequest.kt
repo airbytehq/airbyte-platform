@@ -9,9 +9,9 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.BeanContext
@@ -48,8 +48,7 @@ class AuthorizedRequest(
     val ruleType = declared.asSubclass(OperationRule::class.java)
     if (ruleType == OperationRule::class.java ||
       route.annotationMetadata.classValue(AuthorizeOperation::class.java, "rule").orElseThrow { ForbiddenProblem() } != ruleType ||
-      route.annotationMetadata.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElseThrow() !=
-      RouteMigration.SHARED ||
+      route.annotationMetadata.hasAnnotation(ConfigSearchAccessException::class.java) ||
       route.annotationMetadata.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow() !=
       RouteAccessPolicy.PROTECTED ||
       route.targetMethod.methodName != context.methodName ||

@@ -27,7 +27,6 @@ import io.airbyte.api.server.generated.models.ConnectorRolloutStartResponse
 import io.airbyte.api.server.generated.models.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandlerManual
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
@@ -62,10 +61,8 @@ class ConnectorRolloutApiController(
   //  Endpoints hit by the connector rollout workflow
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutWorkerRule::class,
   )
   override fun startConnectorRollout(
@@ -82,10 +79,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutWorkerRule::class,
   )
   override fun doConnectorRollout(
@@ -100,10 +95,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutWorkerRule::class,
   )
   override fun finalizeConnectorRollout(
@@ -118,10 +111,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutReadRule::class,
   )
   override fun getConnectorRolloutById(
@@ -137,10 +128,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutWorkerRule::class,
   )
   override fun updateConnectorRolloutState(
@@ -157,10 +146,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutFilterRule::class,
   )
   override fun getConnectorRolloutsList(
@@ -178,10 +165,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GlobalAdminRule::class,
   )
   override fun getConnectorRolloutsListAll(): ConnectorRolloutListResponse =
@@ -193,10 +178,8 @@ class ConnectorRolloutApiController(
     )
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutFilterRule::class,
   )
   override fun getConnectorRolloutsListByActorDefinitionId(
@@ -211,10 +194,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutReadRule::class,
   )
   override fun getConnectorRolloutActorSyncInfo(
@@ -239,10 +220,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutManualStartRule::class,
   )
   override fun manualStartConnectorRollout(
@@ -257,10 +236,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutManualChangeRule::class,
   )
   override fun manualDoConnectorRollout(
@@ -275,10 +252,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutManualChangeRule::class,
   )
   override fun manualFinalizeConnectorRollout(
@@ -293,10 +268,8 @@ class ConnectorRolloutApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RolloutManualChangeRule::class,
   )
   override fun manualPauseConnectorRollout(

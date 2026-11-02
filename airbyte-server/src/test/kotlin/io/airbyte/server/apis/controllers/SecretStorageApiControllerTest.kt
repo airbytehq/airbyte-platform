@@ -91,8 +91,6 @@ internal class SecretStorageApiControllerTest {
   @MockBean(CurrentUserService::class)
   fun currentUserService(): CurrentUserService = mockk()
 
-  private val roleResolver = mockk<RoleResolver>()
-
   @Test
   fun testGetSecretStorageById() {
     val secretStorageId = SecretStorageId(UUID.randomUUID())

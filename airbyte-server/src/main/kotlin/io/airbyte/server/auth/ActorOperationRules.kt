@@ -246,7 +246,7 @@ class DestinationCatalogWriteRule(
 class FusionSourceReadRule(
   data: AuthorizationDataService,
   permissions: OperationPermissions,
-) : ActorOperationRule(data, permissions, true, setOf(AuthRoleConstants.WORKSPACE_READER), OperationCaller.entries.toSet()) {
+) : ActorOperationRule(data, permissions, true, setOf(AuthRoleConstants.WORKSPACE_READER), setOf(OperationCaller.USER)) {
   override fun readInput(args: Array<out Any?>): ActorOperationInput =
     ActorOperationInput.Saved(args.firstOrNull() as? UUID ?: throw BadRequestProblem())
 }
@@ -255,7 +255,7 @@ class FusionSourceReadRule(
 class FusionDestinationReadRule(
   data: AuthorizationDataService,
   permissions: OperationPermissions,
-) : ActorOperationRule(data, permissions, false, setOf(AuthRoleConstants.WORKSPACE_READER), OperationCaller.entries.toSet()) {
+) : ActorOperationRule(data, permissions, false, setOf(AuthRoleConstants.WORKSPACE_READER), setOf(OperationCaller.USER)) {
   override fun readInput(args: Array<out Any?>): ActorOperationInput =
     ActorOperationInput.Saved(args.firstOrNull() as? UUID ?: throw BadRequestProblem())
 }
@@ -264,7 +264,7 @@ class FusionDestinationReadRule(
 class FusionSourceWriteRule(
   data: AuthorizationDataService,
   permissions: OperationPermissions,
-) : ActorOperationRule(data, permissions, true, sourceWriteRoles, OperationCaller.entries.toSet()) {
+) : ActorOperationRule(data, permissions, true, sourceWriteRoles, setOf(OperationCaller.USER)) {
   override fun readInput(args: Array<out Any?>): ActorOperationInput =
     ActorOperationInput.Saved(args.firstOrNull() as? UUID ?: throw BadRequestProblem())
 }
@@ -273,7 +273,7 @@ class FusionSourceWriteRule(
 class FusionDestinationWriteRule(
   data: AuthorizationDataService,
   permissions: OperationPermissions,
-) : ActorOperationRule(data, permissions, false, destinationWriteRoles, OperationCaller.entries.toSet()) {
+) : ActorOperationRule(data, permissions, false, destinationWriteRoles, setOf(OperationCaller.USER)) {
   override fun readInput(args: Array<out Any?>): ActorOperationInput =
     ActorOperationInput.Saved(args.firstOrNull() as? UUID ?: throw BadRequestProblem())
 }

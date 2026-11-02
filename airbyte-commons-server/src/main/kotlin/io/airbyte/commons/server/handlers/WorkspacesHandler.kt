@@ -156,12 +156,13 @@ class WorkspacesHandler
       dataplaneGroupId: DataplaneGroupId,
       organizationId: OrganizationId,
     ) {
-      // First, ensure the current user is at least an org editor of the target org.
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withOrg(organizationId.value)
-        .requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
+      // Authenticate token callers without requiring a human user record.
+      val roleRequest = roleResolver.newRequest().withCurrentAuthentication()
+      if (roleRequest.subject == null) {
+        // No-auth deployments and direct callers retain the current user's permission check.
+        roleRequest.withCurrentUser()
+      }
+      roleRequest.withOrg(organizationId.value).requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
 
       // Then, check if the dataplaneGroupId is one of the defaults that every org can use.
       if (dataplaneGroupService.listDefaultDataplaneGroups().map { it.id }.contains(dataplaneGroupId.value)) {

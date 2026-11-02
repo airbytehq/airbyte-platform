@@ -16,8 +16,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.services.OrganizationDomainVerificationService
@@ -37,14 +35,11 @@ import io.micronaut.security.rules.SecurityRule
 open class DomainVerificationApiController(
   private val organizationDomainVerificationService: OrganizationDomainVerificationService,
   private val currentUserService: CurrentUserService,
-  private val roleResolver: RoleResolver,
 ) : DomainVerificationsApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DomainVerificationOrganizationRule::class,
   )
   override fun createDomainVerification(domainVerificationCreateRequestBody: DomainVerificationCreateRequestBody): DomainVerificationResponse {
@@ -65,10 +60,8 @@ open class DomainVerificationApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DomainVerificationOrganizationRule::class,
   )
   override fun listDomainVerifications(organizationIdRequestBody: OrganizationIdRequestBody): DomainVerificationListResponse {
@@ -83,10 +76,8 @@ open class DomainVerificationApiController(
    * Requires instance ADMIN role because it spans all organizations.
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GlobalAdminRule::class,
   )
   override fun listPendingDomainVerifications(): DomainVerificationListResponse {
@@ -102,10 +93,8 @@ open class DomainVerificationApiController(
    * organization admin users who want to initiate a manual check.
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SavedDomainVerificationRule::class,
   )
   override fun checkDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
@@ -123,10 +112,8 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SavedDomainVerificationRule::class,
   )
   override fun deleteDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody) {
@@ -148,10 +135,8 @@ open class DomainVerificationApiController(
    */
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SavedDomainVerificationRule::class,
   )
   override fun resetDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {

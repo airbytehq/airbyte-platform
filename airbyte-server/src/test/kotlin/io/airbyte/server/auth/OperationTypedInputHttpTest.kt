@@ -9,7 +9,6 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.config.ConfigNotFoundType
@@ -286,7 +285,7 @@ class OperationTypedController(
   private val business: OperationTypedBusiness,
 ) {
   @Post("/{organizationId}")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationTypedRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationTypedRule::class)
   fun read(
     @Body body: OperationTypedBody,
     @PathVariable organizationId: UUID,
@@ -294,7 +293,7 @@ class OperationTypedController(
   ): String = business.read(body, organizationId)
 
   @Post("/workspace/{organizationId}")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationWorkspaceTypedRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationWorkspaceTypedRule::class)
   fun readWorkspace(
     @Body body: OperationTypedBody,
     @PathVariable organizationId: UUID,

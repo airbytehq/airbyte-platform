@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.JobRetryStateRequestBody
 import io.airbyte.api.server.generated.models.RetryStateRead
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.JobAdminReadRule
@@ -32,7 +31,6 @@ class JobRetryStatesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminReadRule::class,
   )
   override fun get(
@@ -46,7 +44,6 @@ class JobRetryStatesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun createOrUpdate(

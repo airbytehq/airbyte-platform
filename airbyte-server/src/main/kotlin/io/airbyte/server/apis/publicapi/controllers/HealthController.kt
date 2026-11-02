@@ -7,7 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.problems.throwable.generated.ServiceUnavailableProblem
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.HttpResponse
@@ -40,7 +39,6 @@ class HealthController(
   @ExecuteOn(AirbyteTaskExecutors.HEALTH)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PUBLIC,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   fun healthCheck(): HttpResponse<String> {
     if (healthCheckHandler.health().available) {

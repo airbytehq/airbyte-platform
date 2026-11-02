@@ -80,11 +80,15 @@ class RemainingOperationHttpSupport(
         mapOf(
           "spec.name" to "RemainingOperationHttpTest",
           "micronaut.security.enabled" to security,
+          "micronaut.security.token.jwt.enabled" to security,
           "micronaut.security.filter.enabled" to security,
           "micronaut.server.port" to -1,
           "micronaut.server.host" to "127.0.0.1",
           "micronaut.metrics.enabled" to false,
+          "jackson.serialization-inclusion" to "NON_ABSENT",
           "micronaut.executors.io.type" to "cached",
+          "micronaut.executors.public-api.type" to "cached",
+          "micronaut.executors.health.type" to "cached",
           "micronaut.executors.scheduler.type" to "cached",
           "micronaut.executors.webhook.type" to "cached",
           "micronaut.executors.sonar-forwarding.type" to "cached",
@@ -103,6 +107,8 @@ class RemainingOperationHttpSupport(
           val type = parameter.type as Class<Any>
           val instance =
             when (type.name) {
+              "io.airbyte.config.Configs\$AirbyteEdition" ->
+                if (cloud) io.airbyte.config.Configs.AirbyteEdition.CLOUD else io.airbyte.config.Configs.AirbyteEdition.COMMUNITY
               "com.fasterxml.jackson.databind.ObjectMapper" -> MoreMappers.initMapper()
               "io.airbyte.server.wrapped.apis.ApiHelper" -> type.getConstructor().newInstance()
               else -> mockkClass(type.kotlin).also(business::add)
@@ -138,7 +144,7 @@ class RemainingOperationHttpSupport(
           java.net.http.HttpRequest
             .newBuilder(URI("${server.url}$path"))
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer $token")
+            .apply { if (token.isNotEmpty()) header("Authorization", "Bearer $token") }
             .method(
               method,
               java.net.http.HttpRequest.BodyPublishers
@@ -188,8 +194,8 @@ class RemainingOperationAuthentication : AuthenticationFetcher<HttpRequest<*>> {
         .removePrefix("Bearer ")
     val attributes =
       when {
-        token == "user" || token == "application-owner" -> emptyMap()
-        token == "internal" -> mapOf(TokenType.INTERNAL_CLIENT.toClaim())
+        token == "user" || token == "user-without-roles" || token == "application-owner" -> emptyMap()
+        token == "internal" || token == "internal-without-roles" -> mapOf(TokenType.INTERNAL_CLIENT.toClaim())
         token == "dataplane" -> mapOf(TokenType.DATAPLANE_V1.toClaim())
         token == "service" -> mapOf(TokenType.SERVICE_ACCOUNT.toClaim())
         token == "embedded" -> mapOf(TokenType.EMBEDDED_V1.toClaim())
@@ -203,7 +209,8 @@ class RemainingOperationAuthentication : AuthenticationFetcher<HttpRequest<*>> {
         else -> return Publishers.empty()
       }
     val subject = if (token == "dataplane" || token == "service") UUID(0, 9).toString() else "caller"
-    return Publishers.just(Authentication.build(subject, listOf(AuthRoleConstants.ADMIN), attributes))
+    val roles = if (token == "user-without-roles" || token == "internal-without-roles") emptyList() else listOf(AuthRoleConstants.ADMIN)
+    return Publishers.just(Authentication.build(subject, roles, attributes))
   }
 }
 

@@ -9,7 +9,6 @@ import io.airbyte.api.server.generated.models.ConnectorDocumentationRead
 import io.airbyte.api.server.generated.models.ConnectorDocumentationRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectorDocumentationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -30,10 +29,8 @@ class ConnectorDocumentationApiController(
 ) : ConnectorDocumentationApi {
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.ConnectorDocumentationRule::class,
   )
   override fun getConnectorDocumentation(

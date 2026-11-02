@@ -6,7 +6,6 @@ package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationRule
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.io.service.SoftServiceLoader
 import io.micronaut.http.HttpMethod
@@ -82,7 +81,7 @@ class RouteAccessCoverageTest {
         controllers
           .flatMap { it.methods.toList() }
           .mapNotNull { it.getAnnotation(AuthorizeOperation::class.java) }
-          .filter { it.migration == RouteMigration.SHARED }
+          .filter { it.rule != OperationRule::class }
           .map { it.rule.java }
           .distinct()
           .filter { it != OperationRule::class.java }
@@ -119,35 +118,42 @@ class RouteAccessCoverageTest {
           "The separate workload API is not Config/public API",
         )
         val entries = routeAccessEntries(inventory)
+        assertSharedAuthorizationAuthority(entries)
+        assertPublicRouteHttpCoverage(entries, securityEnabled)
+        assertEquals(
+          emptyList<String>(),
+          entries.filter { it.path.startsWith("/api/public/") && it.searchException }.map { "${it.httpMethod} ${it.path}" },
+          "Every protected public API operation must execute a declared shared rule",
+        )
         assertRemainingProtectedConfigRoutes(inventory, "oss")
         val batch = entries.filter { it.path.startsWith("/api/v1/") && it.family in setOf("sources", "destinations", "connections") }
         val excludedSearches = setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
         assertEquals(
           emptyList<String>(),
-          batch.filter { it.path !in excludedSearches && it.migration != RouteMigration.SHARED }.map { "${it.httpMethod} ${it.path}" },
+          batch.filter { it.path !in excludedSearches && !it.hasSharedRule }.map { "${it.httpMethod} ${it.path}" },
           "Every protected operation in the first PLAT-1512 batch must execute a shared rule",
         )
-        assertEquals(excludedSearches, batch.filter { it.migration == RouteMigration.LEGACY }.map { it.path }.toSet())
+        assertEquals(excludedSearches, batch.filter { it.searchException }.map { it.path }.toSet())
         assertTrue(
           entries.any {
-            it.path == "/api/v1/connections/events/get" && it.migration == RouteMigration.SHARED &&
+            it.path == "/api/v1/connections/events/get" && it.hasSharedRule &&
               it.roles == listOf("isAuthenticated()") && it.implementation.endsWith("ConnectionApiController#getConnectionEvent")
           },
         )
         assertTrue(
           entries.any {
-            it.path == "/api/v1/sources/write_discover_catalog_result" && it.migration == RouteMigration.SHARED &&
+            it.path == "/api/v1/sources/write_discover_catalog_result" && it.hasSharedRule &&
               it.roles == listOf("isAuthenticated()") && it.implementation.endsWith("SourceApiController#writeDiscoverCatalogResult")
           },
         )
-        assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.migration == RouteMigration.SHARED })
+        assertTrue(entries.any { it.path == "/api/v1/commands/run/check" && it.hasSharedRule })
         for (path in listOf("run/connect", "output/connect")) {
-          assertTrue(entries.any { it.path == "/api/v1/commands/$path" && it.migration == RouteMigration.SHARED })
+          assertTrue(entries.any { it.path == "/api/v1/commands/$path" && it.hasSharedRule })
         }
         for (path in listOf("save_stats", "save_stream_metadata")) {
           assertTrue(
             entries.any {
-              it.path == "/api/v1/attempt/$path" && it.migration == RouteMigration.SHARED &&
+              it.path == "/api/v1/attempt/$path" && it.hasSharedRule &&
                 it.roles == listOf("isAuthenticated()")
             },
           )
@@ -179,7 +185,7 @@ class RouteAccessCoverageTest {
     Files.createDirectories(output)
     val summary =
       entries.filter { it.httpMethod != "HEAD" }.groupBy { it.family }.toSortedMap().map { (family, routes) ->
-        "| $family | ${routes.size} | ${routes.count { it.migration == RouteMigration.LEGACY }} |"
+        "| $family | ${routes.size} | ${routes.count { it.searchException }} |"
       }
     val rows =
       entries.map { route ->
@@ -187,9 +193,9 @@ class RouteAccessCoverageTest {
           route.httpMethod,
           route.path,
           route.access,
-          route.migration,
+          route.rule,
+          route.searchException,
           route.roles,
-          route.intent,
           route.implementation,
         ).joinToString(" | ", "| ", " |")
       }
@@ -198,16 +204,16 @@ class RouteAccessCoverageTest {
         appendLine("# $edition served route inventory")
         appendLine()
         appendLine("Derived from the active Micronaut Router. HEAD routes are automatic GET companions.")
-        appendLine("SHARED declarations execute typed rules before controller work; LEGACY routes retain their existing checks.")
+        appendLine("Protected declarations execute typed rules before controller work; marked Config searches retain their existing checks.")
         appendLine(
           "The protected Config API is migrated except for the three root searches.",
         )
         appendLine()
-        appendLine("| Family | Operations | LEGACY remaining |")
+        appendLine("| Family | Operations | Search exceptions |")
         appendLine("| --- | --- | --- |")
         appendLine(summary.joinToString("\n"))
         appendLine()
-        append("| Method | Path | Access | Migration | Secured roles | Intent |")
+        append("| Method | Path | Access | Rule | Search exception | Secured roles |")
         appendLine(" Implementation |")
         appendLine("| --- | --- | --- | --- | --- | --- | --- |")
         appendLine(rows.joinToString("\n"))

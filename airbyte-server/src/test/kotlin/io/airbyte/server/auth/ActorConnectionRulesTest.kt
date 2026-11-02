@@ -43,6 +43,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
@@ -481,8 +482,15 @@ class ActorConnectionRulesTest {
   ): AuthorizationDataService {
     val connections = mockk<ConnectionService>()
     every { connections.getStandardSync(CONNECTION) } returns sync
-    every { connections.listWorkspaceStandardSyncs(WORKSPACE, false) } returns listOf(sync)
-    if (failCascade) every { connections.listWorkspaceStandardSyncs(WORKSPACE, false) } throws IOException("cascade unavailable")
+    val queries =
+      listOf(
+        StandardSyncQuery(WORKSPACE, listOf(SOURCE), null, false),
+        StandardSyncQuery(WORKSPACE, null, listOf(DESTINATION), false),
+      )
+    for (query in queries) {
+      every { connections.listWorkspaceStandardSyncs(query) } returns listOf(sync)
+      if (failCascade) every { connections.listWorkspaceStandardSyncs(query) } throws IOException("cascade unavailable")
+    }
     val actors = mockk<ActorRepository>()
     every { actors.findSourceWorkspaceId(SOURCE) } returns Optional.of(WORKSPACE)
     every { actors.findDestinationWorkspaceId(DESTINATION) } returns Optional.of(WORKSPACE)

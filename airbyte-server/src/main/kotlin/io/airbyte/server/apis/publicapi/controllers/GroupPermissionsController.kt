@@ -8,13 +8,9 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
@@ -34,6 +30,9 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissionResponse
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissions
 import io.airbyte.server.apis.publicapi.mappers.toPermission
+import io.airbyte.server.auth.PublicGroupPermissionCreateRule
+import io.airbyte.server.auth.PublicGroupPermissionDeleteRule
+import io.airbyte.server.auth.PublicGroupSavedRule
 import io.airbyte.server.helpers.GroupPermissionValidator
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
@@ -50,7 +49,6 @@ open class GroupPermissionsController(
   private val groupService: GroupService,
   private val permissionService: PermissionService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
   private val groupPermissionValidator: GroupPermissionValidator,
@@ -58,7 +56,7 @@ open class GroupPermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicListGroupPermissions(groupId: UUID): Response {
     val group =
@@ -67,13 +65,6 @@ open class GroupPermissionsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin or higher to view group permissions
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
@@ -100,7 +91,7 @@ open class GroupPermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupPermissionCreateRule::class,
   )
   override fun publicCreateGroupPermission(
     groupId: UUID,
@@ -116,13 +107,6 @@ open class GroupPermissionsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin to assign permissions to groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
@@ -179,7 +163,7 @@ open class GroupPermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupPermissionDeleteRule::class,
   )
   override fun publicDeleteGroupPermission(
     groupId: UUID,
@@ -191,13 +175,6 @@ open class GroupPermissionsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin to remove permissions from groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)

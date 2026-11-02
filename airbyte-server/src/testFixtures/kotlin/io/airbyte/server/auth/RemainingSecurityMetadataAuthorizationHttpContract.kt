@@ -5,10 +5,8 @@
 package io.airbyte.server.auth
 
 import io.airbyte.api.server.generated.models.Tag
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
@@ -224,13 +222,6 @@ abstract class RemainingSecurityMetadataAuthorizationHttpContract {
               every { instance.resetDomainVerification(VERIFICATION) } returns verification
             }
             is CurrentUserService -> every { instance.getCurrentUser() } returns AuthenticatedUser().withUserId(USER)
-            is RoleResolver -> {
-              val request = mockk<RoleResolver.Request>()
-              every { instance.newRequest() } returns request
-              every { request.withCurrentAuthentication() } returns request
-              every { request.withRef(AuthenticationId.ORGANIZATION_ID, ORGANIZATION) } returns request
-              every { request.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN) } just Runs
-            }
             is TagHandler -> {
               val tag = Tag(tagId = TAG, workspaceId = WORKSPACE, name = "fixture", color = "123456")
               every { instance.getTagsForWorkspaces(listOf(WORKSPACE)) } returns listOf(tag)

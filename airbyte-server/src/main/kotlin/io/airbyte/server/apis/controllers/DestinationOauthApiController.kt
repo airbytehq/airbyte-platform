@@ -14,7 +14,6 @@ import io.airbyte.api.server.generated.models.OAuthConsentRead
 import io.airbyte.api.server.generated.models.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -32,10 +31,8 @@ class DestinationOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : DestinationOauthApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationOAuthFlowRule::class,
   )
   override fun completeDestinationOAuth(
@@ -49,10 +46,8 @@ class DestinationOauthApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationOAuthFlowRule::class,
   )
   override fun getDestinationOAuthConsent(
@@ -60,10 +55,8 @@ class DestinationOauthApiController(
   ): OAuthConsentRead = execute { oAuthHandler.getDestinationOAuthConsent(destinationOauthConsentRequest) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationOAuthInstanceRule::class,
   )
   override fun setInstancewideDestinationOauthParams(

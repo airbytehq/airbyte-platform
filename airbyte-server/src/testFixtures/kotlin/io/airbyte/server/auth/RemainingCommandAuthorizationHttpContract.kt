@@ -117,13 +117,6 @@ abstract class RemainingCommandAuthorizationHttpContract {
         every { service.createDiscoverCommand(ID, ACTOR, any(), any(), any(), any(), any()) } returns true
         every { service.createReplicateCommand(ID, CONNECTION, "17", 0L, any(), any(), any()) } returns true
         every { service.createSpecCommand(ID, DEFINITION, "1", WORKSPACE, any(), any()) } returns true
-        business.filterIsInstance<RoleResolver>().forEach { roles ->
-          val request = mockk<RoleResolver.Request>()
-          every { roles.newRequest() } returns request
-          every { request.withCurrentAuthentication() } returns request
-          every { request.withRef(any(), any<UUID>()) } returns request
-          every { request.requireOneOfRoles(any()) } just Runs
-        }
         business.filterIsInstance<ActorRepository>().forEach {
           every { it.findByActorId(ACTOR) } returns
             mockk { every { workspaceId } returns WORKSPACE }

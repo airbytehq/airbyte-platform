@@ -4,13 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicTagsApi
 import io.airbyte.publicApi.server.generated.models.TagCreateRequest
@@ -21,6 +17,10 @@ import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.constants.TAGS_PATH
 import io.airbyte.server.apis.publicapi.services.TagService
+import io.airbyte.server.auth.PublicTagCreateRule
+import io.airbyte.server.auth.PublicTagReadRule
+import io.airbyte.server.auth.PublicTagWriteRule
+import io.airbyte.server.auth.PublicWorkspaceListRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -30,16 +30,15 @@ import java.util.UUID
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
 open class TagsController(
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val tagService: TagService,
   private val trackingHelper: TrackingHelper,
 ) : PublicTagsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicTagCreateRule::class,
   )
   override fun publicCreateTag(tagCreateRequest: TagCreateRequest): Response {
     val tag =
@@ -55,23 +54,10 @@ open class TagsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicTagWriteRule::class,
   )
   override fun publicDeleteTag(tagId: UUID): Response {
-    // We need to manually fetch the workspaceId here because there is no Tag scope in the ApiAuthorizationHelper
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
 
     trackingHelper.callWithTracker({
       tagService.deleteTag(tagId, workspaceId)
@@ -84,18 +70,9 @@ open class TagsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicTagReadRule::class,
   )
   override fun publicGetTag(tagId: UUID): Response {
-    // We need to manually fetch the workspaceId here because there is no Tag scope in the ApiAuthorizationHelper
-    val workspaceId: UUID = tagService.getTag(tagId).workspaceId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
-
     val tag =
       trackingHelper.callWithTracker({
         tagService.getTag(tagId)
@@ -110,18 +87,10 @@ open class TagsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceListRule::class,
   )
   override fun publicListTags(workspaceIds: List<UUID>?): Response {
-    // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the TagService will determine the workspaces for the current user.
-    if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     val tags =
       trackingHelper.callWithTracker({
@@ -136,26 +105,13 @@ open class TagsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicTagWriteRule::class,
   )
   override fun publicUpdateTag(
     tagId: UUID,
     tagPatchRequest: TagPatchRequest,
   ): Response {
-    // We need to manually fetch the workspaceId here because there is no Tag scope in the ApiAuthorizationHelper
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
 
     val tag =
       trackingHelper.callWithTracker({

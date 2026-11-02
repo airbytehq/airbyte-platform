@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.ListDeclarativeManifestsRequestBod
 import io.airbyte.api.server.generated.models.UpdateActiveManifestRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -33,10 +32,8 @@ class DeclarativeSourceDefinitionsApiController(
 ) : DeclarativeSourceDefinitionsApi {
   @Status(HttpStatus.CREATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DeclarativeManifestRule::class,
   )
   override fun createDeclarativeSourceDefinitionManifest(
@@ -50,10 +47,8 @@ class DeclarativeSourceDefinitionsApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DeclarativeManifestRule::class,
   )
   override fun updateDeclarativeManifestVersion(
@@ -67,10 +62,8 @@ class DeclarativeSourceDefinitionsApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DeclarativeManifestRule::class,
   )
   override fun listDeclarativeManifests(

@@ -31,6 +31,7 @@ import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.DestinationCatalogId
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
@@ -222,6 +223,8 @@ abstract class SchemaChangeAuthorizationHttpContract {
         every { connections.getStandardSync(CONNECTION) } returns first
         every { connections.getStandardSync(SECOND_CONNECTION) } returns second
         every { connections.listWorkspaceStandardSyncs(WORKSPACE, false) } returns listOf(first, unrelated, second)
+        val sourceQuery = StandardSyncQuery(WORKSPACE, listOf(SOURCE), null, false)
+        every { connections.listWorkspaceStandardSyncs(sourceQuery) } returns listOf(first, second)
         every { actors.findSourceWorkspaceId(SOURCE) } returns Optional.of(WORKSPACE)
         for (destination in listOf(DESTINATION, SECOND_DESTINATION)) {
           every { actors.findDestinationWorkspaceId(destination) } returns Optional.of(WORKSPACE)
@@ -312,6 +315,8 @@ abstract class SchemaChangeAuthorizationHttpContract {
                   business.forEach { clearMocks(it, answers = false) }
                   every { connections.listWorkspaceStandardSyncs(WORKSPACE, false) } returns
                     if (state == CatalogState.NO_CONNECTIONS) emptyList() else listOf(first, unrelated, second)
+                  every { connections.listWorkspaceStandardSyncs(sourceQuery) } returns
+                    if (state == CatalogState.NO_CONNECTIONS) emptyList() else listOf(first, second)
                   first.destinationCatalogId = if (state == CatalogState.ABSENT) null else DESTINATION_CATALOG
                   second.destinationCatalogId = if (state == CatalogState.ABSENT) null else SECOND_DESTINATION_CATALOG
                   first.sourceCatalogId = if (state == CatalogState.ABSENT) null else SAVED_SOURCE_CATALOG

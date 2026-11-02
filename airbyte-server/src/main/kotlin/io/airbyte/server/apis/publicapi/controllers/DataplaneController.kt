@@ -4,15 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicDataplanesApi
 import io.airbyte.publicApi.server.generated.models.DataplaneCreateRequest
@@ -20,6 +16,9 @@ import io.airbyte.publicApi.server.generated.models.DataplanePatchRequest
 import io.airbyte.server.apis.publicapi.constants.DATAPLANES_PATH
 import io.airbyte.server.apis.publicapi.services.DataplaneService
 import io.airbyte.server.apis.publicapi.services.RegionService
+import io.airbyte.server.auth.PublicDataplaneAdminRule
+import io.airbyte.server.auth.PublicDataplaneCreateRule
+import io.airbyte.server.auth.PublicDataplaneListRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -34,38 +33,22 @@ import java.util.UUID
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val regionService: RegionService,
-  private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
 ) : PublicDataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDataplaneListRule::class,
   )
-  override fun publicListDataplanes(regionIds: List<UUID>?): Response {
-    if (!regionIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .apply {
-          regionIds.forEach { withOrg(regionService.getOrganizationIdFromRegion(it)) }
-        }.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-    }
-    return dataplaneService.controllerListDataplanes(regionIds)
-  }
+  override fun publicListDataplanes(regionIds: List<UUID>?): Response = dataplaneService.controllerListDataplanes(regionIds)
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDataplaneCreateRule::class,
   )
   override fun publicCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
     val orgId = regionService.getOrganizationIdFromRegion(dataplaneCreateRequest.regionId)
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
 
     return dataplaneService.controllerCreateDataplane(dataplaneCreateRequest)
@@ -75,17 +58,12 @@ open class DataplaneController(
   @Path("$DATAPLANES_PATH/{dataplaneId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDataplaneAdminRule::class,
   )
   override fun publicGetDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return dataplaneService.controllerGetDataplane(dataplaneId)
   }
@@ -95,7 +73,7 @@ open class DataplaneController(
   @Path("$DATAPLANES_PATH/{dataplaneId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDataplaneAdminRule::class,
   )
   override fun publicUpdateDataplane(
     dataplaneId: UUID,
@@ -104,11 +82,6 @@ open class DataplaneController(
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return dataplaneService.controllerUpdateDataplane(dataplaneId, dataplanePatchRequest)
   }
@@ -117,17 +90,12 @@ open class DataplaneController(
   @Path("$DATAPLANES_PATH/{dataplaneId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDataplaneAdminRule::class,
   )
   override fun publicDeleteDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return dataplaneService.controllerDeleteDataplane(dataplaneId)
   }

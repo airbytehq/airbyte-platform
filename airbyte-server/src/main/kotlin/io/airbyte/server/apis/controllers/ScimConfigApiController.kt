@@ -13,7 +13,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -52,7 +51,6 @@ open class ScimConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAdminRule::class,
   )
   override fun getScimConfig(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
@@ -68,7 +66,6 @@ open class ScimConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAdminRule::class,
   )
   override fun enableScim(enableScimRequestBody: EnableScimRequestBody): ScimConfigResponse =
@@ -88,7 +85,6 @@ open class ScimConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAdminRule::class,
   )
   override fun rotateScimToken(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
@@ -108,7 +104,6 @@ open class ScimConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAdminRule::class,
   )
   override fun disableScim(organizationIdRequestBody: OrganizationIdRequestBody) {

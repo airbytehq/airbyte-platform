@@ -10,14 +10,10 @@ import io.airbyte.api.server.generated.models.AirbyteCatalog
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.DestinationSyncMode
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.DestinationDiscoverService
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.ActorId
 import io.airbyte.publicApi.server.generated.apis.PublicConnectionsApi
@@ -37,6 +33,11 @@ import io.airbyte.server.apis.publicapi.helpers.AirbyteCatalogHelper
 import io.airbyte.server.apis.publicapi.services.ConnectionService
 import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
+import io.airbyte.server.auth.PublicConnectionCreateRule
+import io.airbyte.server.auth.PublicConnectionDeleteRule
+import io.airbyte.server.auth.PublicConnectionListRule
+import io.airbyte.server.auth.PublicConnectionPatchRule
+import io.airbyte.server.auth.PublicConnectionReadRule
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
@@ -58,14 +59,12 @@ open class ConnectionsController(
   private val destinationService: DestinationService,
   private val destinationDiscoverService: DestinationDiscoverService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicConnectionsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectionCreateRule::class,
   )
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
@@ -180,22 +179,10 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectionDeleteRule::class,
   )
   override fun publicDeleteConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
 
     val connectionResponse: Any =
       trackingHelper.callWithTracker(
@@ -223,16 +210,10 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectionReadRule::class,
   )
   override fun publicGetConnection(connectionId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val connectionResponse: Any =
       trackingHelper.callWithTracker({
@@ -254,7 +235,7 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectionListRule::class,
   )
   override fun listConnections(
     workspaceIds: List<UUID>?,
@@ -265,15 +246,7 @@ open class ConnectionsController(
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
-    // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the ConnectionService will determine the workspaces for the current user.
-    if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
     val safeTagIds = tagIds ?: emptyList()
@@ -304,25 +277,13 @@ open class ConnectionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectionPatchRule::class,
   )
   override fun patchConnection(
     @PathParam(value = "connectionId") connectionId: String,
     @Valid @Body @NotNull connectionPatchRequest: ConnectionPatchRequest,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
 
     // validate cron timing configurations
     val validConnectionPatchRequest =

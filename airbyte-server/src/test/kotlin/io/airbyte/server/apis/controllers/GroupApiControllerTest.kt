@@ -19,10 +19,8 @@ import io.airbyte.api.server.generated.models.GroupUpdate
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Group
 import io.airbyte.config.GroupMember
 import io.airbyte.data.services.AlreadyGroupMemberException
@@ -54,8 +52,7 @@ import java.util.UUID
 
 class GroupApiControllerTest {
   private lateinit var groupService: GroupService
-  private lateinit var roleResolver: RoleResolver
-  private lateinit var roleRequest: RoleResolver.Request
+
   private lateinit var groupsEntitlementHelper: GroupsEntitlementHelper
   private lateinit var controller: GroupApiController
 
@@ -66,14 +63,8 @@ class GroupApiControllerTest {
   @BeforeEach
   fun setUp() {
     groupService = mockk()
-    roleResolver = mockk()
-    roleRequest = mockk()
-    groupsEntitlementHelper = mockk(relaxed = true)
 
-    every { roleResolver.newRequest() } returns roleRequest
-    every { roleRequest.withCurrentUser() } returns roleRequest
-    every { roleRequest.withRef(any(), any<String>()) } returns roleRequest
-    every { roleRequest.requireRole(any()) } returns Unit
+    groupsEntitlementHelper = mockk(relaxed = true)
 
     controller = createController(groupsEntitlementHelper)
   }
@@ -499,11 +490,17 @@ class GroupApiControllerTest {
       )
     for ((name, rule) in expectedRules) {
       val method = GroupApiController::class.java.methods.single { it.name == name }
-      assertEquals(listOf(SecurityRule.IS_AUTHENTICATED), method.getAnnotation(Secured::class.java).value.toList(), name)
+      assertEquals(
+        listOf(SecurityRule.IS_AUTHENTICATED),
+        (
+          method.getAnnotation(Secured::class.java)
+            ?: GroupApiController::class.java.getAnnotation(Secured::class.java)
+        ).value.toList(),
+        name,
+      )
       val declaration = method.getAnnotation(AuthorizeOperation::class.java)
       assertNotNull(declaration, name)
       assertEquals(RouteAccessPolicy.PROTECTED, declaration.access, name)
-      assertEquals(RouteMigration.SHARED, declaration.migration, name)
       assertEquals(rule, declaration.rule, name)
     }
   }
@@ -511,7 +508,6 @@ class GroupApiControllerTest {
   private fun createController(entitlementHelper: GroupsEntitlementHelper) =
     GroupApiController(
       groupService = groupService,
-      roleResolver = roleResolver,
       groupsEntitlementHelper = entitlementHelper,
     )
 

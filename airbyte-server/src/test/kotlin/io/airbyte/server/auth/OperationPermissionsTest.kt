@@ -14,6 +14,7 @@ import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.micronaut.security.authentication.Authentication
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -31,6 +32,20 @@ class OperationPermissionsTest {
   private val caller = Authentication.build("user")
   private val readers = setOf(AuthRoleConstants.WORKSPACE_READER)
   private val humans = setOf(OperationCaller.USER)
+
+  @Test
+  fun `embedded issuer grants require a usable workspace scope`() {
+    val embedded = mapOf(TokenType.EMBEDDED_V1.toClaim())
+    assertDoesNotThrow { checker.requireCaller(Authentication.build("user", embedded), setOf(OperationCaller.EMBEDDED)) }
+    assertThrows(ForbiddenProblem::class.java) {
+      checker.scopedEmbeddedIssuer(Authentication.build("user", embedded))
+    }
+    assertDoesNotThrow {
+      checker.scopedEmbeddedIssuer(
+        Authentication.build("user", embedded + (TokenScopeClaim.CLAIM_ID to TokenScopeClaim(workspace.toString()))),
+      )
+    }
+  }
 
   @Test
   fun `organization permissions keep inherited workspace actions`() {
@@ -182,6 +197,22 @@ class OperationPermissionsTest {
     assertThrows(
       ForbiddenProblem::class.java,
     ) { checker.requireWorkspaces(applicationOwner, listOf(workspaceAndOrganization), readers, workerCallers) }
+  }
+
+  @Test
+  fun `malformed machine subjects are forbidden before permission lookup`() {
+    for (type in listOf(TokenType.SERVICE_ACCOUNT, TokenType.DATAPLANE_V1)) {
+      val machine = Authentication.build("not-a-uuid", mapOf(type.toClaim()))
+      assertThrows(ForbiddenProblem::class.java) {
+        checker.requireWorkspaces(
+          machine,
+          listOf(workspaceAndOrganization),
+          readers,
+          setOf(OperationCaller.SERVICE_ACCOUNT, OperationCaller.DATAPLANE),
+        )
+      }
+    }
+    verify(exactly = 0) { permissions.getPermissionsByServiceAccountId(any()) }
   }
 
   @Test

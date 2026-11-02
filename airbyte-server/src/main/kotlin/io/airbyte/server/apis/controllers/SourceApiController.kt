@@ -26,8 +26,8 @@ import io.airbyte.api.server.generated.models.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -53,11 +53,9 @@ open class SourceApiController(
   private val schedulerHandler: SchedulerHandler,
   private val sourceHandler: SourceHandler,
 ) : SourceApi {
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceSchemaChangeRule::class,
   )
   override fun applySchemaChangeForSource(
@@ -69,41 +67,34 @@ open class SourceApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
   ): CheckConnectionRead = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun createSource(
     @Body sourceCreate: SourceCreate,
   ): SourceRead = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -111,7 +102,6 @@ open class SourceApiController(
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceDeleteRule::class,
   )
   override fun deleteSource(
@@ -123,33 +113,27 @@ open class SourceApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
   ): SourceDiscoverSchemaRead = execute { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceReadOrWorkerRule::class,
   )
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): SourceRead = execute { sourceHandler.getSource(sourceIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceReadOrWorkerRule::class,
   )
   override fun getSourceWithMetadata(
@@ -163,11 +147,9 @@ open class SourceApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceReadRule::class,
   )
   override fun getMostRecentSourceActorCatalog(
@@ -179,22 +161,18 @@ open class SourceApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceReadRule::class,
   )
   override fun listSourcesForWorkspace(
     @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
   ): SourceReadList = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceReadRule::class,
   )
   override fun listSourcesForWorkspacePaginated(
@@ -203,25 +181,22 @@ open class SourceApiController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
   )
+  @ConfigSearchAccessException
   override fun searchSources(
     @Body sourceSearch: SourceSearch,
   ): SourceReadList = execute { sourceHandler.searchSources(sourceSearch) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteOrWorkerRule::class,
   )
   override fun updateSource(
     @Body sourceUpdate: SourceUpdate,
   ): SourceRead = execute { sourceHandler.updateSource(sourceUpdate) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -229,7 +204,6 @@ open class SourceApiController(
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun upgradeSourceVersion(
@@ -241,23 +215,19 @@ open class SourceApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SourceWriteRule::class,
   )
   override fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
   ): SourceRead = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WriteDiscoverCatalogResultRule::class,
   )
   override fun writeDiscoverCatalogResult(

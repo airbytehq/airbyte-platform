@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.DestinationDefinitionSpecification
 import io.airbyte.api.server.generated.models.DestinationIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -26,10 +25,8 @@ open class DestinationDefinitionSpecificationApiController(
   private val connectorDefinitionSpecificationHandler: ConnectorDefinitionSpecificationHandler,
 ) : DestinationDefinitionSpecificationApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getDestinationDefinitionSpecification(
@@ -42,10 +39,8 @@ open class DestinationDefinitionSpecificationApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getSpecificationForDestinationId(

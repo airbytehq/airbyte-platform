@@ -4,11 +4,10 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.workload.api.WorkloadApi
 import io.micronaut.context.BeanContext
 import io.micronaut.security.annotation.Secured
@@ -24,6 +23,9 @@ class RouteAccessInventory(
   private val router: Router,
   private val beans: BeanContext,
 ) {
+  @Volatile
+  private var validatedRoutes: Set<UriRouteInfo<*, *>> = emptySet()
+
   fun routes(): List<UriRouteInfo<*, *>> =
     router.uriRoutes().filter(::isManaged).toList().distinctBy {
       listOf(
@@ -38,9 +40,13 @@ class RouteAccessInventory(
     }
 
   fun validate() {
-    val errors = routes().flatMap { route -> violations(route).map { "${route.httpMethodName} ${route.uriMatchTemplate}: $it" } }
+    val activeRoutes = routes()
+    val errors = activeRoutes.flatMap { route -> violations(route).map { "${route.httpMethodName} ${route.uriMatchTemplate}: $it" } }
     check(errors.isEmpty()) { "Invalid API access declarations:\n${errors.joinToString("\n")}" }
+    validatedRoutes = activeRoutes.toSet()
   }
+
+  fun isValidated(route: UriRouteInfo<*, *>): Boolean = route in validatedRoutes
 
   fun violations(route: UriRouteInfo<*, *>): List<String> {
     if (!isManaged(route)) return emptyList()
@@ -49,15 +55,23 @@ class RouteAccessInventory(
     val errors = mutableListOf<String>()
     val roles = securedRoles(route).toSet()
     val anonymous = SecurityRule.IS_ANONYMOUS in roles
-    if (declaration.migration == RouteMigration.SHARED) errors += sharedViolations(route, declaration)
-    if (declaration.access == RouteAccessPolicy.PROTECTED) {
-      if (declaration.migration == RouteMigration.NOT_APPLICABLE) errors += "protected routes require a migration status"
-      if (anonymous) errors += "protected policy conflicts with anonymous security metadata"
-    } else {
-      if (declaration.migration != RouteMigration.NOT_APPLICABLE) errors += "public/login routes cannot have a protected migration status"
-      if (!anonymous ||
-        route.annotationMetadata.hasAnnotation(RequiresIntent::class.java)
+    val searchException = method.isAnnotationPresent(ConfigSearchAccessException::class.java)
+    if (route.annotationMetadata.hasAnnotation(ConfigSearchAccessException::class.java) != searchException) {
+      errors += "search exception must be declared on the implementation method"
+    }
+    if (searchException) {
+      if (route.httpMethodName != "POST" || route.uriMatchTemplate.toString() !in configSearchPaths ||
+        declaration.access != RouteAccessPolicy.PROTECTED || declaration.rule.java != OperationRule::class.java
       ) {
+        errors += "search exception requires one of the three protected Config POST searches without a rule"
+      }
+    }
+    if (declaration.access == RouteAccessPolicy.PROTECTED) {
+      if (securedRoles(route) != listOf(SecurityRule.IS_AUTHENTICATED)) errors += "protected route requires authentication-only @Secured"
+      if (!searchException) errors += sharedViolations(route, declaration)
+    } else {
+      if (declaration.rule.java != OperationRule::class.java) errors += "public/login routes cannot have an operation rule"
+      if (!anonymous) {
         errors += "public/login policy conflicts with existing security metadata"
       }
     }
@@ -74,12 +88,12 @@ class RouteAccessInventory(
         .isAbstract(rule.modifiers) ||
       !beans.containsBean(rule)
     ) {
-      return listOf("SHARED requires a concrete DI rule")
+      return listOf("protected route requires a concrete DI rule")
     }
     if (!beans.containsBean(AuthorizationInterceptor::class.java) ||
       !beans.getBeanDefinition(route.declaringType).isProxy
     ) {
-      return listOf("SHARED requires the checker and controller advice")
+      return listOf("protected route requires the checker and controller advice")
     }
     return emptyList()
   }
@@ -104,6 +118,7 @@ class RouteAccessInventory(
   }
 
   companion object {
+    private val configSearchPaths = setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
     private val managedBasePaths = listOf("/api/v1", "/api/public", "/public/v1")
     private val managedControllerPrefixes =
       listOf(

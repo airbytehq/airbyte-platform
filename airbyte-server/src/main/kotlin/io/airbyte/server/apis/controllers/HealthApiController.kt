@@ -8,7 +8,6 @@ import io.airbyte.api.server.generated.apis.HealthApi
 import io.airbyte.api.server.generated.models.HealthCheckRead
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.HealthCheckHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Controller
@@ -24,7 +23,6 @@ class HealthApiController(
   @ExecuteOn(AirbyteTaskExecutors.HEALTH)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PUBLIC,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   override fun getHealthCheck(): HealthCheckRead = healthCheckHandler.health()
 }

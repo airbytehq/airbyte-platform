@@ -16,7 +16,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -43,7 +42,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoAdminRule::class,
   )
   override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
@@ -66,7 +64,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoAdminRule::class,
   )
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
@@ -96,7 +93,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoDeleteRule::class,
   )
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
@@ -115,7 +111,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoAdminRule::class,
   )
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
@@ -137,7 +132,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoAdminRule::class,
   )
   override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
@@ -156,7 +150,6 @@ open class SSOConfigApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SsoAdminRule::class,
   )
   override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {

@@ -7,7 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.problems.throwable.generated.GroupAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Group
@@ -33,7 +32,6 @@ import java.util.concurrent.Callable
 class GroupsControllerTest {
   private val groupService = mockk<GroupService>()
   private val trackingHelper = mockk<TrackingHelper>(relaxed = true)
-  private val roleResolver = mockk<RoleResolver>(relaxed = true)
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>(relaxed = true)
   private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService)
@@ -49,7 +47,6 @@ class GroupsControllerTest {
       GroupsController(
         groupService,
         trackingHelper,
-        roleResolver,
         currentUserService,
         groupsEntitlementHelper,
       )

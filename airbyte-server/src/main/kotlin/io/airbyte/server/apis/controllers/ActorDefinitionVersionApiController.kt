@@ -13,7 +13,6 @@ import io.airbyte.api.server.generated.models.ResolveActorDefinitionVersionRespo
 import io.airbyte.api.server.generated.models.SourceIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -29,10 +28,8 @@ class ActorDefinitionVersionApiController(
   @param:Body private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler,
 ) : ActorDefinitionVersionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionSourceMetadataRule::class,
   )
   override fun getActorDefinitionVersionForSourceId(
@@ -45,10 +42,8 @@ class ActorDefinitionVersionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionDestinationMetadataRule::class,
   )
   override fun getActorDefinitionVersionForDestinationId(
@@ -61,10 +56,8 @@ class ActorDefinitionVersionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionDefaultVersionRule::class,
   )
   override fun getActorDefinitionVersionDefault(
@@ -77,10 +70,8 @@ class ActorDefinitionVersionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionResolveVersionRule::class,
   )
   override fun resolveActorDefinitionVersionByTag(

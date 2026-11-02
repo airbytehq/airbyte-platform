@@ -471,13 +471,6 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
           } returns listOf(group().withId(DEFAULT_GROUP).withOrganizationId(DEFAULT_ORGANIZATION_ID))
           every { instance.listDataplaneGroups(listOf(ORGANIZATION), false) } returns listOf(group())
         }
-        is RoleResolver -> {
-          val request = mockk<RoleResolver.Request>()
-          every { instance.newRequest() } returns request
-          every { request.withCurrentAuthentication() } returns request
-          every { request.withOrg(ORGANIZATION) } returns request
-          every { request.requireRole(any()) } just Runs
-        }
         is EntitlementService -> {
           every { instance.ensureEntitled(OrganizationId(ORGANIZATION), any()) } just Runs
           every {

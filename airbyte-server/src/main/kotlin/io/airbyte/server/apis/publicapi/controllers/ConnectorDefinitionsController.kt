@@ -4,12 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationId
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.ConnectorDefinitionsApi
 import io.airbyte.publicApi.server.generated.models.ConnectorType
@@ -18,7 +15,9 @@ import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.CONNECTOR_DEFINITIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.services.ConnectorDefinitionsService
+import io.airbyte.server.auth.PublicConnectorDefinitionListRule
 import io.micronaut.http.annotation.Controller
+import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
@@ -26,15 +25,15 @@ import java.util.UUID
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
 class ConnectorDefinitionsController(
-  val roleResolver: RoleResolver,
   val connectorDefinitionsService: ConnectorDefinitionsService,
   val currentUserService: CurrentUserService,
   val trackingHelper: TrackingHelper,
 ) : ConnectorDefinitionsApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicConnectorDefinitionListRule::class,
   )
   override fun listConnectorDefinitions(
     type: ConnectorType,
@@ -45,12 +44,6 @@ class ConnectorDefinitionsController(
     if (workspaceId == null) {
       throw IllegalArgumentException("Workspace ID must be provided.")
     }
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val response =
       trackingHelper.callWithTracker(

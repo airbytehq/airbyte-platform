@@ -9,7 +9,6 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Permission
 import io.airbyte.data.services.PermissionService
@@ -188,13 +187,13 @@ class OperationTenantController(
   private val business: OperationTenantBusiness,
 ) {
   @Post("/organizations")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationTenantRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationTenantRule::class)
   fun organizations(
     @Body ids: List<UUID>,
   ): String = business.read()
 
   @Post("/account")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationAccountRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationAccountRule::class)
   fun account(
     @Body subjects: List<String>,
   ): String = business.read()

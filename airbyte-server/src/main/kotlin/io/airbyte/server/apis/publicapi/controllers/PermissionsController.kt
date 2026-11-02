@@ -9,14 +9,10 @@ import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.PermissionIdRequestBody
 import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.PermissionUpdate
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
@@ -36,6 +32,10 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.PermissionReadMapper
 import io.airbyte.server.apis.publicapi.mappers.PermissionResponseReadMapper
+import io.airbyte.server.auth.PublicPermissionCreateRule
+import io.airbyte.server.auth.PublicPermissionListRule
+import io.airbyte.server.auth.PublicPermissionReadRule
+import io.airbyte.server.auth.PublicPermissionWriteRule
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
@@ -52,14 +52,13 @@ private val log = KotlinLogging.logger {}
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PermissionsController(
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val permissionHandler: PermissionHandler,
 ) : PublicPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicPermissionCreateRule::class,
   )
   override fun publicCreatePermission(permissionCreateRequest: PermissionCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
@@ -76,22 +75,8 @@ open class PermissionsController(
       )
       throw badRequestProblem
     }
-    // auth check before processing the request
-    if (workspaceId != null) { // adding a workspace level permission
-      // current user should have workspace_admin or a higher role
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.WORKSPACE_ID, workspaceId.toString())
-        .requireRole(AuthRoleConstants.WORKSPACE_ADMIN)
-    } else if (organizationId != null) { // adding an organization level permission
-      // current user should have organization_admin or a higher role
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString())
-        .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-    } else {
+
+    if (workspaceId == null && organizationId == null) {
       val badRequestProblem =
         BadRequestProblem(ProblemMessageData().message("Workspace ID or Organization ID must be provided in order to create a permission."))
       trackingHelper.trackFailuresIfAny(
@@ -124,24 +109,9 @@ open class PermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicPermissionWriteRule::class,
   )
   override fun publicDeletePermission(permissionId: String): Response {
-    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
-    // current user should have at least a workspace_admin role to delete a workspace level permission
-    // or at least an organization_admin role to delete an organization level permission
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
-      .requireRole(
-        when {
-          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_ADMIN
-          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_ADMIN
-          else -> AuthRoleConstants.INSTANCE_ADMIN
-        },
-      )
-
     // process and monitor the request
     trackingHelper.callWithTracker(
       {
@@ -160,25 +130,9 @@ open class PermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicPermissionReadRule::class,
   )
   override fun publicGetPermission(permissionId: String): Response {
-    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
-
-    // current user should have either at least a workspace_reader role to get a workspace level permission
-    // or at least an organization_read role to read an organization level permission
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
-      .requireRole(
-        when {
-          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_READER
-          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_READER
-          else -> AuthRoleConstants.INSTANCE_ADMIN
-        },
-      )
-
     val permissionResponse =
       trackingHelper.callWithTracker(
         {
@@ -197,7 +151,7 @@ open class PermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicPermissionListRule::class,
   )
   override fun publicListPermissionsByUserId(
     userId: String?,
@@ -219,13 +173,6 @@ open class PermissionsController(
         )
         throw badRequestProblem
       }
-
-      // Make sure current user has to be organization_admin to access another user's permissions.
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
-        .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
       permissionsResponse =
         trackingHelper.callWithTracker(
@@ -259,28 +206,12 @@ open class PermissionsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicPermissionWriteRule::class,
   )
   override fun publicUpdatePermission(
     permissionId: String,
     permissionUpdateRequest: PermissionUpdateRequest,
   ): Response {
-    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
-
-    // current user should have either at least a workspace_admin role to update a workspace level permission
-    // or at least an organization_admin role to update an organization level permission
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
-      .requireRole(
-        when {
-          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_ADMIN
-          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_ADMIN
-          else -> AuthRoleConstants.INSTANCE_ADMIN
-        },
-      )
-
     // process and monitor the request
     val updatePermissionResponse =
       trackingHelper.callWithTracker(

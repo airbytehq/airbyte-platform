@@ -10,13 +10,9 @@ import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.GroupAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.services.GroupManagedByScimException
 import io.airbyte.data.services.GroupNameNotUniqueException
@@ -40,6 +36,9 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.applyToGroupDomainModel
 import io.airbyte.server.apis.publicapi.mappers.toGroupDomainModel
 import io.airbyte.server.apis.publicapi.mappers.toGroupResponse
+import io.airbyte.server.auth.PublicGroupListRule
+import io.airbyte.server.auth.PublicGroupSavedRule
+import io.airbyte.server.auth.PublicOrganizationBodyAdminRule
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -54,14 +53,13 @@ import java.util.UUID
 open class GroupsController(
   private val groupService: GroupService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupListRule::class,
   )
   override fun publicListGroups(
     organizationId: UUID?,
@@ -74,13 +72,6 @@ open class GroupsController(
         ProblemMessageData().message("organizationId query parameter is required"),
       )
     }
-
-    // Require organization admin or higher to list groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(OrganizationId(organizationId))
@@ -134,16 +125,9 @@ open class GroupsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationBodyAdminRule::class,
   )
   override fun publicCreateGroup(groupCreateRequest: GroupCreateRequest): Response {
-    // Require organization admin to create groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, groupCreateRequest.organizationId.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(OrganizationId(groupCreateRequest.organizationId))
 
@@ -176,7 +160,7 @@ open class GroupsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicGetGroup(groupId: UUID): Response {
     val group =
@@ -187,16 +171,6 @@ open class GroupsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Note: Authorization check occurs after group fetch, which allows distinguishing between
-    // non-existent groups (404) and unauthorized access (403). This provides clearer error
-    // messages for API consumers. The enumeration risk is minimal since group IDs are UUIDs
-    // (effectively unguessable), and successful enumeration only reveals existence, not data.
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(OrganizationId(group.organizationId.value))
@@ -221,7 +195,7 @@ open class GroupsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicUpdateGroup(
     groupId: UUID,
@@ -235,13 +209,6 @@ open class GroupsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin to update groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, existingGroup.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     val groupResponse: GroupResponse =
       trackingHelper.callWithTracker(
@@ -274,7 +241,7 @@ open class GroupsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicDeleteGroup(groupId: UUID): Response {
     val existingGroup =
@@ -285,13 +252,6 @@ open class GroupsController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin to delete groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, existingGroup.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     try {
       trackingHelper.callWithTracker(

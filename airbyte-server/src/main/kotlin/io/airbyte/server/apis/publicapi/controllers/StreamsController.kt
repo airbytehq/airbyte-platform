@@ -10,13 +10,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.server.generated.models.DestinationSyncMode
 import io.airbyte.api.server.generated.models.SyncMode
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicStreamsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
@@ -27,6 +23,7 @@ import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.STREAMS_PATH
 import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
+import io.airbyte.server.auth.PublicStreamsRule
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -43,7 +40,6 @@ class StreamsController(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicStreamsApi {
   companion object {
@@ -53,27 +49,14 @@ class StreamsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicStreamsRule::class,
   )
   override fun getStreamProperties(
     sourceId: String,
     destinationId: String?,
     ignoreCache: Boolean,
   ): Response {
-    // Check permission for source and destination
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    val authReq =
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.SOURCE_ID, sourceId)
-
-    if (destinationId != null) {
-      authReq.withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-    }
-
-    authReq.requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val httpResponse =
       trackingHelper.callWithTracker(

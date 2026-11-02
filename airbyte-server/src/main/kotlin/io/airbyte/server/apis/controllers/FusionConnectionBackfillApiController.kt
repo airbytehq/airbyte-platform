@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.FusionConnectionBackfillRequest
 import io.airbyte.api.server.generated.models.FusionConnectionBackfillResponse
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.FusionConnectionBackfillRule
 import io.micronaut.http.annotation.Body
@@ -29,7 +28,6 @@ import java.util.UUID
 open class FusionConnectionBackfillApiController : FusionConnectionBackfillApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionConnectionBackfillRule::class,
   )
   override fun requestFusionConnectionBackfill(

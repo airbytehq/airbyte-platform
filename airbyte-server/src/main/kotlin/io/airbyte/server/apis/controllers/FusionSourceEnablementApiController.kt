@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.FusionSourceEnablementRead
 import io.airbyte.api.server.generated.models.FusionSourceEnablementUpdate
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.FusionSourceReadRule
 import io.airbyte.server.auth.FusionSourceWriteRule
@@ -29,7 +28,6 @@ import java.util.UUID
 open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceReadRule::class,
   )
   override fun getFusionSourceEnablement(
@@ -38,7 +36,6 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceWriteRule::class,
   )
   override fun createFusionSourceEnablement(
@@ -48,7 +45,6 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceWriteRule::class,
   )
   override fun updateFusionSourceEnablement(
@@ -58,7 +54,6 @@ open class FusionSourceEnablementApiController : FusionSourceEnablementApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceWriteRule::class,
   )
   override fun deleteFusionSourceEnablement(

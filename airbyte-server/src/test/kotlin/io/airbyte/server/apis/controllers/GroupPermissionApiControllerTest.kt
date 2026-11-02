@@ -16,7 +16,6 @@ import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.PublicPermissionType
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Group
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
@@ -42,8 +41,7 @@ import java.util.UUID
 class GroupPermissionApiControllerTest {
   private lateinit var groupService: GroupService
   private lateinit var permissionService: PermissionService
-  private lateinit var roleResolver: RoleResolver
-  private lateinit var roleRequest: RoleResolver.Request
+
   private lateinit var groupsEntitlementHelper: GroupsEntitlementHelper
   private lateinit var groupPermissionValidator: GroupPermissionValidator
   private lateinit var controller: GroupPermissionApiController
@@ -57,15 +55,9 @@ class GroupPermissionApiControllerTest {
   fun setUp() {
     groupService = mockk()
     permissionService = mockk()
-    roleResolver = mockk()
-    roleRequest = mockk()
+
     groupsEntitlementHelper = mockk(relaxed = true)
     groupPermissionValidator = mockk()
-
-    every { roleResolver.newRequest() } returns roleRequest
-    every { roleRequest.withCurrentUser() } returns roleRequest
-    every { roleRequest.withRef(any(), any<String>()) } returns roleRequest
-    every { roleRequest.requireRole(any()) } returns Unit
 
     controller = createController(groupsEntitlementHelper)
   }
@@ -424,7 +416,6 @@ class GroupPermissionApiControllerTest {
     GroupPermissionApiController(
       groupService = groupService,
       permissionService = permissionService,
-      roleResolver = roleResolver,
       groupsEntitlementHelper = entitlementHelper,
       groupPermissionValidator = groupPermissionValidator,
     )

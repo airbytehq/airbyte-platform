@@ -36,7 +36,6 @@ import io.airbyte.api.server.generated.models.SpecCommandOutputRequest
 import io.airbyte.api.server.generated.models.SpecCommandOutputResponse
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.logging.LogUtils
@@ -85,7 +84,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = CancelCommandRule::class,
   )
   override fun cancelCommand(
@@ -99,7 +97,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCheckCommandRule::class,
   )
   override fun getCheckCommandOutput(
@@ -125,7 +122,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCommandRule::class,
   )
   override fun getCommand(
@@ -148,7 +144,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCommandRule::class,
   )
   override fun getDiscoverCommandOutput(
@@ -185,7 +180,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCommandRule::class,
   )
   override fun getSpecCommandOutput(
@@ -209,7 +203,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCommandRule::class,
   )
   override fun getReplicateCommandOutput(
@@ -227,7 +220,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadConnectCommandRule::class,
   )
   override fun getConnectCommandOutput(
@@ -275,7 +267,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ReadCommandRule::class,
   )
   override fun getCommandStatus(
@@ -292,7 +283,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = CheckCommandRule::class,
   )
   override fun runCheckCommand(
@@ -344,7 +334,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectCommandRule::class,
   )
   override fun runConnectCommand(
@@ -363,7 +352,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RunDiscoverCommandRule::class,
   )
   override fun runDiscoverCommand(
@@ -386,7 +374,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RunReplicateCommandRule::class,
   )
   override fun runReplicateCommand(
@@ -416,7 +403,6 @@ class CommandApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = RunSpecCommandRule::class,
   )
   override fun runSpecCommand(

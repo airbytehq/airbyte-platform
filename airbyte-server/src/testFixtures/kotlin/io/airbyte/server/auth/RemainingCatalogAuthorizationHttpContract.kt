@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.SchemaChange
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.commons.server.services.CatalogDiffService
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
@@ -24,9 +23,7 @@ import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.apis.controllers.CatalogApiController
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -138,13 +135,6 @@ abstract class RemainingCatalogAuthorizationHttpContract {
         business.filterIsInstance<CatalogService>().forEach {
           every { it.getActorIdByCatalogId(CURRENT) } returns Optional.of(if (deduplicated) UUID(0, 98) else SOURCE)
           every { it.getActorIdByCatalogId(NEXT) } returns if (orphanNewCatalog) Optional.empty() else Optional.of(SOURCE)
-        }
-        business.filterIsInstance<RoleResolver>().forEach { resolver ->
-          val request = mockk<RoleResolver.Request>()
-          every { resolver.newRequest() } returns request
-          every { request.withCurrentUser() } returns request
-          every { request.withRef(AuthenticationId.WORKSPACE_ID, WORKSPACE) } returns request
-          every { request.requireOneOfRoles(any()) } just Runs
         }
         val owner = WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)

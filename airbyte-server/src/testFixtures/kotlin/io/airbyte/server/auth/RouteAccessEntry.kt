@@ -4,10 +4,10 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
+import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.security.annotation.Secured
 import io.micronaut.web.router.UriRouteInfo
 import java.lang.reflect.Method
@@ -18,23 +18,30 @@ fun routeAccessEntries(inventory: RouteAccessInventory): List<RouteAccessEntry> 
     .routes()
     .map { route ->
       val method = implementationMethod(route)
-      val declaration = method.getAnnotation(AuthorizeOperation::class.java)
+      val metadata = route.annotationMetadata
       RouteAccessEntry(
         route.httpMethodName,
         normalizePath(route.uriMatchTemplate.toString()),
         "${method.declaringClass.name}#${method.name}",
-        declaration.access,
-        declaration.migration,
-        route.annotationMetadata
+        metadata.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow(),
+        metadata.classValue(AuthorizeOperation::class.java, "rule").orElse(OperationRule::class.java).name,
+        metadata.hasAnnotation(ConfigSearchAccessException::class.java),
+        metadata
           .getValue(Secured::class.java, Array<String>::class.java)
           .orElse(emptyArray())
           .toList(),
-        route.annotationMetadata
-          .stringValue(RequiresIntent::class.java)
-          .stream()
-          .toList(),
       )
     }.sortedWith(compareBy(RouteAccessEntry::path, RouteAccessEntry::httpMethod))
+}
+
+fun assertSharedAuthorizationAuthority(entries: List<RouteAccessEntry>) {
+  for (entry in entries.filter { it.hasSharedRule }) {
+    org.junit.jupiter.api.Assertions.assertEquals(
+      listOf(io.micronaut.security.rules.SecurityRule.IS_AUTHENTICATED),
+      entry.roles,
+      "${entry.httpMethod} ${entry.path} must keep authentication and leave authorization to its shared rule",
+    )
+  }
 }
 
 private fun implementationMethod(route: UriRouteInfo<*, *>): Method {
@@ -50,7 +57,7 @@ private fun implementationMethod(route: UriRouteInfo<*, *>): Method {
 
 private fun normalizePath(path: String): String = path.replace(Regex("\\{[?&][^}]*}"), "").replace(Regex("\\{([^}:]+):[^}]+}"), "{$1}").trimEnd('/')
 
-/** The pre-migration operation set is frozen independently of active annotations. */
+/** The protected Config operation set is frozen independently of active annotations. */
 fun assertRemainingProtectedConfigRoutes(
   inventory: RouteAccessInventory,
   edition: String,
@@ -84,19 +91,16 @@ fun assertRemainingProtectedConfigRoutes(
       declaration.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow(),
       operation,
     )
-    org.junit.jupiter.api.Assertions.assertEquals(
-      RouteMigration.SHARED,
-      declaration.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElseThrow(),
-      operation,
-    )
+    org.junit.jupiter.api.Assertions
+      .assertFalse(declaration.hasAnnotation(ConfigSearchAccessException::class.java), operation)
     org.junit.jupiter.api.Assertions
       .assertEquals(rule, declaration.classValue(AuthorizeOperation::class.java, "rule").orElseThrow().name, operation)
   }
-  val legacy =
+  val searches =
     routeAccessEntries(inventory).filter {
       it.httpMethod != "HEAD" && it.path.startsWith("/api/v1/") &&
         it.access == RouteAccessPolicy.PROTECTED &&
-        it.migration == RouteMigration.LEGACY
+        it.searchException
     }
   org.junit.jupiter.api.Assertions.assertEquals(
     setOf(
@@ -104,7 +108,7 @@ fun assertRemainingProtectedConfigRoutes(
       "/api/v1/destinations/search",
       "/api/v1/connections/search",
     ),
-    legacy
+    searches
       .map {
         it.path
       }.toSet(),
@@ -116,10 +120,12 @@ data class RouteAccessEntry(
   val path: String,
   val implementation: String,
   val access: RouteAccessPolicy,
-  val migration: RouteMigration,
+  val rule: String,
+  val searchException: Boolean,
   val roles: List<String>,
-  val intent: List<String>,
 ) {
+  val hasSharedRule: Boolean get() = access == RouteAccessPolicy.PROTECTED && rule != OperationRule::class.java.name && !searchException
+
   val family: String get() = path.removePrefix("/api/public/v1/").removePrefix("/api/v1/").substringBefore('/')
 }
 
@@ -131,7 +137,7 @@ fun registerSiblingOperationRules(
 ) {
   controller.methods
     .mapNotNull { it.getAnnotation(AuthorizeOperation::class.java) }
-    .filter { it.migration == RouteMigration.SHARED }
+    .filter { it.access == RouteAccessPolicy.PROTECTED && it.rule != OperationRule::class }
     .map { it.rule.java }
     .distinct()
     .filter { it !in realRules }

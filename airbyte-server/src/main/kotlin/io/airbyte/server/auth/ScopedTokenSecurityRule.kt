@@ -4,14 +4,16 @@
 
 package io.airbyte.server.auth
 
-import io.airbyte.commons.auth.permissions.IntentSecurityRule
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.RouteMigration
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
+import io.airbyte.commons.auth.route.OperationRule
+import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
+import io.micronaut.security.rules.SecuredAnnotationRule
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.rules.SecurityRuleResult
 import io.micronaut.web.router.RouteAttributes
@@ -47,10 +49,7 @@ private val logger = KotlinLogging.logger {}
 class ScopedTokenSecurityRule(
   private val authenticationHeaderResolver: AuthenticationHeaderResolver,
 ) : SecurityRule<HttpRequest<*>> {
-  override fun getOrder(): Int {
-    // Process this rule before IntentSecurityRule.
-    return IntentSecurityRule.ORDER - 100
-  }
+  override fun getOrder(): Int = SecuredAnnotationRule.ORDER - 200
 
   override fun check(
     request: HttpRequest<*>,
@@ -73,12 +72,14 @@ class ScopedTokenSecurityRule(
       return Flux.just(SecurityRuleResult.UNKNOWN)
     }
 
-    // SHARED rules check the scope against typed, saved ownership through OperationPermissions.
+    // Operation rules check the scope against typed, saved ownership through OperationPermissions.
     // Keep the remaining security rules active; UNKNOWN grants no access.
     val route = RouteAttributes.getRouteMatch(request).orElse(null)
     if (route is UriRouteMatch<*, *> &&
-      route.annotationMetadata.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElse(RouteMigration.LEGACY) ==
-      RouteMigration.SHARED
+      route.annotationMetadata.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElse(null) ==
+      RouteAccessPolicy.PROTECTED &&
+      route.annotationMetadata.classValue(AuthorizeOperation::class.java, "rule").orElse(OperationRule::class.java) != OperationRule::class.java &&
+      !route.annotationMetadata.hasAnnotation(ConfigSearchAccessException::class.java)
     ) {
       return Flux.just(SecurityRuleResult.UNKNOWN)
     }
@@ -97,7 +98,6 @@ class ScopedTokenSecurityRule(
     }
 
     // The request continues on to normal role-based auth (that's why this isn't ALLOWED).
-    // This will continue on to the [IntentSecurityRule], which verifies role-based access.
     return Flux.just(SecurityRuleResult.UNKNOWN)
   }
 

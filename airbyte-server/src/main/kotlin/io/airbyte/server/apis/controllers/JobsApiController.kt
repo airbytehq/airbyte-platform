@@ -34,7 +34,6 @@ import io.airbyte.api.server.generated.models.SetJobQueuedRequest
 import io.airbyte.api.server.generated.models.SyncInput
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.JobInputHandler
@@ -74,10 +73,8 @@ open class JobsApiController(
   private val jobObservabilityService: JobObservabilityService,
 ) : JobsApi {
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobRunRule::class,
   )
   override fun cancelJob(
@@ -85,10 +82,8 @@ open class JobsApiController(
   ): JobInfoRead = execute { schedulerHandler.cancelJob(jobIdRequestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobCreateRule::class,
   )
   override fun createJob(
@@ -96,10 +91,8 @@ open class JobsApiController(
   ): JobInfoRead = execute { schedulerHandler.createJob(jobCreate) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun failNonTerminalJobs(
@@ -112,10 +105,8 @@ open class JobsApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun evaluateOutlier(jobIdRequestBody: JobIdRequestBody): InternalOperationResult =
@@ -130,10 +121,8 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun finalizeJob(jobIdRequestBody: JobIdRequestBody): InternalOperationResult =
@@ -148,10 +137,8 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getJobDebugInfo(
@@ -159,10 +146,8 @@ open class JobsApiController(
   ): JobDebugInfoRead = execute { jobHistoryHandler.getJobDebugInfo(jobIdRequestBody.id) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getJobInfo(
@@ -170,10 +155,8 @@ open class JobsApiController(
   ): JobInfoRead = execute { jobHistoryHandler.getJobInfo(jobIdRequestBody.id) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getJobInfoWithoutLogs(
@@ -181,10 +164,8 @@ open class JobsApiController(
   ): JobInfoRead = execute { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody.id) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobInputRule::class,
   )
   override fun getJobInput(
@@ -192,10 +173,8 @@ open class JobsApiController(
   ): Any = execute { jobInputHandler.getJobInput(syncInput) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getJobInfoLight(
@@ -203,10 +182,8 @@ open class JobsApiController(
   ): JobInfoLightRead = execute { jobHistoryHandler.getJobInfoLight(jobIdRequestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadOrWorkerRule::class,
   )
   override fun getLastReplicationJob(
@@ -214,10 +191,8 @@ open class JobsApiController(
   ): JobOptionalRead = execute { jobHistoryHandler.getLastReplicationJob(connectionIdRequestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getLastReplicationJobWithCancel(
@@ -225,10 +200,8 @@ open class JobsApiController(
   ): JobOptionalRead = execute { jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getWebhookConfig(
@@ -241,10 +214,8 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun jobFailure(
@@ -252,10 +223,8 @@ open class JobsApiController(
   ): InternalOperationResult = execute { jobsHandler.jobFailure(jobFailureRequest) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun jobSuccessWithAttemptNumber(
@@ -268,10 +237,8 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun listJobsFor(
@@ -279,10 +246,8 @@ open class JobsApiController(
   ): JobReadList = execute { jobHistoryHandler.listJobsFor(jobListRequestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun listJobsForWorkspaces(
@@ -290,10 +255,8 @@ open class JobsApiController(
   ): JobReadList = execute { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun reportJobStart(
@@ -301,10 +264,8 @@ open class JobsApiController(
   ): InternalOperationResult = execute { jobsHandler.reportJobStart(reportJobStartRequest.jobId) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun setJobQueued(
@@ -312,10 +273,8 @@ open class JobsApiController(
   ): InternalOperationResult = execute { jobsHandler.setJobQueued(setJobQueuedRequest.jobId) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun cancelQueuedJob(
@@ -323,10 +282,8 @@ open class JobsApiController(
   ): InternalOperationResult = execute { jobsHandler.cancelQueuedJob(cancelQueuedJobRequest.jobId) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun checkDataWorkerCapacity(
@@ -341,10 +298,8 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminReadRule::class,
   )
   override fun didPreviousJobSucceed(
@@ -358,19 +313,15 @@ open class JobsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobExplainUnsupportedRule::class,
   )
   override fun explainJob(jobIdRequestBody: JobIdRequestBody): JobExplainRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun persistJobCancellation(
@@ -389,10 +340,8 @@ open class JobsApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun deleteStreamResetRecordsForJob(

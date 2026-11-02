@@ -9,7 +9,6 @@ import io.airbyte.api.server.generated.models.DomainVerificationCreateRequestBod
 import io.airbyte.api.server.generated.models.DomainVerificationIdRequestBody
 import io.airbyte.api.server.generated.models.DomainVerificationResponse
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.domain.models.DomainVerificationMethod
@@ -28,7 +27,7 @@ import java.util.UUID
 
 class DomainVerificationApiControllerTest {
   private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
-  private lateinit var roleResolver: RoleResolver
+
   private lateinit var currentUserService: CurrentUserService
   private lateinit var domainVerificationApiController: DomainVerificationApiController
 
@@ -41,14 +40,13 @@ class DomainVerificationApiControllerTest {
   @BeforeEach
   fun setup() {
     organizationDomainVerificationService = mockk()
-    roleResolver = mockk(relaxed = true)
+
     currentUserService = mockk()
 
     domainVerificationApiController =
       DomainVerificationApiController(
         organizationDomainVerificationService,
         currentUserService,
-        roleResolver,
       )
 
     every { currentUserService.getCurrentUser() } returns

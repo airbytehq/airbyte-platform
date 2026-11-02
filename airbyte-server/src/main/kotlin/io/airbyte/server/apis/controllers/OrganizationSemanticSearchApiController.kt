@@ -13,7 +13,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.OssOrganizationAdminUnsupportedRule
 import io.airbyte.server.auth.OssUnsupportedOperationRule
@@ -27,10 +26,8 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationSemanticSearchApiController : OrganizationSemanticSearchApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OssUnsupportedOperationRule::class,
   )
   override fun getOrganizationSemanticSearchEnablement(
@@ -39,10 +36,8 @@ open class OrganizationSemanticSearchApiController : OrganizationSemanticSearchA
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OssOrganizationAdminUnsupportedRule::class,
   )
   override fun updateOrganizationSemanticSearchEnablement(

@@ -16,7 +16,6 @@ import io.airbyte.api.server.generated.models.StreamStatusRunState
 import io.airbyte.api.server.generated.models.StreamStatusUpdateRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.StreamStatusCreateRule
@@ -42,7 +41,6 @@ class StreamStatusesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = StreamStatusCreateRule::class,
   )
   override fun createStreamStatus(
@@ -57,7 +55,6 @@ class StreamStatusesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = StreamStatusUpdateRule::class,
   )
   override fun updateStreamStatus(
@@ -72,7 +69,6 @@ class StreamStatusesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = StreamStatusListRule::class,
   )
   override fun getStreamStatuses(
@@ -87,7 +83,6 @@ class StreamStatusesApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = StreamStatusRunStateRule::class,
   )
   override fun getStreamStatusesByRunState(

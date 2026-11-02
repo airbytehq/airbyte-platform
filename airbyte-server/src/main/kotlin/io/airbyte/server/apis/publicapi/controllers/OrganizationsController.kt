@@ -4,15 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicOrganizationsApi
@@ -25,6 +21,8 @@ import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.ORGANIZATIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.services.OrganizationService
+import io.airbyte.server.auth.PublicCurrentUserRule
+import io.airbyte.server.auth.PublicOrganizationAdminRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -39,23 +37,16 @@ open class OrganizationsController(
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
-  private val roleResolver: RoleResolver,
 ) : PublicOrganizationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationAdminRule::class,
   )
   override fun createOrUpdateOrganizationOAuthCredentials(
     organizationId: String,
     organizationOAuthCredentialsRequest: OrganizationOAuthCredentialsRequest,
   ): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     trackingHelper.callWithTracker(
       {
         licenseEntitlementChecker.ensureEntitled(
@@ -88,19 +79,13 @@ open class OrganizationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationAdminRule::class,
   )
   override fun deleteOrganizationOAuthCredentials(
     organizationId: String,
     actorType: ActorTypeEnum,
     name: String,
   ): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-
     trackingHelper.callWithTracker(
       {
         licenseEntitlementChecker.ensureEntitled(
@@ -133,7 +118,7 @@ open class OrganizationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicCurrentUserRule::class,
   )
   override fun publicListOrganizationsForUser(): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId

@@ -10,13 +10,13 @@ import ch.qos.logback.core.read.ListAppender
 import io.airbyte.api.scim.generated.models.ScimError
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.scim.ScimAccessDeniedException
 import io.airbyte.domain.models.scim.ScimAuthenticationException
 import io.airbyte.domain.services.scim.ScimAuthenticationContext
 import io.airbyte.domain.services.scim.ScimAuthenticationService
+import io.airbyte.server.auth.DeploymentMetadataRule
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -541,7 +541,6 @@ class ScimAuthenticationTestController {
   @Get("/api/v1/scim-auth-test/failure")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PUBLIC,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   fun normalApiFailure(): HttpResponse<Map<String, String>> = HttpResponse.badRequest(mapOf("message" to "normal API error"))
 
@@ -549,7 +548,7 @@ class ScimAuthenticationTestController {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = DeploymentMetadataRule::class,
   )
   fun normalApi(): String = "authenticated"
 

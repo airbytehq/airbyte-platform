@@ -9,10 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.dsr.DsrDeletionService
 import io.airbyte.commons.server.handlers.dsr.DsrInvalidConfirmationException
 import io.airbyte.commons.server.handlers.dsr.DsrInvalidStateException
@@ -62,7 +60,7 @@ private val log = KotlinLogging.logger {}
  */
 @Controller("/api/v1/internal/dsr")
 @Context
-@Secured(AuthRoleConstants.ADMIN)
+@Secured(SecurityRule.IS_AUTHENTICATED)
 open class DsrDeletionController(
   private val dsrDeletionService: DsrDeletionService,
   private val objectMapper: ObjectMapper,
@@ -72,10 +70,8 @@ open class DsrDeletionController(
   @Post("/preview")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DsrPreviewRule::class,
   )
   open fun preview(
@@ -105,10 +101,8 @@ open class DsrDeletionController(
   @Post("/{requestId}/execute")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DsrSavedRequestRule::class,
   )
   open fun execute(
@@ -181,10 +175,8 @@ open class DsrDeletionController(
 
   @Get("/{requestId}")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DsrSavedRequestRule::class,
   )
   open fun getById(
@@ -197,10 +189,8 @@ open class DsrDeletionController(
 
   @Get
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DsrEmailFilterRule::class,
   )
   open fun listByEmail(
@@ -216,10 +206,8 @@ open class DsrDeletionController(
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = DsrSavedRequestRule::class,
   )
   open fun cancel(

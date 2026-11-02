@@ -145,7 +145,6 @@ abstract class RemainingSecretsAuthorizationHttpContract {
         for (instance in business) {
           when (instance) {
             is CurrentUserService -> every { instance.getCurrentUser() } returns AuthenticatedUser().withUserId(USER).withAuthUserId("caller")
-            is RoleResolver -> every { instance.newRequest() } returns mockk(relaxed = true)
             is SecretStorageService -> {
               every { instance.getById(SecretStorageId(STORAGE)) } returns storage
               every { instance.hydrateStorageConfig(storage) } returns

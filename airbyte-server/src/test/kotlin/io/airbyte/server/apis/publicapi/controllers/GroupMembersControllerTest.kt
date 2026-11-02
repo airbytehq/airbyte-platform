@@ -8,8 +8,6 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Group
@@ -42,11 +40,9 @@ class GroupMembersControllerTest {
   private val groupService = mockk<GroupService>()
   private val userPersistence = mockk<UserPersistence>()
   private val trackingHelper = mockk<TrackingHelper>()
-  private val roleResolver = mockk<RoleResolver>()
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>()
   private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService)
-  private val request = mockk<RoleResolver.Request>()
   private val groupId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
@@ -56,7 +52,6 @@ class GroupMembersControllerTest {
       groupService,
       userPersistence,
       trackingHelper,
-      roleResolver,
       currentUserService,
       groupsEntitlementHelper,
     )
@@ -73,10 +68,6 @@ class GroupMembersControllerTest {
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
-    every { roleResolver.newRequest() } returns request
-    every { request.withCurrentUser() } returns request
-    every { request.withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString()) } returns request
-    every { request.requireRole(any()) } just Runs
     every { userPersistence.getUser(userId) } returns Optional.of(User().withUserId(userId))
     every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(currentUserId)
     every { entitlementService.ensureEntitled(OrganizationId(organizationId), ScimEntitlement) } just Runs

@@ -15,7 +15,6 @@ import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanR
 import io.airbyte.api.server.generated.models.UpdateOrganizationEntitlementPlanResponse
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -40,10 +39,8 @@ open class EntitlementsApiController(
   private val entitlementService: EntitlementService,
 ) : EntitlementsApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationMemberRule::class,
   )
   override fun checkEntitlement(
@@ -66,10 +63,8 @@ open class EntitlementsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationEntitlementsRule::class,
   )
   override fun getEntitlements(
@@ -96,19 +91,15 @@ open class EntitlementsApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GlobalAdminRule::class,
   )
   override fun listAllEntitlementPlans(): ListAllEntitlementPlansResponse = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OssInstanceAdminUnsupportedRule::class,
   )
   override fun updateOrganizationEntitlementPlan(

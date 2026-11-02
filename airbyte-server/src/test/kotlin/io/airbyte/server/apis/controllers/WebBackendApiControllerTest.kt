@@ -15,7 +15,6 @@ import io.airbyte.api.server.generated.models.WebBackendConnectionRequestBody
 import io.airbyte.api.server.generated.models.WebBackendConnectionUpdate
 import io.airbyte.api.server.generated.models.WebBackendWorkspaceState
 import io.airbyte.api.server.generated.models.WebBackendWorkspaceStateResult
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
 import io.airbyte.config.Configs
@@ -32,7 +31,7 @@ import java.util.UUID
 
 internal class WebBackendApiControllerTest {
   private lateinit var controller: WebBackendApiController
-  private val roleResolver: RoleResolver = mockk()
+
   private val webBackendConnectionsHandler: WebBackendConnectionsHandler = mockk()
   private val webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler = mockk()
   private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler = mockk()
@@ -44,7 +43,6 @@ internal class WebBackendApiControllerTest {
         webBackendConnectionsHandler = webBackendConnectionsHandler,
         webBackendCheckUpdatesHandler = webBackendCheckUpdatesHandler,
         webBackendCronExpressionHandler = webBackendCronExpressionHandler,
-        roleResolver = roleResolver,
         webBackendMappersHandler = mockk(),
         airbyteConfig = AirbyteConfig(version = "1.1.1", edition = Configs.AirbyteEdition.COMMUNITY),
         airbyteWebappConfig = AirbyteWebappConfig(),

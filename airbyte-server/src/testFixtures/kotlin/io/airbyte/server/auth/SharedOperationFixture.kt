@@ -8,7 +8,6 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.publisher.Publishers
@@ -102,13 +101,13 @@ open class SharedOperationFixtureController(
   protected val business: SharedOperationFixtureBusiness,
 ) {
   @Get("/inherited")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, SharedOperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, SharedOperationFixtureRule::class)
   open fun inherited(
     @QueryValue id: UUID,
   ): String = business.read(id)
 
   @Get("/overridden")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, SharedOperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, SharedOperationFixtureRule::class)
   open fun overridden(
     @QueryValue id: UUID,
   ): String = business.read(id)

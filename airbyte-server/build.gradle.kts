@@ -128,12 +128,15 @@ dependencies {
   testFixturesImplementation(platform(libs.micronaut.platform))
   testFixturesImplementation(libs.micronaut.http.server.netty)
   testFixturesImplementation(libs.micronaut.security)
+  testFixturesImplementation(libs.micronaut.security.jwt)
+  testFixturesImplementation(libs.jakarta.ws.rs.api)
   testFixturesImplementation(libs.bundles.micronaut.data.jdbc)
   testFixturesImplementation(libs.airbyte.protocol)
   testFixturesImplementation(libs.junit.jupiter.api)
   testFixturesImplementation(libs.mockk)
   testFixturesImplementation(libs.jackson.databind)
   testFixturesImplementation(libs.jooq)
+  testFixturesImplementation(project(":oss:airbyte-analytics"))
   testFixturesImplementation(project(":oss:airbyte-commons-server"))
   testFixturesImplementation(project(":oss:airbyte-audit-logging"))
   testFixturesImplementation(project(":oss:airbyte-commons-temporal"))
@@ -147,6 +150,7 @@ dependencies {
   testFixturesImplementation(project(":oss:airbyte-persistence:job-persistence"))
   testFixturesImplementation(project(":oss:airbyte-domain:models"))
   testFixturesImplementation(project(":oss:airbyte-api:server-api"))
+  testFixturesImplementation(project(":oss:airbyte-api:public-api"))
   testFixturesImplementation(project(":oss:airbyte-api:server-api-client"))
   testFixturesImplementation(project(":oss:airbyte-api:problems-api"))
   testFixturesImplementation(project(":oss:airbyte-db:jooq"))
@@ -308,6 +312,7 @@ tasks.named<Test>("test") {
   // Micronaut retains metadata from closed contexts, so limit how many test classes share a JVM.
   forkEvery = 5
   maxParallelForks = 2
+  maxHeapSize = "1g"
 
   environment(
     mapOf(

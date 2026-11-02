@@ -32,6 +32,7 @@ import io.airbyte.data.services.SecretStorageService
 import io.airbyte.data.services.TagService
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SecretStorageId
@@ -230,10 +231,11 @@ class AuthorizationDataService(
     actorId: UUID,
     workspaceId: UUID,
     source: Boolean,
-  ): List<UUID> =
-    resource { connections.listWorkspaceStandardSyncs(workspaceId, false) }
-      .filter { if (source) it.sourceId == actorId else it.destinationId == actorId }
+  ): List<UUID> {
+    val query = StandardSyncQuery(workspaceId, if (source) listOf(actorId) else null, if (source) null else listOf(actorId), false)
+    return resource { connections.listWorkspaceStandardSyncs(query) }
       .map { it.connectionId ?: throw AuthorizationResourceNotFoundException() }
+  }
 
   fun catalogWasFetchedByActor(
     catalogId: UUID,
@@ -452,6 +454,11 @@ class AuthorizationDataService(
       return entitlements.checkEntitlement(OrganizationId(organizationId), PrivateLinkEntitlement).isEntitled
     }
     return owner == organizationId
+  }
+
+  fun isDefaultDataplaneGroup(dataplaneGroupId: UUID): Boolean {
+    dataplaneGroupOrganization(dataplaneGroupId)
+    return dataplaneGroups.listDefaultDataplaneGroups().any { it.id == dataplaneGroupId }
   }
 
   fun groupOrganization(groupId: UUID): UUID {

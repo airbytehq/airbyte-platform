@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.BillingNotificationSettingsUpdateR
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -29,7 +28,6 @@ open class BillingNotificationSettingsController : BillingNotificationSettingsAp
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getBillingNotificationSettings(
@@ -40,7 +38,6 @@ open class BillingNotificationSettingsController : BillingNotificationSettingsAp
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun updateBillingNotificationSettings(

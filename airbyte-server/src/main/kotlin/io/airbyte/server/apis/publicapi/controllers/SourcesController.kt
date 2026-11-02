@@ -8,13 +8,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.problems.model.generated.ProblemValueData
 import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicSourcesApi
 import io.airbyte.publicApi.server.generated.models.InitiateOauthRequest
@@ -34,6 +30,12 @@ import io.airbyte.server.apis.publicapi.constants.SOURCE_TYPE
 import io.airbyte.server.apis.publicapi.helpers.removeSourceTypeNode
 import io.airbyte.server.apis.publicapi.mappers.SOURCE_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.services.SourceService
+import io.airbyte.server.auth.PublicSourceCreateRule
+import io.airbyte.server.auth.PublicSourceDeleteRule
+import io.airbyte.server.auth.PublicSourceOAuthRule
+import io.airbyte.server.auth.PublicSourceReadRule
+import io.airbyte.server.auth.PublicSourceWriteRule
+import io.airbyte.server.auth.PublicWorkspaceListRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -50,13 +52,11 @@ open class SourcesController(
   private val sourceService: SourceService,
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
-  private val roleResolver: RoleResolver,
 ) : PublicSourcesApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceCreateRule::class,
   )
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
@@ -116,22 +116,10 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceDeleteRule::class,
   )
   override fun publicDeleteSource(sourceId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.EMBEDDED_END_USER,
-        ),
-      )
 
     val sourceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -159,19 +147,13 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceReadRule::class,
   )
   override fun publicGetSource(
     sourceId: String,
     includeSecretCoordinates: Boolean?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER))
 
     val sourceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -197,18 +179,17 @@ open class SourcesController(
       .build()
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceOAuthRule::class,
   )
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response = sourceService.controllerInitiateOAuth(initiateOauthRequest)
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceListRule::class,
   )
   override fun listSources(
     workspaceIds: List<UUID>?,
@@ -218,15 +199,7 @@ open class SourcesController(
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
-    // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the SourceService determine the workspaces for the current user.
-    if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
     val sources: Any? =
@@ -255,25 +228,13 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceWriteRule::class,
   )
   override fun patchSource(
     sourceId: String,
     sourcePatchRequest: SourcePatchRequest?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.EMBEDDED_END_USER,
-        ),
-      )
 
     val sourceResponse: Any? =
       sourcePatchRequest?.let { request ->
@@ -307,25 +268,13 @@ open class SourcesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceWriteRule::class,
   )
   override fun putSource(
     sourceId: String,
     sourcePutRequest: SourcePutRequest?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.EMBEDDED_END_USER,
-        ),
-      )
 
     val sourceResponse: Any? =
       sourcePutRequest?.let { request ->

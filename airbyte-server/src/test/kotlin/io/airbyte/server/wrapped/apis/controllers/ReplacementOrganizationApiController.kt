@@ -8,9 +8,9 @@ import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.server.apis.controllers.OrganizationApiController
+import io.airbyte.server.auth.OrganizationEditorRule
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -32,7 +32,7 @@ open class ReplacementOrganizationApiController(
   ) {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = OrganizationEditorRule::class,
   )
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody?,

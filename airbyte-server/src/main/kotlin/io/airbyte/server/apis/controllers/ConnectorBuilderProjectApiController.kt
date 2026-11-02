@@ -36,7 +36,6 @@ import io.airbyte.api.server.generated.models.SourceDefinitionIdBody
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.builder.contributions.ContributionCreate
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.commons.server.handlers.ConnectorContributionHandler
@@ -74,10 +73,8 @@ class ConnectorBuilderProjectApiController(
 ) : ConnectorBuilderProjectApi {
   @Status(HttpStatus.CREATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderCreateRule::class,
   )
   override fun createConnectorBuilderProject(
@@ -91,10 +88,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.CREATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderForkRule::class,
   )
   override fun createForkedConnectorBuilderProject(
@@ -108,10 +103,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderDeleteRule::class,
   )
   override fun deleteConnectorBuilderProject(
@@ -125,10 +118,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderSavedReadRule::class,
   )
   override fun getConnectorBuilderProject(
@@ -142,10 +133,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderProjectListRule::class,
   )
   override fun listConnectorBuilderProjects(
@@ -158,10 +147,8 @@ class ConnectorBuilderProjectApiController(
     }
 
   @Status(HttpStatus.OK)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderPublishRule::class,
   )
   override fun publishConnectorBuilderProject(
@@ -174,10 +161,8 @@ class ConnectorBuilderProjectApiController(
     }
 
   @Status(HttpStatus.OK)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = AuthenticatedMetadataRule::class,
   )
   override fun getDeclarativeManifestBaseImage(
@@ -191,10 +176,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderTestingReadRule::class,
   )
   override fun readConnectorBuilderProjectStream(
@@ -208,10 +191,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderTestingReadRule::class,
   )
   override fun fullResolveManifestBuilderProject(
@@ -225,10 +206,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderResolveRule::class,
   )
   override fun resolveManifestBuilderProject(
@@ -247,10 +226,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderCapabilitiesRule::class,
   )
   override fun getConnectorBuilderCapabilities(
@@ -261,10 +238,8 @@ class ConnectorBuilderProjectApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = AuthenticatedMetadataRule::class,
   )
   override fun generateContribution(
@@ -291,10 +266,8 @@ class ConnectorBuilderProjectApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = AuthenticatedMetadataRule::class,
   )
   override fun checkContribution(
@@ -312,10 +285,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderUpdateRule::class,
   )
   override fun updateConnectorBuilderProject(
@@ -329,10 +300,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderTestingWriteRule::class,
   )
   override fun updateConnectorBuilderProjectTestingValues(
@@ -346,10 +315,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderDefinitionProjectRule::class,
   )
   override fun getConnectorBuilderProjectIdForDefinitionId(
@@ -363,10 +330,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderOAuthRule::class,
   )
   override fun getConnectorBuilderProjectOAuthConsent(
@@ -380,10 +345,8 @@ class ConnectorBuilderProjectApiController(
 
   @Status(HttpStatus.OK)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = BuilderOAuthRule::class,
   )
   override fun completeConnectorBuilderProjectOauth(

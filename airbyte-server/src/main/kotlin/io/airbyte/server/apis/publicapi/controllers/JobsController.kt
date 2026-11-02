@@ -6,13 +6,9 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.publicApi.server.generated.apis.PublicJobsApi
@@ -32,6 +28,10 @@ import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.helpers.orderByToFieldAndMethod
 import io.airbyte.server.apis.publicapi.services.ConnectionService
 import io.airbyte.server.apis.publicapi.services.JobService
+import io.airbyte.server.auth.PublicJobCancelRule
+import io.airbyte.server.auth.PublicJobCreateRule
+import io.airbyte.server.auth.PublicJobListRule
+import io.airbyte.server.auth.PublicJobReadRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -50,7 +50,6 @@ open class JobsController(
   private val jobService: JobService,
   private val connectionService: ConnectionService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val workspaceHelper: WorkspaceHelper,
 ) : PublicJobsApi {
@@ -59,18 +58,12 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicJobCancelRule::class,
   )
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.JOB_ID, jobId.toString())
-      .requireRole(AuthRoleConstants.WORKSPACE_RUNNER)
 
     val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
@@ -98,27 +91,10 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicJobCreateRule::class,
   )
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    // Only Editor and above should be able to run a Clear.
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.CONNECTION_ID, jobCreateRequest.connectionId)
-      .requireOneOfRoles(
-        when (jobCreateRequest.jobType) {
-          JobTypeEnum.CLEAR ->
-            setOf(
-              AuthRoleConstants.WORKSPACE_EDITOR,
-              AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-              AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-            )
-          else -> setOf(AuthRoleConstants.WORKSPACE_RUNNER)
-        },
-      )
 
     val connectionResponse: ConnectionResponse =
       trackingHelper.callWithTracker(
@@ -223,18 +199,12 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicJobReadRule::class,
   )
   override fun getJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.JOB_ID, jobId.toString())
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
@@ -262,7 +232,7 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicJobListRule::class,
   )
   override fun listJobs(
     connectionId: String?,
@@ -278,19 +248,6 @@ open class JobsController(
     orderBy: String?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-    if (connectionId != null) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    } else if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     val filter =
       JobsFilter(

@@ -25,20 +25,16 @@ import io.airbyte.api.server.generated.models.SourceDefinitionCreate
 import io.airbyte.api.server.generated.models.SourceDefinitionRead
 import io.airbyte.api.server.generated.models.SourceDefinitionUpdate
 import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
-import io.airbyte.commons.server.support.AuthenticationId
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.ActorType
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DeclarativeManifest
@@ -59,10 +55,18 @@ import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.services.UserService
+import io.airbyte.server.auth.PublicDeclarativeDefinitionReadRule
+import io.airbyte.server.auth.PublicDeclarativeDefinitionWriteRule
+import io.airbyte.server.auth.PublicDestinationDefinitionReadRule
+import io.airbyte.server.auth.PublicDestinationDefinitionWriteRule
+import io.airbyte.server.auth.PublicSourceDefinitionReadRule
+import io.airbyte.server.auth.PublicSourceDefinitionWriteRule
+import io.airbyte.server.auth.PublicWorkspaceReadRule
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.context.ServerRequestContext
+import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
@@ -71,8 +75,8 @@ import java.util.UUID
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
+@ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
 class DefinitionsController(
-  val roleResolver: RoleResolver,
   val currentUserService: CurrentUserService,
   val sourceDefinitionsHandler: SourceDefinitionsHandler,
   val destinationDefinitionsHandler: DestinationDefinitionsHandler,
@@ -87,7 +91,7 @@ class DefinitionsController(
   PublicDeclarativeSourceDefinitionsApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceDefinitionWriteRule::class,
   )
   override fun publicCreateSourceDefinition(
     workspaceId: UUID,
@@ -98,7 +102,6 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     sourceDefinitionsHandler
       .createCustomSourceDefinition(
@@ -109,14 +112,12 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDeclarativeDefinitionWriteRule::class,
   )
   override fun publicCreateDeclarativeSourceDefinition(
     workspaceId: UUID,
     request: CreateDeclarativeSourceDefinitionRequest,
   ) = wrap {
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
-
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
     // The "manifest" field contains the "spec", but it has a snake_case connection_specification
@@ -154,7 +155,7 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationDefinitionWriteRule::class,
   )
   override fun publicCreateDestinationDefinition(
     workspaceId: UUID,
@@ -165,7 +166,6 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-    ensureUserCanWrite(workspaceId, ActorType.DESTINATION)
 
     destinationDefinitionsHandler
       .createCustomDestinationDefinition(
@@ -176,7 +176,7 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceDefinitionWriteRule::class,
   )
   override fun publicDeleteSourceDefinition(
     workspaceId: UUID,
@@ -187,7 +187,6 @@ class DefinitionsController(
     if (def.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE) {
       throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom == true)
 
     sourceDefinitionsHandler.deleteSourceDefinition(definitionId)
     def.toPublicApiModel().ok()
@@ -195,14 +194,12 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDeclarativeDefinitionWriteRule::class,
   )
   override fun publicDeleteDeclarativeSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
-
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     val proj = connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(definitionId)
     if (proj.isEmpty) {
@@ -223,28 +220,26 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationDefinitionWriteRule::class,
   )
   override fun publicDeleteDestinationDefinition(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom == true)
+
     destinationDefinitionsHandler.deleteDestinationDefinition(definitionId)
     def.toPublicApiModel().ok()
   }
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceDefinitionReadRule::class,
   )
   override fun publicGetSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
-    ensureUserCanRead(workspaceId)
-
     // Use the listSourceDefinitionsForWorkspace function so that version pins, entitlements,
     // and other details are taken into account.
     val defs =
@@ -267,14 +262,12 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDeclarativeDefinitionReadRule::class,
   )
   override fun publicGetDeclarativeSourceDefinition(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
-    ensureUserCanRead(workspaceId)
-
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     connectorBuilderService
       .getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(definitionId)
@@ -284,14 +277,12 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationDefinitionReadRule::class,
   )
   override fun publicGetDestinationDefinition(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
-    ensureUserCanRead(workspaceId)
-
     // Use the listDestinationDefinitionsForWorkspace function so that version pins, entitlements,
     // and other details are taken into account.
     val defs =
@@ -309,12 +300,10 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceReadRule::class,
   )
   override fun publicListSourceDefinitions(workspaceId: UUID) =
     wrap {
-      ensureUserCanRead(workspaceId)
-
       DefinitionsResponse(
         sourceDefinitionsHandler
           .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
@@ -326,12 +315,10 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceReadRule::class,
   )
   override fun publicListDeclarativeSourceDefinitions(workspaceId: UUID) =
     wrap {
-      ensureUserCanRead(workspaceId)
-
       DeclarativeSourceDefinitionsResponse(
         sourceDefinitionsHandler
           .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
@@ -351,12 +338,10 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceReadRule::class,
   )
   override fun publicListDestinationDefinitions(workspaceId: UUID) =
     wrap {
-      ensureUserCanRead(workspaceId)
-
       DefinitionsResponse(
         destinationDefinitionsHandler
           .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody(workspaceId = workspaceId))
@@ -367,7 +352,7 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicSourceDefinitionWriteRule::class,
   )
   override fun publicUpdateSourceDefinition(
     workspaceId: UUID,
@@ -379,9 +364,6 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-
-    val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom == true)
 
     sourceDefinitionsHandler
       .updateSourceDefinition(
@@ -397,7 +379,7 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDeclarativeDefinitionWriteRule::class,
   )
   override fun publicUpdateDeclarativeSourceDefinition(
     workspaceId: UUID,
@@ -409,8 +391,6 @@ class DefinitionsController(
       throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
     val projId = proj.get()
-
-    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     val maxVersion =
       connectorBuilderService
@@ -448,7 +428,7 @@ class DefinitionsController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationDefinitionWriteRule::class,
   )
   override fun publicUpdateDestinationDefinition(
     workspaceId: UUID,
@@ -460,8 +440,6 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-    val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom == true)
 
     destinationDefinitionsHandler
       .updateDestinationDefinition(
@@ -496,40 +474,6 @@ class DefinitionsController(
       }, template, method, userId)
     trackingHelper.trackSuccess(template, method, userId)
     return res
-  }
-
-  private fun ensureUserCanRead(workspaceId: UUID) {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
-  }
-
-  private fun ensureUserCanWrite(
-    workspaceId: UUID,
-    actorType: ActorType,
-    isCustom: Boolean = true,
-  ) {
-    if (!isCustom) {
-      throw BadRequestProblem(
-        ProblemMessageData().message("Public definitions cannot be modified."),
-      )
-    }
-
-    // WORKSPACE_SOURCE_EDITOR can write source definitions. WORKSPACE_DESTINATION_EDITOR is
-    // deliberately not granted definition writes, matching UploadCustomConnector.
-    val requiredRoles =
-      when (actorType) {
-        ActorType.SOURCE -> setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR)
-        ActorType.DESTINATION -> setOf(AuthRoleConstants.WORKSPACE_EDITOR)
-      }
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(requiredRoles)
   }
 }
 

@@ -11,7 +11,6 @@ import io.airbyte.api.server.generated.models.DiffCatalogsRequest
 import io.airbyte.api.server.generated.models.DiffCatalogsResponse
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.CatalogDiffService
 import io.airbyte.metrics.lib.TracingHelper
@@ -33,7 +32,6 @@ class CatalogApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = CatalogDiffRule::class,
   )
   override fun diffCatalogs(

@@ -25,11 +25,9 @@ import io.airbyte.api.server.generated.models.HeartbeatRecord
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
@@ -66,17 +64,14 @@ open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataplaneHealthService: DataplaneHealthService,
-  private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
   private val metricClient: MetricClient,
   private val airbyteConfig: AirbyteConfig,
 ) : DataplaneApi,
   DataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneCreateRule::class,
   )
   override fun createDataplane(
@@ -104,10 +99,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun updateDataplane(
@@ -124,10 +117,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun deleteDataplane(
@@ -140,10 +131,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun listDataplanes(
@@ -174,7 +163,6 @@ open class DataplaneController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.LOGIN,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   override fun getDataplaneToken(
     @Body dataplaneTokenRequest: DataplaneTokenRequestBody,
@@ -189,10 +177,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneMachineRule::class,
   )
   override fun initializeDataplane(
@@ -226,10 +212,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneMachineRule::class,
   )
   override fun heartbeatDataplane(
@@ -297,10 +281,8 @@ open class DataplaneController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DataplaneManageRule::class,
   )
   override fun listDataplaneHealth(

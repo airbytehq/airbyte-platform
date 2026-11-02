@@ -7,7 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
@@ -30,6 +29,8 @@ import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.toApplicationRead
+import io.airbyte.server.auth.PublicCurrentUserRule
+import io.airbyte.server.auth.PublicOwnedApplicationRule
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -51,7 +52,7 @@ open class ApplicationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicCurrentUserRule::class,
   )
   override fun publicCreateApplication(applicationCreate: ApplicationCreate): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
@@ -78,7 +79,7 @@ open class ApplicationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOwnedApplicationRule::class,
   )
   override fun publicDeleteApplication(applicationId: String): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
@@ -112,7 +113,6 @@ open class ApplicationsController(
   @Secured(SecurityRule.IS_ANONYMOUS)
   @AuthorizeOperation(
     access = RouteAccessPolicy.LOGIN,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response {
     ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.CLIENT_ID to applicationTokenRequestWithGrant.clientId))
@@ -135,7 +135,7 @@ open class ApplicationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOwnedApplicationRule::class,
   )
   override fun publicGetApplication(applicationId: String): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()
@@ -171,7 +171,7 @@ open class ApplicationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicCurrentUserRule::class,
   )
   override fun publicListApplications(): Response {
     val user: AuthenticatedUser = currentUserService.getCurrentUser()

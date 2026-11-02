@@ -16,7 +16,6 @@ import io.airbyte.api.server.generated.models.PrivateLinkReadList
 import io.airbyte.api.server.generated.models.PrivateLinkUpdateRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.PrivateLinkGlobalStubRule
 import io.airbyte.server.auth.PrivateLinkWorkspaceStubRule
@@ -30,10 +29,8 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PrivateLinkController : PrivateLinkApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkWorkspaceStubRule::class,
   )
   override fun createPrivateLink(
@@ -41,10 +38,8 @@ open class PrivateLinkController : PrivateLinkApi {
   ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkWorkspaceStubRule::class,
   )
   override fun listPrivateLinksForWorkspace(
@@ -52,10 +47,8 @@ open class PrivateLinkController : PrivateLinkApi {
   ): PrivateLinkReadList = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkWorkspaceStubRule::class,
   )
   override fun deletePrivateLink(
@@ -63,10 +56,8 @@ open class PrivateLinkController : PrivateLinkApi {
   ): Unit = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkGlobalStubRule::class,
   )
   override fun getPrivateLink(
@@ -74,10 +65,8 @@ open class PrivateLinkController : PrivateLinkApi {
   ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkGlobalStubRule::class,
   )
   override fun updatePrivateLink(
@@ -85,10 +74,8 @@ open class PrivateLinkController : PrivateLinkApi {
   ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PrivateLinkGlobalStubRule::class,
   )
   override fun listPrivateLinksByStatus(

@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.InstanceConfigurationResponse
 import io.airbyte.api.server.generated.models.InstanceConfigurationSetupRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.server.apis.controllers.InstanceConfigurationApiController
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -18,11 +17,14 @@ import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import jakarta.inject.Singleton
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 @Controller
+@Secured(SecurityRule.IS_ANONYMOUS)
 @Replaces(InstanceConfigurationApiController::class)
 @Requires(property = "spec.name", value = "StrictJsonDeserializationTest")
 class DirectInterfaceInstanceConfigurationApiController(
@@ -30,15 +32,13 @@ class DirectInterfaceInstanceConfigurationApiController(
 ) : InstanceConfigurationApi {
   @Status(HttpStatus.NO_CONTENT)
   @AuthorizeOperation(
-    access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    access = RouteAccessPolicy.PUBLIC,
   )
   override fun getInstanceConfiguration(): InstanceConfigurationResponse = instanceConfigurationResponse()
 
   @Status(HttpStatus.NO_CONTENT)
   @AuthorizeOperation(
-    access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    access = RouteAccessPolicy.LOGIN,
   )
   override fun setupInstanceConfiguration(
     @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody?,

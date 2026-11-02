@@ -20,7 +20,6 @@ import io.airbyte.api.server.generated.models.WorkspaceIdActorDefinitionRequestB
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -45,10 +44,8 @@ open class DestinationDefinitionApiController(
   private val enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler,
 ) : DestinationDefinitionApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.CustomDefinitionCreateRule::class,
   )
   override fun createCustomDestinationDefinition(
@@ -66,10 +63,8 @@ open class DestinationDefinitionApiController(
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationDefinitionMutationRule::class,
   )
   override fun deleteDestinationDefinition(
@@ -82,10 +77,8 @@ open class DestinationDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationRegistryMetadataRule::class,
   )
   override fun getDestinationDefinition(
@@ -99,10 +92,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationRegistryScopedReadRule::class,
   )
   override fun getDestinationDefinitionForScope(
@@ -115,10 +106,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationRegistryScopedReadRule::class,
   )
   override fun getDestinationDefinitionForWorkspace(
@@ -131,10 +120,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationRegistryGrantRule::class,
   )
   override fun grantDestinationDefinition(
@@ -147,10 +134,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.AuthenticatedMetadataRule::class,
   )
   override fun listDestinationDefinitions(): DestinationDefinitionReadList =
@@ -161,10 +146,8 @@ open class DestinationDefinitionApiController(
     )
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionRegistryWorkspaceReadRule::class,
   )
   override fun listDestinationDefinitionsForWorkspace(
@@ -177,10 +160,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionRegistryWorkspaceReadRule::class,
   )
   override fun listEnterpriseDestinationStubsForWorkspace(
@@ -193,10 +174,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.AuthenticatedMetadataRule::class,
   )
   override fun listLatestDestinationDefinitions(): DestinationDefinitionReadList =
@@ -207,10 +186,8 @@ open class DestinationDefinitionApiController(
     )
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DefinitionRegistryPrivateListRule::class,
   )
   override fun listPrivateDestinationDefinitions(
@@ -223,10 +200,8 @@ open class DestinationDefinitionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationRegistryRevokeRule::class,
   )
   override fun revokeDestinationDefinition(
@@ -239,10 +214,8 @@ open class DestinationDefinitionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.DestinationDefinitionMutationRule::class,
   )
   override fun updateDestinationDefinition(

@@ -4,14 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.publicApi.server.generated.apis.PublicWorkspacesApi
 import io.airbyte.publicApi.server.generated.models.ActorTypeEnum
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
@@ -20,6 +15,11 @@ import io.airbyte.publicApi.server.generated.models.WorkspaceUpdateRequest
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_PATH
 import io.airbyte.server.apis.publicapi.services.WorkspaceService
+import io.airbyte.server.auth.PublicWorkspaceCreateRule
+import io.airbyte.server.auth.PublicWorkspaceListRule
+import io.airbyte.server.auth.PublicWorkspaceReadRule
+import io.airbyte.server.auth.PublicWorkspaceUpdateRule
+import io.airbyte.server.auth.PublicWorkspaceWriteRule
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
@@ -36,79 +36,47 @@ private val logger = KotlinLogging.logger {}
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkspacesController(
   protected val workspaceService: WorkspaceService,
-  private val roleResolver: RoleResolver,
 ) : PublicWorkspacesApi {
   @Path("$WORKSPACES_PATH/{workspaceId}/oauthCredentials")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceWriteRule::class,
   )
   override fun createOrUpdateWorkspaceOAuthCredentials(
     workspaceId: String,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest,
-  ): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
-
-    return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
+  ): Response =
+    workspaceService.controllerSetWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
       workspaceOAuthCredentialsRequest,
     )
-  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceWriteRule::class,
   )
   override fun deleteWorkspaceOAuthCredentials(
     workspaceId: String,
     actorType: ActorTypeEnum,
     name: String,
-  ): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
-
-    return workspaceService.controllerDeleteWorkspaceOverrideOAuthParams(
+  ): Response =
+    workspaceService.controllerDeleteWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
       actorType,
       name,
     )
-  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceCreateRule::class,
   )
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): Response {
     // This request is hard-coded to the DEFAULT_ORGANIZATION_ID in OSS,
     // because there's only one organization in OSS.
     // This controller is overridden in Airbyte Cloud to allow multiple workspaces.
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, DEFAULT_ORGANIZATION_ID)
-      .requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
 
     return workspaceService.controllerCreateWorkspace(workspaceCreateRequest)
   }
@@ -117,43 +85,22 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceWriteRule::class,
   )
-  override fun publicDeleteWorkspace(workspaceId: String): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
-
-    return workspaceService.controllerDeleteWorkspace(UUID.fromString(workspaceId))
-  }
+  override fun publicDeleteWorkspace(workspaceId: String): Response = workspaceService.controllerDeleteWorkspace(UUID.fromString(workspaceId))
 
   @Path("$WORKSPACES_PATH/{workspaceId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceReadRule::class,
   )
-  override fun publicGetWorkspace(workspaceId: String): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    return workspaceService.controllerGetWorkspace(UUID.fromString(workspaceId))
-  }
+  override fun publicGetWorkspace(workspaceId: String): Response = workspaceService.controllerGetWorkspace(UUID.fromString(workspaceId))
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceListRule::class,
   )
   override fun publicListWorkspaces(
     workspaceIds: List<UUID>?,
@@ -161,15 +108,7 @@ open class WorkspacesController(
     limit: Int,
     offset: Int,
   ): Response {
-    // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the WorkspaceService will determine the workspaces for the current user.
-    if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     return workspaceService.controllerListWorkspaces(
       workspaceIds ?: emptyList(),
@@ -184,23 +123,10 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceUpdateRule::class,
   )
   override fun publicUpdateWorkspace(
     workspaceId: String,
     workspaceUpdateRequest: WorkspaceUpdateRequest,
-  ): Response {
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(
-        setOf(
-          AuthRoleConstants.WORKSPACE_EDITOR,
-          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
-          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
-        ),
-      )
-    return workspaceService.controllerUpdateWorkspace(UUID.fromString(workspaceId), workspaceUpdateRequest)
-  }
+  ): Response = workspaceService.controllerUpdateWorkspace(UUID.fromString(workspaceId), workspaceUpdateRequest)
 }

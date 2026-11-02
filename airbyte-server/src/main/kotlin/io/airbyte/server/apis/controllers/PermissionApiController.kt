@@ -20,7 +20,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Permission
@@ -46,10 +45,8 @@ open class PermissionApiController(
   private val permissionHandler: PermissionHandler,
 ) : PermissionApi {
   @AuditLogging(provider = AuditLoggingProvider.CREATE_PERMISSION)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionCreateRule::class,
   )
   override fun createPermission(
@@ -69,10 +66,8 @@ open class PermissionApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionReadRule::class,
   )
   override fun getPermission(
@@ -80,10 +75,8 @@ open class PermissionApiController(
   ): PermissionRead = execute { permissionHandler.getPermissionRead(permissionIdRequestBody) }
 
   @AuditLogging(provider = AuditLoggingProvider.UPDATE_PERMISSION)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionUpdateRule::class,
   )
   override fun updatePermission(
@@ -105,10 +98,8 @@ open class PermissionApiController(
   }
 
   @AuditLogging(provider = AuditLoggingProvider.DELETE_PERMISSION)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionDeleteRule::class,
   )
   override fun deletePermission(
@@ -120,10 +111,8 @@ open class PermissionApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionLeaveWorkspaceRule::class,
   )
   override fun deleteUserFromWorkspace(
@@ -135,30 +124,24 @@ open class PermissionApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionUserListRule::class,
   )
   override fun listPermissionsByUser(
     @Body userIdRequestBody: UserIdRequestBody,
   ): PermissionReadList = execute { permissionHandler.effectivePermissionReadListForUser(userIdRequestBody.userId) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionDiagnosticRule::class,
   )
   override fun checkPermissions(
     @Body permissionCheckRequest: PermissionCheckRequest,
   ): PermissionCheckRead = execute { permissionHandler.checkPermissions(permissionCheckRequest) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = PermissionDiagnosticRule::class,
   )
   override fun checkPermissionsAcrossMultipleWorkspaces(

@@ -5,14 +5,15 @@
 package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.Post
 import io.micronaut.inject.BeanConfiguration
 import io.micronaut.inject.BeanDefinitionReference
 import io.micronaut.security.annotation.Secured
@@ -25,7 +26,7 @@ import org.junit.jupiter.api.Test
 
 class RouteAccessMetadataTest {
   @Test
-  fun `wrong access policies and unverified SHARED routes are rejected from real route metadata`() {
+  fun `wrong access policies and protected routes without rules are rejected from real route metadata`() {
     context().start().use { context ->
       val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
 
@@ -38,6 +39,7 @@ class RouteAccessMetadataTest {
         )
       assertTrue(errors("/public-protected").any { it.contains("conflicts") })
       assertTrue(errors("/shared").any { it.contains("concrete DI rule") })
+      assertTrue(errors("/missing-rule").any { it.contains("concrete DI rule") })
     }
   }
 
@@ -75,6 +77,22 @@ class RouteAccessMetadataTest {
     }
   }
 
+  @Test
+  fun `search exception is restricted to the three authenticated POST searches without a rule`() {
+    context().start().use { context ->
+      val inventory = RouteAccessInventory(context.getBean(Router::class.java), context)
+      for (route in inventory.routes().filter { it.targetMethod.methodName in setOf("wrongPath", "withRule", "publicException") }) {
+        val errors = inventory.violations(route)
+        assertTrue(errors.any { it.contains("search exception") }, "${route.httpMethodName} ${route.uriMatchTemplate}: $errors")
+      }
+      val valid = inventory.routes().filter { it.httpMethodName == "POST" && it.uriMatchTemplate.toString() == "/api/v1/sources/search" }
+      assertEquals(1, valid.size)
+      assertTrue(inventory.violations(valid.single()).isEmpty())
+      val wrongMethod = inventory.routes().first { it.httpMethodName == "GET" && it.uriMatchTemplate.toString() == "/api/v1/sources/search" }
+      assertTrue(inventory.violations(wrongMethod).any { it.contains("search exception") })
+    }
+  }
+
   private fun context(
     replacement: Boolean = false,
     empty: Boolean = false,
@@ -88,6 +106,7 @@ class RouteAccessMetadataTest {
           "io.airbyte.server.auth.RouteAccessWorkloadPathController",
           "io.airbyte.server.auth.RouteAccessParentController",
           "io.airbyte.server.auth.RouteAccessReplacementController",
+          "io.airbyte.server.auth.RouteAccessSearchExceptionController",
         )
       }
     val isolated =
@@ -121,25 +140,29 @@ class RouteAccessMetadataTest {
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class RouteAccessMetadataController {
   @Get("/public-protected")
-  @AuthorizeOperation(RouteAccessPolicy.PUBLIC, RouteMigration.NOT_APPLICABLE)
+  @AuthorizeOperation(RouteAccessPolicy.PUBLIC)
   fun wrongPublic() = "unreachable"
 
   @Get("/shared")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
   fun shared() = "unreachable"
+
+  @Get("/missing-rule")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
+  fun missingRule() = "unreachable"
 }
 
 @Context
 @Controller("/api/v1/inherited-fixture")
 @Requires(property = "spec.name", value = "RouteAccessMetadataTest")
-@Secured(SecurityRule.IS_AUTHENTICATED)
+@Secured(SecurityRule.IS_ANONYMOUS)
 open class RouteAccessParentController {
   @Get("/inherited")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.LEGACY)
+  @AuthorizeOperation(RouteAccessPolicy.PUBLIC)
   open fun inherited() = "inherited"
 
   @Get("/overridden")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.LEGACY)
+  @AuthorizeOperation(RouteAccessPolicy.PUBLIC)
   open fun overridden() = "parent"
 }
 
@@ -158,4 +181,35 @@ class RouteAccessReplacementController : RouteAccessParentController() {
 class RouteAccessWorkloadPathController {
   @Get
   fun missing() = "unchecked"
+}
+
+@Controller("/api/v1")
+@Requires(property = "spec.name", value = "RouteAccessMetadataTest")
+@Secured(SecurityRule.IS_AUTHENTICATED)
+class RouteAccessSearchExceptionController {
+  @Post("/sources/search")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
+  @ConfigSearchAccessException
+  fun valid() = "preserved search"
+
+  @Get("/sources/search")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
+  @ConfigSearchAccessException
+  fun wrongMethod() = "unreachable"
+
+  @Post("/search-exception/wrong-path")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
+  @ConfigSearchAccessException
+  fun wrongPath() = "unreachable"
+
+  @Post("/connections/search")
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationNonBeanRule::class)
+  @ConfigSearchAccessException
+  fun withRule() = "unreachable"
+
+  @Post("/destinations/search")
+  @Secured(SecurityRule.IS_ANONYMOUS)
+  @AuthorizeOperation(RouteAccessPolicy.PUBLIC)
+  @ConfigSearchAccessException
+  fun publicException() = "unreachable"
 }

@@ -4,11 +4,14 @@
 
 package io.airbyte.server.auth
 
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.OperationInput
+import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Value
 import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.annotation.Controller
@@ -37,7 +40,7 @@ class RouteAccessHttpTest {
   @CsvSource(
     "missing,missing method-level @AuthorizeOperation",
     "outside,missing method-level @AuthorizeOperation",
-    "shared,SHARED requires a concrete DI rule",
+    "shared,protected route requires a concrete DI rule",
   )
   fun `invalid managed declarations fail startup with and without authentication`(
     invalidRoute: String,
@@ -53,7 +56,7 @@ class RouteAccessHttpTest {
   }
 
   @Test
-  fun `LEGACY metadata preserves existing role denial public login and handler failures`() {
+  fun `rules preserve role denial public login and handler failures`() {
     context().start().use { context ->
       context.getBean(EmbeddedServer::class.java).start().use { server ->
         HttpClient.newHttpClient().use { client ->
@@ -118,7 +121,13 @@ class RouteAccessHttpTest {
     invalidRoute: String = "",
     securityEnabled: Boolean = true,
   ): ApplicationContext {
-    val allowed = listOf("io.airbyte.server.auth.RouteAccess")
+    val allowed =
+      listOf(
+        "io.airbyte.server.auth.RouteAccess",
+        "io.airbyte.server.auth.AuthorizedRequest",
+        "io.airbyte.server.auth.AuthorizationInterceptor",
+        "io.airbyte.commons.server.errors.problems.AbstractThrowableProblemHandler",
+      )
     val isolated =
       object : BeanConfiguration by BeanConfiguration.disabled("io.airbyte") {
         override fun isWithin(beanDefinitionReference: BeanDefinitionReference<*>): Boolean =
@@ -153,22 +162,21 @@ class RouteAccessHttpTest {
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class RouteAccessHttpController {
   @Get("/legacy")
-  @Secured("test-reader")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.LEGACY)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteAccessHttpRule::class)
   fun legacy() = "legacy permission retained"
 
   @Get("/public")
   @Secured(SecurityRule.IS_ANONYMOUS)
-  @AuthorizeOperation(RouteAccessPolicy.PUBLIC, RouteMigration.NOT_APPLICABLE)
+  @AuthorizeOperation(RouteAccessPolicy.PUBLIC)
   fun publicRoute() = "public"
 
   @Get("/login")
   @Secured(SecurityRule.IS_ANONYMOUS)
-  @AuthorizeOperation(RouteAccessPolicy.LOGIN, RouteMigration.NOT_APPLICABLE)
+  @AuthorizeOperation(RouteAccessPolicy.LOGIN)
   fun loginRoute() = "login"
 
   @Get("/failure")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.LEGACY)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteAccessHttpRule::class)
   fun failure(): String =
     throw io.micronaut.http.exceptions
       .HttpStatusException(io.micronaut.http.HttpStatus.SERVICE_UNAVAILABLE, "handler failed")
@@ -200,7 +208,7 @@ class RouteAccessMissingController {
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class RouteAccessUnverifiedController {
   @Get("/shared")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED)
   fun shared() = "unguarded"
 }
 
@@ -211,4 +219,19 @@ class RouteAccessUnverifiedController {
 class RouteAccessOutsidePrefixController {
   @Get("/missing")
   fun missing() = "unchecked"
+}
+
+@Singleton
+@Requires(property = "spec.name", value = "RouteAccessHttpTest")
+class RouteAccessHttpRule(
+  @Value("\${micronaut.security.enabled}") private val securityEnabled: Boolean,
+) : OperationRule {
+  override fun readInput(args: Array<out Any?>): OperationInput = MetadataOperationInput
+
+  override fun authorize(
+    caller: Authentication,
+    input: OperationInput,
+  ) {
+    if (securityEnabled && "test-reader" !in caller.roles) throw ForbiddenProblem()
+  }
 }

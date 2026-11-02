@@ -17,7 +17,6 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.UserInvitationHandler
-import io.airbyte.server.helpers.UserInvitationAuthorizationHelper
 import io.airbyte.server.status
 import io.airbyte.server.statusException
 import io.micronaut.context.ApplicationContext
@@ -28,9 +27,7 @@ import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import jakarta.inject.Inject
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -46,8 +43,6 @@ internal class UserInvitationApiControllerTest {
 
   lateinit var userInvitationHandler: UserInvitationHandler
 
-  lateinit var userInvitationAuthorizationHelper: UserInvitationAuthorizationHelper
-
   @Inject
   @Client("/")
   lateinit var client: HttpClient
@@ -57,11 +52,9 @@ internal class UserInvitationApiControllerTest {
   @BeforeAll
   fun setupMock() {
     userInvitationHandler = mockk()
-    userInvitationAuthorizationHelper = mockk()
     val currentUserService = mockk<CurrentUserService>()
     every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail("user@airbyte.io")
     context.registerSingleton(UserInvitationHandler::class.java, userInvitationHandler)
-    context.registerSingleton(UserInvitationAuthorizationHelper::class.java, userInvitationAuthorizationHelper)
     context.registerSingleton(CurrentUserService::class.java, currentUserService)
   }
 
@@ -118,7 +111,6 @@ internal class UserInvitationApiControllerTest {
 
   @Test
   fun testCancelUserInvitation() {
-    every { userInvitationAuthorizationHelper.authorizeInvitationAdmin(invitationId, any<UUID>()) } just runs
     every { userInvitationHandler.cancel(any()) } returns
       UserInvitationAdminRead(
         id = invitationId,

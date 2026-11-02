@@ -13,6 +13,7 @@ import io.airbyte.api.server.generated.models.UserInvitationAdminRead
 import io.airbyte.api.server.generated.models.UserInvitationCreateResponse
 import io.airbyte.api.server.generated.models.UserInvitationRead
 import io.airbyte.api.server.generated.models.UserInvitationStatus
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -40,7 +41,6 @@ import io.airbyte.server.apis.controllers.UserInvitationApiController
 import io.airbyte.server.handlers.UserInvitationHandler
 import io.airbyte.server.helpers.GroupPermissionValidator
 import io.airbyte.server.helpers.GroupsEntitlementHelper
-import io.airbyte.server.helpers.UserInvitationAuthorizationHelper
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -218,6 +218,62 @@ abstract class RemainingMembershipAuthorizationHttpContract {
     }
   }
 
+  @Test
+  fun `invitation cancellation has one saved admin decision for either selector in every auth mode`() {
+    for (security in listOf(true, false)) {
+      for (organization in listOf(false, true)) {
+        for (body in listOf("""{"id":"$INVITATION"}""", """{"inviteCode":"fixture"}""")) {
+          val cancel = scenarios().single { it.path.endsWith("/cancel") }.copy(body = body)
+          val admin = if (organization) Permission.PermissionType.ORGANIZATION_ADMIN else Permission.PermissionType.WORKSPACE_ADMIN
+          exercise(cancel, 200, security = security, invitationOrganization = organization, grant = admin)
+          exercise(
+            cancel,
+            403,
+            security = security,
+            invitationOrganization = organization,
+            granted = false,
+            noAuthGranted = false,
+            expectedMessage = if (security) "Admin authorization failed for invitation." else cancellationFailure(body),
+          )
+          exercise(
+            cancel,
+            403,
+            security = security,
+            invitationOrganization = organization,
+            grant = if (organization) Permission.PermissionType.ORGANIZATION_READER else Permission.PermissionType.WORKSPACE_READER,
+            expectedMessage = if (security) "Admin authorization failed for invitation." else cancellationFailure(body),
+          )
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `invitation cancellation preserves saved lookup and no auth permission failures before cancellation`() {
+    for (security in listOf(true, false)) {
+      for (body in listOf("""{"id":"$INVITATION"}""", """{"inviteCode":"fixture"}""")) {
+        val cancel = scenarios().single { it.path.endsWith("/cancel") }.copy(body = body)
+        exercise(cancel, 403, security = security, missing = true, expectedMessage = "Admin authorization failed for invitation.")
+        exercise(cancel, 403, security = security, lookupError = true, expectedMessage = "Admin authorization failed for invitation.")
+        if (!security) exercise(cancel, 403, security = false, noAuthPermissionError = true, expectedMessage = cancellationFailure(body))
+      }
+    }
+  }
+
+  @Test
+  fun `invitation cancellation rejects anonymous callers before saved lookup`() {
+    val cancel = scenarios().single { it.path.endsWith("/cancel") }
+    exercise(cancel, 401, token = "", earlierAllow = false)
+    exercise(cancel, 403, token = "")
+  }
+
+  private fun cancellationFailure(body: String): String =
+    if (body.contains("\"id\"")) {
+      "Admin authorization failed for invitation id: $INVITATION and user id: $USER"
+    } else {
+      "Admin authorization failed for invite code: fixture and user id: $USER"
+    }
+
   private fun exercise(
     scenario: Scenario,
     expected: Int,
@@ -238,11 +294,15 @@ abstract class RemainingMembershipAuthorizationHttpContract {
     missingBeneficiary: Boolean = false,
     userlessPermission: Boolean = false,
     expectedMessage: String = "",
+    invitationOrganization: Boolean = false,
+    noAuthGranted: Boolean = true,
+    noAuthPermissionError: Boolean = false,
+    earlierAllow: Boolean = true,
   ) {
     val data = mockk<AuthorizationDataService>()
     val membership = mockk<MembershipAuthorizationDataService>()
     val grants = mockk<PermissionService>()
-    RemainingOperationHttpSupport(cloud, controllers(), scenarios().map { "io.airbyte.server.auth.${it.rule}" }.toSet(), security).run(
+    RemainingOperationHttpSupport(cloud, controllers(), scenarios().map { "io.airbyte.server.auth.${it.rule}" }.toSet(), security, earlierAllow).run(
       configure = { context, business ->
         configureBusiness(business, foreignPermissionGroup, userlessPermission)
         every { data.organization(ORGANIZATION) } returns ORGANIZATION
@@ -269,7 +329,13 @@ abstract class RemainingMembershipAuthorizationHttpContract {
           }
         val invitation =
           SavedAuthorizationInvitation(
-            AuthorizationTarget.Workspace(WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)),
+            if (invitationOrganization) {
+              AuthorizationTarget.Organization(
+                ORGANIZATION,
+              )
+            } else {
+              AuthorizationTarget.Workspace(WorkspaceAndOrganization(WORKSPACE, ORGANIZATION))
+            },
             email,
             Permission.PermissionType.WORKSPACE_READER,
           )
@@ -281,6 +347,7 @@ abstract class RemainingMembershipAuthorizationHttpContract {
           val failure = if (missing) AuthorizationResourceNotFoundException() else java.io.IOException("membership metadata unavailable")
           every { membership.permission(PERMISSION) } throws failure
           every { membership.invitationById(INVITATION) } throws failure
+          every { membership.invitationByCode("fixture") } throws failure
         }
         val permissions =
           if (!granted) {
@@ -293,6 +360,26 @@ abstract class RemainingMembershipAuthorizationHttpContract {
               },
             )
           }
+        if (scenario.path.endsWith("/cancel")) {
+          val defaultPermissions =
+            if (noAuthGranted) {
+              listOf(
+                Permission()
+                  .withPermissionId(UUID(0, 19))
+                  .withUserId(USER)
+                  .withPermissionType(grant)
+                  .also { if (invitationOrganization) it.organizationId = ORGANIZATION else it.workspaceId = WORKSPACE },
+              )
+            } else {
+              emptyList()
+            }
+          every { grants.getEffectivePermissionsForUser(USER) } returns defaultPermissions
+          if (noAuthPermissionError) {
+            every { grants.getEffectivePermissionsForUser(USER) } throws
+              java.io.IOException("permission storage unavailable")
+          }
+          context.registerSingleton(PermissionHandler::class.java, PermissionHandler(mockk(), mockk(), { UUID.randomUUID() }, grants))
+        }
         every { grants.getPermissionsByAuthUserId("caller") } returns permissions
         every { grants.getPermissionsByServiceAccountId(UUID(0, 9)) } returns permissions
         context.registerSingleton(AuthorizationDataService::class.java, data)
@@ -313,7 +400,7 @@ abstract class RemainingMembershipAuthorizationHttpContract {
         }
         val response = RemainingOperationHttpSupport.request(server, scenario.method, scenario.path, scenario.body, token)
         assertEquals(expected, response.statusCode(), "${scenario.path}: ${response.body()}")
-        if (expectedMessage.isNotEmpty()) assertTrue(response.body().contains(expectedMessage), response.body())
+        if (expectedMessage.isNotEmpty()) assertEquals(expectedMessage, Jsons.deserialize(response.body()).path("message").asText(), response.body())
         if (expected != scenario.status || expected == 403 || expected == 404 ||
           expected == 400
         ) {
@@ -325,7 +412,29 @@ abstract class RemainingMembershipAuthorizationHttpContract {
           verify(exactly = 0) { membership.invitationByCode(any()) }
           verify(exactly = 0) { membership.currentIdentity(any()) }
         }
-        if (scenario.path.endsWith("/cancel") && scenario.body.contains("\"id\"")) verify(exactly = 0) { membership.invitationByCode(any()) }
+        if (scenario.path.endsWith("/cancel")) {
+          if (scenario.body.contains("\"id\"")) verify(exactly = 0) { membership.invitationByCode(any()) }
+          business.filterIsInstance<CurrentUserService>().forEach { verify(exactly = 0) { it.getCurrentUser() } }
+          if (expected == 200) {
+            assertEquals("cancelled", Jsons.deserialize(response.body()).path("status").asText(), response.body())
+            business.filterIsInstance<UserInvitationHandler>().forEach { handler ->
+              verify(exactly = 1) {
+                handler.cancel(match { if (scenario.body.contains("\"id\"")) it.id == INVITATION else it.inviteCode == "fixture" && it.id == null })
+              }
+            }
+            if (scenario.body.contains("\"id\"")) {
+              verify(exactly = 1) { membership.invitationById(INVITATION) }
+            } else {
+              verify(exactly = 1) { membership.invitationByCode("fixture") }
+            }
+          }
+          if (token.isEmpty()) {
+            verify(exactly = 0) { membership.invitationById(any()) }
+            verify(exactly = 0) { membership.defaultIdentity() }
+            verify(exactly = 0) { membership.currentIdentity(any()) }
+          }
+          if (security) verify(exactly = 0) { grants.getEffectivePermissionsForUser(any()) }
+        }
         if (!security) verify(exactly = 0) { grants.getPermissionsByAuthUserId(any()) }
       },
     )
@@ -463,13 +572,6 @@ abstract class RemainingMembershipAuthorizationHttpContract {
             GroupMember(UUID(0, 10), GROUP, USER, "fixture@example.com", "fixture", time)
           every { instance.removeGroupMember(GroupId(GROUP), UserId(USER), OrganizationId(ORGANIZATION)) } just Runs
         }
-        is RoleResolver -> {
-          val request = mockk<RoleResolver.Request>()
-          every { instance.newRequest() } returns request
-          every { request.withCurrentUser() } returns request
-          every { request.withRef(any(), ORGANIZATION.toString()) } returns request
-          every { request.requireRole(any()) } just Runs
-        }
         is GroupsEntitlementHelper -> every { instance.ensureEntitled(OrganizationId(ORGANIZATION)) } just Runs
         is PermissionService -> {
           every { instance.getPermissionsByGroupId(GROUP) } returns emptyList()
@@ -542,10 +644,6 @@ abstract class RemainingMembershipAuthorizationHttpContract {
               0,
               0,
             )
-        }
-        is UserInvitationAuthorizationHelper -> {
-          every { instance.authorizeInvitationAdmin(INVITATION, USER) } just Runs
-          every { instance.authorizeInvitationAdmin("fixture", USER) } just Runs
         }
       }
     }

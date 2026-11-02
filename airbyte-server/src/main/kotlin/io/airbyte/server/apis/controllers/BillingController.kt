@@ -18,7 +18,6 @@ import io.airbyte.api.server.generated.models.OrganizationTrialStatusRead
 import io.airbyte.api.server.generated.models.PaymentInformationRead
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -32,7 +31,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getCustomerPortalLink(
@@ -43,7 +41,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun listPastInvoices(
@@ -54,7 +51,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun getPaymentInformation(
@@ -65,7 +61,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingSubscriptionUnsupportedRule::class,
   )
   override fun getSubscriptionInfo(
@@ -76,7 +71,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.UnavailableProtectedRule::class,
   )
   override fun handleWebhook(
@@ -87,7 +81,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingTrialUnsupportedRule::class,
   )
   override fun getOrganizationTrialStatus(
@@ -98,7 +91,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingBackfillStubRule::class,
   )
   override fun backfillUsage(billingBackfillUsageRequest: BillingBackfillUsageRequest?): Unit = throw ApiNotImplementedInOssProblem()
@@ -107,7 +99,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun cancelSubscription(
@@ -118,7 +109,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.GlobalAdminRule::class,
   )
   override fun disableDelinquentWorkspaces(): Unit = throw ApiNotImplementedInOssProblem()
@@ -127,7 +117,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun unscheduleCancelSubscription(
@@ -138,7 +127,6 @@ open class BillingController : BillingApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.BillingManageUnsupportedRule::class,
   )
   override fun unschedulePlanChange(

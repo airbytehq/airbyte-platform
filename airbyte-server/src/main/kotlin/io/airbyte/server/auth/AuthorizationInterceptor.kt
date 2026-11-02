@@ -5,7 +5,8 @@
 package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.RouteMigration
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
+import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
@@ -17,7 +18,9 @@ class AuthorizationInterceptor(
   private val authorizedRequest: AuthorizedRequest,
 ) : MethodInterceptor<Any, Any> {
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any? =
-    if (context.enumValue(AuthorizeOperation::class.java, "migration", RouteMigration::class.java).orElseThrow() == RouteMigration.SHARED) {
+    if (context.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow() == RouteAccessPolicy.PROTECTED &&
+      !context.hasAnnotation(ConfigSearchAccessException::class.java)
+    ) {
       authorizedRequest.execute(context)
     } else {
       context.proceed()

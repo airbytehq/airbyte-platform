@@ -17,7 +17,6 @@ import io.airbyte.api.server.generated.models.SaveStatsRequestBody
 import io.airbyte.api.server.generated.models.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -40,10 +39,8 @@ class AttemptApiController(
   private val jobConverter: JobConverter,
 ) : AttemptApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getAttemptForJob(
@@ -59,10 +56,8 @@ class AttemptApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun createNewAttemptNumber(
@@ -70,10 +65,8 @@ class AttemptApiController(
   ): CreateNewAttemptNumberResponse = execute { attemptHandler.createNewAttemptNumber(requestBody.jobId) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobReadRule::class,
   )
   override fun getAttemptCombinedStats(
@@ -87,10 +80,8 @@ class AttemptApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SaveAttemptStatsRule::class,
   )
   override fun saveStats(
@@ -98,10 +89,8 @@ class AttemptApiController(
   ): InternalOperationResult = execute { attemptHandler.saveStats(requestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = SaveAttemptStreamMetadataRule::class,
   )
   override fun saveStreamMetadata(
@@ -109,10 +98,8 @@ class AttemptApiController(
   ): InternalOperationResult = execute { attemptHandler.saveStreamMetadata(requestBody.requireBody()) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun saveSyncConfig(
@@ -120,10 +107,8 @@ class AttemptApiController(
   ): InternalOperationResult = execute { attemptHandler.saveSyncConfig(requestBody) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = JobAdminRule::class,
   )
   override fun failAttempt(

@@ -331,7 +331,7 @@ class FusionConnectionReadRule(
     data,
     permissions,
     setOf(AuthRoleConstants.WORKSPACE_READER),
-    callers = OperationCaller.entries.toSet(),
+    callers = setOf(OperationCaller.USER),
   )
 
 @Singleton
@@ -342,7 +342,7 @@ class FusionConnectionWriteRule(
     data,
     permissions,
     setOf(AuthRoleConstants.WORKSPACE_EDITOR),
-    callers = OperationCaller.entries.toSet(),
+    callers = setOf(OperationCaller.USER),
   )
 
 @Singleton

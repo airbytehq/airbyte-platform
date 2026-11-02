@@ -4,6 +4,7 @@
 
 package io.airbyte.domain.services.auth
 
+import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ApplicationService
@@ -24,6 +25,20 @@ class ApplicationAuthorizationServiceTest {
   private val users = mockk<UserPersistence>()
   private val applications = mockk<ApplicationService>()
   private val service = ApplicationAuthorizationService(users, applications)
+
+  @Test
+  fun `public application provider IDs retain exact string ownership and unknown ID behavior`() {
+    val user = AuthenticatedUser().withUserId(UUID(0, 8)).withAuthUserId("caller")
+    every { users.getUserByAuthId("caller") } returns Optional.of(user)
+    every { applications.listApplicationsByUser(user) } returns listOf(Application().withId("provider-application"))
+    assertEquals(true, service.ownsPublicApplication("caller", "provider-application"))
+    assertEquals(false, service.ownsPublicApplication("caller", "another-provider-application"))
+    every { applications.listApplicationsByUser(user) } returns emptyList()
+    assertEquals(false, service.ownsPublicApplication("caller", "provider-application"))
+    val failure = IOException("provider unavailable")
+    every { applications.listApplicationsByUser(user) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.ownsPublicApplication("caller", "provider-application") })
+  }
 
   @Test
   fun `application current owner uses unique auth subject while no auth uses the real default user's subject`() {

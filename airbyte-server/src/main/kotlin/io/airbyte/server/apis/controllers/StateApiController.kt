@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.models.ConnectionState
 import io.airbyte.api.server.generated.models.ConnectionStateCreateOrUpdate
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.StateHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -26,10 +25,8 @@ open class StateApiController(
   private val stateHandler: StateHandler,
 ) : StateApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.ConnectionStateWorkerRule::class,
   )
   override fun createOrUpdateState(
@@ -37,10 +34,8 @@ open class StateApiController(
   ): ConnectionState = execute { stateHandler.createOrUpdateState(connectionStateCreateOrUpdate) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.ConnectionStateWriteRule::class,
   )
   override fun createOrUpdateStateSafe(
@@ -48,10 +43,8 @@ open class StateApiController(
   ): ConnectionState = execute { stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.ConnectionStateReadRule::class,
   )
   override fun getState(

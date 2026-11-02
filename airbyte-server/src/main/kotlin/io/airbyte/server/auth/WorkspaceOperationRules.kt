@@ -4,12 +4,16 @@
 
 package io.airbyte.server.auth
 
+import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.server.generated.models.ListWorkspacesByUserRequestBody
 import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.server.generated.models.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRequest
+import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.SlugRequestBody
 import io.airbyte.api.server.generated.models.WorkspaceCreate
 import io.airbyte.api.server.generated.models.WorkspaceCreateWithId
@@ -24,7 +28,11 @@ import io.airbyte.api.server.generated.models.WorkspaceUsageRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
+import io.airbyte.commons.server.handlers.PermissionHandler
+import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.services.auth.AuthorizationDataService
+import io.airbyte.server.apis.execute
+import io.micronaut.context.annotation.Value
 import io.micronaut.security.authentication.Authentication
 import jakarta.inject.Singleton
 import java.util.Optional
@@ -248,6 +256,9 @@ class WorkspaceAdminRule(
 class WorkspaceCreateRule(
   private val data: AuthorizationDataService,
   private val permissions: OperationPermissions,
+  private val permissionHandler: PermissionHandler,
+  private val currentUserService: CurrentUserService,
+  @param:Value("\${micronaut.security.enabled:false}") private val securityEnabled: Boolean,
 ) : OperationRule {
   override fun readInput(args: Array<out Any?>): WorkspaceOperationInput = workspaceInput(args)
 
@@ -264,6 +275,26 @@ class WorkspaceCreateRule(
       }
     }
     request.dataplaneGroup.ifPresent { if (!data.canUseDataplaneGroup(it, organization)) throw ForbiddenProblem() }
+
+    // No-auth deployments retain the default user's organization permission check.
+    if (!securityEnabled) {
+      execute {
+        val status =
+          permissionHandler
+            .checkPermissions(
+              PermissionCheckRequest(
+                userId = currentUserService.getCurrentUser().userId,
+                permissionType = PermissionType.ORGANIZATION_ADMIN,
+                organizationId = organization,
+              ),
+            ).status
+        if (status != PermissionCheckRead.Status.SUCCEEDED) {
+          throw ForbiddenProblem(
+            ProblemMessageData().message("User does not have permission to create a workspace in organization $organization"),
+          )
+        }
+      }
+    }
   }
 }
 

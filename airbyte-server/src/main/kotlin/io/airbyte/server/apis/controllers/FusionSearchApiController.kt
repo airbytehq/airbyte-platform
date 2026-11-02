@@ -10,7 +10,6 @@ import io.airbyte.api.server.generated.apis.FusionSearchApi
 import io.airbyte.api.server.generated.models.FusionSearchRequest
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.auth.FusionDestinationSearchRule
 import io.airbyte.server.auth.FusionDestinationSearchStatusRule
@@ -30,7 +29,6 @@ import java.util.UUID
 open class FusionSearchApiController : FusionSearchApi {
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceSearchRule::class,
   )
   override fun searchFusionSource(
@@ -40,7 +38,6 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionDestinationSearchRule::class,
   )
   override fun searchFusionDestination(
@@ -50,7 +47,6 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionSourceSearchStatusRule::class,
   )
   override fun getFusionSourceSearchStatus(
@@ -59,7 +55,6 @@ open class FusionSearchApiController : FusionSearchApi {
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = FusionDestinationSearchStatusRule::class,
   )
   override fun getFusionDestinationSearchStatus(

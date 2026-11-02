@@ -8,13 +8,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.problems.model.generated.ProblemValueData
 import io.airbyte.api.problems.throwable.generated.UnknownValueProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicDestinationsApi
 import io.airbyte.publicApi.server.generated.models.DestinationCreateRequest
@@ -34,6 +30,11 @@ import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.helpers.removeDestinationType
 import io.airbyte.server.apis.publicapi.mappers.DESTINATION_NAME_TO_DEFINITION_ID
 import io.airbyte.server.apis.publicapi.services.DestinationService
+import io.airbyte.server.auth.PublicDestinationCreateRule
+import io.airbyte.server.auth.PublicDestinationDeleteRule
+import io.airbyte.server.auth.PublicDestinationReadRule
+import io.airbyte.server.auth.PublicDestinationWriteRule
+import io.airbyte.server.auth.PublicWorkspaceListRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -48,14 +49,12 @@ import java.util.UUID
 open class DestinationsController(
   private val destinationService: DestinationService,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicDestinationsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationCreateRule::class,
   )
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest?): Response {
     val destinationResponse: Any? =
@@ -116,16 +115,10 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationDeleteRule::class,
   )
   override fun publicDeleteDestination(destinationId: String): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: Any? =
       trackingHelper.callWithTracker(
@@ -152,19 +145,13 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationReadRule::class,
   )
   override fun publicGetDestination(
     destinationId: String,
     includeSecretCoordinates: Boolean?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val destinationResponse: Any? =
       trackingHelper.callWithTracker(
@@ -192,7 +179,7 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicWorkspaceListRule::class,
   )
   override fun listDestinations(
     workspaceIds: List<UUID>?,
@@ -202,15 +189,7 @@ open class DestinationsController(
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 
-    // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the DestinationService will determine the workspaces for the current user.
-    if (!workspaceIds.isNullOrEmpty()) {
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withWorkspaces(workspaceIds)
-        .requireRole(AuthRoleConstants.WORKSPACE_READER)
-    }
 
     val safeWorkspaceIds = workspaceIds ?: emptyList()
     val destinations: Any? =
@@ -238,19 +217,13 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationWriteRule::class,
   )
   override fun patchDestination(
     destinationId: String,
     destinationPatchRequest: DestinationPatchRequest?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: DestinationResponse? =
       destinationPatchRequest?.let { patch ->
@@ -280,19 +253,13 @@ open class DestinationsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicDestinationWriteRule::class,
   )
   override fun putDestination(
     destinationId: String,
     destinationPutRequest: DestinationPutRequest?,
   ): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
-
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: Any? =
       destinationPutRequest?.let { request ->

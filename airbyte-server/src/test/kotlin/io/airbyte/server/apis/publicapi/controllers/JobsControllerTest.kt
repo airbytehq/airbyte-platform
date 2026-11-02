@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.helpers.WorkspaceHelper
@@ -27,7 +26,6 @@ class JobsControllerTest {
   private val jobService: JobService = mockk()
   private val connectionService: ConnectionService = mockk()
   private val trackingHelper: TrackingHelper = mockk(relaxed = true)
-  private val roleResolver: RoleResolver = mockk(relaxed = true)
   private val currentUserService: CurrentUserService = mockk()
   private val workspaceHelper: WorkspaceHelper = mockk()
 
@@ -43,7 +41,6 @@ class JobsControllerTest {
         jobService = jobService,
         connectionService = connectionService,
         trackingHelper = trackingHelper,
-        roleResolver = roleResolver,
         currentUserService = currentUserService,
         workspaceHelper = workspaceHelper,
       )

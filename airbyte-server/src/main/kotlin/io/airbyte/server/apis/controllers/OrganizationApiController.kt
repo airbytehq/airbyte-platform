@@ -24,7 +24,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -54,10 +53,8 @@ open class OrganizationApiController(
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
 ) : OrganizationApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAccessibleRule::class,
   )
   override fun getOrganization(
@@ -70,10 +67,8 @@ open class OrganizationApiController(
     }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationEditorRule::class,
   )
   override fun updateOrganization(
@@ -81,10 +76,8 @@ open class OrganizationApiController(
   ): OrganizationRead = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody.requireBody()) }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationInstanceAdminRule::class,
   )
   override fun setOrganizationAgenticStatus(
@@ -92,10 +85,8 @@ open class OrganizationApiController(
   ): OrganizationRead = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody.requireBody()) }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationCreateRule::class,
   )
   override fun createOrganization(
@@ -103,11 +94,9 @@ open class OrganizationApiController(
   ): OrganizationRead = execute { organizationsHandler.createOrganization(organizationCreateRequestBody.requireBody()) }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @Validated
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationDeletePlaceholderRule::class,
   )
   override fun deleteOrganization(
@@ -116,10 +105,8 @@ open class OrganizationApiController(
   ): Unit = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationUserListRule::class,
   )
   override fun listOrganizationsByUser(
@@ -127,10 +114,8 @@ open class OrganizationApiController(
   ): OrganizationReadList = execute { organizationsHandler.listOrganizationsByUser(request.requireBody()) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationUsageUnsupportedRule::class,
   )
   override fun getOrganizationUsage(
@@ -138,10 +123,8 @@ open class OrganizationApiController(
   ): OrganizationUsageRead = throw ApiNotImplementedInOssProblem()
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationUserListRule::class,
   )
   override fun listOrganizationSummaries(
@@ -149,10 +132,8 @@ open class OrganizationApiController(
   ): ListOrganizationSummariesResponse = execute { organizationsHandler.getOrganizationSummaries(organizationSummaryRequestBody.requireBody()) }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationAccessibleRule::class,
   )
   override fun getOrgInfo(
@@ -165,10 +146,8 @@ open class OrganizationApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = OrganizationMemberUnsupportedRule::class,
   )
   override fun getOrganizationDataWorkerUsage(

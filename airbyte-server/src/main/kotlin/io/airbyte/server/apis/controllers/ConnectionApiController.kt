@@ -46,11 +46,9 @@ import io.airbyte.api.server.generated.models.PostprocessDiscoveredCatalogResult
 import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.generated.Intent
-import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.route.AuthorizeOperation
+import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
@@ -95,11 +93,9 @@ open class ConnectionApiController(
   private val jobHistoryHandler: JobHistoryHandler,
   private val connectionService: ConnectionService,
 ) : ConnectionApi {
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionAdminRule::class,
   )
   override fun autoDisableConnection(
@@ -111,11 +107,9 @@ open class ConnectionApiController(
       InternalOperationResult(succeeded = wasDisabled)
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionAdminRule::class,
   )
   override fun backfillConnectionEvents(
@@ -127,36 +121,30 @@ open class ConnectionApiController(
     }
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionMutationRule::class,
   )
   override fun createConnection(
     @Body connectionCreate: ConnectionCreate,
   ): ConnectionRead = execute { connectionsHandler.createConnection(connectionCreate) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionMutationRule::class,
   )
   override fun updateConnection(
     @Body connectionUpdate: ConnectionUpdate,
   ): ConnectionRead = execute { connectionsHandler.updateConnection(connectionUpdate, null, false) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionMutationRule::class,
   )
   override fun updateConnectionWithReason(
@@ -170,22 +158,18 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun listConnectionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): ConnectionReadList = execute { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun listConnectionsForWorkspacesPaginated(
@@ -198,10 +182,8 @@ open class ConnectionApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionRunRule::class,
   )
   override fun refreshConnectionStream(
@@ -218,11 +200,9 @@ open class ConnectionApiController(
     return JobReadResponse(job = job)
   }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun listAllConnectionsForWorkspace(
@@ -232,7 +212,6 @@ open class ConnectionApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionAdminRule::class,
   )
   override fun listConnectionsByActorDefinition(
@@ -247,28 +226,24 @@ open class ConnectionApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
   )
+  @ConfigSearchAccessException
   override fun searchConnections(
     @Body connectionSearch: ConnectionSearch,
   ): ConnectionReadList = execute { matchSearchHandler.searchConnections(connectionSearch) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadOrWorkerRule::class,
   )
   override fun getConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): ConnectionRead = execute { connectionsHandler.getConnection(connectionIdRequestBody.connectionId) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionDataHistory(
@@ -280,11 +255,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GetConnectionEventRule::class,
   )
   override fun getConnectionEvent(
@@ -293,11 +266,9 @@ open class ConnectionApiController(
       ConnectionEventIdRequestBody,
   ): ConnectionEventWithDetails = execute { connectionsHandler.getConnectionEvent(connectionEventIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun listConnectionEvents(
@@ -306,11 +277,9 @@ open class ConnectionApiController(
       ConnectionEventsRequestBody,
   ): ConnectionEventList = execute { connectionsHandler.listConnectionEvents(connectionEventsRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun listConnectionEventsForJob(
@@ -324,7 +293,6 @@ open class ConnectionApiController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionEventsMinimalRule::class,
   )
   override fun listConnectionEventsMinimal(
@@ -336,11 +304,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadOrWorkerRule::class,
   )
   override fun getConnectionForJob(
@@ -353,11 +319,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionLastJobPerStream(
@@ -369,11 +333,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionStatuses(
@@ -385,11 +347,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionStreamHistory(
@@ -401,11 +361,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionSyncProgress(
@@ -418,11 +376,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionReadRule::class,
   )
   override fun getConnectionUptimeHistory(
@@ -435,12 +391,10 @@ open class ConnectionApiController(
     }
 
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionDeleteRule::class,
   )
   override fun deleteConnection(
@@ -454,76 +408,62 @@ open class ConnectionApiController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @RequiresIntent(Intent.RunAndCancelConnectionSyncAndRefresh)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionRunRule::class,
   )
   override fun syncConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead = execute { schedulerHandler.syncConnection(connectionIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun resetConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun resetConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun clearConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun clearConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun applySchemaChangeForConnection(
     @Body request: ConnectionAutoPropagateSchemaChange,
   ): ConnectionAutoPropagateResult = execute { connectionsHandler.applySchemaChange(request) }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionWriteRule::class,
   )
   override fun postprocessDiscoveredCatalogForConnection(
@@ -536,11 +476,9 @@ open class ConnectionApiController(
       )
     }
 
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = ConnectionAdminRule::class,
   )
   override fun getConnectionContext(

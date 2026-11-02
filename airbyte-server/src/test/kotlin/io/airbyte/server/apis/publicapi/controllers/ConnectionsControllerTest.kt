@@ -14,7 +14,6 @@ import io.airbyte.api.server.generated.models.ConnectionScheduleType
 import io.airbyte.api.server.generated.models.ConnectionStatus
 import io.airbyte.api.server.generated.models.DestinationRead
 import io.airbyte.api.server.generated.models.SourceDiscoverSchemaRead
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
@@ -52,7 +51,6 @@ class ConnectionsControllerTest {
   private val sourceService: SourceService = mockk()
   private val destinationService: DestinationService = mockk()
   private val trackingHelper: TrackingHelper = mockk(relaxed = true)
-  private val roleResolver: RoleResolver = mockk(relaxed = true)
   private val currentUserService: CurrentUserService = mockk()
   private val destinationDiscoverService: DestinationDiscoverService = mockk(relaxed = true)
 
@@ -72,7 +70,6 @@ class ConnectionsControllerTest {
         sourceService = sourceService,
         destinationService = destinationService,
         trackingHelper = trackingHelper,
-        roleResolver = roleResolver,
         currentUserService = currentUserService,
         destinationDiscoverService = destinationDiscoverService,
       )

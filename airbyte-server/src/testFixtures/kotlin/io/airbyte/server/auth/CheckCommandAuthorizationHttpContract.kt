@@ -292,18 +292,12 @@ abstract class CheckCommandAuthorizationHttpContract {
         )
       every { commands.processCheckConfig(any(), any(), any(), any()) } answers { lastArg() }
       every { commands.createCheckCommand(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns true
-      val legacyRoles = mockk<RoleResolver>(relaxed = true)
-      val roleRequest = mockk<RoleResolver.Request>(relaxed = true)
-      every { legacyRoles.newRequest() } returns roleRequest
-      every { roleRequest.withCurrentAuthentication() } returns roleRequest
-      every { roleRequest.withRef(any(), any<UUID>()) } returns roleRequest
       context.registerSingleton(AuthorizationDataService::class.java, data)
       context.registerSingleton(
         OperationPermissions::class.java,
         OperationPermissions(permissions, RoleResolver(mockk(), mockk(), mockk(), mockk()), security),
       )
       context.registerSingleton(CommandService::class.java, commands)
-      context.registerSingleton(RoleResolver::class.java, legacyRoles)
       context.registerSingleton(ActorRepository::class.java, actorRepository)
       context.registerSingleton(WorkspaceService::class.java, workspaces)
       context.registerSingleton(

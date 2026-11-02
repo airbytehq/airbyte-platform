@@ -15,6 +15,7 @@ import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
@@ -64,6 +65,19 @@ class AuthorizationDataServiceTest {
       entitlements = mockk(),
       featureFlags = mockk(),
     )
+
+  @Test
+  fun `actor connection lookup limits the workspace query to the actor being deleted`() {
+    val actor = UUID(0, 10)
+    val connection = UUID(0, 11)
+    for (source in listOf(true, false)) {
+      val query = StandardSyncQuery(workspaceId, if (source) listOf(actor) else null, if (source) null else listOf(actor), false)
+      every { connections.listWorkspaceStandardSyncs(query) } returns listOf(StandardSync().withConnectionId(connection))
+
+      assertEquals(listOf(connection), service.actorConnectionIds(actor, workspaceId, source))
+    }
+    verify(exactly = 0) { connections.listWorkspaceStandardSyncs(workspaceId, false) }
+  }
 
   @Test
   fun `historical billing checks both typed connection actors and source definition while allowing tombstoned workspaces`() {

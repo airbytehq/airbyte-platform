@@ -10,12 +10,10 @@ import io.airbyte.api.server.generated.models.WebBackendConnectionReadList
 import io.airbyte.api.server.generated.models.WebBackendConnectionStatusCounts
 import io.airbyte.api.server.generated.models.WebBackendValidateMappersResponse
 import io.airbyte.api.server.generated.models.WebBackendWorkspaceStateResult
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
@@ -237,17 +235,6 @@ abstract class RemainingWebBackendAuthorizationHttpContract {
         val mappers = business.filterIsInstance<WebBackendMappersHandler>().single()
         every { mappers.validateMappers(match { it.connectionId == CONNECTION }) } returns
           WebBackendValidateMappersResponse(initialFields = emptyList(), outputFields = emptyList(), mappers = emptyList())
-        business.filterIsInstance<RoleResolver>().forEach { resolver ->
-          val request = mockk<RoleResolver.Request>()
-          every { resolver.newRequest() } returns request
-          every { request.withCurrentUser() } returns request
-          every { request.withRef(AuthenticationId.CONNECTION_ID, CONNECTION.toString()) } returns request
-          every {
-            request.requireOneOfRoles(
-              setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR),
-            )
-          } just Runs
-        }
         val owner = WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.workspaceAndOrganization(WORKSPACE) } returns owner
         every { data.workspaceAndOrganization(UUID(0, 99)) } returns WorkspaceAndOrganization(UUID(0, 99), ORGANIZATION)

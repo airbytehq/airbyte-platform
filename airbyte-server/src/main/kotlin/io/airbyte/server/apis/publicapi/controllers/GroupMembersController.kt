@@ -9,13 +9,9 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.GroupMemberAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.GroupMember
 import io.airbyte.config.persistence.UserPersistence
@@ -38,6 +34,8 @@ import io.airbyte.server.apis.publicapi.constants.GROUP_MEMBERS_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.GroupMembersResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.toGroupMemberResponse
+import io.airbyte.server.auth.PublicGroupMemberAddRule
+import io.airbyte.server.auth.PublicGroupSavedRule
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -53,14 +51,13 @@ open class GroupMembersController(
   private val groupService: GroupService,
   private val userPersistence: UserPersistence,
   private val trackingHelper: TrackingHelper,
-  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupMembersApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicListGroupMembers(
     groupId: UUID,
@@ -73,13 +70,6 @@ open class GroupMembersController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin or higher to view group members
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Ensure organization has groups feature entitlement
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
@@ -123,7 +113,7 @@ open class GroupMembersController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupMemberAddRule::class,
   )
   override fun publicAddGroupMember(
     groupId: UUID,
@@ -135,13 +125,6 @@ open class GroupMembersController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-
-    // Require organization admin to add members to groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
@@ -195,7 +178,7 @@ open class GroupMembersController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicGroupSavedRule::class,
   )
   override fun publicRemoveGroupMember(
     groupId: UUID,
@@ -207,12 +190,6 @@ open class GroupMembersController(
           .resourceType("group")
           .resourceId(groupId.toString()),
       )
-    // Require organization admin to remove members from groups
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, group.organizationId.value.toString())
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)

@@ -18,8 +18,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Group
 import io.airbyte.config.Permission
@@ -50,14 +48,11 @@ private const val PERMISSION_RESOURCE_TYPE = "permission"
 open class GroupPermissionApiController(
   private val groupService: GroupService,
   private val permissionService: PermissionService,
-  private val roleResolver: RoleResolver,
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
   private val groupPermissionValidator: GroupPermissionValidator,
 ) : GroupPermissionApi {
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GroupSavedAdminRule::class,
   )
   override fun listGroupPermissions(groupIdRequestBody: GroupIdRequestBody): GroupPermissionReadList {
@@ -72,10 +67,8 @@ open class GroupPermissionApiController(
   }
 
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GroupPermissionCreateRule::class,
   )
   override fun createGroupPermission(groupPermissionCreate: GroupPermissionCreate): GroupPermissionRead {
@@ -111,10 +104,8 @@ open class GroupPermissionApiController(
 
   @Status(HttpStatus.NO_CONTENT)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = GroupPermissionDeleteRule::class,
   )
   override fun deleteGroupPermission(groupPermissionIdRequestBody: GroupPermissionIdRequestBody) {

@@ -34,6 +34,16 @@ class ApplicationAuthorizationService(
     applications.requireApplicationOwner(authUserId, applicationId)
   }
 
+  /** Public provider IDs are strings; preserve exact matching, including a 404 for an unknown non-UUID ID. */
+  fun ownsPublicApplication(
+    authUserId: String,
+    applicationId: String,
+  ): Boolean {
+    val user = users.getUserByAuthId(authUserId).orElseThrow()
+    check(user.authUserId == authUserId) { "Authentication identity does not match the saved user" }
+    return applications.listApplicationsByUser(user).any { it.id == applicationId }
+  }
+
   private fun subject(user: Optional<AuthenticatedUser>): String {
     val subject: String? = user.orElseThrow().authUserId
     check(!subject.isNullOrBlank()) { "Saved user has no authentication identity" }

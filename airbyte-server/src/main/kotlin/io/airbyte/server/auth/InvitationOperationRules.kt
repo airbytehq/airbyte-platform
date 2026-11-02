@@ -6,6 +6,9 @@ package io.airbyte.server.auth
 
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.InviteCodeRequestBody
+import io.airbyte.api.server.generated.models.PermissionCheckRead
+import io.airbyte.api.server.generated.models.PermissionCheckRequest
+import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.ScopeType
 import io.airbyte.api.server.generated.models.UserInvitationCancelRequestBody
 import io.airbyte.api.server.generated.models.UserInvitationCreateRequestBody
@@ -14,6 +17,7 @@ import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.domain.models.auth.AuthorizationTarget
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.AuthorizationUserIdentity
@@ -160,6 +164,7 @@ class InvitationAcceptRule(
 class InvitationCancelRule(
   private val membership: MembershipAuthorizationDataService,
   private val permissions: OperationPermissions,
+  private val permissionHandler: PermissionHandler,
   @Value("\${micronaut.security.enabled:false}") private val security: Boolean,
 ) : OperationRule {
   override fun readInput(args: Array<out Any?>): InvitationOperationInput = invitationInput(args)
@@ -169,18 +174,53 @@ class InvitationCancelRule(
     input: OperationInput,
   ) {
     permissions.requireAuthenticated(caller, setOf(OperationCaller.USER))
-    invitationIdentity(membership, caller, security)
-    try {
-      val invitation =
-        when (val request = input as InvitationOperationInput) {
-          is InvitationOperationInput.Id -> membership.invitationById(request.value)
-          is InvitationOperationInput.Code -> membership.invitationByCode(request.value)
-          else -> throw BadRequestProblem()
+    val identity = invitationIdentity(membership, caller, security)
+    val invitation =
+      try {
+        val invitation =
+          when (val request = input as InvitationOperationInput) {
+            is InvitationOperationInput.Id -> membership.invitationById(request.value)
+            is InvitationOperationInput.Code -> membership.invitationByCode(request.value)
+            else -> throw BadRequestProblem()
+          }
+        requireAuthorizationTarget(permissions, caller, invitation.target, permissionAdminRoles, setOf(OperationCaller.USER))
+        invitation
+      } catch (failure: Exception) {
+        // Existing cancellation deliberately wraps saved-lookup and role failures as OperationNotAllowed.
+        throw OperationNotAllowedException("Admin authorization failed for invitation.", failure)
+      }
+
+    // No-auth deployments still require the default user's saved invitation admin permission.
+    if (!security) {
+      try {
+        val request =
+          when (val target = invitation.target) {
+            is AuthorizationTarget.Workspace ->
+              PermissionCheckRequest(
+                userId = identity.userId,
+                permissionType = PermissionType.WORKSPACE_ADMIN,
+                workspaceId = target.workspaceAndOrganization.workspaceId,
+              )
+            is AuthorizationTarget.Organization ->
+              PermissionCheckRequest(
+                userId = identity.userId,
+                permissionType = PermissionType.ORGANIZATION_ADMIN,
+                organizationId = target.organizationId,
+              )
+            AuthorizationTarget.Global -> throw OperationNotAllowedException("Invitation has no scope type")
+          }
+        if (permissionHandler.checkPermissions(request).status != PermissionCheckRead.Status.SUCCEEDED) {
+          throw OperationNotAllowedException("User ${identity.userId} is not an admin of the invitation scope")
         }
-      requireAuthorizationTarget(permissions, caller, invitation.target, permissionAdminRoles, setOf(OperationCaller.USER))
-    } catch (failure: Exception) {
-      // Existing cancellation deliberately wraps saved-lookup and role failures as OperationNotAllowed.
-      throw OperationNotAllowedException("Admin authorization failed for invitation.", failure)
+      } catch (failure: Exception) {
+        val selector =
+          when (input) {
+            is InvitationOperationInput.Id -> "invitation id: ${input.value}"
+            is InvitationOperationInput.Code -> "invite code: ${input.value}"
+            else -> throw BadRequestProblem()
+          }
+        throw OperationNotAllowedException("Admin authorization failed for $selector and user id: ${identity.userId}", failure)
+      }
     }
   }
 }

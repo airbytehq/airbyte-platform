@@ -4,15 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicRegionsApi
 import io.airbyte.publicApi.server.generated.models.RegionCreateRequest
@@ -20,6 +16,9 @@ import io.airbyte.publicApi.server.generated.models.RegionPatchRequest
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.REGIONS_PATH
 import io.airbyte.server.apis.publicapi.services.RegionService
+import io.airbyte.server.auth.PublicOrganizationAdminRule
+import io.airbyte.server.auth.PublicOrganizationBodyAdminRule
+import io.airbyte.server.auth.PublicRegionAdminRule
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -33,21 +32,15 @@ import java.util.UUID
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class RegionController(
   private val regionService: RegionService,
-  private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
 ) : PublicRegionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationAdminRule::class,
   )
   override fun publicListRegions(organizationId: UUID): Response {
     ensureSelfManagedRegionsEntitlement(OrganizationId(organizationId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return regionService.controllerListRegions(organizationId)
   }
@@ -55,15 +48,10 @@ open class RegionController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationBodyAdminRule::class,
   )
   override fun publicCreateRegion(regionCreateRequest: RegionCreateRequest): Response {
     ensureSelfManagedRegionsEntitlement(OrganizationId(regionCreateRequest.organizationId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, regionCreateRequest.organizationId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return regionService.controllerCreateRegion(regionCreateRequest)
   }
@@ -72,16 +60,11 @@ open class RegionController(
   @Path("$REGIONS_PATH/{regionId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicRegionAdminRule::class,
   )
   override fun publicGetRegion(regionId: UUID): Response {
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return regionService.controllerGetRegion(regionId)
   }
@@ -91,7 +74,7 @@ open class RegionController(
   @Path("$REGIONS_PATH/{regionId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicRegionAdminRule::class,
   )
   override fun publicUpdateRegion(
     regionId: UUID,
@@ -99,11 +82,6 @@ open class RegionController(
   ): Response {
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return regionService.controllerUpdateRegion(regionId, regionPatchRequest)
   }
@@ -112,16 +90,11 @@ open class RegionController(
   @Path("$REGIONS_PATH/{regionId}")
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicRegionAdminRule::class,
   )
   override fun publicDeleteRegion(regionId: UUID): Response {
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
     ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
-    roleResolver
-      .newRequest()
-      .withCurrentUser()
-      .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
-      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     return regionService.controllerDeleteRegion(regionId)
   }

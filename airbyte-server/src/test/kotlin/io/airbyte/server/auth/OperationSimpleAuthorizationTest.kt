@@ -9,7 +9,6 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -150,7 +149,7 @@ class OperationSimpleController(
   val calls = AtomicInteger()
 
   @Get("/plain")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationSimpleRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationSimpleRule::class)
   fun plain(
     @QueryValue id: UUID,
   ): String {
@@ -159,13 +158,13 @@ class OperationSimpleController(
   }
 
   @Get("/no-result")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationSimpleRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationSimpleRule::class)
   fun noResult(
     @QueryValue id: UUID,
   ) = "accepted"
 
   @Get("/reactive-no-result")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationSimpleRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationSimpleRule::class)
   fun reactiveNoResult(
     @QueryValue id: UUID,
   ): Mono<String> = Mono.just("accepted")

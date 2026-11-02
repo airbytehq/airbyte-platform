@@ -7,7 +7,6 @@ package io.airbyte.server.auth
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -149,7 +148,7 @@ class OperationShapeController(
   private val work: OperationShapeWork,
 ) {
   @Get("/shared")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun shared(
     @QueryValue id: UUID,
   ): SharedFlow<String> {
@@ -158,7 +157,7 @@ class OperationShapeController(
   }
 
   @Get("/state")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun state(
     @QueryValue id: UUID,
   ): StateFlow<String> {
@@ -167,7 +166,7 @@ class OperationShapeController(
   }
 
   @Get("/connectable")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun connectable(
     @QueryValue id: UUID,
   ): ConnectableFlux<String> {
@@ -176,7 +175,7 @@ class OperationShapeController(
   }
 
   @Get("/custom")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun custom(
     @QueryValue id: UUID,
   ): OperationCustomPublisher {
@@ -185,19 +184,19 @@ class OperationShapeController(
   }
 
   @Get("/publisher")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun publisher(
     @QueryValue id: UUID,
   ): Publisher<String> = Mono.fromCallable { business.read(id) }
 
   @Get("/mono")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun mono(
     @QueryValue id: UUID,
   ): Mono<String> = Mono.fromCallable { business.read(id) }
 
   @Get("/flux")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   fun flux(
     @QueryValue id: UUID,
   ): Flux<String> = Flux.defer { Flux.just(business.read(id)) }

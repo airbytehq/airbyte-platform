@@ -57,6 +57,18 @@ class OperationPermissions(
     return Authentication.build(users.getCurrentUser().authUserId, caller.roles, caller.attributes + TokenType.USER.toClaim())
   }
 
+  /** Some public job and destination methods resolve the embedded token issuer's saved permissions. */
+  fun scopedEmbeddedIssuer(caller: Authentication): Authentication {
+    if (!securityEnabled) return caller
+    requireCaller(caller, setOf(OperationCaller.USER, OperationCaller.EMBEDDED))
+    return if (TokenType.fromClaims(caller.attributes) == TokenType.EMBEDDED_V1) {
+      if (getTokenScopeClaim(caller) == null) throw ForbiddenProblem()
+      Authentication.build(caller.name, caller.roles, caller.attributes + TokenType.USER.toClaim())
+    } else {
+      caller
+    }
+  }
+
   fun requireSelf(
     caller: Authentication,
     subject: String,
@@ -149,10 +161,11 @@ class OperationPermissions(
     if (scope != null && (owners.isEmpty() || owners.any { scope.workspaceId != it.workspaceId.toString() })) throw ForbiddenProblem()
   }
 
-  private fun requireCaller(
+  internal fun requireCaller(
     caller: Authentication,
     allowed: Set<OperationCaller>,
   ) {
+    if (!securityEnabled) return
     val kind =
       when (TokenType.fromClaims(caller.attributes)) {
         TokenType.USER -> OperationCaller.USER
@@ -179,7 +192,15 @@ class OperationPermissions(
         TokenType.WORKLOAD_API -> return setOf(AuthRoleConstants.DATAPLANE)
         TokenType.EMBEDDED_V1 -> return setOf(AuthRoleConstants.EMBEDDED_END_USER)
         TokenType.USER -> permissions.getPermissionsByAuthUserId(caller.name)
-        TokenType.DATAPLANE_V1, TokenType.SERVICE_ACCOUNT -> permissions.getPermissionsByServiceAccountId(UUID.fromString(caller.name))
+        TokenType.DATAPLANE_V1, TokenType.SERVICE_ACCOUNT -> {
+          val accountId =
+            try {
+              UUID.fromString(caller.name)
+            } catch (_: IllegalArgumentException) {
+              throw ForbiddenProblem()
+            }
+          permissions.getPermissionsByServiceAccountId(accountId)
+        }
       }
     return roles.resolveRoles(permissions, caller.name, workspaces, organizationsByWorkspace, organizations, emptySet(), type == TokenType.USER)
   }

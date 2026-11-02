@@ -13,8 +13,6 @@ import io.airbyte.api.server.generated.models.SecretStorageRead
 import io.airbyte.api.server.generated.models.SecretStorageReadList
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.SecretStorageCreate
@@ -43,12 +41,10 @@ class SecretStorageApiController(
   private val secretStorageCredentialsService: SecretStorageCredentialsService,
   private val secretMigrationService: SecretMigrationService,
   private val currentUserService: CurrentUserService,
-  private val roleResolver: RoleResolver,
 ) : SecretStorageApi {
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.SecretStorageManageRule::class,
   )
   override fun createSecretStorage(
@@ -93,7 +89,6 @@ class SecretStorageApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.SecretStorageDeleteRule::class,
   )
   override fun deleteSecretStorage(
@@ -110,7 +105,6 @@ class SecretStorageApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.SecretStorageReadRule::class,
   )
   override fun getSecretStorage(
@@ -128,7 +122,6 @@ class SecretStorageApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.SecretStorageManageRule::class,
   )
   override fun listSecretStorage(
@@ -151,7 +144,6 @@ class SecretStorageApiController(
   @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = io.airbyte.server.auth.SecretStorageMigrationRule::class,
   )
   override fun migrateSecretStorage(

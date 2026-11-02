@@ -66,6 +66,7 @@ import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.config.persistence.WorkspaceTombstoneResult
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.auth.TokenType
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.WebhookConfigInUseException
 import io.airbyte.data.services.DataplaneGroupService
@@ -154,6 +155,8 @@ internal class WorkspacesHandlerTest {
     // Setup roleResolver mock chain
     every { roleResolver.newRequest() } returns roleRequest
     every { roleRequest.withCurrentUser() } returns roleRequest
+    every { roleRequest.withCurrentAuthentication() } returns roleRequest
+    every { roleRequest.subject } returns RoleResolver.Subject("caller", TokenType.USER)
     every { roleRequest.withOrg(any()) } returns roleRequest
     every { roleRequest.requireRole(any()) } just Runs
 
@@ -2024,7 +2027,7 @@ internal class WorkspacesHandlerTest {
 
     // Verify that role check was performed
     verify { roleResolver.newRequest() }
-    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withCurrentAuthentication() }
     verify { roleRequest.withOrg(ORGANIZATION_ID) }
     verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
@@ -2057,7 +2060,7 @@ internal class WorkspacesHandlerTest {
 
     // Verify that role check was performed
     verify { roleResolver.newRequest() }
-    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withCurrentAuthentication() }
     verify { roleRequest.withOrg(ORGANIZATION_ID) }
     verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
@@ -2106,7 +2109,7 @@ internal class WorkspacesHandlerTest {
 
     // Verify that role check was still performed (but won't throw since it's a default group)
     verify { roleResolver.newRequest() }
-    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withCurrentAuthentication() }
     verify { roleRequest.withOrg(ORGANIZATION_ID) }
     verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
   }
@@ -2186,7 +2189,7 @@ internal class WorkspacesHandlerTest {
 
     // Verify that role check was still performed (but passed because it's a default group)
     verify { roleResolver.newRequest() }
-    verify { roleRequest.withCurrentUser() }
+    verify { roleRequest.withCurrentAuthentication() }
     verify { roleRequest.withOrg(ORGANIZATION_ID) }
     verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
     verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }

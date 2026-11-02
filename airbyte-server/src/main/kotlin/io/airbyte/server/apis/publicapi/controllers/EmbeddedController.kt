@@ -8,7 +8,6 @@ import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.json.Jsons
@@ -28,6 +27,9 @@ import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
 import io.airbyte.publicApi.server.generated.models.EmbeddedScopedTokenRequest
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.publicApi.server.generated.models.PermissionType
+import io.airbyte.server.auth.PublicCurrentUserRule
+import io.airbyte.server.auth.PublicEmbeddedTokenRule
+import io.airbyte.server.auth.PublicOrganizationBodyAdminRule
 import io.airbyte.server.auth.TokenScopeClaim
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Controller
@@ -48,6 +50,7 @@ import java.util.Base64
 @Requires(property = "micronaut.security.token.jwt.enabled", value = "true")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @Controller
+@ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
 class EmbeddedController(
   val jwtTokenGenerator: JwtTokenGenerator,
   val airbyteConfig: AirbyteConfig,
@@ -62,7 +65,7 @@ class EmbeddedController(
 
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicCurrentUserRule::class,
   )
   override fun listEmbeddedOrganizationsByUser(): Response {
     val currentUserId = currentUserService.getCurrentUser().userId
@@ -137,11 +140,10 @@ class EmbeddedController(
     ).ok()
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicEmbeddedTokenRule::class,
   )
   override fun generateEmbeddedScopedToken(embeddedScopedTokenRequest: EmbeddedScopedTokenRequest): Response {
     val currentUser = currentUserService.getCurrentUser()
@@ -150,11 +152,10 @@ class EmbeddedController(
       .ok()
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.LEGACY,
+    rule = PublicOrganizationBodyAdminRule::class,
   )
   override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
     val organizationId = OrganizationId(req.organizationId)

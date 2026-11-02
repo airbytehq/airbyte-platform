@@ -27,8 +27,6 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -62,13 +60,10 @@ open class WebBackendApiController(
   private val webBackendMappersHandler: WebBackendMappersHandler,
   private val airbyteConfig: AirbyteConfig,
   private val airbyteWebappConfig: AirbyteWebappConfig,
-  private val roleResolver: RoleResolver,
 ) : WebBackendApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendStateTypeRule::class,
   )
   override fun getStateType(
@@ -80,20 +75,16 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = AuthenticatedMetadataRule::class,
   )
   override fun webBackendCheckUpdates(): WebBackendCheckUpdatesRead = execute { webBackendCheckUpdatesHandler.checkUpdates() }
 
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendConnectionCreateRule::class,
   )
   override fun webBackendCreateConnection(
@@ -108,10 +99,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendConnectionGetRule::class,
   )
   override fun webBackendGetConnection(
@@ -123,10 +112,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendWorkspaceReadRule::class,
   )
   override fun webBackendGetWorkspaceState(
@@ -139,10 +126,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendConnectionListRule::class,
   )
   override fun webBackendListConnectionsForWorkspace(
@@ -156,10 +141,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendWorkspaceReadRule::class,
   )
   override fun webBackendGetConnectionStatusCounts(
@@ -172,10 +155,8 @@ open class WebBackendApiController(
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendConnectionUpdateRule::class,
   )
   override fun webBackendUpdateConnection(
@@ -187,10 +168,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = WebBackendMappersRule::class,
   )
   override fun webBackendValidateMappers(
@@ -203,10 +182,8 @@ open class WebBackendApiController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @Secured(SecurityRule.IS_AUTHENTICATED)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
-    migration = RouteMigration.SHARED,
     rule = AuthenticatedMetadataRule::class,
   )
   override fun webBackendDescribeCronExpression(
@@ -222,7 +199,6 @@ open class WebBackendApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PUBLIC,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse(

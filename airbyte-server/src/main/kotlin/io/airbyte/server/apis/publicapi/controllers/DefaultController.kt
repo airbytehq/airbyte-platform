@@ -6,7 +6,6 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.micronaut.runtime.AirbyteInternalDocumentationConfig
 import io.airbyte.publicApi.server.generated.apis.PublicRootApi
@@ -26,7 +25,6 @@ open class DefaultController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PUBLIC,
-    migration = RouteMigration.NOT_APPLICABLE,
   )
   override fun getDocumentation(): Response =
     Response

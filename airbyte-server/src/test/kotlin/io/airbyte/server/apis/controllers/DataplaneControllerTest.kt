@@ -16,7 +16,6 @@ import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -45,7 +44,7 @@ class DataplaneControllerTest {
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
     private val dataplaneHealthService = mockk<DataplaneHealthService>(relaxed = true)
-    private val roleResolver = mockk<RoleResolver>(relaxed = true)
+
     private val entitlementService = mockk<EntitlementService>(relaxed = true)
     private val airbyteConfig =
       mockk<AirbyteConfig>().apply {
@@ -56,7 +55,6 @@ class DataplaneControllerTest {
         dataplaneService,
         dataplaneGroupService,
         dataplaneHealthService,
-        roleResolver,
         entitlementService,
         mockk(relaxed = true),
         airbyteConfig,

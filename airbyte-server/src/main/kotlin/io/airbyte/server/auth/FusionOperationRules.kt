@@ -234,12 +234,16 @@ private fun <T> fusionResourceRead(read: () -> T): T =
 private fun executionActorId(args: Array<out Any?>): UUID =
   when (val value = args.firstOrNull()) {
     is UUID -> value
-    is String ->
-      try {
-        UUID.fromString(value)
-      } catch (_: IllegalArgumentException) {
-        throw BadRequestProblem()
-      }
+    is String -> {
+      val id =
+        try {
+          UUID.fromString(value)
+        } catch (_: IllegalArgumentException) {
+          throw BadRequestProblem()
+        }
+      if (!id.toString().equals(value, ignoreCase = true)) throw BadRequestProblem()
+      id
+    }
     else -> throw BadRequestProblem()
   }
 

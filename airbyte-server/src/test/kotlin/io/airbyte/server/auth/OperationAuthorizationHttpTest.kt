@@ -9,7 +9,6 @@ import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
-import io.airbyte.commons.auth.route.RouteMigration
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
@@ -202,19 +201,19 @@ open class OperationFixtureController(
   private val behavior: OperationFixtureBehavior,
 ) {
   @Get("/read")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   open fun read(
     @QueryValue id: UUID,
   ): String = behavior.call(id) { business.read(it) }
 
   @Get("/deferred")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   open fun deferred(
     @QueryValue id: UUID,
   ): Publisher<String> = behavior.publisher(id) { business.read(it) }
 
   @Get("/stage")
-  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, RouteMigration.SHARED, OperationFixtureRule::class)
+  @AuthorizeOperation(RouteAccessPolicy.PROTECTED, OperationFixtureRule::class)
   open fun stage(
     @QueryValue id: UUID,
   ): CompletableFuture<String> = CompletableFuture.completedFuture(business.read(id))
