@@ -53,19 +53,9 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
 
-  testImplementation(libs.junit.pioneer)
+  testImplementation(libs.junit.jupiter.system.stubs)
   testImplementation(libs.json.assert)
   testImplementation(libs.mockk)
-}
-
-tasks.named<Test>("test") {
-  jvmArgs(
-    listOf(
-      // Required to use junit-pioneer @SetEnvironmentVariable
-      "--add-opens=java.base/java.util=ALL-UNNAMED",
-      "--add-opens=java.base/java.lang=ALL-UNNAMED",
-    ),
-  )
 }
 
 val envVars = mapOf("VERSION" to "dev")

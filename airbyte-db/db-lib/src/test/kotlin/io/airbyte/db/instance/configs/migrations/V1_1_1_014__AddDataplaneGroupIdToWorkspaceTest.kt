@@ -23,16 +23,22 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.extension.ExtendWith
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
+import uk.org.webcompere.systemstubs.jupiter.SystemStub
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @Suppress("ktlint:standard:class-naming")
+@ExtendWith(SystemStubsExtension::class)
 internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsDatabaseTest() {
+  @SystemStub
+  val environmentVariables = EnvironmentVariables()
+
   @BeforeEach
   fun beforeEach() {
-    val currentEnv = System.getenv("AIRBYTE_EDITION")
-
     val flyway =
       create(
         dataSource,
@@ -59,13 +65,12 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
     ctx.deleteFrom(DSL.table("workspace")).execute()
     recreateColumnGeography(ctx)
     dropColumnGeographyDONOTUSE(ctx)
-    setEnv("AIRBYTE_EDITION", currentEnv)
   }
 
   @Test
   @Order(10)
   fun testDataplaneGroupIdIsPopulatedCloud() {
-    setEnv("AIRBYTE_EDITION", "CLOUD")
+    environmentVariables.set("AIRBYTE_EDITION", "CLOUD")
 
     val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
@@ -176,7 +181,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   @Test
   @Order(11)
   fun testDataplaneGroupIdIsPopulatedNonCloud() {
-    setEnv("AIRBYTE_EDITION", "asdf")
+    environmentVariables.set("AIRBYTE_EDITION", "asdf")
 
     val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
@@ -293,7 +298,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   @Test
   @Order(12)
   fun testDataplaneGroupIdIsPopulatedNullAirbyteEdition() {
-    setEnv("AIRBYTE_EDITION", null)
+    environmentVariables.remove("AIRBYTE_EDITION")
 
     val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
@@ -411,7 +416,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   @Test
   @Order(1)
   fun testMigrationThrowsOnCloudWhenDataplaneGroupIdNotFoundForGeography() {
-    setEnv("AIRBYTE_EDITION", "CLOUD")
+    environmentVariables.set("AIRBYTE_EDITION", "CLOUD")
 
     val ctx = dslContext!!
     ctx
@@ -536,22 +541,6 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
       } catch (e: Exception) {
         // ignore
       }
-    }
-  }
-
-  private fun setEnv(
-    key: String,
-    value: String?,
-  ) {
-    val env = System.getenv()
-    val cl = env::class.java
-    val field = cl.getDeclaredField("m")
-    field.isAccessible = true
-    val writableEnv = field.get(env) as MutableMap<String, String?>
-    if (value != null) {
-      writableEnv[key] = value
-    } else {
-      writableEnv.remove(key)
     }
   }
 }

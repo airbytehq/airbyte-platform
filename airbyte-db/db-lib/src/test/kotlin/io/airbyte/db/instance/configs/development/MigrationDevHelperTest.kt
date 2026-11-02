@@ -15,30 +15,36 @@ import io.airbyte.db.instance.development.migrationId
 import org.flywaydb.core.api.MigrationVersion
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junitpioneer.jupiter.ClearEnvironmentVariable
-import org.junitpioneer.jupiter.SetEnvironmentVariable
+import org.junit.jupiter.api.extension.ExtendWith
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
+import uk.org.webcompere.systemstubs.jupiter.SystemStub
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension
 
 private const val VERSION_0113_ALPHA = "0.11.3-alpha"
 
+@ExtendWith(SystemStubsExtension::class)
 internal class MigrationDevHelperTest {
-  @SetEnvironmentVariable(key = AIRBYTE_VERSION_ENV_VAR, value = VERSION_0113_ALPHA)
+  @SystemStub
+  val environmentVariables = EnvironmentVariables()
+
   @Test
   fun testGetCurrentAirbyteVersion() {
+    environmentVariables.set(AIRBYTE_VERSION_ENV_VAR, VERSION_0113_ALPHA)
     // Test that this method will not throw any exception.
     Assertions.assertEquals(VERSION_0113_ALPHA, currentAirbyteVersion.serialize())
   }
 
-  @SetEnvironmentVariable(key = VERSION_ENV_VAR, value = "dev")
   @Test
   fun testGetCurrentAirbyteVersionFromFallbackEnv() {
+    environmentVariables.set(VERSION_ENV_VAR, "dev")
     // Test that this method will not throw any exception.
     Assertions.assertEquals("dev", currentAirbyteVersion.serialize())
   }
 
-  @ClearEnvironmentVariable(key = AIRBYTE_VERSION_ENV_VAR)
-  @ClearEnvironmentVariable(key = VERSION_ENV_VAR)
   @Test
   fun testGetCurrentAirbyteVersionFailure() {
+    environmentVariables.remove(AIRBYTE_VERSION_ENV_VAR)
+    environmentVariables.remove(VERSION_ENV_VAR)
     Assertions.assertThrows(
       IllegalStateException::class.java,
     ) { currentAirbyteVersion.toString() }
