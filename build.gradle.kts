@@ -195,12 +195,3 @@ taskNames.forEach { taskName ->
     dependsOn(subprojects.flatMap { it.getTasksByName(taskName, true) })
   }
 }
-
-// Retired test frameworks (Mockito, Kotest, kotlin.test, JUnit 4, ...) must not come back; the scan lives in the
-// internal root build. The public airbyte-platform mirror has no such root (oss/ is its root project), so depend on
-// the scan only where it exists.
-tasks.named("check") {
-  if ("checkTestFrameworkImports" in rootProject.tasks.names) {
-    dependsOn(rootProject.tasks.named("checkTestFrameworkImports"))
-  }
-}

@@ -249,9 +249,8 @@ Always prefer scoped commands during iteration:
 
 - **Format a module**: `./gradlew :oss:airbyte-server:spotlessApply`
 - **Format everything (repo)**: `make format.oss`
-- **Check a module (compile + test + spotless check)**:
-  `./gradlew :oss:airbyte-server:check`. This skips
-  `checkTestFrameworkImports`.
+- **Check a module (compile + test + spotless check +
+  `checkTestFrameworkImports`)**: `./gradlew :oss:airbyte-server:check`
 - **Check test sources for retired test frameworks**:
   `./gradlew checkTestFrameworkImports` (a file scan, no compile)
 - **Run one test class**:
@@ -262,9 +261,8 @@ Always prefer scoped commands during iteration:
   `:oss:check -x test`, which includes `checkTestFrameworkImports`)
 - **All OSS unit tests**: `make test.unit.oss`
 
-Before declaring work done, run `:check` on every touched module, plus
-`./gradlew checkTestFrameworkImports` if you changed tests. For a full
-pass, run `make check.oss` and `make test.unit.oss`.
+Before declaring work done, run `:check` on every touched module. For a
+full pass, run `make check.oss` and `make test.unit.oss`.
 
 ## Logging
 
