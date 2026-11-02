@@ -7,11 +7,14 @@ package io.airbyte.data.services
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
 import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.HeartbeatData
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -28,6 +31,24 @@ class DataplaneHealthService(
     val HEALTHY_THRESHOLD_DURATION: Duration = Duration.ofSeconds(60)
     val DEGRADED_THRESHOLD_DURATION: Duration = Duration.ofMinutes(5)
     val RETENTION_PERIOD_DURATION: Duration = Duration.ofHours(24)
+
+    // Part of the API contract: 48 periods of 15 minutes. The window stays shorter than RETENTION_PERIOD_DURATION on purpose:
+    // the check-in before the window that anchors the first period is only reliable while retention still holds it, so the
+    // gap between the two is how far back an anchor can be. A change to either value is a contract change, not a tuning knob.
+    val HISTORY_WINDOW_DURATION: Duration = Duration.ofHours(12)
+    val HISTORY_BUCKET_DURATION: Duration = Duration.ofMinutes(15)
+    val HISTORY_BUCKET_COUNT: Int = (HISTORY_WINDOW_DURATION.toMillis() / HISTORY_BUCKET_DURATION.toMillis()).toInt()
+
+    /**
+     * Periods are aligned to the clock (:00, :15, :30, :45 UTC) so a silence stays in the same period from one poll to the next.
+     * The last period is the current quarter, graded on what has happened so far, so the window starts 47 periods before it.
+     */
+    fun historyWindowStart(now: OffsetDateTime): OffsetDateTime {
+      val utc = now.withOffsetSameInstant(ZoneOffset.UTC)
+      val currentPeriodStart =
+        utc.truncatedTo(ChronoUnit.HOURS).plusMinutes((utc.minute / HISTORY_BUCKET_DURATION.toMinutes()) * HISTORY_BUCKET_DURATION.toMinutes())
+      return currentPeriodStart.minus(HISTORY_WINDOW_DURATION).plus(HISTORY_BUCKET_DURATION)
+    }
   }
 
   /**
@@ -52,32 +73,61 @@ class DataplaneHealthService(
 
   /**
    * Get health info for multiple dataplanes based on their latest heartbeats.
+   *
+   * With [includeHistory] the heartbeat read covers the whole history window instead of the recent
+   * heartbeat window, so the 12-hour history costs one query per call and not one per dataplane.
    */
-  fun getDataplaneHealthInfos(dataplaneIds: List<UUID>): List<DataplaneHealthInfo> {
+  fun getDataplaneHealthInfos(
+    dataplaneIds: List<UUID>,
+    includeHistory: Boolean,
+  ): List<DataplaneHealthInfo> {
     if (dataplaneIds.isEmpty()) {
       return emptyList()
     }
 
     val now = OffsetDateTime.now()
     val recentHeartbeatStart = now.minus(DEGRADED_THRESHOLD_DURATION)
+    val readStart = if (includeHistory) historyWindowStart(now) else recentHeartbeatStart
 
-    val latestHeartbeats = heartbeatLogRepository.findLatestHeartbeatsByDataplaneIds(dataplaneIds)
-    val heartbeatMap = latestHeartbeats.associateBy { it.dataplaneId }
-
-    val recentHeartbeatLogs = heartbeatLogRepository.findHeartbeatHistoryForDataplanes(dataplaneIds, recentHeartbeatStart, now)
-    val recentHeartbeatsByDataplane = recentHeartbeatLogs.groupBy { it.dataplaneId }
+    val latestHeartbeatByDataplane = heartbeatLogRepository.findLatestHeartbeatsByDataplaneIds(dataplaneIds).associateBy { it.dataplaneId }
+    val heartbeatLogsByDataplane = heartbeatLogRepository.findHeartbeatHistoryForDataplanes(dataplaneIds, readStart, now).groupBy { it.dataplaneId }
+    val lastCheckInBeforeWindowByDataplane =
+      if (includeHistory) {
+        // Anchors older than retention are ignored even before cleanup deletes them, so the grading never depends on when
+        // the hourly cleanup last ran.
+        heartbeatLogRepository
+          .findLatestHeartbeatsBeforeForDataplanes(dataplaneIds, now.minus(RETENTION_PERIOD_DURATION), readStart)
+          .associateBy { it.dataplaneId }
+      } else {
+        emptyMap()
+      }
 
     return dataplaneIds.map { dataplaneId ->
-      val heartbeat = heartbeatMap[dataplaneId]
-      val recentLogs = recentHeartbeatsByDataplane[dataplaneId] ?: emptyList()
-      calculateHealthStatus(dataplaneId, heartbeat, recentLogs, now)
+      val checkIns = heartbeatLogsByDataplane.getOrDefault(dataplaneId, emptyList()).mapNotNull { it.createdAt }
+      // Only the pre-flag Regions settings page reads recent_heartbeats, for its 5-minute pulse graph. The flag-on page
+      // renders health_history instead, so once the old page is removed this list and its contract field can go too.
+      val recentHeartbeats = checkIns.filter { !it.isBefore(recentHeartbeatStart) }.map { HeartbeatData(timestamp = it) }
+
+      val latestHeartbeat = latestHeartbeatByDataplane[dataplaneId]
+      val healthHistory =
+        if (includeHistory) {
+          // A dataplane whose newest check-in is older than the window has been silent the whole time, and cleanup never deletes
+          // the newest row, so it anchors the history even when it is older than retention.
+          val anchor = lastCheckInBeforeWindowByDataplane[dataplaneId]?.createdAt ?: latestHeartbeat?.createdAt?.takeIf { it.isBefore(readStart) }
+          buildHealthHistory(knownCheckIns = listOfNotNull(anchor) + checkIns.sorted(), windowStart = readStart, now = now)
+        } else {
+          emptyList()
+        }
+
+      calculateHealthStatus(dataplaneId, latestHeartbeat, recentHeartbeats, healthHistory, now)
     }
   }
 
   private fun calculateHealthStatus(
     dataplaneId: UUID,
     heartbeat: DataplaneHeartbeatLog?,
-    recentHeartbeatLogs: List<DataplaneHeartbeatLog>,
+    recentHeartbeats: List<HeartbeatData>,
+    healthHistory: List<HealthHistoryBucket>,
     now: OffsetDateTime,
   ): DataplaneHealthInfo {
     if (heartbeat == null || heartbeat.createdAt == null) {
@@ -89,36 +139,90 @@ class DataplaneHealthService(
         recentHeartbeats = emptyList(),
         controlPlaneVersion = null,
         dataplaneVersion = null,
+        healthHistory = healthHistory,
       )
     }
 
     val timeSinceHeartbeat = Duration.between(heartbeat.createdAt, now)
-    val secondsSince = timeSinceHeartbeat.seconds
-
-    val status =
-      when {
-        timeSinceHeartbeat <= HEALTHY_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.HEALTHY
-        timeSinceHeartbeat <= DEGRADED_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.DEGRADED
-        else -> DataplaneHealthInfo.HealthStatus.UNHEALTHY
-      }
-
-    val recentHeartbeats =
-      recentHeartbeatLogs.mapNotNull { log ->
-        log.createdAt?.let { timestamp ->
-          HeartbeatData(timestamp = timestamp)
-        }
-      }
 
     return DataplaneHealthInfo(
       dataplaneId = dataplaneId,
-      status = status,
+      status = statusForSilence(timeSinceHeartbeat),
       lastHeartbeatTimestamp = heartbeat.createdAt,
-      secondsSinceLastHeartbeat = secondsSince,
+      secondsSinceLastHeartbeat = timeSinceHeartbeat.seconds,
       recentHeartbeats = recentHeartbeats,
       controlPlaneVersion = heartbeat.controlPlaneVersion,
       dataplaneVersion = heartbeat.dataplaneVersion,
+      healthHistory = healthHistory,
     )
   }
+
+  /**
+   * Splits the history window into [HISTORY_BUCKET_COUNT] clock-aligned periods, oldest first, and grades each one by the
+   * longest silence reached inside it. The last check-in carries across period boundaries, so [knownCheckIns]
+   * must be sorted ascending and may start with a check-in before [windowStart].
+   */
+  private fun buildHealthHistory(
+    knownCheckIns: List<OffsetDateTime>,
+    windowStart: OffsetDateTime,
+    now: OffsetDateTime,
+  ): List<HealthHistoryBucket> {
+    val checkInsByBucket = knownCheckIns.groupBy { bucketIndexOf(it, windowStart) }
+
+    // Holds at most one element: the last check-in seen before the current period, empty until the first known check-in.
+    var lastCheckInBeforeBucket = checkInsByBucket.getOrDefault(-1, emptyList()).takeLast(1)
+
+    return (0 until HISTORY_BUCKET_COUNT).map { index ->
+      val bucketStart = windowStart.plus(HISTORY_BUCKET_DURATION.multipliedBy(index.toLong()))
+      // The current period is still running, so its silence is measured up to now instead of up to its end.
+      val bucketEnd = minOf(bucketStart.plus(HISTORY_BUCKET_DURATION), now)
+      val checkInsInBucket = checkInsByBucket.getOrDefault(index, emptyList())
+
+      val status = worstStatusInBucket(lastCheckInBeforeBucket + checkInsInBucket, bucketEnd)
+      lastCheckInBeforeBucket = checkInsInBucket.takeLast(1).ifEmpty { lastCheckInBeforeBucket }
+
+      HealthHistoryBucket(bucketStart = bucketStart, status = status)
+    }
+  }
+
+  /**
+   * Returns -1 for a check-in before the window, otherwise the period index clamped to the last period so a
+   * check-in recorded at the exact end of the window still counts.
+   */
+  private fun bucketIndexOf(
+    checkIn: OffsetDateTime,
+    windowStart: OffsetDateTime,
+  ): Int {
+    if (checkIn.isBefore(windowStart)) {
+      return -1
+    }
+    val index = Duration.between(windowStart, checkIn).toMillis() / HISTORY_BUCKET_DURATION.toMillis()
+    return index.toInt().coerceAtMost(HISTORY_BUCKET_COUNT - 1)
+  }
+
+  /**
+   * [checkIns] are the check-ins that bound the silences inside one period: the last one before the period, if any,
+   * followed by the ones inside it. The silence from the last check-in to the period end counts too, so a period
+   * with no check-ins is graded by how long the dataplane had been silent when the period ended.
+   */
+  private fun worstStatusInBucket(
+    checkIns: List<OffsetDateTime>,
+    bucketEnd: OffsetDateTime,
+  ): DataplaneHealthInfo.HealthStatus {
+    if (checkIns.isEmpty()) {
+      return DataplaneHealthInfo.HealthStatus.UNKNOWN
+    }
+
+    val silences = checkIns.zipWithNext { earlier, later -> Duration.between(earlier, later) } + Duration.between(checkIns.last(), bucketEnd)
+    return statusForSilence(silences.max())
+  }
+
+  private fun statusForSilence(silence: Duration): DataplaneHealthInfo.HealthStatus =
+    when {
+      silence <= HEALTHY_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.HEALTHY
+      silence <= DEGRADED_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.DEGRADED
+      else -> DataplaneHealthInfo.HealthStatus.UNHEALTHY
+    }
 
   /**
    * Deletes heartbeat logs older than the retention period,

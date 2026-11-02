@@ -22,6 +22,7 @@ import io.airbyte.domain.models.ServiceAccount
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.DataplaneAuthorizationDataService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.server.apis.controllers.DataWorkerAllocationApiController
@@ -498,8 +499,9 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
         is AirbyteConfig -> every { instance.version } returns "fixture"
         is DataplaneHealthService -> {
           every { instance.recordHeartbeat(any(), "fixture", null) } just Runs
-          every { instance.getDataplaneHealthInfos(listOf(DATAPLANE)) } returns emptyList()
+          every { instance.getDataplaneHealthInfos(listOf(DATAPLANE), any()) } returns emptyList()
         }
+        is FeatureFlagClient -> every { instance.boolVariation(any(), any()) } returns false
       }
       configureDependency(instance)
     }

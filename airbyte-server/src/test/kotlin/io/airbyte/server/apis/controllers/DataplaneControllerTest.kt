@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHealthHistoryBucket
 import io.airbyte.api.server.generated.models.DataplaneHealthRead
 import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
 import io.airbyte.api.server.generated.models.DataplaneHeartbeatResponse
@@ -23,7 +24,11 @@ import io.airbyte.data.services.DataplaneHealthService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.DataplaneHealthUi
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.mockk.every
 import io.mockk.mockk
@@ -50,6 +55,10 @@ class DataplaneControllerTest {
       mockk<AirbyteConfig>().apply {
         every { version } returns TEST_CONTROL_PLANE_VERSION
       }
+    private val featureFlagClient =
+      mockk<FeatureFlagClient>().apply {
+        every { boolVariation(DataplaneHealthUi, any()) } returns false
+      }
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
@@ -58,6 +67,7 @@ class DataplaneControllerTest {
         entitlementService,
         mockk(relaxed = true),
         airbyteConfig,
+        featureFlagClient,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -287,11 +297,12 @@ class DataplaneControllerTest {
   private fun createDataplaneGroup(
     id: UUID? = null,
     enabled: Boolean = false,
+    organizationId: UUID = UUID.randomUUID(),
   ): DataplaneGroup =
     io.airbyte.data.repositories.entities
       .DataplaneGroup(
         id = id ?: UUID.randomUUID(),
-        organizationId = UUID.randomUUID(),
+        organizationId = organizationId,
         name = "Test Dataplane Group",
         enabled = enabled,
         createdAt = OffsetDateTime.now(),
@@ -306,9 +317,9 @@ class DataplaneControllerTest {
     val dataplaneId3 = UUID.randomUUID()
     val mockOrganizationId = UUID.randomUUID()
 
-    val dataplane1 = createDataplane(dataplaneId1)
-    val dataplane2 = createDataplane(dataplaneId2)
-    val dataplane3 = createDataplane(dataplaneId3)
+    val dataplane1 = createDataplane(dataplaneId1, enabled = true)
+    val dataplane2 = createDataplane(dataplaneId2, enabled = true)
+    val dataplane3 = createDataplane(dataplaneId3, enabled = true)
 
     val dataplaneGroupEntity =
       io.airbyte.data.repositories.entities
@@ -334,6 +345,7 @@ class DataplaneControllerTest {
         recentHeartbeats = emptyList(),
         controlPlaneVersion = "1.0.0",
         dataplaneVersion = "2.0.0",
+        healthHistory = emptyList(),
       )
 
     val healthStatus2 =
@@ -345,6 +357,7 @@ class DataplaneControllerTest {
         recentHeartbeats = emptyList(),
         controlPlaneVersion = "1.0.1",
         dataplaneVersion = "2.0.1",
+        healthHistory = emptyList(),
       )
 
     val healthStatus3 =
@@ -356,13 +369,14 @@ class DataplaneControllerTest {
         recentHeartbeats = emptyList(),
         controlPlaneVersion = "1.0.2",
         dataplaneVersion = "2.0.2",
+        healthHistory = emptyList(),
       )
 
     every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
     every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane1, dataplane2, dataplane3)
 
-    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId1, dataplaneId2, dataplaneId3)) } returns
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId1, dataplaneId2, dataplaneId3), false) } returns
       listOf(healthStatus1, healthStatus2, healthStatus3)
 
     val request = OrganizationIdRequestBody(organizationId = mockOrganizationId)
@@ -384,7 +398,113 @@ class DataplaneControllerTest {
     Assertions.assertEquals(dataplaneId3, health3.dataplaneId)
     Assertions.assertEquals(DataplaneHealthRead.Status.UNHEALTHY, health3.status)
 
+    response.dataplanes.forEach { health ->
+      Assertions.assertEquals(true, health.enabled)
+      Assertions.assertNull(health.healthHistory)
+    }
     verify(exactly = 1) { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) }
+    verify(exactly = 1) { featureFlagClient.boolVariation(DataplaneHealthUi, Organization(mockOrganizationId)) }
+  }
+
+  @Test
+  fun `listDataplaneHealth returns the history when the data plane health UI flag is on`() {
+    val dataplaneId = UUID.randomUUID()
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val bucketStart = OffsetDateTime.now().minusHours(24)
+    val healthInfo =
+      DataplaneHealthInfo(
+        dataplaneId = dataplaneId,
+        status = DataplaneHealthInfo.HealthStatus.HEALTHY,
+        lastHeartbeatTimestamp = OffsetDateTime.now().minusSeconds(30),
+        secondsSinceLastHeartbeat = 30,
+        recentHeartbeats = emptyList(),
+        controlPlaneVersion = "1.0.0",
+        dataplaneVersion = "2.0.0",
+        healthHistory =
+          listOf(
+            HealthHistoryBucket(bucketStart = bucketStart, status = DataplaneHealthInfo.HealthStatus.UNKNOWN),
+            HealthHistoryBucket(bucketStart = bucketStart.plusMinutes(15), status = DataplaneHealthInfo.HealthStatus.DEGRADED),
+          ),
+      )
+
+    every { featureFlagClient.boolVariation(DataplaneHealthUi, Organization(mockOrganizationId)) } returns true
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId), true) } returns listOf(healthInfo)
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    val health = response.dataplanes.single()
+    Assertions.assertEquals(true, health.enabled)
+    Assertions.assertEquals(
+      listOf(
+        DataplaneHealthHistoryBucket(bucketStart = bucketStart.toInstant().toEpochMilli(), status = DataplaneHealthHistoryBucket.Status.UNKNOWN),
+        DataplaneHealthHistoryBucket(
+          bucketStart = bucketStart.plusMinutes(15).toInstant().toEpochMilli(),
+          status = DataplaneHealthHistoryBucket.Status.DEGRADED,
+        ),
+      ),
+      health.healthHistory,
+    )
+  }
+
+  @Test
+  fun `listDataplaneHealth reports enabled false when the dataplane group is disabled`() {
+    val dataplaneId = UUID.randomUUID()
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = false, organizationId = mockOrganizationId)
+    val healthInfo =
+      DataplaneHealthInfo(
+        dataplaneId = dataplaneId,
+        status = DataplaneHealthInfo.HealthStatus.UNKNOWN,
+        lastHeartbeatTimestamp = null,
+        secondsSinceLastHeartbeat = null,
+        recentHeartbeats = emptyList(),
+        controlPlaneVersion = null,
+        dataplaneVersion = null,
+        healthHistory = emptyList(),
+      )
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId), false) } returns listOf(healthInfo)
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    Assertions.assertEquals(false, response.dataplanes.single().enabled)
+  }
+
+  @Test
+  fun `listDataplaneHealth reports enabled false when the dataplane is disabled`() {
+    val dataplaneId = UUID.randomUUID()
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = false)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val healthInfo =
+      DataplaneHealthInfo(
+        dataplaneId = dataplaneId,
+        status = DataplaneHealthInfo.HealthStatus.UNKNOWN,
+        lastHeartbeatTimestamp = null,
+        secondsSinceLastHeartbeat = null,
+        recentHeartbeats = emptyList(),
+        controlPlaneVersion = null,
+        dataplaneVersion = null,
+        healthHistory = emptyList(),
+      )
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId), false) } returns listOf(healthInfo)
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    Assertions.assertEquals(false, response.dataplanes.single().enabled)
   }
 
   @Test
@@ -416,12 +536,13 @@ class DataplaneControllerTest {
         recentHeartbeats = emptyList(),
         controlPlaneVersion = null,
         dataplaneVersion = null,
+        healthHistory = emptyList(),
       )
 
     every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
     every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
-    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId)) } returns listOf(healthStatus)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplaneId), false) } returns listOf(healthStatus)
 
     val request = OrganizationIdRequestBody(organizationId = mockOrganizationId)
     val response = dataplaneController.listDataplaneHealth(request)

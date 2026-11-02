@@ -18,6 +18,10 @@ data class DataplaneHealthInfo(
   val recentHeartbeats: List<HeartbeatData>,
   val controlPlaneVersion: String?,
   val dataplaneVersion: String?,
+  /**
+   * Fixed-width periods covering the check-in history window, oldest first. Empty when the history was not requested.
+   */
+  val healthHistory: List<HealthHistoryBucket>,
 ) {
   /**
    * Enum representing the health status of a dataplane.
@@ -50,4 +54,12 @@ data class DataplaneHealthInfo(
  */
 data class HeartbeatData(
   val timestamp: OffsetDateTime,
+)
+
+/**
+ * Worst check-in state reached inside one period of the health history.
+ */
+data class HealthHistoryBucket(
+  val bucketStart: OffsetDateTime,
+  val status: DataplaneHealthInfo.HealthStatus,
 )

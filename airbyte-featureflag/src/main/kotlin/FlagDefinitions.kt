@@ -271,6 +271,13 @@ object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-re
 object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.external-cloud-orgs.enabled", default = false)
 
 /**
+ * Gates the Regions page of the data plane health UI. The server returns the 12-hour check-in history
+ * on the dataplane health read only when this is on; the webapp reads the same key to show the new page.
+ * Remove once the Regions page is the only data plane view.
+ */
+object DataplaneHealthUi : Temporary<Boolean>(key = "platform.dataplane-health-ui", default = false)
+
+/**
  * Cloud gate for custom docker image connector definitions. Evaluated with the calling user (email attribute),
  * the workspace and its organization, so the approved-customer targeting can be expressed on any of the three.
  * Instance admins bypass it. Community edition never evaluates it.

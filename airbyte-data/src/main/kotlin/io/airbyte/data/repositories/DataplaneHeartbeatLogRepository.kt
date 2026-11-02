@@ -58,6 +58,22 @@ interface DataplaneHeartbeatLogRepository : PageableRepository<DataplaneHeartbea
 
   @Query(
     """
+    SELECT DISTINCT ON (dataplane_id) *
+    FROM dataplane_heartbeat_log
+    WHERE dataplane_id IN (:dataplaneIds)
+    AND created_at >= :afterTime
+    AND created_at < :beforeTime
+    ORDER BY dataplane_id, created_at DESC
+    """,
+  )
+  fun findLatestHeartbeatsBeforeForDataplanes(
+    dataplaneIds: List<UUID>,
+    afterTime: OffsetDateTime,
+    beforeTime: OffsetDateTime,
+  ): List<DataplaneHeartbeatLog>
+
+  @Query(
+    """
     WITH latest_heartbeats AS (
       SELECT DISTINCT ON (dataplane_id) id
       FROM dataplane_heartbeat_log

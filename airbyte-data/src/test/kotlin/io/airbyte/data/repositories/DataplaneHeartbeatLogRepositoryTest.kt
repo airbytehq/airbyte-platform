@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @MicronautTest
@@ -643,5 +644,89 @@ class DataplaneHeartbeatLogRepositoryTest : AbstractConfigRepositoryTest() {
 
     val remainingLogs = dataplaneHeartbeatLogRepository.findAll().toList()
     assertEquals(2, remainingLogs.size)
+  }
+
+  @Test
+  fun `findLatestHeartbeatsBeforeForDataplanes excludes the row at the boundary and returns the newest earlier one`() {
+    val dataplaneId = UUID.randomUUID()
+    val boundary = OffsetDateTime.now().minusHours(24).truncatedTo(ChronoUnit.MICROS)
+    insertHeartbeat(dataplaneId, boundary.minusHours(2))
+    val newestBefore = insertHeartbeat(dataplaneId, boundary.minusHours(1))
+    insertHeartbeat(dataplaneId, boundary)
+    insertHeartbeat(dataplaneId, boundary.plusHours(1))
+
+    val result = dataplaneHeartbeatLogRepository.findLatestHeartbeatsBeforeForDataplanes(listOf(dataplaneId), boundary.minusDays(90), boundary)
+
+    assertEquals(listOf(newestBefore), result.map { it.id })
+  }
+
+  @Test
+  fun `findLatestHeartbeatsBeforeForDataplanes returns one row per dataplane`() {
+    val dataplane1 = UUID.randomUUID()
+    val dataplane2 = UUID.randomUUID()
+    val boundary = OffsetDateTime.now().minusHours(24)
+    insertHeartbeat(dataplane1, boundary.minusHours(6))
+    val dataplane1Newest = insertHeartbeat(dataplane1, boundary.minusHours(2))
+    insertHeartbeat(dataplane1, boundary.plusHours(1))
+    insertHeartbeat(dataplane2, boundary.minusDays(36))
+    val dataplane2Newest = insertHeartbeat(dataplane2, boundary.minusDays(26))
+
+    val result =
+      dataplaneHeartbeatLogRepository.findLatestHeartbeatsBeforeForDataplanes(
+        listOf(dataplane1, dataplane2),
+        boundary.minusDays(90),
+        boundary,
+      )
+
+    assertEquals(mapOf(dataplane1 to dataplane1Newest, dataplane2 to dataplane2Newest), result.associate { it.dataplaneId to it.id })
+  }
+
+  @Test
+  fun `findLatestHeartbeatsBeforeForDataplanes omits a dataplane with no earlier check-in`() {
+    val recentOnly = UUID.randomUUID()
+    val withHistory = UUID.randomUUID()
+    val boundary = OffsetDateTime.now().minusHours(24)
+    insertHeartbeat(recentOnly, boundary.plusHours(1))
+    val earlier = insertHeartbeat(withHistory, boundary.minusHours(1))
+
+    val result =
+      dataplaneHeartbeatLogRepository.findLatestHeartbeatsBeforeForDataplanes(
+        listOf(recentOnly, withHistory),
+        boundary.minusDays(90),
+        boundary,
+      )
+
+    assertEquals(listOf(withHistory to earlier), result.map { it.dataplaneId to it.id })
+  }
+
+  @Test
+  fun `findLatestHeartbeatsBeforeForDataplanes ignores rows older than the lower bound`() {
+    val dataplaneId = UUID.randomUUID()
+    val boundary = OffsetDateTime.now().minusHours(12)
+    val lowerBound = boundary.minusHours(12)
+    insertHeartbeat(dataplaneId, lowerBound.minusMinutes(1))
+    insertHeartbeat(dataplaneId, boundary.plusHours(1))
+
+    val result = dataplaneHeartbeatLogRepository.findLatestHeartbeatsBeforeForDataplanes(listOf(dataplaneId), lowerBound, boundary)
+
+    assertEquals(emptyList<DataplaneHeartbeatLog>(), result)
+  }
+
+  private fun insertHeartbeat(
+    dataplaneId: UUID,
+    createdAt: OffsetDateTime,
+  ): UUID {
+    val id = UUID.randomUUID()
+    jooqDslContext
+      .insertInto(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .columns(
+        Tables.DATAPLANE_HEARTBEAT_LOG.ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CONTROL_PLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CREATED_AT,
+      ).values(id, dataplaneId, "1.0.0", "2.0.0", createdAt)
+      .execute()
+    return id
   }
 }

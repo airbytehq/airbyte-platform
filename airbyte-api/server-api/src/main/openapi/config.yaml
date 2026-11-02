@@ -25500,6 +25500,14 @@ components:
           type: string
         dataplane_version:
           type: string
+        enabled:
+          type: boolean
+          description: True when both the dataplane and its dataplane group are enabled.
+        health_history:
+          type: array
+          description: 48 periods of 15 minutes aligned to the clock (:00, :15, :30, :45 UTC), oldest first. The last period is the current one, graded on the check-ins so far. Present only when the data plane health UI is enabled for the organization.
+          items:
+            $ref: "#/components/schemas/DataplaneHealthHistoryBucket"
     HeartbeatRecord:
       type: object
       required:
@@ -25508,6 +25516,24 @@ components:
         timestamp:
           type: integer
           format: int64
+    DataplaneHealthHistoryBucket:
+      type: object
+      required:
+        - bucket_start
+        - status
+      properties:
+        bucket_start:
+          type: integer
+          format: int64
+          description: Start of the period in epoch milliseconds.
+        status:
+          type: string
+          description: Worst check-in state reached inside the period. UNKNOWN when the period ends before the first known check-in.
+          enum:
+            - HEALTHY
+            - DEGRADED
+            - UNHEALTHY
+            - UNKNOWN
     DataplaneInitRequestBody:
       required:
         - client_id

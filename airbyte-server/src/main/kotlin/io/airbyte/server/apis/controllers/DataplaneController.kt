@@ -10,6 +10,7 @@ import io.airbyte.api.server.generated.models.AccessToken
 import io.airbyte.api.server.generated.models.DataplaneCreateRequestBody
 import io.airbyte.api.server.generated.models.DataplaneCreateResponse
 import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneHealthHistoryBucket
 import io.airbyte.api.server.generated.models.DataplaneHealthListResponse
 import io.airbyte.api.server.generated.models.DataplaneHealthRead
 import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
@@ -38,6 +39,9 @@ import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.DataplaneHealthUi
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -67,6 +71,7 @@ open class DataplaneController(
   private val entitlementService: EntitlementService,
   private val metricClient: MetricClient,
   private val airbyteConfig: AirbyteConfig,
+  private val featureFlagClient: FeatureFlagClient,
 ) : DataplaneApi,
   DataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -296,7 +301,8 @@ open class DataplaneController(
     val dataplanes = dataplaneService.listDataplanes(dataplaneGroups.map { it.id })
     val dataplaneMap = dataplanes.associateBy { it.id }
 
-    val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id })
+    val includeHealthHistory = featureFlagClient.boolVariation(DataplaneHealthUi, Organization(request.organizationId))
+    val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, includeHealthHistory)
 
     val dataplaneHealthReads =
       healthInfos.map { healthInfo ->
@@ -316,6 +322,18 @@ open class DataplaneController(
             },
           controlPlaneVersion = healthInfo.controlPlaneVersion,
           dataplaneVersion = healthInfo.dataplaneVersion,
+          enabled = dataplane.enabled && dataplaneGroup.enabled,
+          healthHistory =
+            if (includeHealthHistory) {
+              healthInfo.healthHistory.map { bucket ->
+                DataplaneHealthHistoryBucket(
+                  bucketStart = bucket.bucketStart.toInstant().toEpochMilli(),
+                  status = DataplaneHealthHistoryBucket.Status.entries.first { it.value == bucket.status.name },
+                )
+              }
+            } else {
+              null
+            },
         )
       }
 

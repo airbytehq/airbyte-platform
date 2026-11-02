@@ -25,6 +25,7 @@ import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.DataplaneTokenServiceDataImpl
 import io.airbyte.domain.models.ServiceAccount
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -209,6 +210,9 @@ class AttemptWriteProducerBeans {
 
   @Singleton
   fun dataplaneHealth(): DataplaneHealthService = mockk()
+
+  @Singleton
+  fun featureFlags(): FeatureFlagClient = mockk()
 
   @Singleton
   fun entitlements(): EntitlementService = mockk()
