@@ -58,6 +58,7 @@ object ConnectionCreateMapper {
         ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(
           connectionCreateRequest.nonBreakingSchemaUpdatesBehavior,
         ),
+      notifySchemaChanges = connectionCreateRequest.notifySchemaChanges,
       namespaceDefinition = ConnectionHelper.convertNamespaceDefinitionEnum(connectionCreateRequest.namespaceDefinition),
       namespaceFormat = connectionCreateRequest.namespaceFormat,
       prefix = connectionCreateRequest.prefix,

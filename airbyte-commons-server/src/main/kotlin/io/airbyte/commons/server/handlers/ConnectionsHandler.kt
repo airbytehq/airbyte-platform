@@ -573,7 +573,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           .withSourceCatalogId(connectionCreate.sourceCatalogId)
           .withDestinationCatalogId(connectionCreate.destinationCatalogId)
           .withBreakingChange(false)
-          .withNotifySchemaChanges(connectionCreate.notifySchemaChanges)
+          .withNotifySchemaChanges(connectionCreate.notifySchemaChanges ?: workspaceSendsConnectionUpdateNotifications(workspaceId))
           .withOnDemandEnabled(connectionCreate.onDemandEnabled ?: false)
           .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.nonBreakingChangesPreference),
@@ -677,6 +677,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
       return buildConnectionRead(connectionId)
     }
+
+    private fun workspaceSendsConnectionUpdateNotifications(workspaceId: UUID): Boolean =
+      workspaceService
+        .getStandardWorkspaceNoSecrets(workspaceId, false)
+        .notificationSettings
+        ?.sendOnConnectionUpdate
+        ?.notificationType
+        ?.isNotEmpty() == true
 
     private fun populateSyncFromLegacySchedule(
       standardSync: StandardSync,

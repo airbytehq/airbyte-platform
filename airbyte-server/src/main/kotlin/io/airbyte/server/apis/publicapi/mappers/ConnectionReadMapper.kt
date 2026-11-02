@@ -95,6 +95,7 @@ object ConnectionReadMapper {
       schedule = connectionScheduleResponse,
       configurations = streamConfigurations,
       nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
+      notifySchemaChanges = connectionRead.notifySchemaChanges,
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
       namespaceFormat = connectionRead.namespaceFormat,
       prefix = connectionRead.prefix,

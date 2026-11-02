@@ -21,6 +21,9 @@ import io.airbyte.server.apis.publicapi.helpers.AirbyteCatalogHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 
 class ConnectionUpdateMapperTest {
@@ -128,5 +131,31 @@ class ConnectionUpdateMapperTest {
       )
 
     assertEquals("UTC", result.scheduleData!!.cron!!.cronTimeZone)
+  }
+
+  @ParameterizedTest
+  @MethodSource("schemaChangeNotificationValues")
+  fun `maps schema change notification setting`(notifySchemaChanges: Boolean?) {
+    val request = ConnectionPatchRequest(notifySchemaChanges = notifySchemaChanges)
+
+    val result =
+      ConnectionUpdateMapper.from(
+        UUID.randomUUID(),
+        request,
+        UUID.randomUUID(),
+        AirbyteCatalog(streams = emptyList()),
+      )
+
+    assertEquals(notifySchemaChanges, result.notifySchemaChanges)
+  }
+
+  companion object {
+    @JvmStatic
+    fun schemaChangeNotificationValues() =
+      listOf(
+        Arguments.of(true),
+        Arguments.of(false),
+        Arguments.of(null as Boolean?),
+      )
   }
 }

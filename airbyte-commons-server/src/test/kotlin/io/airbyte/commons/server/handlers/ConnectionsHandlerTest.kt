@@ -155,6 +155,8 @@ import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
+import io.airbyte.config.Notification
+import io.airbyte.config.NotificationItem
 import io.airbyte.config.NotificationSettings
 import io.airbyte.config.RefreshConfig
 import io.airbyte.config.RefreshStream
@@ -1313,6 +1315,127 @@ internal class ConnectionsHandlerTest {
             any(),
           )
         } returns destinationVersion
+      }
+
+      @Test
+      fun `create defaults notify schema changes to true when workspace has notification types`() {
+        every {
+          workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+        } returns
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withNotificationSettings(
+              NotificationSettings()
+                .withSendOnConnectionUpdate(
+                  NotificationItem().withNotificationType(listOf(Notification.NotificationType.SLACK)),
+                ),
+            )
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = null)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(true, createdSync.notifySchemaChanges)
+      }
+
+      @Test
+      fun `create defaults notify schema changes to false when workspace has no notification types`() {
+        every {
+          workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+        } returns
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withNotificationSettings(
+              NotificationSettings()
+                .withSendOnConnectionUpdate(NotificationItem().withNotificationType(emptyList())),
+            )
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = null)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(false, createdSync.notifySchemaChanges)
+      }
+
+      @Test
+      fun `create defaults notify schema changes to false when workspace notification settings are null`() {
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+          StandardWorkspace().withWorkspaceId(workspaceId)
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = null)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(false, createdSync.notifySchemaChanges)
+      }
+
+      @Test
+      fun `create defaults notify schema changes to false when send on connection update is null`() {
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withNotificationSettings(NotificationSettings())
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = null)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(false, createdSync.notifySchemaChanges)
+      }
+
+      @Test
+      fun `create preserves explicit false without reading workspace notification settings`() {
+        every {
+          workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+        } returns
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withNotificationSettings(
+              NotificationSettings()
+                .withSendOnConnectionUpdate(
+                  NotificationItem().withNotificationType(listOf(Notification.NotificationType.SLACK)),
+                ),
+            )
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = false)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(false, createdSync.notifySchemaChanges)
+        verify(exactly = 0) { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) }
+      }
+
+      @Test
+      fun `create preserves explicit true without reading workspace notification settings`() {
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns
+          StandardWorkspace().withWorkspaceId(workspaceId)
+
+        val connectionCreate =
+          buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+            .copy(notifySchemaChanges = true)
+
+        val createdSync = createAndCapture(connectionCreate)
+
+        assertEquals(true, createdSync.notifySchemaChanges)
+        verify(exactly = 0) { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) }
+      }
+
+      private fun createAndCapture(connectionCreate: ConnectionCreate): StandardSync {
+        connectionsHandler.createConnection(connectionCreate)
+
+        val standardSyncSlot = slot<StandardSync>()
+        verify { connectionService.writeStandardSync(capture(standardSyncSlot)) }
+        return standardSyncSlot.captured
       }
 
       private fun buildConnectionCreateRequest(

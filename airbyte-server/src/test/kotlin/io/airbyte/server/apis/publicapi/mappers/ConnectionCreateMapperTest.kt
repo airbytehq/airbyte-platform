@@ -36,6 +36,7 @@ class ConnectionCreateMapperTest {
         destinationId = UUID.randomUUID(),
         name = "test",
         nonBreakingSchemaUpdatesBehavior = io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION,
+        notifySchemaChanges = true,
         namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
         namespaceFormat = "test",
         prefix = "test",
@@ -55,6 +56,7 @@ class ConnectionCreateMapperTest {
         destinationId = connectionCreateRequest.destinationId,
         name = connectionCreateRequest.name,
         nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
+        notifySchemaChanges = true,
         namespaceDefinition = NamespaceDefinitionType.DESTINATION,
         namespaceFormat = "test",
         prefix = "test",
@@ -140,5 +142,6 @@ class ConnectionCreateMapperTest {
       )
 
     assertEquals("UTC", result.scheduleData!!.cron!!.cronTimeZone)
+    assertEquals(null, result.notifySchemaChanges)
   }
 }

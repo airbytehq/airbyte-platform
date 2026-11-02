@@ -57,6 +57,7 @@ object ConnectionUpdateMapper {
       name = connectionPatchRequest.name,
       nonBreakingChangesPreference =
         connectionPatchRequest.nonBreakingSchemaUpdatesBehavior?.let { ConnectionHelper.convertNonBreakingSchemaUpdatesBehaviorEnum(it) },
+      notifySchemaChanges = connectionPatchRequest.notifySchemaChanges,
       namespaceDefinition = connectionPatchRequest.namespaceDefinition?.let { ConnectionHelper.convertNamespaceDefinitionEnum(it) },
       namespaceFormat = connectionPatchRequest.namespaceFormat,
       prefix = connectionPatchRequest.prefix,

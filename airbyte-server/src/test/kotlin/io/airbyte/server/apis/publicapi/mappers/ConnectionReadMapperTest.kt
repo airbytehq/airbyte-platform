@@ -79,6 +79,27 @@ internal class ConnectionReadMapperTest {
   }
 
   @ParameterizedTest
+  @MethodSource("schemaChangeNotificationValues")
+  internal fun `maps schema change notification setting`(notifySchemaChanges: Boolean?) {
+    val connectionRead =
+      ConnectionRead(
+        connectionId = UUID.randomUUID(),
+        name = "testconnection",
+        status = ConnectionStatus.ACTIVE,
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        createdAt = 1L,
+        syncCatalog = AirbyteCatalog(streams = emptyList()),
+        breakingChange = false,
+        notifySchemaChanges = notifySchemaChanges,
+      )
+
+    val result = ConnectionReadMapper.from(connectionRead, UUID.randomUUID())
+
+    assertEquals(notifySchemaChanges, result.notifySchemaChanges)
+  }
+
+  @ParameterizedTest
   @MethodSource("validSyncModeCombinations")
   internal fun `test syncModesToConnectionSyncModeEnum - valid combinations`(
     sourceSyncMode: SyncMode,
@@ -90,6 +111,14 @@ internal class ConnectionReadMapperTest {
   }
 
   companion object {
+    @JvmStatic
+    fun schemaChangeNotificationValues() =
+      listOf(
+        Arguments.of(true),
+        Arguments.of(false),
+        Arguments.of(null as Boolean?),
+      )
+
     @JvmStatic
     fun validSyncModeCombinations() =
       listOf(

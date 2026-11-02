@@ -2753,6 +2753,13 @@ components:
           default: ""
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+        notifySchemaChanges:
+          type: "boolean"
+          description: "Turns schema change notifications on or off for this connection.\
+            \ The workspace's notification settings decide where they are sent. Breaking\
+            \ changes use `connectionUpdateActionRequired`. Other schema changes use\
+            \ `connectionUpdate`. If omitted, it is true when the workspace's `connectionUpdate`\
+            \ settings have email or webhook enabled. Otherwise it is false."
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         tags:
@@ -2794,6 +2801,12 @@ components:
             \ “airbyte_projects”)."
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault"
+        notifySchemaChanges:
+          type: "boolean"
+          description: "Turns schema change notifications on or off for this connection.\
+            \ The workspace's notification settings decide where they are sent. Breaking\
+            \ changes use `connectionUpdateActionRequired`. Other schema changes use\
+            \ `connectionUpdate`."
         status:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         tags:
@@ -2987,6 +3000,12 @@ components:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
+        notifySchemaChanges:
+          type: "boolean"
+          description: "Turns schema change notifications on or off for this connection.\
+            \ The workspace's notification settings decide where they are sent. Breaking\
+            \ changes use `connectionUpdateActionRequired`. Other schema changes use\
+            \ `connectionUpdate`."
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
