@@ -34,6 +34,7 @@ import {
 import { ConnectorDefinition } from "core/domain/connector";
 import { useIsCloudApp } from "core/utils/app";
 import { isDevelopment } from "core/utils/isDevelopment";
+import { links } from "core/utils/links";
 import { useGetActorIdFromParams } from "core/utils/useGetActorIdFromParams";
 
 import styles from "./DocumentationPanel.module.scss";
@@ -79,6 +80,11 @@ export const prepareMarkdown = (markdown: string, env: "oss" | "cloud"): string 
   return env === "oss" ? preprocessed.replaceAll(CLOUD_ENV_MARKERS, "") : preprocessed.replaceAll(OSS_ENV_MARKERS, "");
 };
 
+// Docs link images by a root-absolute path like /.gitbook/assets/..., which the docs site serves from its root.
+// The browser would otherwise request them from the app's own origin, where they don't exist.
+export const resolveRootAbsoluteImageSrc = (src: string): string =>
+  src.startsWith("/") && !src.startsWith("//") ? new URL(src, links.docsLink).toString() : src;
+
 const ImgRelativePathReplacer: React.FC<
   React.ImgHTMLAttributes<HTMLImageElement> & { actorType?: "source" | "destination" }
 > = ({ src, alt, actorType, ...props }) => {
@@ -97,7 +103,7 @@ const ImgRelativePathReplacer: React.FC<
       newSrc = url.toString();
     }
   } else {
-    newSrc = src;
+    newSrc = resolveRootAbsoluteImageSrc(src);
   }
 
   return <img src={newSrc} alt={alt} {...props} />;
