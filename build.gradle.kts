@@ -113,6 +113,15 @@ allprojects {
     dependencies {
       "pmd"(project(":oss:airbyte-pmd-rules"))
     }
+    // The plugin calls useJUnitJupiter() without a version, so a module that does not declare
+    // libs.bundles.junit gets Gradle's default JUnit 5, or the Micronaut BOM's. Pin every test
+    // suite to the catalog's JUnit instead.
+    @Suppress("UnstableApiUsage")
+    configure<TestingExtension> {
+      suites.withType<JvmTestSuite>().configureEach {
+        useJUnitJupiter(libs.versions.junit.jupiter)
+      }
+    }
   }
   configurations.all {
     resolutionStrategy {
@@ -187,7 +196,11 @@ taskNames.forEach { taskName ->
   }
 }
 
-// Retired test frameworks (Mockito, Kotest, kotlin.test, JUnit 4, ...) must not come back; the scan lives in the root build.
+// Retired test frameworks (Mockito, Kotest, kotlin.test, JUnit 4, ...) must not come back; the scan lives in the
+// internal root build. The public airbyte-platform mirror has no such root (oss/ is its root project), so depend on
+// the scan only where it exists.
 tasks.named("check") {
-  dependsOn(rootProject.tasks.named("checkTestFrameworkImports"))
+  if ("checkTestFrameworkImports" in rootProject.tasks.names) {
+    dependsOn(rootProject.tasks.named("checkTestFrameworkImports"))
+  }
 }
