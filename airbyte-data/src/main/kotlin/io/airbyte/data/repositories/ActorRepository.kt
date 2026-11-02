@@ -6,6 +6,7 @@ package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Actor
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -23,6 +24,51 @@ interface ActorRepository : PageableRepository<Actor, UUID> {
 
   @Query("SELECT workspace_id FROM actor WHERE id = :destinationId AND actor_type = 'destination'")
   fun findDestinationWorkspaceId(destinationId: UUID): Optional<UUID>
+
+  /** Empty when the connection, an actor, or its workspace is missing, or the two actors are in different workspaces. */
+  @Query(
+    """
+    SELECT w.id AS workspace_id, w.organization_id, w.tombstone AS workspace_tombstone FROM connection c
+    JOIN actor s ON s.id = c.source_id
+    JOIN actor d ON d.id = c.destination_id
+    JOIN workspace w ON w.id = s.workspace_id AND w.id = d.workspace_id
+    JOIN organization o ON o.id = w.organization_id
+    WHERE c.id = :connectionId
+    """,
+  )
+  fun findConnectionAuthorizationMetadata(connectionId: UUID): Optional<ConnectionAuthorizationMetadata>
+
+  /** Same filters as [findSourceWorkspaceId] and [findDestinationWorkspaceId] plus a live workspace, for the connection's actors. */
+  @Query(
+    """
+    SELECT sw.id AS source_workspace_id, sw.organization_id AS source_organization_id,
+      dw.id AS destination_workspace_id, dw.organization_id AS destination_organization_id
+    FROM connection c
+    JOIN actor s ON s.id = c.source_id AND s.actor_type = 'source'
+    JOIN workspace sw ON sw.id = s.workspace_id AND sw.tombstone = false
+    JOIN actor d ON d.id = c.destination_id AND d.actor_type = 'destination'
+    JOIN workspace dw ON dw.id = d.workspace_id AND dw.tombstone = false
+    WHERE c.id = :connectionId
+    """,
+  )
+  fun findConnectionOwnersAuthorizationMetadata(connectionId: UUID): Optional<ConnectionOwnersAuthorizationMetadata>
+
+  /** Same filters as [findConnectionOwnersAuthorizationMetadata], for a source and destination given directly. */
+  @Query(
+    """
+    SELECT sw.id AS source_workspace_id, sw.organization_id AS source_organization_id,
+      dw.id AS destination_workspace_id, dw.organization_id AS destination_organization_id
+    FROM actor s
+    JOIN workspace sw ON sw.id = s.workspace_id AND sw.tombstone = false
+    JOIN actor d ON d.id = :destinationId AND d.actor_type = 'destination'
+    JOIN workspace dw ON dw.id = d.workspace_id AND dw.tombstone = false
+    WHERE s.id = :sourceId AND s.actor_type = 'source'
+    """,
+  )
+  fun findActorOwnersAuthorizationMetadata(
+    sourceId: UUID,
+    destinationId: UUID,
+  ): Optional<ConnectionOwnersAuthorizationMetadata>
 
   @Query("SELECT actor_type FROM actor_definition WHERE id = :definitionId")
   fun findDefinitionTypeById(definitionId: UUID): Optional<ActorType>
@@ -82,3 +128,20 @@ interface ActorRepository : PageableRepository<Actor, UUID> {
     workspaceId: UUID,
   ): Optional<UUID>
 }
+
+/** The one workspace that owns both of a connection's actors. */
+@Introspected
+data class ConnectionAuthorizationMetadata(
+  val workspaceId: UUID,
+  val organizationId: UUID,
+  val workspaceTombstone: Boolean,
+)
+
+/** The saved owners of a source and a destination. */
+@Introspected
+data class ConnectionOwnersAuthorizationMetadata(
+  val sourceWorkspaceId: UUID,
+  val sourceOrganizationId: UUID,
+  val destinationWorkspaceId: UUID,
+  val destinationOrganizationId: UUID,
+)

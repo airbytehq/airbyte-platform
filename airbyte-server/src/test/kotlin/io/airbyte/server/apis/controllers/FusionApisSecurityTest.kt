@@ -9,6 +9,7 @@ import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.SavedConnectionReferences
 import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -75,6 +76,7 @@ internal class FusionApisSecurityTest {
     val owner = WorkspaceAndOrganization(resourceId, resourceId)
     every { authorizationDataService.savedSourceWorkspaceAndOrganization(resourceId) } returns owner
     every { authorizationDataService.savedDestinationWorkspaceAndOrganization(resourceId) } returns owner
+    authorizationDataService.answerConnectionOwnersFromActorStubs()
     every { authorizationDataService.savedConnectionReferences(resourceId) } returns
       SavedConnectionReferences(resourceId, resourceId, Optional.empty(), Optional.empty(), emptyList())
     every { authorizationDataService.canUseDataplaneGroup(resourceId, resourceId) } returns true

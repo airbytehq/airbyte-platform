@@ -453,6 +453,7 @@ abstract class RemainingWorkspaceAuthorizationHttpContract {
         every { data.organization(ORGANIZATION) } returns ORGANIZATION
         every { data.organization(OTHER_ORGANIZATION) } returns OTHER_ORGANIZATION
         every { data.savedConnectionActorIds(CONNECTION) } returns (UUID(0, 30) to UUID(0, 31))
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(UUID(0, 30)) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.connectionSourceWorkspaceAndOrganization(CONNECTION, any()) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.savedSourceWorkspaceAndOrganization(SKILL_ACTOR) } returns

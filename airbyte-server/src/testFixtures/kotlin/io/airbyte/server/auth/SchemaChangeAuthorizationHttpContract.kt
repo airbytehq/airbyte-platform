@@ -28,6 +28,7 @@ import io.airbyte.config.Permission
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.ConnectionOwnersAuthorizationMetadata
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
@@ -228,6 +229,8 @@ abstract class SchemaChangeAuthorizationHttpContract {
         every { actors.findSourceWorkspaceId(SOURCE) } returns Optional.of(WORKSPACE)
         for (destination in listOf(DESTINATION, SECOND_DESTINATION)) {
           every { actors.findDestinationWorkspaceId(destination) } returns Optional.of(WORKSPACE)
+          every { actors.findActorOwnersAuthorizationMetadata(SOURCE, destination) } returns
+            Optional.of(ConnectionOwnersAuthorizationMetadata(WORKSPACE, ORGANIZATION, WORKSPACE, ORGANIZATION))
         }
         every { workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } returns
           StandardWorkspace().withWorkspaceId(WORKSPACE).withOrganizationId(ORGANIZATION)

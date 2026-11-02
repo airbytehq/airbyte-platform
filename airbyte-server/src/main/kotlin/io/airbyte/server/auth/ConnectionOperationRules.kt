@@ -118,24 +118,17 @@ private fun connectionInput(args: Array<out Any?>): ConnectionOperationInput =
 internal fun connectionOwner(
   data: AuthorizationDataService,
   connectionId: UUID,
-): WorkspaceAndOrganization {
-  val (sourceId, destinationId) = data.savedConnectionActorIds(connectionId)
-  return connectionOwner(data, sourceId, destinationId)
-}
+): WorkspaceAndOrganization = sharedOwner(data.savedConnectionOwners(connectionId))
 
 internal fun connectionOwner(
   data: AuthorizationDataService,
   references: SavedConnectionReferences,
-): WorkspaceAndOrganization = connectionOwner(data, references.sourceId, references.destinationId)
+): WorkspaceAndOrganization = sharedOwner(data.savedActorOwners(references.sourceId, references.destinationId))
 
-private fun connectionOwner(
-  data: AuthorizationDataService,
-  sourceId: UUID,
-  destinationId: UUID,
-): WorkspaceAndOrganization {
-  val owner = data.savedSourceWorkspaceAndOrganization(sourceId)
-  if (data.savedDestinationWorkspaceAndOrganization(destinationId) != owner) throw BadRequestProblem()
-  return owner
+private fun sharedOwner(owners: Pair<WorkspaceAndOrganization, WorkspaceAndOrganization>): WorkspaceAndOrganization {
+  val (source, destination) = owners
+  if (destination != source) throw BadRequestProblem()
+  return source
 }
 
 internal fun requireSavedDestinationCatalog(

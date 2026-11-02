@@ -157,6 +157,7 @@ abstract class ConfigApiBatchAuthorizationHttpContract {
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns owner
         every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } returns owner
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedConnectionReferences(CONNECTION) } returns
           SavedConnectionReferences(SOURCE, DESTINATION, Optional.empty(), Optional.empty(), listOf(OPERATION))
         every { data.connectionWorkspaceAndOrganization(CONNECTION) } returns owner

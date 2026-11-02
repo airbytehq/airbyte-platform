@@ -15,6 +15,7 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AttemptsRepository
 import io.airbyte.data.repositories.AuthorizationCommandRepository
+import io.airbyte.data.repositories.ConnectionOwnersAuthorizationMetadata
 import io.airbyte.data.repositories.GroupRepository
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.services.ActorDefinitionService
@@ -176,6 +177,22 @@ class AuthorizationDataService(
     )
   }
 
+  /** Source owner to destination owner, with the same checks as [savedSourceWorkspaceAndOrganization] and its destination twin. */
+  fun savedConnectionOwners(connectionId: UUID): Pair<WorkspaceAndOrganization, WorkspaceAndOrganization> =
+    actorRepository
+      .findConnectionOwnersAuthorizationMetadata(connectionId)
+      .map { it.owners() }
+      .orElseThrow { AuthorizationResourceNotFoundException() }
+
+  fun savedActorOwners(
+    sourceId: UUID,
+    destinationId: UUID,
+  ): Pair<WorkspaceAndOrganization, WorkspaceAndOrganization> =
+    actorRepository
+      .findActorOwnersAuthorizationMetadata(sourceId, destinationId)
+      .map { it.owners() }
+      .orElseThrow { AuthorizationResourceNotFoundException() }
+
   fun savedConnectionActorIds(connectionId: UUID): Pair<UUID, UUID> {
     val connection = resource { connections.getStandardSync(connectionId) }
     requireResource(connection.connectionId == connectionId)
@@ -322,10 +339,6 @@ class AuthorizationDataService(
       serviceAccountId,
     )
 
-  fun sourceWorkspaceAndOrganization(sourceId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(sourceId)
-
-  fun destinationWorkspaceAndOrganization(destinationId: UUID): WorkspaceAndOrganization = actorWorkspaceAndOrganization(destinationId)
-
   fun savedActorDefinitionId(
     actorId: UUID,
     workspaceId: UUID,
@@ -364,13 +377,8 @@ class AuthorizationDataService(
     connectionEvents.findConnectionIdForEvent(connectionEventId).orElseThrow { AuthorizationResourceNotFoundException() }
 
   fun connectionWorkspaceAndOrganization(connectionId: UUID): WorkspaceAndOrganization {
-    val connection = resource { connections.getStandardSync(connectionId) }
-    requireResource(connection.connectionId == connectionId)
-    val sourceId = connection.sourceId ?: throw AuthorizationResourceNotFoundException()
-    val destinationId = connection.destinationId ?: throw AuthorizationResourceNotFoundException()
-    val source = sourceWorkspaceAndOrganization(sourceId)
-    requireResource(source == destinationWorkspaceAndOrganization(destinationId))
-    return source
+    val connection = actorRepository.findConnectionAuthorizationMetadata(connectionId).orElseThrow { AuthorizationResourceNotFoundException() }
+    return WorkspaceAndOrganization(connection.workspaceId, connection.organizationId)
   }
 
   fun operationWorkspaceAndOrganization(operationId: UUID): WorkspaceAndOrganization {
@@ -393,10 +401,9 @@ class AuthorizationDataService(
   }
 
   fun savedConnectionWorkspaceAndOrganization(connectionId: UUID): WorkspaceAndOrganization {
-    val owner = connectionWorkspaceAndOrganization(connectionId)
-    requireResource(workspaceAndOrganization(owner.workspaceId) == owner)
-    organization(owner.organizationId)
-    return owner
+    val connection = actorRepository.findConnectionAuthorizationMetadata(connectionId).orElseThrow { AuthorizationResourceNotFoundException() }
+    requireResource(!connection.workspaceTombstone)
+    return WorkspaceAndOrganization(connection.workspaceId, connection.organizationId)
   }
 
   fun replicationJobConnectionId(jobId: Long): UUID {
@@ -560,6 +567,9 @@ class AuthorizationDataService(
       null -> throw AuthorizationResourceNotFoundException()
     }
   }
+
+  private fun ConnectionOwnersAuthorizationMetadata.owners() =
+    WorkspaceAndOrganization(sourceWorkspaceId, sourceOrganizationId) to WorkspaceAndOrganization(destinationWorkspaceId, destinationOrganizationId)
 
   private fun requireResource(valid: Boolean) {
     if (!valid) throw AuthorizationResourceNotFoundException()

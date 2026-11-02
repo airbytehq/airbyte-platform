@@ -20,6 +20,8 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AttemptsRepository
 import io.airbyte.data.repositories.AuthorizationCommandRepository
+import io.airbyte.data.repositories.ConnectionAuthorizationMetadata
+import io.airbyte.data.repositories.ConnectionOwnersAuthorizationMetadata
 import io.airbyte.data.repositories.GroupRepository
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.repositories.entities.Attempt
@@ -125,6 +127,7 @@ class AuthorizationResourceLookupTest {
       every { actors.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, workspace, org))
     }
     every { connections.getStandardSync(id) } returns StandardSync().withConnectionId(id).withSourceId(source).withDestinationId(destination)
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } returns Optional.of(ConnectionAuthorizationMetadata(workspace, org, false))
   }
 
   @Test
@@ -153,17 +156,11 @@ class AuthorizationResourceLookupTest {
   }
 
   @Test
-  fun `actor source and destination read non-secret saved ownership on every call`() {
-    for (lookup in listOf(
-      service::actorWorkspaceAndOrganization,
-      service::sourceWorkspaceAndOrganization,
-      service::destinationWorkspaceAndOrganization,
-    )) {
-      assertEquals(pair, lookup(id))
-    }
+  fun `actor reads non-secret saved ownership on every call`() {
+    assertEquals(pair, service.actorWorkspaceAndOrganization(id))
     val moved = WorkspaceAndOrganization(UUID.randomUUID(), UUID.randomUUID())
     every { actors.getIdsForActors(listOf(id)) } returns listOf(ActorWorkspaceOrganizationIds(id, moved.workspaceId, moved.organizationId))
-    assertEquals(moved, service.sourceWorkspaceAndOrganization(id))
+    assertEquals(moved, service.actorWorkspaceAndOrganization(id))
   }
 
   @Test
@@ -215,19 +212,35 @@ class AuthorizationResourceLookupTest {
 
   @Test
   fun `connections use both saved actors and reject contradictory or missing ownership`() {
+    // The query returns no row when an actor is missing or the two actors are in different workspaces.
     assertEquals(pair, service.connectionWorkspaceAndOrganization(id))
-    every { actors.getIdsForActors(listOf(destination)) } returns listOf(ActorWorkspaceOrganizationIds(destination, UUID.randomUUID(), org))
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionWorkspaceAndOrganization(id) }
-    every { actors.getIdsForActors(listOf(destination)) } returns emptyList()
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionWorkspaceAndOrganization(id) }
   }
 
   @Test
-  fun `connection missing actor IDs and wrong returned resource fail closed`() {
-    every { connections.getStandardSync(id) } returns StandardSync().withConnectionId(id).withSourceId(source)
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionWorkspaceAndOrganization(id) }
-    every { connections.getStandardSync(id) } returns StandardSync().withConnectionId(source).withSourceId(source).withDestinationId(destination)
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionWorkspaceAndOrganization(id) }
+  fun `saved connection ownership also rejects a tombstoned workspace`() {
+    assertEquals(pair, service.savedConnectionWorkspaceAndOrganization(id))
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } returns Optional.of(ConnectionAuthorizationMetadata(workspace, org, true))
+    assertEquals(pair, service.connectionWorkspaceAndOrganization(id))
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedConnectionWorkspaceAndOrganization(id) }
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedConnectionWorkspaceAndOrganization(id) }
+  }
+
+  @Test
+  fun `saved connection and actor owners return source then destination and missing owners are not found`() {
+    val other = WorkspaceAndOrganization(UUID.randomUUID(), UUID.randomUUID())
+    val owners = ConnectionOwnersAuthorizationMetadata(workspace, org, other.workspaceId, other.organizationId)
+    every { actorRepository.findConnectionOwnersAuthorizationMetadata(id) } returns Optional.of(owners)
+    every { actorRepository.findActorOwnersAuthorizationMetadata(source, destination) } returns Optional.of(owners)
+    assertEquals(pair to other, service.savedConnectionOwners(id))
+    assertEquals(pair to other, service.savedActorOwners(source, destination))
+
+    every { actorRepository.findConnectionOwnersAuthorizationMetadata(id) } returns Optional.empty()
+    every { actorRepository.findActorOwnersAuthorizationMetadata(source, destination) } returns Optional.empty()
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedConnectionOwners(id) }
+    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.savedActorOwners(source, destination) }
   }
 
   @Test
@@ -499,11 +512,13 @@ class AuthorizationResourceLookupTest {
 
   @Test
   fun `resource not-found errors translate but dependency errors propagate`() {
-    every { connections.getStandardSync(id) } throws ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, id)
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionWorkspaceAndOrganization(id) }
     val failure = IOException("metadata unavailable")
+    every { actorRepository.findConnectionAuthorizationMetadata(id) } throws failure
+    assertSame(failure, assertThrows(IOException::class.java) { service.connectionWorkspaceAndOrganization(id) })
     every { actors.getIdsForActors(listOf(id)) } throws failure
-    assertSame(failure, assertThrows(IOException::class.java) { service.sourceWorkspaceAndOrganization(id) })
+    assertSame(failure, assertThrows(IOException::class.java) { service.actorWorkspaceAndOrganization(id) })
     every { permissions.getPermission(id) } throws failure
     assertSame(failure, assertThrows(IOException::class.java) { service.permissionTarget(id) })
   }

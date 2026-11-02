@@ -75,6 +75,7 @@ internal class ServiceAccountTokenHttpTest {
       every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
       val owner = WorkspaceAndOrganization(workspaceId, organizationId)
       every { data.savedConnectionActorIds(connectionId) } returns (sourceId to destinationId)
+      data.answerConnectionOwnersFromActorStubs()
       every { data.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
       every { data.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
       every { stateHandler.getState(any()) } returns ConnectionState(connectionId = connectionId, stateType = ConnectionStateType.NOT_SET)

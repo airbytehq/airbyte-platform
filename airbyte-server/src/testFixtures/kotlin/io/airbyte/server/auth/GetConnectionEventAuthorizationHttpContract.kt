@@ -12,21 +12,18 @@ import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.errors.handlers.UncaughtExceptionHandler
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
-import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Permission
-import io.airbyte.config.StandardSync
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.auth.TokenType
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.ConnectionAuthorizationMetadata
 import io.airbyte.data.repositories.ConnectionTimelineEventRepository
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
-import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.ConnectionTimelineEventServiceDataImpl
-import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.apis.controllers.ConnectionApiController
 import io.micronaut.context.ApplicationContext
@@ -203,28 +200,19 @@ abstract class GetConnectionEventAuthorizationHttpContract {
       every { permissionHandler.isUserInstanceAdmin(USER) } returns false
       val helper = spyk(ConnectionTimelineEventHelper(emptySet(), mockk(), mockk(), permissionHandler, users, mockk(), events))
       val connections = mockk<ConnectionService>()
-      every { connections.getStandardSync(CONNECTION) } returns
-        StandardSync().withConnectionId(CONNECTION).withSourceId(SOURCE).withDestinationId(DESTINATION)
-      every { connections.getStandardSync(OTHER_CONNECTION) } returns
-        StandardSync().withConnectionId(OTHER_CONNECTION).withSourceId(OTHER_SOURCE).withDestinationId(OTHER_DESTINATION)
-      if (missing ==
-        "connection"
-      ) {
-        every { connections.getStandardSync(CONNECTION) } throws ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, CONNECTION)
+      val actorRepository = mockk<ActorRepository>()
+      every { actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } returns
+        Optional.of(ConnectionAuthorizationMetadata(WORKSPACE, ORGANIZATION, false))
+      every { actorRepository.findConnectionAuthorizationMetadata(OTHER_CONNECTION) } returns
+        Optional.of(ConnectionAuthorizationMetadata(if (sameWorkspace) WORKSPACE else OTHER_WORKSPACE, ORGANIZATION, false))
+      // The joined query returns no row for a missing connection, actor, or organization.
+      if (missing in listOf("connection", "actor", "organization")) {
+        every { actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } returns Optional.empty()
       }
-      if (failure == "connection") every { connections.getStandardSync(CONNECTION) } throws IOException("connection unavailable")
-      val actors = mockk<ActorDefinitionService>()
-      for (actor in listOf(SOURCE, DESTINATION, OTHER_SOURCE, OTHER_DESTINATION)) {
-        val workspace = if (!sameWorkspace && actor in listOf(OTHER_SOURCE, OTHER_DESTINATION)) OTHER_WORKSPACE else WORKSPACE
-        every { actors.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, workspace, ORGANIZATION))
+      if (failure == "connection") {
+        every { actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } throws IOException("connection unavailable")
       }
-      if (missing == "actor") every { actors.getIdsForActors(listOf(SOURCE)) } returns emptyList()
-      if (missing ==
-        "organization"
-      ) {
-        every { actors.getIdsForActors(listOf(SOURCE)) } returns listOf(ActorWorkspaceOrganizationIds(SOURCE, WORKSPACE, null))
-      }
-      if (failure == "actor") every { actors.getIdsForActors(any()) } throws IOException("actor unavailable")
+      if (failure == "actor") every { actorRepository.findConnectionAuthorizationMetadata(any()) } throws IOException("actor unavailable")
       val permissions = mockk<PermissionService>()
       val grants =
         if (!granted) {
@@ -246,7 +234,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
         AuthorizationDataService(
           workspaces = mockk(),
           permissions = permissions,
-          actors = actors,
+          actors = mockk(),
           connections = connections,
           operations = mockk(),
           jobs = mockk(),
@@ -263,7 +251,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
           invitations = mockk(),
           privateLinks = mockk(),
           connectionEvents = events,
-          actorRepository = mockk(),
+          actorRepository = actorRepository,
           attempts = mockk(),
           entitlements = mockk(),
           featureFlags = mockk(),
@@ -342,7 +330,7 @@ abstract class GetConnectionEventAuthorizationHttpContract {
             verify(exactly = 0) { repository.findConnectionIdByEventId(any()) }
           }
           if (status == 422) {
-            verify(exactly = 0) { connections.getStandardSync(OTHER_CONNECTION) }
+            verify(exactly = 0) { actorRepository.findConnectionAuthorizationMetadata(OTHER_CONNECTION) }
           }
           if (status == 200) {
             val body = Jsons.deserialize(response.body())
@@ -374,13 +362,9 @@ abstract class GetConnectionEventAuthorizationHttpContract {
     val OTHER_CONNECTION: UUID = UUID(0, 3)
     val WORKSPACE: UUID = UUID(0, 4)
     val ORGANIZATION: UUID = UUID(0, 5)
-    val SOURCE: UUID = UUID(0, 6)
-    val DESTINATION: UUID = UUID(0, 7)
     val USER: UUID = UUID(0, 8)
     val OTHER_WORKSPACE: UUID = UUID(0, 10)
     val OTHER_ORGANIZATION: UUID = UUID(0, 11)
-    val OTHER_SOURCE: UUID = UUID(0, 12)
-    val OTHER_DESTINATION: UUID = UUID(0, 13)
   }
 }
 

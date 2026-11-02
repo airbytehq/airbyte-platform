@@ -26,6 +26,7 @@ import io.airbyte.featureflag.EnableStrictJsonDeserialization
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.server.assertStatus
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.airbyte.server.config.StrictJsonDeserializationFlag
 import io.airbyte.server.services.DataplaneService
 import io.airbyte.server.status
@@ -326,6 +327,7 @@ internal class StrictJsonDeserializationTest {
     val sourceId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
     val owner = WorkspaceAndOrganization(UUID.randomUUID(), UUID.randomUUID())
+    authorizationDataService.answerConnectionOwnersFromActorStubs()
     every { authorizationDataService.savedConnectionReferences(connectionId) } returns
       SavedConnectionReferences(sourceId, destinationId, Optional.empty(), Optional.empty(), emptyList())
     every { authorizationDataService.savedSourceWorkspaceAndOrganization(sourceId) } returns owner

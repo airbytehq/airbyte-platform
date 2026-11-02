@@ -127,6 +127,7 @@ abstract class ActorConnectionAuthorizationHttpContract {
       ).build()
       .use { context ->
         val data = mockk<AuthorizationDataService>(relaxed = true)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         if (missing) every { data.savedSourceWorkspaceAndOrganization(SOURCE) } throws AuthorizationResourceNotFoundException()
         if (failure) every { data.savedSourceWorkspaceAndOrganization(SOURCE) } throws IOException("ownership unavailable")

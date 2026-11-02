@@ -138,6 +138,7 @@ abstract class RemainingCatalogAuthorizationHttpContract {
         }
         val owner = WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns owner
         every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } returns owner
         every { data.catalogWasFetchedByActor(CURRENT, SOURCE) } returns true

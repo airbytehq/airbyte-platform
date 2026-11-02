@@ -57,7 +57,7 @@ class PublicConnectionTagCompatibilityTest {
   }
 
   private class Fixture {
-    val data = mockk<AuthorizationDataService>()
+    val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
     val caller = Authentication.build("caller")
     val permissions: OperationPermissions
 

@@ -39,6 +39,7 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.auth.TokenType
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.ConnectionOwnersAuthorizationMetadata
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.PermissionService
@@ -273,6 +274,7 @@ class ActorConnectionRulesTest {
   @Test
   fun `Fusion resolution rejects a workload without a saved assignment before resolver business work`() {
     val data = mockk<AuthorizationDataService>(relaxed = true)
+    data.answerConnectionOwnersFromActorStubs()
     every { data.savedConnectionReferences(CONNECTION) } returns
       SavedConnectionReferences(SOURCE, DESTINATION, Optional.empty(), Optional.empty(), emptyList())
     every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns OWNER
@@ -496,6 +498,18 @@ class ActorConnectionRulesTest {
     every { actors.findDestinationWorkspaceId(DESTINATION) } returns Optional.of(WORKSPACE)
     every { actors.findDestinationWorkspaceId(OTHER_DESTINATION) } returns Optional.of(OTHER_WORKSPACE)
     every { actors.catalogWasFetchedByActor(CATALOG, SOURCE) } returns true
+    val destinationWorkspace = if (sync.destinationId == OTHER_DESTINATION) OTHER_WORKSPACE else WORKSPACE
+    val owners =
+      Optional.of(
+        ConnectionOwnersAuthorizationMetadata(
+          WORKSPACE,
+          ORGANIZATION,
+          destinationWorkspace,
+          if (destinationWorkspace == WORKSPACE) ORGANIZATION else OTHER_ORGANIZATION,
+        ),
+      )
+    every { actors.findConnectionOwnersAuthorizationMetadata(CONNECTION) } returns owners
+    every { actors.findActorOwnersAuthorizationMetadata(sync.sourceId, sync.destinationId) } returns owners
     val workspaces = mockk<WorkspaceService>()
     every { workspaces.getStandardWorkspaceNoSecrets(any(), false) } answers {
       StandardWorkspace().withWorkspaceId(firstArg()).withOrganizationId(if (firstArg<UUID>() == WORKSPACE) ORGANIZATION else OTHER_ORGANIZATION)
@@ -534,6 +548,7 @@ class ActorConnectionRulesTest {
       every { data.savedSourceWorkspaceAndOrganization(OTHER_SOURCE) } returns OWNER
       every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } returns OWNER
       every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+      data.answerConnectionOwnersFromActorStubs()
       every { data.savedConnectionReferences(CONNECTION) } returns
         SavedConnectionReferences(SOURCE, DESTINATION, Optional.empty(), Optional.empty(), emptyList())
       every { data.destinationCatalogForValidation(CONNECTION, WORKSPACE, any()) } returns Optional.empty()

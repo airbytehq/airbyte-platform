@@ -55,7 +55,7 @@ fun assertPublicAuthorizedRequests(
         RemainingOperationHttpSupport(cloud, listOf(controller), publicApiRuleNames(controller, cloud), earlierAllow = earlierAllow).run(
           configure = { context, business ->
             configurePublicApiBusiness(business, cloud)
-            val data = mockk<AuthorizationDataService>()
+            val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
             every { data.workspaceAndOrganization(any()) } returns owner
             every { data.savedWorkspaceAndOrganization(any(), any()) } returns owner
             every { data.savedSourceWorkspaceAndOrganization(any()) } returns owner

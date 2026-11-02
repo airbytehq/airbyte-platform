@@ -196,6 +196,7 @@ abstract class RemainingStreamStatusAuthorizationHttpContract {
         every { data.workspaceAndOrganization(WORKSPACE) } returns owner
         every { data.workspaceAndOrganization(UUID(0, 99)) } returns WorkspaceAndOrganization(UUID(0, 99), ORGANIZATION)
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns owner
         every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } returns owner
         every { data.replicationJobConnectionId(JOB) } returns if (foreignJob) UUID(0, 98) else CONNECTION

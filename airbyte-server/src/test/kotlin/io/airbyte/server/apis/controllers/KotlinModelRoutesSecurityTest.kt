@@ -63,6 +63,7 @@ import io.airbyte.domain.services.secrets.SecretMigrationService
 import io.airbyte.domain.services.secrets.SecretStorageCredentialsService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.airbyte.server.handlers.RetryStatesHandler
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.micronaut.context.annotation.Factory
@@ -223,6 +224,7 @@ internal class KotlinModelRoutesSecurityTest {
     every { authorizationData.workspaceAndOrganization(ROUTES_WORKSPACE) } returns owner
     every { authorizationData.organization(ROUTES_ORGANIZATION) } returns ROUTES_ORGANIZATION
     every { authorizationData.savedConnectionActorIds(ROUTES_CONNECTION) } returns (ROUTES_SOURCE to ROUTES_DESTINATION)
+    authorizationData.answerConnectionOwnersFromActorStubs()
     every { authorizationData.savedSourceWorkspaceAndOrganization(ROUTES_SOURCE) } returns owner
     every { authorizationData.savedDestinationWorkspaceAndOrganization(ROUTES_DESTINATION) } returns owner
     every { authorizationData.replicationJobConnectionId(1L) } returns ROUTES_CONNECTION

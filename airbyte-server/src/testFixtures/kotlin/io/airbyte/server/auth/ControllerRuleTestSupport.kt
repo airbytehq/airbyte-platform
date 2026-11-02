@@ -51,3 +51,15 @@ fun requireCommunityDefinitionForControllerTest(
   }
   rule.authorize(Authentication.build("caller"), input)
 }
+
+/** Answers the joined connection owner lookups from the per-actor stubs, so a test's actor overrides keep applying. */
+fun AuthorizationDataService.answerConnectionOwnersFromActorStubs() {
+  val data = this
+  every { data.savedConnectionOwners(any()) } answers {
+    val (source, destination) = data.savedConnectionActorIds(firstArg())
+    data.savedSourceWorkspaceAndOrganization(source) to data.savedDestinationWorkspaceAndOrganization(destination)
+  }
+  every { data.savedActorOwners(any(), any()) } answers {
+    data.savedSourceWorkspaceAndOrganization(firstArg()) to data.savedDestinationWorkspaceAndOrganization(secondArg())
+  }
+}

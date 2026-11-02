@@ -25,6 +25,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.ConnectionOwnersAuthorizationMetadata
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.JobService
@@ -132,6 +133,8 @@ internal class AuthorizationScopeConsistencyHttpTest {
       every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(attackerSource) } returns Optional.of(attackerWs)
       every { ScopeConsistencyTestBeans.actors.findSourceWorkspaceId(victimSource) } returns Optional.of(victimWs)
       every { ScopeConsistencyTestBeans.actors.findDestinationWorkspaceId(victimDestination) } returns Optional.of(victimWs)
+      every { ScopeConsistencyTestBeans.actors.findConnectionOwnersAuthorizationMetadata(victimConn) } returns
+        Optional.of(ConnectionOwnersAuthorizationMetadata(victimWs, victimOrg, victimWs, victimOrg))
       every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(attackerWs, false) } returns
         StandardWorkspace().withWorkspaceId(attackerWs).withOrganizationId(attackerOrg)
       every { ScopeConsistencyTestBeans.workspaces.getStandardWorkspaceNoSecrets(victimWs, false) } returns

@@ -388,6 +388,7 @@ abstract class RemainingJobsAuthorizationHttpContract {
         every { data.workspaceAndOrganization(WORKSPACE) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.workspaceAndOrganization(OTHER_WORKSPACE) } returns WorkspaceAndOrganization(OTHER_WORKSPACE, UUID(0, 13))
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
         val grants = mockk<PermissionService>()

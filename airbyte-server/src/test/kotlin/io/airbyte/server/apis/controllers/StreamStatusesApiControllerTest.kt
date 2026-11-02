@@ -19,6 +19,7 @@ import io.airbyte.data.repositories.entities.StreamStatusAuthorization
 import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.assertStatus
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.airbyte.server.handlers.StreamStatusesHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
@@ -66,6 +67,7 @@ internal class StreamStatusesApiControllerTest {
         val owner = WorkspaceAndOrganization(workspaceId, authorizationOrganizationId)
         every { data.workspaceAndOrganization(workspaceId) } returns owner
         every { data.savedConnectionActorIds(any()) } returns (sourceId to destinationId)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
         every { data.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
         every { data.replicationJobConnectionId(jobId) } returns connectionId

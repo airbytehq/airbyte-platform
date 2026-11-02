@@ -19,6 +19,7 @@ import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.server.auth.CatalogDiffRule
 import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.micronaut.security.authentication.Authentication
 import io.mockk.every
 import io.mockk.mockk
@@ -48,6 +49,7 @@ internal class CatalogApiControllerTest {
   init {
     every { currentUser.getCurrentUser() } returns AuthenticatedUser().withAuthUserId("reader")
     every { data.savedConnectionActorIds(connectionId) } returns (sourceId to destinationId)
+    data.answerConnectionOwnersFromActorStubs()
     every { data.savedSourceWorkspaceAndOrganization(sourceId) } returns owner
     every { data.savedDestinationWorkspaceAndOrganization(destinationId) } returns owner
     every { data.catalogWasFetchedByActor(catalogId1, sourceId) } returns true

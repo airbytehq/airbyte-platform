@@ -136,6 +136,7 @@ abstract class RemainingOperationAndStateAuthorizationHttpContract {
         every { data.workspaceAndOrganization(WORKSPACE) } returns owner
         every { data.operationWorkspaceAndOrganization(OPERATION) } answers { data.workspaceAndOrganization(WORKSPACE) }
         every { data.savedConnectionActorIds(CONNECTION) } returns (SOURCE to DESTINATION)
+        data.answerConnectionOwnersFromActorStubs()
         every { data.savedSourceWorkspaceAndOrganization(SOURCE) } answers { data.workspaceAndOrganization(WORKSPACE) }
         every { data.savedDestinationWorkspaceAndOrganization(DESTINATION) } answers { data.workspaceAndOrganization(WORKSPACE) }
         every { data.savedConnectionOperationIds(CONNECTION) } returns listOf(OPERATION, OPERATION)

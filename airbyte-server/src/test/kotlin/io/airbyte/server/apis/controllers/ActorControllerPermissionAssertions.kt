@@ -16,6 +16,7 @@ import io.airbyte.server.auth.ActorOperationInput
 import io.airbyte.server.auth.ConnectionOperationInput
 import io.airbyte.server.auth.ConnectionOperationRule
 import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -36,6 +37,7 @@ internal fun assertActorControllerPermissions(
   val owner = WorkspaceAndOrganization(UUID(0, 902), UUID(0, 903))
   val data = mockk<AuthorizationDataService>()
   every { data.savedConnectionActorIds(actor) } returns (actor to actor)
+  data.answerConnectionOwnersFromActorStubs()
   every { data.savedConnectionReferences(actor) } returns
     SavedConnectionReferences(actor, actor, Optional.empty(), Optional.empty(), emptyList())
   every { data.actorConnectionIds(any(), any(), any()) } returns emptyList()

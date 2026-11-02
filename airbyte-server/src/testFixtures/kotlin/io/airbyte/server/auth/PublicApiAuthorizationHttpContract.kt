@@ -69,7 +69,7 @@ abstract class PublicApiAuthorizationHttpContract {
 
   @Test
   fun `public authentication rejects missing and invalid tokens before saved ownership or business reads`() {
-    val data = mockk<AuthorizationDataService>()
+    val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
     val grants = mockk<PermissionService>()
     RemainingOperationHttpSupport(
       cloud,
@@ -207,7 +207,7 @@ abstract class PublicApiAuthorizationHttpContract {
                     0,
                   )
               }
-              val data = mockk<AuthorizationDataService>()
+              val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
               every { data.savedSourceWorkspaceAndOrganization(SOURCE) } returns WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
               context.registerSingleton(AuthorizationDataService::class.java, data)
               val grants = mockk<PermissionService>()
@@ -299,7 +299,7 @@ abstract class PublicApiAuthorizationHttpContract {
             ).run(
               configure = { context, _ ->
                 val owner = WorkspaceAndOrganization(WORKSPACE, ORGANIZATION)
-                val data = mockk<AuthorizationDataService>()
+                val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
                 every { data.workspaceAndOrganization(WORKSPACE) } returns owner
                 every { data.requireActorDefinitionType(SOURCE, kind != "destinations") } answers {
                   if (failure == "missing" || kind == "destinations" && failure == "wrong-kind") throw AuthorizationResourceNotFoundException()
@@ -468,7 +468,7 @@ abstract class PublicApiAuthorizationHttpContract {
       ).run(
         configure = { context, business ->
           configurePublicApiBusiness(business, cloud)
-          val data = mockk<AuthorizationDataService>()
+          val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
           every { data.permissionTarget(SOURCE) } returns AuthorizationTarget.Global
           context.registerSingleton(AuthorizationDataService::class.java, data)
           context.registerSingleton(
@@ -511,7 +511,7 @@ abstract class PublicApiAuthorizationHttpContract {
   @Test
   fun `workspace and organization permission reads and writes remain available with or without auth`() {
     for (security in listOf(true, false)) {
-      val data = mockk<AuthorizationDataService>()
+      val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
       val grants = mockk<PermissionService>()
       every { grants.getPermissionsByAuthUserId("caller") } returns
         listOf(Permission().withOrganizationId(ORGANIZATION).withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN))
@@ -663,7 +663,7 @@ abstract class PublicApiAuthorizationHttpContract {
             @Suppress("UNCHECKED_CAST")
             context.registerSingleton(type as Class<Any>, mockkClass(type.kotlin, relaxed = true))
           }
-        val data = mockk<AuthorizationDataService>()
+        val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
         val membership = mockk<MembershipAuthorizationDataService>()
         configure(data, membership)
         context.registerSingleton(AuthorizationDataService::class.java, data)

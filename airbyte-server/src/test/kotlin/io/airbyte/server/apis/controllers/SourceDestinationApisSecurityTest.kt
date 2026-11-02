@@ -35,6 +35,7 @@ import io.airbyte.domain.models.auth.WorkspaceAndOrganization
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.SavedConnectionReferences
 import io.airbyte.server.auth.OperationPermissions
+import io.airbyte.server.auth.answerConnectionOwnersFromActorStubs
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -89,6 +90,7 @@ internal class SourceDestinationApisSecurityTest {
         every { savedDestinationWorkspaceAndOrganization(resourceId) } returns owner
         every { workspaceAndOrganization(resourceId) } returns owner
         every { savedConnectionActorIds(resourceId) } returns (resourceId to resourceId)
+        answerConnectionOwnersFromActorStubs()
         every { savedConnectionReferences(resourceId) } returns
           SavedConnectionReferences(resourceId, resourceId, Optional.empty(), Optional.empty(), emptyList())
         every { requireActorDefinitionType(resourceId, any()) } returns Unit

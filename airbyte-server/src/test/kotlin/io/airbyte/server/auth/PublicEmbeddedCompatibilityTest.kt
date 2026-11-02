@@ -86,7 +86,7 @@ class PublicEmbeddedCompatibilityTest {
   }
 
   private class Fixture {
-    val data = mockk<AuthorizationDataService>()
+    val data = mockk<AuthorizationDataService>().also { it.answerConnectionOwnersFromActorStubs() }
     val grants = mockk<PermissionService>()
     val permissions = OperationPermissions(grants, RoleResolver(mockk(), mockk(), mockk(), mockk()), true)
 

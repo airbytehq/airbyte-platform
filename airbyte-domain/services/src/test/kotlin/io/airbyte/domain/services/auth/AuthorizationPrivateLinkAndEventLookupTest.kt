@@ -5,15 +5,13 @@
 package io.airbyte.domain.services.auth
 
 import io.airbyte.config.ConfigNotFoundType
-import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.data.services.ActorDefinitionService
-import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.ConnectionAuthorizationMetadata
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.PrivateLinkService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.domain.models.PrivateLink
 import io.airbyte.domain.models.PrivateLinkServiceConfig
 import io.airbyte.domain.models.PrivateLinkServiceType
@@ -36,19 +34,16 @@ class AuthorizationPrivateLinkAndEventLookupTest {
   private val workspace = UUID.randomUUID()
   private val organization = UUID.randomUUID()
   private val connection = UUID.randomUUID()
-  private val source = UUID.randomUUID()
-  private val destination = UUID.randomUUID()
   private val workspaces = mockk<WorkspaceService>()
   private val privateLinks = mockk<PrivateLinkService>()
   private val events = mockk<ConnectionTimelineEventService>()
-  private val connections = mockk<ConnectionService>()
-  private val actors = mockk<ActorDefinitionService>()
+  private val actorRepository = mockk<ActorRepository>()
   private val service =
     AuthorizationDataService(
       workspaces = workspaces,
       permissions = mockk(),
-      actors = actors,
-      connections = connections,
+      actors = mockk(),
+      connections = mockk(),
       operations = mockk(),
       jobs = mockk(),
       organizations = mockk(),
@@ -64,7 +59,7 @@ class AuthorizationPrivateLinkAndEventLookupTest {
       invitations = mockk(),
       privateLinks = privateLinks,
       connectionEvents = events,
-      actorRepository = mockk(),
+      actorRepository = actorRepository,
       attempts = mockk(),
       entitlements = mockk(),
       featureFlags = mockk(),
@@ -86,11 +81,8 @@ class AuthorizationPrivateLinkAndEventLookupTest {
     every { workspaces.getStandardWorkspaceNoSecrets(workspace, false) } returns
       StandardWorkspace().withWorkspaceId(workspace).withOrganizationId(organization)
     every { events.findConnectionIdForEvent(id) } returns Optional.of(connection)
-    every { connections.getStandardSync(connection) } returns
-      StandardSync().withConnectionId(connection).withSourceId(source).withDestinationId(destination)
-    for (actor in listOf(source, destination)) {
-      every { actors.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, workspace, organization))
-    }
+    every { actorRepository.findConnectionAuthorizationMetadata(connection) } returns
+      Optional.of(ConnectionAuthorizationMetadata(workspace, organization, false))
   }
 
   @Test
@@ -165,15 +157,14 @@ class AuthorizationPrivateLinkAndEventLookupTest {
 
     val movedWorkspace = UUID.randomUUID()
     val movedOrganization = UUID.randomUUID()
-    for (actor in listOf(source, destination)) {
-      every { actors.getIdsForActors(listOf(actor)) } returns listOf(ActorWorkspaceOrganizationIds(actor, movedWorkspace, movedOrganization))
-    }
+    every { actorRepository.findConnectionAuthorizationMetadata(connection) } returns
+      Optional.of(ConnectionAuthorizationMetadata(movedWorkspace, movedOrganization, false))
     assertEquals(WorkspaceAndOrganization(movedWorkspace, movedOrganization), service.connectionEventWorkspaceAndOrganization(id, connection))
 
     val movedConnection = UUID.randomUUID()
     every { events.findConnectionIdForEvent(id) } returns Optional.of(movedConnection)
-    every { connections.getStandardSync(movedConnection) } returns
-      StandardSync().withConnectionId(movedConnection).withSourceId(source).withDestinationId(destination)
+    every { actorRepository.findConnectionAuthorizationMetadata(movedConnection) } returns
+      Optional.of(ConnectionAuthorizationMetadata(movedWorkspace, movedOrganization, false))
     assertEquals(WorkspaceAndOrganization(movedWorkspace, movedOrganization), service.connectionEventWorkspaceAndOrganization(id, movedConnection))
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
   }
@@ -188,46 +179,24 @@ class AuthorizationPrivateLinkAndEventLookupTest {
   fun `connection event without saved parent fails before parent lookup`() {
     every { events.findConnectionIdForEvent(id) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-    verify(exactly = 0) { connections.getStandardSync(any()) }
-    verify(exactly = 0) { actors.getIdsForActors(any()) }
+    verify(exactly = 0) { actorRepository.findConnectionAuthorizationMetadata(any()) }
   }
 
   @Test
   fun `connection event from another connection in the same workspace fails before tenant lookup`() {
     val otherConnection = UUID.randomUUID()
-    every { connections.getStandardSync(otherConnection) } returns
-      StandardSync().withConnectionId(otherConnection).withSourceId(source).withDestinationId(destination)
+    every { actorRepository.findConnectionAuthorizationMetadata(otherConnection) } returns
+      Optional.of(ConnectionAuthorizationMetadata(workspace, organization, false))
     every { events.findConnectionIdForEvent(id) } returns Optional.of(otherConnection)
 
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-    verify(exactly = 0) { connections.getStandardSync(any()) }
-    verify(exactly = 0) { actors.getIdsForActors(any()) }
+    verify(exactly = 0) { actorRepository.findConnectionAuthorizationMetadata(any()) }
   }
 
   @Test
-  fun `connection event missing or wrong saved connection stays not found`() {
-    every { connections.getStandardSync(connection) } throws ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, connection)
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-
-    every { connections.getStandardSync(connection) } returns
-      StandardSync().withConnectionId(UUID.randomUUID()).withSourceId(source).withDestinationId(destination)
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-  }
-
-  @Test
-  fun `connection event missing actor workspace or organization stays not found`() {
-    // The actor projection joins workspace, so a missing actor or workspace returns no row.
-    every { actors.getIdsForActors(listOf(source)) } returns emptyList()
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-
-    every { actors.getIdsForActors(listOf(source)) } returns listOf(ActorWorkspaceOrganizationIds(source, workspace, null))
-    assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
-  }
-
-  @Test
-  fun `connection event contradictory parent ownership fails closed`() {
-    every { actors.getIdsForActors(listOf(destination)) } returns
-      listOf(ActorWorkspaceOrganizationIds(destination, UUID.randomUUID(), organization))
+  fun `connection event missing saved connection actor or shared workspace stays not found`() {
+    // The query returns no row for each of these, so they share one not-found path.
+    every { actorRepository.findConnectionAuthorizationMetadata(connection) } returns Optional.empty()
     assertThrows(AuthorizationResourceNotFoundException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) }
   }
 
@@ -239,20 +208,14 @@ class AuthorizationPrivateLinkAndEventLookupTest {
 
     every { events.findConnectionIdForEvent(id) } returns Optional.of(connection)
     val connectionFailure = IOException("connections unavailable")
-    every { connections.getStandardSync(connection) } throws connectionFailure
+    every { actorRepository.findConnectionAuthorizationMetadata(connection) } throws connectionFailure
     assertSame(connectionFailure, assertThrows(IOException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) })
-
-    every { connections.getStandardSync(connection) } returns
-      StandardSync().withConnectionId(connection).withSourceId(source).withDestinationId(destination)
-    val actorFailure = IOException("actors unavailable")
-    every { actors.getIdsForActors(listOf(destination)) } throws actorFailure
-    assertSame(actorFailure, assertThrows(IOException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) })
   }
 
   @Test
   fun `connection event missing exception translation does not hide downstream bugs`() {
     val failure = NoSuchElementException("unexpected connection failure")
-    every { connections.getStandardSync(connection) } throws failure
+    every { actorRepository.findConnectionAuthorizationMetadata(connection) } throws failure
     assertSame(failure, assertThrows(NoSuchElementException::class.java) { service.connectionEventWorkspaceAndOrganization(id, connection) })
   }
 }

@@ -12,27 +12,20 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.errors.handlers.UncaughtExceptionHandler
 import io.airbyte.commons.server.handlers.AttemptHandler
-import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
-import io.airbyte.config.Organization
 import io.airbyte.config.Permission
-import io.airbyte.config.StandardSync
-import io.airbyte.config.StandardWorkspace
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.auth.TokenType
+import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.AttemptsRepository
+import io.airbyte.data.repositories.ConnectionAuthorizationMetadata
 import io.airbyte.data.repositories.StreamAttemptMetadataRepository
 import io.airbyte.data.repositories.entities.Attempt
 import io.airbyte.data.repositories.entities.AttemptAuthorizationMetadata
-import io.airbyte.data.services.ActorDefinitionService
-import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.JobService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.StreamAttemptMetadataService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.data.services.shared.JobMetadata
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.persistence.job.JobPersistence
@@ -139,13 +132,13 @@ abstract class AttemptWriteAuthorizationHttpContract {
     for (security in listOf(true, false)) {
       withAttemptServer(security = security) { fixture ->
         every { fixture.permissions.getPermissionsByServiceAccountId(ACCOUNT) } returns listOf(grant("global"))
-        every { fixture.connections.getStandardSync(OTHER_CONNECTION) } returns
-          StandardSync().withConnectionId(OTHER_CONNECTION).withSourceId(SOURCE).withDestinationId(DESTINATION)
+        every { fixture.actorRepository.findConnectionAuthorizationMetadata(OTHER_CONNECTION) } returns
+          Optional.of(ConnectionAuthorizationMetadata(WORKSPACE, ORGANIZATION, false))
         val response = post(fixture.server, "/api/v1/attempt/save_stats", statsBody(OTHER_CONNECTION), if (security) "dataplane" else "")
         assertEquals(400, response.statusCode(), response.body())
         verify(exactly = 0) { fixture.handler.saveStats(any()) }
         fixture.verifyWrites(0)
-        verify(exactly = 0) { fixture.connections.getStandardSync(OTHER_CONNECTION) }
+        verify(exactly = 0) { fixture.actorRepository.findConnectionAuthorizationMetadata(OTHER_CONNECTION) }
       }
     }
   }
@@ -235,39 +228,18 @@ abstract class AttemptWriteAuthorizationHttpContract {
             every { fixture.attempts.findAuthorizationMetadata(JOB + 1, ATTEMPT.toLong()) } returns
               Optional.of(AttemptAuthorizationMetadata(id = ATTEMPT_ROW, jobId = JOB + 1, attemptNumber = ATTEMPT.toLong()))
           }
-          "connection" ->
-            every { fixture.connections.getStandardSync(CONNECTION) } throws
-              ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, CONNECTION)
-          "connection-id" -> every { fixture.connections.getStandardSync(CONNECTION) } returns StandardSync().withConnectionId(OTHER_CONNECTION)
-          "source" ->
-            every { fixture.connections.getStandardSync(CONNECTION) } returns
-              StandardSync().withConnectionId(CONNECTION).withDestinationId(DESTINATION)
-          "destination" ->
-            every { fixture.connections.getStandardSync(CONNECTION) } returns
-              StandardSync().withConnectionId(CONNECTION).withSourceId(SOURCE)
-          "actor" -> every { fixture.actors.getIdsForActors(listOf(SOURCE)) } returns emptyList()
-          "actor-id" ->
-            every { fixture.actors.getIdsForActors(listOf(SOURCE)) } returns
-              listOf(ActorWorkspaceOrganizationIds(DESTINATION, WORKSPACE, ORGANIZATION))
-          "actor-org" ->
-            every { fixture.actors.getIdsForActors(listOf(SOURCE)) } returns
-              listOf(ActorWorkspaceOrganizationIds(SOURCE, WORKSPACE, null))
-          "actor-workspace" ->
-            every { fixture.actors.getIdsForActors(listOf(DESTINATION)) } returns
-              listOf(ActorWorkspaceOrganizationIds(DESTINATION, OTHER_WORKSPACE, OTHER_ORGANIZATION))
+          // Each case now means the joined owner query returns no row:
+          // connection = no connection row; actor = no source actor row; actor-workspace = actors in different workspaces;
+          // organization = no organization row. The rest were mismatches between separate reads that a join by ID cannot return:
+          // connection-id, actor-id and workspace-id (row with another ID), source and destination (NOT NULL actor IDs),
+          // actor-org and workspace-org (the organization comes from the one joined workspace row), organization-id.
+          "connection", "connection-id", "source", "destination", "actor", "actor-id", "actor-org", "actor-workspace",
+          "workspace-id", "workspace-org", "organization", "organization-id",
+          ->
+            every { fixture.actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } returns Optional.empty()
           "workspace" ->
-            every { fixture.workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } throws
-              ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, WORKSPACE)
-          "workspace-id" ->
-            every { fixture.workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } returns
-              StandardWorkspace().withWorkspaceId(OTHER_WORKSPACE).withOrganizationId(ORGANIZATION)
-          "workspace-org" ->
-            every { fixture.workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } returns
-              StandardWorkspace().withWorkspaceId(WORKSPACE).withOrganizationId(OTHER_ORGANIZATION)
-          "organization" -> every { fixture.organizations.getOrganization(ORGANIZATION) } returns Optional.empty()
-          "organization-id" ->
-            every { fixture.organizations.getOrganization(ORGANIZATION) } returns
-              Optional.of(Organization().withOrganizationId(OTHER_ORGANIZATION))
+            every { fixture.actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } returns
+              Optional.of(ConnectionAuthorizationMetadata(WORKSPACE, ORGANIZATION, true))
         }
       }
     }
@@ -281,10 +253,8 @@ abstract class AttemptWriteAuthorizationHttpContract {
           "job" -> every { fixture.jobs.findJobMetadataById(JOB) } throws IOException("job unavailable")
           "unexpected-job" -> every { fixture.jobs.findJobMetadataById(JOB) } throws IllegalStateException("job unavailable")
           "attempt" -> every { fixture.attempts.findAuthorizationMetadata(JOB, ATTEMPT.toLong()) } throws IOException("attempt unavailable")
-          "connection" -> every { fixture.connections.getStandardSync(CONNECTION) } throws IOException("connection unavailable")
-          "actor" -> every { fixture.actors.getIdsForActors(any()) } throws IOException("actor unavailable")
-          "workspace" -> every { fixture.workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } throws IOException("workspace unavailable")
-          "organization" -> every { fixture.organizations.getOrganization(ORGANIZATION) } throws IOException("organization unavailable")
+          "connection", "actor", "workspace", "organization" ->
+            every { fixture.actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } throws IOException("$failure unavailable")
           "permission" -> every { fixture.permissions.getPermissionsByServiceAccountId(ACCOUNT) } throws IOException("permissions unavailable")
         }
       }
@@ -386,27 +356,17 @@ abstract class AttemptWriteAuthorizationHttpContract {
       val permissions = mockk<PermissionService>()
       every { permissions.getPermissionsByServiceAccountId(ACCOUNT) } returns listOf(grant("organization"))
       every { permissions.getPermissionsByAuthUserId(any()) } returns listOf(grant("global", Permission.PermissionType.INSTANCE_ADMIN))
-      val connections = mockk<ConnectionService>()
-      every { connections.getStandardSync(CONNECTION) } returns
-        StandardSync().withConnectionId(CONNECTION).withSourceId(SOURCE).withDestinationId(DESTINATION)
-      val actors = mockk<ActorDefinitionService>()
-      for (id in listOf(SOURCE, DESTINATION)) {
-        every { actors.getIdsForActors(listOf(id)) } returns listOf(ActorWorkspaceOrganizationIds(id, WORKSPACE, ORGANIZATION))
-      }
+      val actorRepository = mockk<ActorRepository>()
+      every { actorRepository.findConnectionAuthorizationMetadata(CONNECTION) } returns
+        Optional.of(ConnectionAuthorizationMetadata(WORKSPACE, ORGANIZATION, false))
       val workspaces = mockk<WorkspaceService>()
-      every { workspaces.getStandardWorkspaceNoSecrets(WORKSPACE, false) } returns
-        StandardWorkspace().withWorkspaceId(WORKSPACE).withOrganizationId(ORGANIZATION)
-      val organizations = mockk<OrganizationService>()
-      every { organizations.getOrganization(ORGANIZATION) } returns Optional.of(Organization().withOrganizationId(ORGANIZATION))
       val dependencies =
         mapOf<Class<*>, Any>(
           JobService::class.java to jobs,
           AttemptsRepository::class.java to attempts,
           PermissionService::class.java to permissions,
-          ConnectionService::class.java to connections,
-          ActorDefinitionService::class.java to actors,
+          ActorRepository::class.java to actorRepository,
           WorkspaceService::class.java to workspaces,
-          OrganizationService::class.java to organizations,
         )
       val dataConstructor = AuthorizationDataService::class.java.declaredConstructors.single { !it.isSynthetic }
       val data =
@@ -458,10 +418,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
           metadataService,
           handler,
           jobs,
-          connections,
-          actors,
-          workspaces,
-          organizations,
+          actorRepository,
           permissions,
         )
       configure(fixture)
@@ -501,10 +458,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
     val metadataService: StreamAttemptMetadataService,
     val handler: AttemptHandler,
     val jobs: JobService,
-    val connections: ConnectionService,
-    val actors: ActorDefinitionService,
-    val workspaces: WorkspaceService,
-    val organizations: OrganizationService,
+    val actorRepository: ActorRepository,
     val permissions: PermissionService,
   ) {
     lateinit var server: EmbeddedServer

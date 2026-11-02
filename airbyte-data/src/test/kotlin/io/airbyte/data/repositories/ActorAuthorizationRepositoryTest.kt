@@ -172,6 +172,82 @@ class ActorAuthorizationRepositoryTest : AbstractConfigRepositoryTest() {
     assertFalse(assigned())
   }
 
+  @Test
+  fun `connection owner is the one workspace of both actors and keeps tombstoned workspaces`() {
+    val source = actor("source").first
+    val destination = actor("destination").first
+    val connection = connection(source, destination)
+
+    assertEquals(
+      ConnectionAuthorizationMetadata(workspace, organization, false),
+      actors.findConnectionAuthorizationMetadata(connection).orElseThrow(),
+    )
+    assertEquals(
+      ConnectionAuthorizationMetadata(workspace, organization, false),
+      actors.findConnectionAuthorizationMetadata(connection(destination, source)).orElseThrow(),
+    )
+    assertTrue(actors.findConnectionAuthorizationMetadata(UUID.randomUUID()).isEmpty)
+
+    jooqDslContext.execute("UPDATE workspace SET tombstone = true WHERE id = ?", workspace)
+    assertEquals(
+      ConnectionAuthorizationMetadata(workspace, organization, true),
+      actors.findConnectionAuthorizationMetadata(connection).orElseThrow(),
+    )
+
+    jooqDslContext.execute("UPDATE actor SET workspace_id = ? WHERE id = ?", otherWorkspace().first, destination)
+    assertTrue(actors.findConnectionAuthorizationMetadata(connection).isEmpty)
+  }
+
+  @Test
+  fun `connection owners match the source and destination owner lookups`() {
+    val source = actor("source").first
+    val destination = actor("destination").first
+    val connection = connection(source, destination)
+    val owners = ConnectionOwnersAuthorizationMetadata(workspace, organization, workspace, organization)
+
+    assertEquals(owners, actors.findConnectionOwnersAuthorizationMetadata(connection).orElseThrow())
+    assertEquals(owners, actors.findActorOwnersAuthorizationMetadata(source, destination).orElseThrow())
+    assertTrue(actors.findConnectionOwnersAuthorizationMetadata(UUID.randomUUID()).isEmpty)
+    assertTrue(actors.findConnectionOwnersAuthorizationMetadata(connection(destination, source)).isEmpty)
+    assertTrue(actors.findActorOwnersAuthorizationMetadata(destination, source).isEmpty)
+    assertTrue(actors.findActorOwnersAuthorizationMetadata(UUID.randomUUID(), destination).isEmpty)
+    assertTrue(actors.findActorOwnersAuthorizationMetadata(source, UUID.randomUUID()).isEmpty)
+
+    val other = otherWorkspace()
+    jooqDslContext.execute("UPDATE actor SET workspace_id = ? WHERE id = ?", other.first, destination)
+    val split = ConnectionOwnersAuthorizationMetadata(workspace, organization, other.first, other.second)
+    assertEquals(split, actors.findConnectionOwnersAuthorizationMetadata(connection).orElseThrow())
+    assertEquals(split, actors.findActorOwnersAuthorizationMetadata(source, destination).orElseThrow())
+
+    jooqDslContext.execute("UPDATE workspace SET tombstone = true WHERE id = ?", other.first)
+    assertTrue(actors.findConnectionOwnersAuthorizationMetadata(connection).isEmpty)
+    assertTrue(actors.findActorOwnersAuthorizationMetadata(source, destination).isEmpty)
+  }
+
+  private fun otherWorkspace(): Pair<UUID, UUID> {
+    val otherOrganization = organizationRepository.save(Organization(name = "other owner", email = "other@example.com")).id!!
+    val id =
+      workspaceRepository
+        .save(
+          Workspace(name = "other", slug = UUID.randomUUID().toString(), dataplaneGroupId = group, organizationId = otherOrganization),
+        ).id!!
+    return id to otherOrganization
+  }
+
+  private fun connection(
+    source: UUID,
+    destination: UUID,
+  ): UUID {
+    val id = UUID.randomUUID()
+    jooqDslContext.execute(
+      "INSERT INTO connection (id, namespace_definition, source_id, destination_id, name, catalog, status) VALUES (?, 'source', ?, ?, 'sync', '{}'::jsonb, 'active')",
+      id,
+      source,
+      destination,
+    )
+    return id
+  }
+
   private fun actor(kind: String): Pair<UUID, UUID> {
     val id = UUID.randomUUID()
     val definition = UUID.randomUUID()
