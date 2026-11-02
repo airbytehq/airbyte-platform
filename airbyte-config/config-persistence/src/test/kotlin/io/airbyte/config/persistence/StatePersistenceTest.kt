@@ -61,7 +61,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   fun beforeEach() {
     truncateAllTables()
 
-    statePersistence = StatePersistence(database, ConnectionServiceJooqImpl(database))
+    statePersistence = StatePersistence(database, ConnectionServiceJooqImpl(database, configTransactions))
 
     val featureFlagClient = mockk<TestClient>(relaxed = true)
     val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
@@ -92,7 +92,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
         mockk<ScopedConfigurationService>(relaxed = true),
         connectionTimelineEventService,
       )
-    connectionService = ConnectionServiceJooqImpl(database)
+    connectionService = ConnectionServiceJooqImpl(database, configTransactions)
     sourceService =
       SourceServiceJooqImpl(
         database!!,
@@ -121,6 +121,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
 
     connectionId = setupTestData()

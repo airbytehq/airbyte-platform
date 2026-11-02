@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
@@ -19,6 +20,11 @@ import io.airbyte.api.server.generated.models.ListWorkspacesInOrganizationReques
 import io.airbyte.api.server.generated.models.NotificationConfig
 import io.airbyte.api.server.generated.models.NotificationType
 import io.airbyte.api.server.generated.models.NotificationsConfig
+import io.airbyte.api.server.generated.models.OperationRead
+import io.airbyte.api.server.generated.models.OperationReadList
+import io.airbyte.api.server.generated.models.OperatorConfiguration
+import io.airbyte.api.server.generated.models.OperatorType
+import io.airbyte.api.server.generated.models.OperatorWebhook
 import io.airbyte.api.server.generated.models.Pagination
 import io.airbyte.api.server.generated.models.SlugRequestBody
 import io.airbyte.api.server.generated.models.SourceRead
@@ -41,7 +47,6 @@ import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
-import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.NotificationConverter.toApiList
 import io.airbyte.commons.server.converters.NotificationSettingsConverter.toApi
@@ -56,14 +61,13 @@ import io.airbyte.config.NotificationSettings
 import io.airbyte.config.Organization
 import io.airbyte.config.SlackNotificationConfiguration
 import io.airbyte.config.StandardWorkspace
-import io.airbyte.config.WebhookConfig
-import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.config.persistence.WorkspaceTombstoneResult
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.WebhookConfigInUseException
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
@@ -80,6 +84,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -98,6 +103,7 @@ import java.util.function.Supplier
 
 internal class WorkspacesHandlerTest {
   lateinit var connectionsHandler: ConnectionsHandler
+  lateinit var operationsHandler: OperationsHandler
   lateinit var destinationHandler: DestinationHandler
   lateinit var sourceHandler: SourceHandler
   lateinit var uuidSupplier: Supplier<UUID>
@@ -127,6 +133,8 @@ internal class WorkspacesHandlerTest {
     secretPersistence = mockk<SecretPersistence>(relaxUnitFun = true)
     permissionHandler = mockk<PermissionHandler>(relaxUnitFun = true)
     connectionsHandler = mockk<ConnectionsHandler>(relaxUnitFun = true)
+    operationsHandler = mockk<OperationsHandler>(relaxUnitFun = true)
+    every { connectionsHandler.listConnectionsForWorkspace(any()) } returns ConnectionReadList(connections = emptyList())
     destinationHandler = mockk<DestinationHandler>(relaxUnitFun = true)
     sourceHandler = mockk<SourceHandler>(relaxUnitFun = true)
     uuidSupplier = mockk<Supplier<UUID>>()
@@ -190,6 +198,7 @@ internal class WorkspacesHandlerTest {
       roleResolver,
       scimConfigurationService,
       scimAccessGate,
+      operationsHandler,
     )
 
   private fun generateWorkspace(): StandardWorkspace =
@@ -1335,7 +1344,7 @@ internal class WorkspacesHandlerTest {
         .withOrganizationId(ORGANIZATION_ID)
         .withTombstone(false)
 
-    verify { workspaceService.writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets) }
+    verify { workspaceService.writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets, emptySet()) }
 
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
@@ -1374,7 +1383,196 @@ internal class WorkspacesHandlerTest {
 
     getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }
+  }
+
+  @Test
+  fun testRotateWebhookTokenPreservesConfigId() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+
+    getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+      WorkspaceUpdate(
+        workspaceId = workspace.workspaceId,
+        webhookConfigs = listOf(WebhookConfigWrite(name = TEST_NAME, authToken = "rotated-token")),
+      ),
+    )
+
+    val savedWorkspace = slot<StandardWorkspace>()
+    verify { workspaceService.writeWorkspaceWithSecrets(capture(savedWorkspace), setOf(WEBHOOK_CONFIG_ID)) }
+    val savedConfig = savedWorkspace.captured.webhookOperationConfigs["webhookConfigs"][0]
+    assertEquals(WEBHOOK_CONFIG_ID.toString(), savedConfig["id"].asText())
+    assertEquals("rotated-token", savedConfig["authToken"].asText())
+  }
+
+  @Test
+  fun testWebhookConfigUpdatePreservesUnchangedSecretsAndIds() {
+    val otherId = UUID.randomUUID()
+    val existingConfigs =
+      deserialize(
+        """{"webhookConfigs":[
+          {"id":"$WEBHOOK_CONFIG_ID","name":"$TEST_NAME","authToken":{"_secret":"a-secret_v1"}},
+          {"id":"$otherId","name":"other","authToken":{"_secret":"other-secret_v1"},"customDbtHost":"other.example.com"}
+        ]}""",
+      )
+    workspace.withWebhookOperationConfigs(existingConfigs)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+
+    getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+      WorkspaceUpdate(
+        workspaceId = workspace.workspaceId,
+        webhookConfigs =
+          listOf(
+            WebhookConfigWrite(name = TEST_NAME, authToken = "rotated-token"),
+            WebhookConfigWrite(name = "other", customDbtHost = "other.example.com"),
+          ),
+      ),
+    )
+
+    val savedWorkspace = slot<StandardWorkspace>()
+    verify { workspaceService.writeWorkspaceWithSecrets(capture(savedWorkspace), setOf(WEBHOOK_CONFIG_ID, otherId)) }
+    assertEquals(existingConfigs["webhookConfigs"][1], savedWorkspace.captured.webhookOperationConfigs["webhookConfigs"][1])
+  }
+
+  @Test
+  fun `concurrent webhook use returns a state conflict problem`() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { connectionsHandler.listConnectionsForWorkspace(any()) } returns ConnectionReadList(connections = emptyList())
+    every { workspaceService.writeStandardWorkspaceNoSecrets(any()) } throws WebhookConfigInUseException()
+
+    val problem =
+      assertThrows<StateConflictProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+          WorkspaceUpdate(workspaceId = workspace.workspaceId, webhookConfigs = emptyList()),
+        )
+      }
+
+    assertTrue(problem.problem.getDetail()!!.contains("replacement"))
+  }
+
+  @Test
+  fun testRemoveWebhookConfigInUseIsRejected() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    stubConnectionWithWebhook(WEBHOOK_CONFIG_ID)
+
+    val error =
+      assertThrows<StateConflictProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+          WorkspaceUpdate(workspaceId = workspace.workspaceId, webhookConfigs = emptyList()),
+        )
+      }
+
+    assertTrue(error.message!!.contains("Remove"))
+    assertEquals(PERSISTED_WEBHOOK_CONFIGS, workspace.webhookOperationConfigs)
+    verify(exactly = 0) { workspaceService.writeWorkspaceWithSecrets(any()) }
+    verify(exactly = 0) { workspaceService.writeStandardWorkspaceNoSecrets(any()) }
+  }
+
+  @Test
+  fun testWebhookConfigIdPreservesTokenWhenRenamed() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+
+    getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+      WorkspaceUpdate(
+        workspaceId = workspace.workspaceId,
+        webhookConfigs = listOf(WebhookConfigWrite(id = WEBHOOK_CONFIG_ID, name = "renamed")),
+      ),
+    )
+
+    val savedWorkspace = slot<StandardWorkspace>()
+    verify { workspaceService.writeWorkspaceWithSecrets(capture(savedWorkspace), setOf(WEBHOOK_CONFIG_ID)) }
+    val savedConfig = savedWorkspace.captured.webhookOperationConfigs["webhookConfigs"][0]
+    assertEquals(WEBHOOK_CONFIG_ID.toString(), savedConfig["id"].asText())
+    assertEquals("renamed", savedConfig["name"].asText())
+    assertEquals(PERSISTED_WEBHOOK_CONFIGS["webhookConfigs"][0]["authToken"], savedConfig["authToken"])
+  }
+
+  @Test
+  fun testWebhookConfigIdFromAnotherWorkspaceIsRejected() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+
+    assertThrows<BadRequestProblem> {
+      getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+        WorkspaceUpdate(
+          workspaceId = workspace.workspaceId,
+          webhookConfigs = listOf(WebhookConfigWrite(id = UUID.randomUUID(), name = TEST_NAME, authToken = "new-token")),
+        ),
+      )
+    }
+
+    verify(exactly = 0) { workspaceService.writeWorkspaceWithSecrets(any()) }
+  }
+
+  @Test
+  fun testWebhookConfigDuplicateIdsAreRejected() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    every { uuidSupplier.get() } returns UUID.randomUUID()
+
+    assertThrows<BadRequestProblem> {
+      getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+        WorkspaceUpdate(
+          workspaceId = workspace.workspaceId,
+          webhookConfigs =
+            listOf(
+              WebhookConfigWrite(id = WEBHOOK_CONFIG_ID, name = TEST_NAME, authToken = "one"),
+              WebhookConfigWrite(id = WEBHOOK_CONFIG_ID, name = TEST_NAME, authToken = "two"),
+            ),
+        ),
+      )
+    }
+
+    verify(exactly = 0) { workspaceService.writeWorkspaceWithSecrets(any()) }
+  }
+
+  @Test
+  fun testRemoveWebhookConfigPreservesOtherConfigUsedByConnection() {
+    val otherId = UUID.randomUUID()
+    val configs =
+      deserialize(
+        """{"webhookConfigs":[
+          {"id":"$WEBHOOK_CONFIG_ID","name":"$TEST_NAME","authToken":{"_secret":"a-secret_v1"}},
+          {"id":"$otherId","name":"other","authToken":{"_secret":"other-secret_v1"}}
+        ]}""",
+      )
+    workspace.withWebhookOperationConfigs(configs)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    stubConnectionWithWebhook(otherId)
+
+    getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+      WorkspaceUpdate(workspaceId = workspace.workspaceId, webhookConfigs = listOf(WebhookConfigWrite(id = otherId, name = "other"))),
+    )
+
+    val savedWorkspace = slot<StandardWorkspace>()
+    verify { workspaceService.writeWorkspaceWithSecrets(capture(savedWorkspace), setOf(otherId)) }
+    assertEquals(listOf(configs["webhookConfigs"][1]), savedWorkspace.captured.webhookOperationConfigs["webhookConfigs"].toList())
+  }
+
+  @Test
+  fun testRemoveWebhookConfigPropagatesConnectionLookupFailure() {
+    workspace.withWebhookOperationConfigs(clone(PERSISTED_WEBHOOK_CONFIGS))
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns workspace
+    val failure = IllegalStateException("Connection lookup failed")
+    every { connectionsHandler.listConnectionsForWorkspace(any()) } throws failure
+
+    val error =
+      assertThrows<IllegalStateException> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).updateWorkspace(
+          WorkspaceUpdate(workspaceId = workspace.workspaceId, webhookConfigs = emptyList()),
+        )
+      }
+
+    assertEquals(failure, error)
+    assertEquals(PERSISTED_WEBHOOK_CONFIGS, workspace.webhookOperationConfigs)
+    verify(exactly = 0) { workspaceService.writeStandardWorkspaceNoSecrets(any()) }
   }
 
   @Test
@@ -1424,7 +1622,7 @@ internal class WorkspacesHandlerTest {
         tombstone = false,
       )
 
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }
 
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
@@ -1436,8 +1634,7 @@ internal class WorkspacesHandlerTest {
     val workspaceUpdateOrganization =
       WorkspaceUpdateOrganization(workspaceId = workspace.workspaceId, organizationId = newOrgId)
     val expectedWorkspace = clone(workspace).withOrganizationId(newOrgId)
-    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns expectedWorkspace
-    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returns expectedWorkspace
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(clone(workspace), expectedWorkspace)
     // The same as the original workspace, with only the organization ID updated.
     val expectedWorkspaceRead =
       WorkspaceRead(
@@ -1460,7 +1657,7 @@ internal class WorkspacesHandlerTest {
 
     val actualWorkspaceRead =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspaceOrganization(workspaceUpdateOrganization)
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace, workspace.organizationId) }
     verify { workspaceHelper.invalidateWorkspaceOrganization(workspace.workspaceId) }
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
@@ -1490,12 +1687,6 @@ internal class WorkspacesHandlerTest {
         .withEmail(expectedNewEmail)
         .withAnonymousDataCollection(true)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_2)
-        .withWebhookOperationConfigs(
-          jsonNode<WebhookOperationConfigs?>(
-            WebhookOperationConfigs()
-              .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
-          ),
-        )
 
     every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
@@ -1521,7 +1712,7 @@ internal class WorkspacesHandlerTest {
       )
 
     val actualWorkspaceRead = getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }
     assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
@@ -1590,17 +1781,10 @@ internal class WorkspacesHandlerTest {
           .withNotificationType(listOf<Notification.NotificationType?>(Notification.NotificationType.CUSTOMERIO)),
       )
 
-    expectedWorkspace.withWebhookOperationConfigs(
-      jsonNode<WebhookOperationConfigs?>(
-        WebhookOperationConfigs()
-          .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
-      ),
-    )
-
     every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(existingWorkspace, expectedWorkspace)
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspace(workspaceUpdate)
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }
   }
 
   @Test
@@ -1637,6 +1821,7 @@ internal class WorkspacesHandlerTest {
         roleResolver,
         scimConfigurationService,
         scimAccessGate,
+        operationsHandler,
       )
 
     val uuid = UUID.randomUUID()
@@ -1865,12 +2050,6 @@ internal class WorkspacesHandlerTest {
     val expectedWorkspace =
       clone(workspace)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_2)
-        .withWebhookOperationConfigs(
-          jsonNode<WebhookOperationConfigs?>(
-            WebhookOperationConfigs()
-              .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
-          ),
-        )
 
     every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
@@ -2000,12 +2179,6 @@ internal class WorkspacesHandlerTest {
     val expectedWorkspace =
       clone(workspace)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_2)
-        .withWebhookOperationConfigs(
-          jsonNode<WebhookOperationConfigs?>(
-            WebhookOperationConfigs()
-              .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
-          ),
-        )
 
     every { workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false) } returnsMany listOf(workspace, expectedWorkspace)
 
@@ -2016,7 +2189,7 @@ internal class WorkspacesHandlerTest {
     verify { roleRequest.withCurrentUser() }
     verify { roleRequest.withOrg(ORGANIZATION_ID) }
     verify { roleRequest.requireRole("ORGANIZATION_EDITOR") }
-    verify { workspaceService.writeStandardWorkspaceNoSecrets(expectedWorkspace) }
+    verify { workspaceService.writeWorkspacePreservingWebhookConfigs(expectedWorkspace) }
   }
 
   @ParameterizedTest
@@ -2044,6 +2217,38 @@ internal class WorkspacesHandlerTest {
     assertThrows<ForbiddenProblem> {
       getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
     }
+  }
+
+  private fun stubConnectionWithWebhook(webhookConfigId: UUID) {
+    val connectionId = UUID.randomUUID()
+    val connection =
+      ConnectionRead(
+        connectionId = connectionId,
+        name = "connection",
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        syncCatalog =
+          io.airbyte.api.server.generated.models
+            .AirbyteCatalog(streams = emptyList()),
+        status = io.airbyte.api.server.generated.models.ConnectionStatus.ACTIVE,
+        breakingChange = false,
+      )
+    every { connectionsHandler.listConnectionsForWorkspace(WorkspaceIdRequestBody(workspaceId = workspace.workspaceId)) } returns
+      ConnectionReadList(connections = listOf(connection))
+
+    val operation =
+      OperationRead(
+        workspaceId = workspace.workspaceId,
+        operationId = UUID.randomUUID(),
+        name = "dbt Cloud",
+        operatorConfiguration =
+          OperatorConfiguration(
+            operatorType = OperatorType.WEBHOOK,
+            webhook = OperatorWebhook(webhookConfigId = webhookConfigId),
+          ),
+      )
+    every { operationsHandler.listOperationsForConnection(ConnectionIdRequestBody(connectionId = connectionId)) } returns
+      OperationReadList(operations = listOf(operation))
   }
 
   companion object {

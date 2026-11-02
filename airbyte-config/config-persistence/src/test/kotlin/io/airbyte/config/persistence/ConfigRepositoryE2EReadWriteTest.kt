@@ -159,7 +159,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
 
-    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!, configTransactions))
     actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
@@ -179,6 +179,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
           secretsRepositoryWriter,
           secretPersistenceConfigService,
           metricClient,
+          transactions = configTransactions,
         ),
       )
 
@@ -219,7 +220,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         ),
       )
 
-    operationService = spyk(OperationServiceJooqImpl(database!!))
+    operationService = spyk(OperationServiceJooqImpl(database!!, configTransactions, workspaceService))
 
     for (workspace in standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace!!)

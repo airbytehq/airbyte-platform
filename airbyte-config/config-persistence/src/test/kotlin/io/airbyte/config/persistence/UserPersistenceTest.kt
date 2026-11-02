@@ -57,6 +57,7 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
     userPersistence = UserPersistence(database)
     organizationService = OrganizationServiceJooqImpl(database)

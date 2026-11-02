@@ -341,11 +341,18 @@ object SecretsHelpers {
     secretBasePrefix: String,
   ): Map<String, AirbyteManagedCoordinateAndRawValue> =
     buildMap {
+      val retainedCoordinates =
+        newFullConfig.processedSecrets.values
+          .mapNotNull { it.secretCoordinate }
+          .toSet()
       newFullConfig.processedSecrets.forEach { (path, processedSecretNode) ->
         processedSecretNode.rawValue?.let { rawValue ->
           // If there is an existing secret reference, attempt to extract its AirbyteManagedSecretCoordinate.
           val persistedNode = persistedPartialConfig?.referencedSecrets?.get(path)
-          val existingCoordinate = persistedNode?.secretCoordinate as? AirbyteManagedSecretCoordinate
+          // The old secret may still be referenced at another array position. Give the replacement
+          // its own base, so a later rotation cannot overwrite that secret's next version.
+          val existingCoordinate =
+            (persistedNode?.secretCoordinate as? AirbyteManagedSecretCoordinate)?.takeUnless { it in retainedCoordinates }
 
           // Create a new coordinate.
           val coordinate =

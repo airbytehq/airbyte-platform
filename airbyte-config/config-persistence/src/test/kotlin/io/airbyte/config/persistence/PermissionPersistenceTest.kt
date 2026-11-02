@@ -57,6 +57,7 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
         mockk<SecretsRepositoryWriter>(relaxed = true),
         mockk<SecretPersistenceConfigService>(relaxed = true),
         mockk<MetricClient>(relaxed = true),
+        transactions = configTransactions,
       )
     // write workspace table
     for (workspace in MockData.standardWorkspaces()) {

@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
@@ -17,6 +18,8 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
+import io.airbyte.data.repositories.WorkspaceWebhookConfigRepository
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
@@ -33,7 +36,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.transaction.TransactionOperations
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -48,13 +51,12 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import java.io.IOException
+import java.sql.Connection
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
 import java.util.stream.Stream
-
-private val log = KotlinLogging.logger {}
 
 @Singleton
 class WorkspaceServiceJooqImpl
@@ -66,9 +68,10 @@ class WorkspaceServiceJooqImpl
     private val secretsRepositoryWriter: SecretsRepositoryWriter,
     private val secretPersistenceConfigService: SecretPersistenceConfigService,
     private val metricClient: MetricClient,
+    @Named("config") private val transactions: TransactionOperations<Connection>,
   ) : WorkspaceService {
     private val database = ExceptionWrappingDatabase(database)
-    private val connectionService = ConnectionServiceJooqImpl(database)
+    private val connectionService = ConnectionServiceJooqImpl(database, transactions)
 
     /**
      * Get workspace.
@@ -250,8 +253,15 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      */
     override fun writeStandardWorkspaceNoSecrets(workspace: StandardWorkspace) {
-      database.transaction<Any?> { ctx ->
-        writeStandardWorkspaceNoSecrets(ctx, workspace)
+      writeStandardWorkspaceNoSecrets(workspace, workspace.organizationId)
+    }
+
+    override fun writeStandardWorkspaceNoSecrets(
+      workspace: StandardWorkspace,
+      currentOrganizationId: UUID,
+    ) {
+      transactions.executeWrite { status ->
+        writeStandardWorkspaceNoSecrets(DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES), workspace, currentOrganizationId)
       }
     }
 
@@ -259,16 +269,45 @@ class WorkspaceServiceJooqImpl
       ctx: DSLContext,
       workspace: StandardWorkspace,
     ) {
+      writeStandardWorkspaceNoSecrets(ctx, workspace, workspace.organizationId)
+    }
+
+    override fun writeWorkspacePreservingWebhookConfigs(
+      workspace: StandardWorkspace,
+      currentOrganizationId: UUID,
+    ) {
+      transactions.executeWrite { status ->
+        writeStandardWorkspaceNoSecrets(
+          DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES),
+          workspace,
+          currentOrganizationId,
+          preserveWebhookConfigs = true,
+        )
+      }
+    }
+
+    private fun writeStandardWorkspaceNoSecrets(
+      ctx: DSLContext,
+      workspace: StandardWorkspace,
+      currentOrganizationId: UUID,
+      preserveWebhookConfigs: Boolean = false,
+    ) {
       val timestamp = OffsetDateTime.now()
       val isExistingConfig =
         ctx.fetchExists(
           DSL
             .select()
             .from(Tables.WORKSPACE)
-            .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId)),
+            .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId))
+            .and(Tables.WORKSPACE.ORGANIZATION_ID.eq(currentOrganizationId)),
         )
 
       if (isExistingConfig) {
+        val currentWorkspace = StandardWorkspace().withWorkspaceId(workspace.workspaceId).withOrganizationId(currentOrganizationId)
+        val previousConfigs = WorkspaceWebhookConfigRepository.getForUpdate(ctx, currentWorkspace)
+        if (!preserveWebhookConfigs) {
+          WorkspaceWebhookConfigRepository.validateRemoval(ctx, workspace, previousConfigs)
+        }
         ctx
           .update(Tables.WORKSPACE)
           .set(Tables.WORKSPACE.ID, workspace.workspaceId)
@@ -310,13 +349,14 @@ class WorkspaceServiceJooqImpl
           ).set(Tables.WORKSPACE.UPDATED_AT, timestamp)
           .set(
             Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS,
-            if (workspace.webhookOperationConfigs == null) {
-              null
+            if (preserveWebhookConfigs) {
+              Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS
             } else {
-              JSONB.valueOf(Jsons.serialize(workspace.webhookOperationConfigs))
+              DSL.value(workspace.webhookOperationConfigs?.let { JSONB.valueOf(Jsons.serialize(it)) }, Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS)
             },
           ).set(Tables.WORKSPACE.ORGANIZATION_ID, workspace.organizationId)
           .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId))
+          .and(Tables.WORKSPACE.ORGANIZATION_ID.eq(currentOrganizationId))
           .execute()
       } else {
         ctx
@@ -758,30 +798,68 @@ class WorkspaceServiceJooqImpl
     }
 
     override fun writeWorkspaceWithSecrets(workspace: StandardWorkspace) {
-      writeStandardWorkspaceNoSecrets(workspaceWithSecretCoordinates(workspace))
+      writeWorkspaceWithSecrets(workspace, emptySet())
+    }
+
+    override fun writeWorkspaceWithSecrets(
+      workspace: StandardWorkspace,
+      expectedWebhookConfigIds: Set<UUID>,
+    ) {
+      transactions.executeWrite { status ->
+        writeWorkspaceWithSecrets(DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES), workspace, expectedWebhookConfigIds)
+      }
     }
 
     override fun writeWorkspaceWithSecrets(
       ctx: DSLContext,
       workspace: StandardWorkspace,
     ) {
-      writeStandardWorkspaceNoSecrets(ctx, workspaceWithSecretCoordinates(workspace))
+      writeWorkspaceWithSecrets(ctx, workspace, emptySet())
     }
 
-    private fun workspaceWithSecretCoordinates(workspace: StandardWorkspace): StandardWorkspace {
+    private fun writeWorkspaceWithSecrets(
+      ctx: DSLContext,
+      workspace: StandardWorkspace,
+      expectedWebhookConfigIds: Set<UUID>,
+    ) {
+      val previousWebhookConfigs =
+        if (
+          ctx.fetchExists(
+            Tables.WORKSPACE,
+            Tables.WORKSPACE.ID
+              .eq(workspace.workspaceId)
+              .and(Tables.WORKSPACE.ORGANIZATION_ID.eq(workspace.organizationId)),
+          )
+        ) {
+          val previousConfigs = WorkspaceWebhookConfigRepository.getForUpdate(ctx, workspace)
+          WorkspaceWebhookConfigRepository.validateRemoval(ctx, workspace, previousConfigs)
+          Optional.of(previousConfigs)
+        } else {
+          Optional.empty()
+        }
+      val currentIds =
+        previousWebhookConfigs
+          .orElse(
+            Jsons.emptyObject(),
+          ).path("webhookConfigs")
+          .map { UUID.fromString(it.path("id").asText()) }
+          .toSet()
+      if (!currentIds.containsAll(expectedWebhookConfigIds)) throw WebhookConfigNotFoundException()
+
+      writeStandardWorkspaceNoSecrets(ctx, workspaceWithSecretCoordinates(workspace, previousWebhookConfigs))
+    }
+
+    private fun workspaceWithSecretCoordinates(
+      workspace: StandardWorkspace,
+      previousWebhookConfigs: Optional<JsonNode>,
+    ): StandardWorkspace {
       // Get the schema for the webhook config, so we can split out any secret fields.
       val webhookConfigSchema = Yamls.deserialize(Resources.read("types/WebhookOperationConfigs.yaml"))
-      // Check if there's an existing config, so we can re-use the secret coordinates.
-      val previousWorkspace = getWorkspaceIfExists(workspace.workspaceId)
-      var previousWebhookConfigs: Optional<JsonNode> = Optional.empty()
-
-      if (previousWorkspace.isPresent && previousWorkspace.get().webhookOperationConfigs != null) {
-        previousWebhookConfigs = Optional.of(previousWorkspace.get().webhookOperationConfigs)
-      }
-
       val partialWorkspace = Jsons.clone(workspace)
 
-      if (workspace.webhookOperationConfigs != null) {
+      if (partialWorkspace.webhookOperationConfigs != null) {
+        val configs = partialWorkspace.webhookOperationConfigs
+        resolveWebhookTokenReferences(configs, previousWebhookConfigs.orElse(Jsons.emptyObject()))
         val organizationId = workspace.organizationId
         var secretPersistence: SecretPersistence? = null
 
@@ -795,14 +873,14 @@ class WorkspaceServiceJooqImpl
             secretsRepositoryWriter.updateFromConfigLegacy(
               workspace.workspaceId,
               previousWebhookConfigs.get(),
-              workspace.webhookOperationConfigs,
+              configs,
               webhookConfigSchema,
               secretPersistence,
             )
           } else {
             secretsRepositoryWriter.createFromConfigLegacy(
               workspace.workspaceId,
-              workspace.webhookOperationConfigs,
+              configs,
               webhookConfigSchema,
               secretPersistence,
             )
@@ -813,18 +891,19 @@ class WorkspaceServiceJooqImpl
       return partialWorkspace
     }
 
-    private fun getWorkspaceIfExists(workspaceId: UUID): Optional<StandardWorkspace> {
-      try {
-        return Optional.of(getStandardWorkspaceNoSecrets(workspaceId, false))
-      } catch (e: ConfigNotFoundException) {
-        log.warn { "Unable to find workspace with ID $workspaceId" }
-        return Optional.empty()
-      } catch (e: JsonValidationException) {
-        log.warn { "Unable to find workspace with ID $workspaceId" }
-        return Optional.empty()
-      } catch (e: IOException) {
-        log.warn { "Unable to find workspace with ID $workspaceId" }
-        return Optional.empty()
+    private fun resolveWebhookTokenReferences(
+      configs: JsonNode,
+      currentConfigs: JsonNode,
+    ) {
+      val currentConfigsById = currentConfigs.path("webhookConfigs").associateBy { it.path("id").asText() }
+      for (config in configs.path("webhookConfigs")) {
+        if (!config.path("authToken").isObject) continue
+
+        // Omitted tokens were copied before the transaction; use the locked configuration's reference.
+        val currentToken =
+          currentConfigsById[config.path("id").asText()]?.get("authToken")
+            ?: throw WebhookConfigNotFoundException()
+        (config as ObjectNode).set<JsonNode>("authToken", currentToken)
       }
     }
   }

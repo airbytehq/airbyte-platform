@@ -86,7 +86,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     secretPersistenceConfigService = mockk<SecretPersistenceConfigService>(relaxed = true)
     dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database!!)
     organizationService = OrganizationServiceJooqImpl(database!!)
-    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!, configTransactions))
 
     val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
     val connectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)
@@ -187,6 +187,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
           secretsRepositoryWriter,
           secretPersistenceConfigService,
           metricClient,
+          transactions = configTransactions,
         ),
       )
   }

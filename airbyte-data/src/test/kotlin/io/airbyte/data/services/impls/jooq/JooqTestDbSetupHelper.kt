@@ -119,6 +119,7 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
     this.organizationServiceJooqImpl = OrganizationServiceJooqImpl(database)
   }

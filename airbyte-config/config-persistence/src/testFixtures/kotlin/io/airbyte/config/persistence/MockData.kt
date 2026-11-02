@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -410,6 +411,7 @@ object MockData {
         .withName("Another Workspace")
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
+        .withWebhookOperationConfigs(clone(workspace1.webhookOperationConfigs))
         .withTombstone(false)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)

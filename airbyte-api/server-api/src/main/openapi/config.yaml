@@ -14158,12 +14158,16 @@ components:
     WebhookConfigWrite:
       type: object
       properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of an existing webhook configuration in this workspace. Omit when creating a configuration.
         name:
           type: string
           description: human readable name for this webhook e.g. for UI display.
         authToken:
           type: string
-          description: an auth token, to be passed as the value for an HTTP Authorization header.
+          description: an auth token, to be passed as the value for an HTTP Authorization header. Omit when updating to preserve the existing token.
         validationUrl:
           type: string
           description: if supplied, the webhook config will be validated by checking that this URL returns a 2xx response.
@@ -14496,6 +14500,8 @@ components:
           format: uuid
         webhookConfigs:
           type: array
+          nullable: true
+          description: Omit or set to null to preserve current webhook configurations. An empty list removes all configurations.
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
     WorkspaceGetDbtJobsRequest:

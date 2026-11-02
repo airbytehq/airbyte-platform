@@ -38,11 +38,14 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.MaximumWorkspacesEntitlement
 import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.random.randomAlpha
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.NotificationConverter.toConfigList
 import io.airbyte.commons.server.converters.NotificationSettingsConverter.toConfig
 import io.airbyte.commons.server.converters.WorkspaceConverter.domainToApiModel
+import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter.toApiReads
+import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter.toPersistenceUpdate
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter.toPersistenceWrite
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.errors.InternalServerKnownException
@@ -63,6 +66,8 @@ import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.config.persistence.WorkspaceTombstoneResult
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.WebhookConfigInUseException
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
@@ -125,6 +130,7 @@ class WorkspacesHandler
     private val roleResolver: RoleResolver,
     private val scimConfigurationService: ScimConfigurationService,
     private val scimAccessGate: ScimAccessGate,
+    private val operationsHandler: OperationsHandler,
   ) {
     fun createWorkspace(workspaceCreate: WorkspaceCreate): WorkspaceRead {
       val workspaceCreateWithId =
@@ -571,6 +577,18 @@ class WorkspacesHandler
       log.debug { "Initial workspace: $workspace" }
       log.debug { "Initial WorkspaceRead: ${domainToApiModel(workspace)}" }
 
+      val webhookConfigs = workspacePatch.webhookConfigs
+      val expectedWebhookConfigIds =
+        webhookConfigs
+          ?.let { configs ->
+            val existingIds = toApiReads(workspace.webhookOperationConfigs).map { it.id }.toSet()
+            val updatedConfigs = toPersistenceUpdate(configs, workspace.webhookOperationConfigs ?: Jsons.emptyObject(), uuidSupplier)
+            val retainedIds = toApiReads(updatedConfigs).map { it.id }.toSet()
+            validateWebhookConfigRemoval(workspaceId, existingIds - retainedIds)
+            workspace.webhookOperationConfigs = updatedConfigs
+            existingIds intersect retainedIds
+          }.orEmpty()
+
       applyPatchToStandardWorkspace(workspace, workspacePatch)
       workspace.notificationSettings = patchNotificationSettingsWithDefaultValue(workspace.notificationSettings)
       validateWorkspacePatch(workspace, workspacePatch)
@@ -578,19 +596,51 @@ class WorkspacesHandler
 
       log.debug { "Patched Workspace before persisting: $workspace" }
 
-      if (CollectionUtils.isEmpty(workspacePatch.webhookConfigs)) {
-        // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
-        // we never hydrated them in the first place.
-        workspaceService.writeStandardWorkspaceNoSecrets(workspace)
-      } else {
-        // We're saving new webhook configs, so we need to persist the secrets.
-        persistStandardWorkspace(workspace)
+      try {
+        if (webhookConfigs == null) {
+          workspaceService.writeWorkspacePreservingWebhookConfigs(workspace)
+        } else if (webhookConfigs.isEmpty()) {
+          // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
+          // we never hydrated them in the first place.
+          workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+        } else {
+          // We're saving new webhook configs, so we need to persist the secrets.
+          workspaceService.writeWorkspaceWithSecrets(workspace, expectedWebhookConfigIds)
+        }
+      } catch (e: WebhookConfigInUseException) {
+        throw StateConflictProblem(e.message, ProblemMessageData().message(e.message))
+      } catch (e: WebhookConfigNotFoundException) {
+        throw StateConflictProblem(e.message, ProblemMessageData().message(e.message))
       }
 
       // after updating email or tracking info, we need to re-identify the instance.
       trackingClient.identify(workspaceId, ScopeType.WORKSPACE)
 
       return buildWorkspaceReadFromId(workspaceId)
+    }
+
+    private fun validateWebhookConfigRemoval(
+      workspaceId: UUID,
+      removedIds: Set<UUID>,
+    ) {
+      if (removedIds.isEmpty()) return
+
+      val connections =
+        connectionsHandler.listConnectionsForWorkspace(
+          WorkspaceIdRequestBody(workspaceId = workspaceId),
+        )
+      for (connection in connections.connections) {
+        val operations =
+          operationsHandler.listOperationsForConnection(
+            ConnectionIdRequestBody(connectionId = connection.connectionId),
+          )
+        if (operations.operations.any { it.operatorConfiguration.webhook?.webhookConfigId in removedIds }) {
+          val message =
+            "Remove connection transformations using this webhook configuration before deleting it. " +
+              "To rotate the token, save a replacement instead."
+          throw StateConflictProblem(message, ProblemMessageData().message(message))
+        }
+      }
     }
 
     fun updateWorkspaceName(workspaceUpdateName: WorkspaceUpdateName): WorkspaceRead {
@@ -602,9 +652,8 @@ class WorkspacesHandler
         .withName(workspaceUpdateName.name)
         .withSlug(generateUniqueSlug(workspaceUpdateName.name))
 
-      // NOTE: it's safe (and necessary) to use the NoSecrets variant because we never hydrated them in
-      // the first place.
-      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace)
+      // This request only changes the name; keep the current webhook settings in the database.
+      workspaceService.writeWorkspacePreservingWebhookConfigs(persistedWorkspace)
 
       return buildWorkspaceReadFromId(workspaceId)
     }
@@ -613,9 +662,10 @@ class WorkspacesHandler
       val workspaceId = workspaceUpdateOrganization.workspaceId
 
       val persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+      val currentOrganizationId = persistedWorkspace.organizationId
       persistedWorkspace
         .withOrganizationId(workspaceUpdateOrganization.organizationId)
-      workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace)
+      workspaceService.writeWorkspacePreservingWebhookConfigs(persistedWorkspace, currentOrganizationId)
       workspaceHelper.invalidateWorkspaceOrganization(workspaceId)
       return buildWorkspaceReadFromId(workspaceId)
     }
@@ -735,10 +785,6 @@ class WorkspacesHandler
       if (workspacePatch.name != null) {
         workspace.name = workspacePatch.name
         workspace.slug = generateUniqueSlug(workspacePatch.name!!)
-      }
-      // Empty List is a valid value for webhookConfigs
-      if (workspacePatch.webhookConfigs != null) {
-        workspace.webhookOperationConfigs = toPersistenceWrite(workspacePatch.webhookConfigs, uuidSupplier)
       }
       if (workspacePatch.name != null) {
         workspace.name = workspacePatch.name

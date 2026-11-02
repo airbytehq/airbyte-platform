@@ -110,6 +110,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
 
     connectorBuilderService = ConnectorBuilderServiceJooqImpl(database)

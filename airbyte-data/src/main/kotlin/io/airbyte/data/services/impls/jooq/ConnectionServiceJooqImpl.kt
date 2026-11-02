@@ -22,6 +22,7 @@ import io.airbyte.config.Tag
 import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.ScheduleHelpers
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.WorkspaceWebhookConfigRepository
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.impls.jooq.DbConverter.buildStandardSync
 import io.airbyte.data.services.shared.ConnectionCronSchedule
@@ -52,6 +53,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.transaction.TransactionOperations
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -68,6 +70,7 @@ import org.jooq.TableField
 import org.jooq.impl.DSL
 import org.jooq.impl.TableImpl
 import java.io.IOException
+import java.sql.Connection
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -80,6 +83,7 @@ class ConnectionServiceJooqImpl
   @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
+    @Named("config") private val transactions: TransactionOperations<Connection>,
   ) : ConnectionService {
     private val database = ExceptionWrappingDatabase(database)
 
@@ -155,9 +159,8 @@ class ConnectionServiceJooqImpl
      * @throws IOException - exception while interacting with the db
      */
     override fun writeStandardSync(standardSync: StandardSync) {
-      database.transaction<Any?> { ctx: DSLContext ->
-        writeStandardSync(standardSync, ctx)
-        null
+      transactions.executeWrite { status ->
+        writeStandardSync(standardSync, DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES))
       }
     }
 
@@ -1838,6 +1841,12 @@ class ConnectionServiceJooqImpl
       standardSync: StandardSync,
       ctx: DSLContext,
     ) {
+      WorkspaceWebhookConfigRepository.validateConnectionOperations(
+        ctx,
+        standardSync.sourceId,
+        standardSync.connectionId,
+        standardSync.operationIds.toSet(),
+      )
       val timestamp = OffsetDateTime.now()
       val isExistingConfig =
         ctx.fetchExists(

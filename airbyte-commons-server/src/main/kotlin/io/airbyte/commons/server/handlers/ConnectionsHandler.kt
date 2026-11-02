@@ -24,6 +24,7 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -151,6 +152,7 @@ import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.CatalogService
@@ -659,7 +661,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         // TODO this is the hook for future check with catalog work
         log.info { "Entered into Dark Launch Code for Check with Catalog for connectionId $connectionId" }
       }
-      connectionService.writeStandardSync(standardSync)
+      persistConnection(standardSync)
 
       trackNewConnection(standardSync)
 
@@ -922,7 +924,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       applyPatchToStandardSync(sync, connectionPatch, workspaceId)
 
       log.debug { "patched StandardSync before persisting: $sync" }
-      connectionService.writeStandardSync(sync)
+      persistConnection(sync)
 
       eventRunner.update(connectionId)
 
@@ -1148,6 +1150,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             },
           )
         }
+      }
+    }
+
+    private fun persistConnection(sync: StandardSync) {
+      try {
+        connectionService.writeStandardSync(sync)
+      } catch (e: WebhookConfigNotFoundException) {
+        throw BadRequestProblem(e.message, null)
       }
     }
 

@@ -93,7 +93,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
         .withTombstone(false),
     )
 
-    connectionService = spyk(ConnectionServiceJooqImpl(database!!))
+    connectionService = spyk(ConnectionServiceJooqImpl(database!!, configTransactions))
 
     sourceService =
       spyk(
@@ -140,6 +140,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
           secretsRepositoryWriter,
           secretPersistenceConfigService,
           metricClient,
+          transactions = configTransactions,
         ),
       )
   }

@@ -5,6 +5,8 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.WebhookConfigRead
 import io.airbyte.api.server.generated.models.WebhookConfigWrite
 import io.airbyte.commons.json.Jsons
@@ -40,6 +42,35 @@ object WorkspaceWebhookConfigsConverter {
         )
 
     return Jsons.jsonNode(configs)
+  }
+
+  fun toPersistenceUpdate(
+    apiWebhookConfigs: List<WebhookConfigWrite>,
+    persistedWebhookConfigs: JsonNode,
+    uuidSupplier: Supplier<UUID>,
+  ): JsonNode {
+    val existingConfigs = persistedWebhookConfigs.path("webhookConfigs").toList()
+    val configs =
+      apiWebhookConfigs.map { input ->
+        val existingConfig =
+          if (input.id != null) {
+            existingConfigs.find { it.path("id").asText() == input.id.toString() }
+              ?: throw BadRequestProblem("Webhook configuration ID does not belong to this workspace.", null)
+          } else {
+            // Older clients do not send IDs when replacing a token.
+            existingConfigs.filter { it.path("name").asText() == input.name }.singleOrNull()
+          }
+        val id = existingConfig?.path("id")?.asText()?.let(UUID::fromString) ?: uuidSupplier.get()
+        val config = Jsons.jsonNode(toPersistenceConfig(Supplier { id }, input)) as ObjectNode
+        if (input.authToken == null && existingConfig != null) {
+          existingConfig.get("authToken")?.let { config.set<JsonNode>("authToken", it) }
+        }
+        config
+      }
+    if (configs.map { it.path("id").asText() }.distinct().size != configs.size) {
+      throw BadRequestProblem("Webhook configuration IDs must be unique.", null)
+    }
+    return Jsons.jsonNode(mapOf("webhookConfigs" to configs))
   }
 
   /**

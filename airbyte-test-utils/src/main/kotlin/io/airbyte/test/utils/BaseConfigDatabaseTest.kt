@@ -17,12 +17,16 @@ import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.test.TestDatabaseProviders
+import io.micronaut.context.ApplicationContext
+import io.micronaut.inject.qualifiers.Qualifiers
+import io.micronaut.transaction.TransactionOperations
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
 import java.io.IOException
+import java.sql.Connection
 import java.sql.SQLException
 import java.time.OffsetDateTime
 import javax.sql.DataSource
@@ -74,6 +78,8 @@ open class BaseConfigDatabaseTest {
     @JvmField
     @get:InternalForTesting
     var database: Database? = null
+    lateinit var configTransactions: TransactionOperations<Connection>
+    private lateinit var transactionContext: ApplicationContext
 
     // keep these private, do not expose outside this class!
     private var container: PostgreSQLContainer<*>? = null
@@ -104,6 +110,7 @@ open class BaseConfigDatabaseTest {
     @AfterAll
     @JvmStatic
     fun dbDown() {
+      transactionContext.close()
       close(dataSource)
       container!!.close()
     }
@@ -221,6 +228,28 @@ open class BaseConfigDatabaseTest {
 
     private fun setDb() {
       dataSource = Databases.createDataSource(container!!)
+      transactionContext =
+        ApplicationContext
+          .builder()
+          .packages("io.micronaut")
+          .properties(
+            mapOf(
+              "datasources.config.url" to container!!.jdbcUrl,
+              "datasources.config.username" to container!!.username,
+              "datasources.config.password" to container!!.password,
+              "datasources.config.driverClassName" to container!!.driverClassName,
+              "datasources.config.db-type" to "postgres",
+              "datasources.config.dialect" to "POSTGRES",
+              "INTERNAL_API_HOST" to "http://localhost:8080",
+            ),
+          ).start()
+      @Suppress("UNCHECKED_CAST")
+      val transactions =
+        transactionContext.getBean(
+          TransactionOperations::class.java,
+          Qualifiers.byName("config"),
+        ) as TransactionOperations<Connection>
+      configTransactions = transactions
       dslContext = create(dataSource!!, SQLDialect.POSTGRES)
       val databaseProviders =
         TestDatabaseProviders(

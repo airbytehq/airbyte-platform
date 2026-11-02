@@ -11,6 +11,7 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -189,6 +190,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
@@ -1341,6 +1343,18 @@ internal class ConnectionsHandlerTest {
           notifySchemaChangesByEmail = standardSync.notifySchemaChangesByEmail,
           backfillPreference = standardSync.backfillPreference.convertTo<SchemaChangeBackfillPreference>(),
         )
+
+      @Test
+      fun `stale webhook attachment returns a bad request problem`() {
+        val workspace = StandardWorkspace().withWorkspaceId(workspaceId)
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns workspace
+        every { connectionService.writeStandardSync(any()) } throws WebhookConfigNotFoundException()
+        val request = buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+
+        val problem = assertThrows(BadRequestProblem::class.java) { connectionsHandler.createConnection(request) }
+
+        assertTrue(problem.problem.getDetail()!!.contains("no longer exists"))
+      }
 
       @Test
       fun testCreateConnection() {

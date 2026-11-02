@@ -57,6 +57,9 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.persistence.job.DefaultJobPersistence
+import io.micronaut.context.ApplicationContext
+import io.micronaut.inject.qualifiers.Qualifiers
+import io.micronaut.transaction.TransactionOperations
 import io.mockk.every
 import io.mockk.mockk
 import org.flywaydb.core.Flyway
@@ -71,6 +74,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 import uk.org.webcompere.systemstubs.jupiter.SystemStub
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension
+import java.sql.Connection
 import java.util.Optional
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -82,6 +86,8 @@ internal class BootloaderTest {
   private lateinit var configsDataSource: DataSource
   private lateinit var jobsDataSource: DataSource
   private lateinit var featureFlagClient: FeatureFlagClient
+  private lateinit var transactionContext: ApplicationContext
+  private lateinit var configTransactions: TransactionOperations<Connection>
   private val metricClient: MetricClient = mockk(relaxed = true)
 
   @BeforeEach
@@ -97,13 +103,29 @@ internal class BootloaderTest {
     jobsDataSource =
       DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
 
-    configsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
-    jobsDataSource = DataSourceFactory.create(container.username, container.password, container.driverClassName, container.jdbcUrl)
     featureFlagClient = TestClient(mapOf("heartbeat-max-seconds-between-messages" to "10800"))
+    transactionContext =
+      ApplicationContext
+        .builder()
+        .packages("io.micronaut")
+        .properties(
+          mapOf(
+            "datasources.config.url" to container.jdbcUrl,
+            "datasources.config.username" to container.username,
+            "datasources.config.password" to container.password,
+            "datasources.config.driverClassName" to container.driverClassName,
+            "datasources.config.db-type" to "postgres",
+            "datasources.config.dialect" to "POSTGRES",
+          ),
+        ).start()
+    @Suppress("UNCHECKED_CAST")
+    val transactions = transactionContext.getBean(TransactionOperations::class.java, Qualifiers.byName("config")) as TransactionOperations<Connection>
+    configTransactions = transactions
   }
 
   @AfterEach
   fun cleanup() {
+    transactionContext.close()
     closeDataSource(configsDataSource)
     closeDataSource(jobsDataSource)
     container.stop()
@@ -140,7 +162,7 @@ internal class BootloaderTest {
     val secretPersistenceConfigService: SecretPersistenceConfigService = mockk()
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
 
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, configTransactions)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService =
       mockk {
@@ -182,6 +204,7 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -340,7 +363,7 @@ internal class BootloaderTest {
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, configTransactions)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
@@ -379,6 +402,7 @@ internal class BootloaderTest {
         mockk(),
         mockk(),
         metricClient,
+        transactions = configTransactions,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -659,7 +683,7 @@ internal class BootloaderTest {
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase, configTransactions)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
@@ -682,6 +706,7 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
     val sourceService =
       SourceServiceJooqImpl(

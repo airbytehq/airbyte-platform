@@ -52,6 +52,8 @@ dependencies {
   testImplementation(libs.mockk)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  integrationTestImplementation(libs.micronaut.data.tx)
 }
 
 airbyte {

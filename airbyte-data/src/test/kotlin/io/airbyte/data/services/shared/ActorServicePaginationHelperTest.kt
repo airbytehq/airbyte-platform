@@ -90,7 +90,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         metricClient,
         paginationHelper,
       )
-    this.connectionServiceJooqImpl = ConnectionServiceJooqImpl(database!!)
+    this.connectionServiceJooqImpl = ConnectionServiceJooqImpl(database!!, configTransactions)
   }
 
   @ParameterizedTest

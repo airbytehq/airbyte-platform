@@ -5,8 +5,10 @@
 package io.airbyte.data.services.impls.jooq
 
 import io.airbyte.api.server.generated.models.ActorStatus
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.BasicSchedule
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationConnection
@@ -25,6 +27,13 @@ import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.config.mapper.configs.HashingMapperConfig
 import io.airbyte.config.mapper.configs.HashingMethods
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.hydration.RealSecretsHydrator
+import io.airbyte.config.secrets.persistence.LocalTestingSecretPersistence
+import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.WebhookConfigInUseException
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.data.services.shared.ConnectionJobStatus
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
@@ -38,16 +47,19 @@ import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
+import io.airbyte.db.instance.configs.jooq.generated.enums.OperatorType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.db.instance.test.TestDatabaseProviders
+import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers.fieldsToJsonSchema
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.test.utils.Databases
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
@@ -56,6 +68,7 @@ import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeAll
@@ -65,21 +78,357 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.testcontainers.containers.PostgreSQLContainer
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import javax.sql.DataSource
+import io.airbyte.db.instance.configs.jooq.generated.Tables as ConfigTables
 
 internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
-  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl = ConnectionServiceJooqImpl(database)
+  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl = ConnectionServiceJooqImpl(database, configTransactions)
   private var jobDatabase: Database? = null
   private var dataSource: DataSource? = null
   private var dslContext: DSLContext? = null
+
+  @Test
+  fun `pausing a connection preserves an attached webhook operation with an old missing config`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    orphanWebhookConfig(workspaceId)
+
+    connectionServiceJooqImpl.writeStandardSync(Jsons.clone(sync).withStatus(StandardSync.Status.INACTIVE))
+
+    val saved = connectionServiceJooqImpl.getStandardSync(sync.connectionId)
+    assertEquals(StandardSync.Status.INACTIVE, saved.status)
+    assertEquals(sync.operationIds, saved.operationIds)
+  }
+
+  @Test
+  fun `association update can retain an attached webhook operation with an old missing config`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    orphanWebhookConfig(workspaceId)
+    val operationService = OperationServiceJooqImpl(database, configTransactions, mockk())
+
+    operationService.updateConnectionOperationIds(sync.connectionId, sync.operationIds.toSet())
+
+    assertEquals(sync.operationIds, connectionServiceJooqImpl.getStandardSync(sync.connectionId).operationIds)
+  }
+
+  @Test
+  fun `missing operation is reported as a missing operation`() {
+    val (_, sync) = webhookAttachmentFixture()
+    val missingOperationId = UUID.randomUUID()
+
+    val error =
+      assertThrows(ConfigNotFoundException::class.java) {
+        connectionServiceJooqImpl.writeStandardSync(sync.withOperationIds(listOf(missingOperationId)))
+      }
+
+    assertEquals(ConfigNotFoundType.STANDARD_SYNC_OPERATION.toString(), error.type)
+    assertEquals(missingOperationId.toString(), error.configId)
+  }
+
+  @Test
+  fun `operation from another workspace is reported as a missing operation`() {
+    val (_, sync) = webhookAttachmentFixture()
+    val (_, otherSync) = webhookAttachmentFixture()
+    val otherOperationId = otherSync.operationIds.single()
+    database!!.query { ctx ->
+      ctx
+        .update(ConfigTables.OPERATION)
+        .set(ConfigTables.OPERATION.OPERATOR_TYPE, OperatorType.normalization)
+        .where(ConfigTables.OPERATION.ID.eq(otherOperationId))
+        .execute()
+    }
+
+    val error =
+      assertThrows(ConfigNotFoundException::class.java) {
+        connectionServiceJooqImpl.writeStandardSync(sync.withOperationIds(listOf(otherOperationId)))
+      }
+
+    assertEquals(ConfigNotFoundType.STANDARD_SYNC_OPERATION.toString(), error.type)
+    assertEquals(otherOperationId.toString(), error.configId)
+  }
+
+  @Test
+  fun `blocked removal preserves tokens before rotating another configuration`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    val secretPersistence = database!!.query { ctx -> LocalTestingSecretPersistence(ctx) }
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    val workspaceService =
+      WorkspaceServiceJooqImpl(
+        database,
+        mockk(relaxed = true),
+        SecretsRepositoryReader(RealSecretsHydrator(secretPersistence)),
+        SecretsRepositoryWriter(secretPersistence, metricClient),
+        mockk(),
+        metricClient,
+        configTransactions,
+      )
+    val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    val configId = workspace.webhookOperationConfigs["webhookConfigs"][0]["id"].asText()
+    val otherId = UUID.randomUUID()
+    workspace.webhookOperationConfigs =
+      Jsons.deserialize(
+        """{"webhookConfigs":[
+          {"id":"$configId","name":"dbt cloud","authToken":"token-A"},
+          {"id":"$otherId","name":"other","authToken":"token-B"}
+        ]}""",
+      )
+    workspaceService.writeWorkspaceWithSecrets(workspace)
+    val replacement = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    replacement.webhookOperationConfigs =
+      Jsons.deserialize("""{"webhookConfigs":[{"id":"$otherId","name":"other","authToken":"replacement-B"}]}""")
+
+    assertThrows(WebhookConfigInUseException::class.java) { workspaceService.writeWorkspaceWithSecrets(replacement) }
+
+    val hydrated = workspaceService.getWorkspaceWithSecrets(workspaceId, false).webhookOperationConfigs
+    assertEquals("token-A", hydrated["webhookConfigs"][0]["authToken"].asText())
+    assertEquals("token-B", hydrated["webhookConfigs"][1]["authToken"].asText())
+  }
+
+  @Test
+  fun `an attached tombstoned transformation still prevents webhook config removal`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    val workspaceService =
+      WorkspaceServiceJooqImpl(database, mockk(), mockk(), mockk(), mockk(), mockk(), configTransactions)
+    val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    workspace.webhookOperationConfigs = Jsons.deserialize("""{"webhookConfigs":[]}""")
+
+    assertThrows(WebhookConfigInUseException::class.java) { workspaceService.writeStandardWorkspaceNoSecrets(workspace) }
+
+    assertEquals(1, workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).webhookOperationConfigs["webhookConfigs"].size())
+  }
+
+  @Test
+  fun `a deprecated connection still protects its attached webhook config`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync.withStatus(StandardSync.Status.DEPRECATED))
+    val workspaceService =
+      WorkspaceServiceJooqImpl(database, mockk(), mockk(), mockk(), mockk(), mockk(), configTransactions)
+    val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    workspace.webhookOperationConfigs = Jsons.deserialize("""{"webhookConfigs":[]}""")
+
+    assertThrows(WebhookConfigInUseException::class.java) { workspaceService.writeStandardWorkspaceNoSecrets(workspace) }
+  }
+
+  @Test
+  fun `an attached tombstoned operation cannot be saved with a missing webhook config`() {
+    val (_, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    val workspaceService =
+      WorkspaceServiceJooqImpl(database, mockk(), mockk(), mockk(), mockk(), mockk(), configTransactions)
+    val operationService = OperationServiceJooqImpl(database, configTransactions, workspaceService)
+    val original = operationService.getStandardSyncOperation(sync.operationIds.single())
+    val updated = Jsons.clone(original)
+    updated.operatorWebhook.webhookConfigId = UUID.randomUUID()
+
+    assertThrows(WebhookConfigNotFoundException::class.java) { operationService.writeStandardSyncOperation(updated) }
+
+    assertEquals(original, operationService.getStandardSyncOperation(original.operationId))
+    assertEquals(sync.operationIds, connectionServiceJooqImpl.getStandardSync(sync.connectionId).operationIds)
+  }
+
+  @Test
+  fun `an unattached tombstoned operation can still be saved after webhook config removal`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    val workspaceService =
+      WorkspaceServiceJooqImpl(database, mockk(), mockk(), mockk(), mockk(), mockk(), configTransactions)
+    val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    workspace.webhookOperationConfigs = Jsons.deserialize("""{"webhookConfigs":[]}""")
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+    val operationService = OperationServiceJooqImpl(database, configTransactions, workspaceService)
+    val updated = operationService.getStandardSyncOperation(sync.operationIds.single()).withName("obsolete transformation")
+
+    operationService.writeStandardSyncOperation(updated)
+
+    assertEquals(updated, operationService.getStandardSyncOperation(updated.operationId))
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `stale tombstoned operation cannot be attached after its webhook config was removed`(writeConnection: Boolean) {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    if (!writeConnection) connectionServiceJooqImpl.writeStandardSync(Jsons.clone(sync).withOperationIds(emptyList()))
+    database!!.query { ctx ->
+      ctx
+        .update(ConfigTables.WORKSPACE)
+        .set(ConfigTables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.valueOf("""{"webhookConfigs":[]}"""))
+        .where(ConfigTables.WORKSPACE.ID.eq(workspaceId))
+        .execute()
+    }
+
+    assertThrows(WebhookConfigNotFoundException::class.java) { attachOperation(sync, writeConnection) }
+
+    assertTrue(
+      database!!.query { ctx ->
+        !ctx.fetchExists(
+          ConfigTables.CONNECTION_OPERATION,
+          ConfigTables.CONNECTION_OPERATION.CONNECTION_ID.eq(sync.connectionId),
+        )
+      },
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun `attaching a tombstoned operation waits for config removal then rejects the missing config`(writeConnection: Boolean) {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    if (!writeConnection) connectionServiceJooqImpl.writeStandardSync(Jsons.clone(sync).withOperationIds(emptyList()))
+    val removalSaved = CountDownLatch(1)
+    val allowCommit = CountDownLatch(1)
+    val attachmentStarted = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+    try {
+      val removal =
+        executor.submit {
+          database!!.transaction { ctx ->
+            ctx
+              .update(ConfigTables.WORKSPACE)
+              .set(ConfigTables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.valueOf("""{"webhookConfigs":[]}"""))
+              .where(ConfigTables.WORKSPACE.ID.eq(workspaceId))
+              .execute()
+            removalSaved.countDown()
+            assertTrue(allowCommit.await(10, TimeUnit.SECONDS))
+          }
+        }
+      assertTrue(removalSaved.await(10, TimeUnit.SECONDS))
+      val attachment =
+        executor.submit<Boolean> {
+          attachmentStarted.countDown()
+          try {
+            attachOperation(sync, writeConnection)
+            true
+          } catch (_: WebhookConfigNotFoundException) {
+            false
+          }
+        }
+      assertTrue(attachmentStarted.await(10, TimeUnit.SECONDS))
+      assertThrows(TimeoutException::class.java) { attachment.get(250, TimeUnit.MILLISECONDS) }
+      allowCommit.countDown()
+      removal.get(10, TimeUnit.SECONDS)
+      assertFalse(attachment.get(10, TimeUnit.SECONDS))
+      assertTrue(
+        database!!.query { ctx ->
+          !ctx.fetchExists(ConfigTables.CONNECTION_OPERATION, ConfigTables.CONNECTION_OPERATION.CONNECTION_ID.eq(sync.connectionId))
+        },
+      )
+    } finally {
+      allowCommit.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `a concurrent detach and config removal cannot let a connection write restore the orphaned operation`() {
+    val (workspaceId, sync) = webhookAttachmentFixture()
+    connectionServiceJooqImpl.writeStandardSync(sync)
+    val removalSaved = CountDownLatch(1)
+    val allowCommit = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+    try {
+      val removal =
+        executor.submit {
+          database!!.transaction { ctx ->
+            ctx
+              .deleteFrom(ConfigTables.CONNECTION_OPERATION)
+              .where(ConfigTables.CONNECTION_OPERATION.CONNECTION_ID.eq(sync.connectionId))
+              .execute()
+            ctx
+              .update(ConfigTables.WORKSPACE)
+              .set(ConfigTables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.valueOf("""{"webhookConfigs":[]}"""))
+              .where(ConfigTables.WORKSPACE.ID.eq(workspaceId))
+              .execute()
+            removalSaved.countDown()
+            assertTrue(allowCommit.await(10, TimeUnit.SECONDS))
+          }
+        }
+      assertTrue(removalSaved.await(10, TimeUnit.SECONDS))
+      val rewrite =
+        executor.submit<Boolean> {
+          try {
+            connectionServiceJooqImpl.writeStandardSync(sync)
+            true
+          } catch (_: WebhookConfigNotFoundException) {
+            false
+          }
+        }
+      assertThrows(TimeoutException::class.java) { rewrite.get(250, TimeUnit.MILLISECONDS) }
+      allowCommit.countDown()
+      removal.get(10, TimeUnit.SECONDS)
+      assertFalse(rewrite.get(10, TimeUnit.SECONDS))
+      assertTrue(
+        database!!.query { ctx ->
+          !ctx.fetchExists(ConfigTables.CONNECTION_OPERATION, ConfigTables.CONNECTION_OPERATION.CONNECTION_ID.eq(sync.connectionId))
+        },
+      )
+    } finally {
+      allowCommit.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  private fun attachOperation(
+    sync: StandardSync,
+    writeConnection: Boolean,
+  ) {
+    if (writeConnection) {
+      connectionServiceJooqImpl.writeStandardSync(sync)
+    } else {
+      OperationServiceJooqImpl(database, configTransactions, mockk())
+        .updateConnectionOperationIds(sync.connectionId, sync.operationIds.toSet())
+    }
+  }
+
+  private fun webhookAttachmentFixture(): Pair<UUID, StandardSync> {
+    val fixture = JooqTestDbSetupHelper()
+    fixture.setUpDependencies()
+    val workspaceId = fixture.workspace!!.workspaceId
+    val configId = UUID.randomUUID()
+    val operationId = UUID.randomUUID()
+    database!!.query { ctx ->
+      ctx
+        .update(ConfigTables.WORKSPACE)
+        .set(ConfigTables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.valueOf("""{"webhookConfigs":[{"id":"$configId","name":"dbt cloud"}]}"""))
+        .where(ConfigTables.WORKSPACE.ID.eq(workspaceId))
+        .execute()
+      ctx
+        .insertInto(ConfigTables.OPERATION)
+        .set(ConfigTables.OPERATION.ID, operationId)
+        .set(ConfigTables.OPERATION.WORKSPACE_ID, workspaceId)
+        .set(ConfigTables.OPERATION.NAME, "removed transformation")
+        .set(ConfigTables.OPERATION.OPERATOR_TYPE, OperatorType.webhook)
+        .set(ConfigTables.OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf("""{"webhookConfigId":"$configId"}"""))
+        .set(ConfigTables.OPERATION.TOMBSTONE, true)
+        .set(ConfigTables.OPERATION.CREATED_AT, OffsetDateTime.now())
+        .set(ConfigTables.OPERATION.UPDATED_AT, OffsetDateTime.now())
+        .execute()
+    }
+    return workspaceId to createStandardSync(fixture.source!!, fixture.destination!!, mutableListOf()).withOperationIds(listOf(operationId))
+  }
+
+  private fun orphanWebhookConfig(workspaceId: UUID) {
+    database!!.query { ctx ->
+      ctx
+        .update(ConfigTables.WORKSPACE)
+        .set(ConfigTables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.valueOf("""{"webhookConfigs":[]}"""))
+        .where(ConfigTables.WORKSPACE.ID.eq(workspaceId))
+        .execute()
+    }
+  }
 
   @ParameterizedTest
   @MethodSource("actorSyncsStreamTestProvider")

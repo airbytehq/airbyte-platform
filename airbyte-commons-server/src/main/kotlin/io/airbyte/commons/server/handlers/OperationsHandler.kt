@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.CheckOperationRead
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.OperationCreate
@@ -21,6 +22,7 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.WorkspaceService
@@ -104,7 +106,11 @@ open class OperationsHandler
     }
 
     private fun persistOperation(standardSyncOperation: StandardSyncOperation): OperationRead {
-      operationService.writeStandardSyncOperation(standardSyncOperation)
+      try {
+        operationService.writeStandardSyncOperation(standardSyncOperation)
+      } catch (e: WebhookConfigNotFoundException) {
+        throw BadRequestProblem(e.message, null)
+      }
       return buildOperationRead(standardSyncOperation.operationId)
     }
 
@@ -141,6 +147,7 @@ open class OperationsHandler
       deleteOperationIds: List<UUID>,
     ) {
       val operationIds: MutableList<UUID> = ArrayList(standardSync.operationIds)
+      val unsharedOperationIds = mutableListOf<UUID>()
       for (operationId in deleteOperationIds) {
         operationIds.remove(operationId)
         var sharedOperation = false
@@ -152,11 +159,12 @@ open class OperationsHandler
           }
         }
         if (!sharedOperation) {
-          removeOperation(operationId)
+          unsharedOperationIds.add(operationId)
         }
       }
 
       operationService.updateConnectionOperationIds(standardSync.connectionId, HashSet(operationIds))
+      unsharedOperationIds.forEach(::removeOperation)
     }
 
     fun deleteOperation(operationIdRequestBody: OperationIdRequestBody) {

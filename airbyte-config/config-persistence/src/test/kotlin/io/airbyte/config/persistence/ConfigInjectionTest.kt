@@ -72,7 +72,7 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
         .withEnabled(true)
         .withTombstone(false),
     )
-    val connectionService: ConnectionService = ConnectionServiceJooqImpl(database)
+    val connectionService: ConnectionService = ConnectionServiceJooqImpl(database, configTransactions)
     val scopedConfigurationService: ScopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
     val actorDefinitionService: ActorDefinitionService = ActorDefinitionServiceJooqImpl(database)
     val connectionTimelineEventService: ConnectionTimelineEventService = mockk<ConnectionTimelineEventService>(relaxed = true)

@@ -85,7 +85,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
     every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()) } returns DataplaneGroup().withId(DATAPLANE_GROUP_ID)
 
-    connectionService = ConnectionServiceJooqImpl(database!!)
+    connectionService = ConnectionServiceJooqImpl(database!!, configTransactions)
     actorDefinitionService = spyk(ActorDefinitionServiceJooqImpl(database!!))
     actorDefinitionVersionUpdater =
       spyk(
@@ -126,6 +126,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
 
     val organizationService = OrganizationServiceJooqImpl(database!!)

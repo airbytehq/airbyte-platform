@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.entitlements
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardSync
@@ -109,6 +111,8 @@ internal class WorkspaceConsolidationStep(
       }
     }
 
+    moveWebhookConfigs(extra, kept)
+
     // Grants and overrides first so the moved actors resolve their definitions and credentials in the kept workspace.
     moveCustomConnectorGrants(extra, kept)
     oAuthService.reassignWorkspaceOAuthParams(extra.workspaceId, kept.workspaceId)
@@ -147,6 +151,27 @@ internal class WorkspaceConsolidationStep(
       }
       actorDefinitionService.deleteActorDefinitionWorkspaceGrant(definitionId, extra.workspaceId, ScopeType.WORKSPACE)
     }
+  }
+
+  private fun moveWebhookConfigs(
+    extra: StandardWorkspace,
+    kept: StandardWorkspace,
+  ) {
+    val extraConfigs = extra.webhookOperationConfigs?.path("webhookConfigs") ?: return
+    if (extraConfigs.size() == 0) return
+
+    val sourceConfigs =
+      requireNotNull(workspaceService.getWorkspaceWithSecrets(extra.workspaceId, false).webhookOperationConfigs) {
+        "Webhook configs are missing from workspace ${extra.workspaceId}"
+      }
+    val target = workspaceService.getStandardWorkspaceNoSecrets(kept.workspaceId, false)
+    val merged = Jsons.clone(target.webhookOperationConfigs ?: Jsons.emptyObject()) as ObjectNode
+    val configsById = merged.path("webhookConfigs").associateBy { it.path("id").asText() }.toMutableMap()
+    sourceConfigs.path("webhookConfigs").forEach { configsById[it.path("id").asText()] = it }
+    val configs = merged.putArray("webhookConfigs")
+    configsById.values.forEach { configs.add(it) }
+
+    workspaceService.writeWorkspaceWithSecrets(target.withWebhookOperationConfigs(merged))
   }
 
   private fun moveOperations(

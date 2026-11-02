@@ -49,6 +49,7 @@ internal class WorkspaceFilterTest : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
   }
 

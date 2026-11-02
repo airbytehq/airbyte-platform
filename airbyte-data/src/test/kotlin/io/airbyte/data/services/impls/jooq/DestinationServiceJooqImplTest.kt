@@ -77,7 +77,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         metricClient,
         actorPaginationServiceHelper,
       )
-    this.connectionServiceJooqImpl = ConnectionServiceJooqImpl(database!!)
+    this.connectionServiceJooqImpl = ConnectionServiceJooqImpl(database!!, configTransactions)
   }
 
   @Test

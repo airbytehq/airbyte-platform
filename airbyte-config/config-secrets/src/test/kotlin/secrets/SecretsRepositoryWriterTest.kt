@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
@@ -132,6 +133,41 @@ internal class SecretsRepositoryWriterTest {
           secretPersistence,
         )
       }
+    }
+
+    @Test
+    fun `reordering webhook configs while rotating a token preserves both secrets`() {
+      val spec =
+        Jsons.deserialize(
+          """
+          {"type":"object","properties":{"webhookConfigs":{"type":"array","items":{
+            "type":"object","properties":{"id":{"type":"string"},"authToken":{"type":"string","airbyte_secret":true}}
+          }}}}
+          """.trimIndent(),
+        )
+      val original =
+        Jsons.deserialize("""{"webhookConfigs":[{"id":"A","authToken":"token-A"},{"id":"B","authToken":"token-B"}]}""")
+      val persisted = secretsRepositoryWriter.createFromConfigLegacy(WORKSPACE_ID, original, spec)
+      val updated =
+        Jsons.deserialize("""{"webhookConfigs":[{"id":"B"},{"id":"A","authToken":"replacement-A"}]}""")
+      (updated["webhookConfigs"][0] as ObjectNode)
+        .set<JsonNode>("authToken", persisted["webhookConfigs"][1]["authToken"])
+
+      val saved = secretsRepositoryWriter.updateFromConfigLegacy(WORKSPACE_ID, persisted, updated, spec)
+      val hydrated = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(saved)
+
+      assertEquals("B", hydrated!!["webhookConfigs"][0]["id"].asText())
+      assertEquals("token-B", hydrated["webhookConfigs"][0]["authToken"].asText())
+      assertEquals("A", hydrated["webhookConfigs"][1]["id"].asText())
+      assertEquals("replacement-A", hydrated["webhookConfigs"][1]["authToken"].asText())
+
+      val nextUpdate = Jsons.clone(saved)
+      (nextUpdate["webhookConfigs"][0] as ObjectNode).put("authToken", "replacement-B")
+      val savedAgain = secretsRepositoryWriter.updateFromConfigLegacy(WORKSPACE_ID, saved, nextUpdate, spec)
+      val hydratedAgain = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(savedAgain)
+
+      assertEquals("replacement-B", hydratedAgain!!["webhookConfigs"][0]["authToken"].asText())
+      assertEquals("replacement-A", hydratedAgain["webhookConfigs"][1]["authToken"].asText())
     }
 
     @Test

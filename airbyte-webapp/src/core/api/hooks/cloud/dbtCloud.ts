@@ -66,6 +66,7 @@ export const isSameJob = (remoteJob: DbtCloudJobInfo, savedJob: DbtCloudJob): bo
 export const useDbtCloudServiceToken = () => {
   const workspace = useCurrentWorkspace();
   const { workspaceId } = workspace;
+  const dbtConfig = workspace.webhookConfigs?.find(isDbtWebhookConfig);
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const queryClient = useQueryClient();
 
@@ -76,13 +77,15 @@ export const useDbtCloudServiceToken = () => {
   >(
     ["saveToken", { workspaceId }],
     async ({ authToken, accessUrl }) => {
-      const webhookConfigs = [
-        {
-          name: WEBHOOK_CONFIG_NAME,
-          authToken,
-          customDbtHost: accessUrl,
-        },
-      ];
+      const updatedConfig = {
+        ...dbtConfig,
+        name: dbtConfig?.name ?? WEBHOOK_CONFIG_NAME,
+        authToken,
+        customDbtHost: accessUrl,
+      };
+      const webhookConfigs = dbtConfig
+        ? workspace.webhookConfigs?.map((config) => (config.id === dbtConfig.id ? updatedConfig : config))
+        : [...(workspace.webhookConfigs ?? []), updatedConfig];
 
       return await updateWorkspace({
         workspaceId,
@@ -99,7 +102,8 @@ export const useDbtCloudServiceToken = () => {
   const { mutateAsync: deleteToken, isLoading: isDeletingToken } = useMutation<WorkspaceRead, Error>(
     ["deleteToken", { workspaceId }],
     async () => {
-      const webhookConfigs: WebhookConfigWrite[] = [];
+      const webhookConfigs: WebhookConfigWrite[] =
+        workspace.webhookConfigs?.filter((config) => !isDbtWebhookConfig(config)) ?? [];
 
       return await updateWorkspace({
         workspaceId,
@@ -110,6 +114,7 @@ export const useDbtCloudServiceToken = () => {
 
   return {
     hasExistingToken: hasDbtIntegration(workspace),
+    accessUrl: dbtConfig?.customDbtHost,
     saveToken,
     isSavingToken,
     deleteToken,

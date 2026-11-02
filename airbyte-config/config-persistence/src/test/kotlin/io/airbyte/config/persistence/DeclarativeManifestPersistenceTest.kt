@@ -99,6 +99,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
+        transactions = configTransactions,
       )
 
     connectorBuilderService = ConnectorBuilderServiceJooqImpl(database!!)

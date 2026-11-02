@@ -48,6 +48,16 @@ interface WorkspaceService {
   fun writeStandardWorkspaceNoSecrets(workspace: StandardWorkspace)
 
   fun writeStandardWorkspaceNoSecrets(
+    workspace: StandardWorkspace,
+    currentOrganizationId: UUID,
+  )
+
+  fun writeWorkspacePreservingWebhookConfigs(
+    workspace: StandardWorkspace,
+    currentOrganizationId: UUID = workspace.organizationId,
+  )
+
+  fun writeStandardWorkspaceNoSecrets(
     ctx: DSLContext,
     workspace: StandardWorkspace,
   ) = writeStandardWorkspaceNoSecrets(workspace)
@@ -89,6 +99,12 @@ interface WorkspaceService {
   ): StandardWorkspace
 
   fun writeWorkspaceWithSecrets(workspace: StandardWorkspace)
+
+  /** Require configurations retained from an earlier read to still exist when writing. */
+  fun writeWorkspaceWithSecrets(
+    workspace: StandardWorkspace,
+    expectedWebhookConfigIds: Set<UUID>,
+  )
 
   fun writeWorkspaceWithSecrets(
     ctx: DSLContext,

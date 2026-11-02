@@ -4,7 +4,9 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.OperatorWebhook
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceConnection
@@ -29,6 +31,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -168,6 +171,47 @@ class WorkspaceConsolidationStepTest {
     verify { userPersistence.reassignDefaultWorkspace(extra.workspaceId, kept.workspaceId) }
     verify { workspaceService.writeStandardWorkspaceNoSecrets(match { it.workspaceId == extra.workspaceId && it.tombstone == true }) }
     verify(exactly = 0) { workspaceService.writeStandardWorkspaceNoSecrets(match { it.workspaceId == kept.workspaceId }) }
+  }
+
+  @Test
+  fun `moves webhook configs with tokens before moving their operations`() {
+    val keptConfigId = UUID.randomUUID()
+    val extraConfigId = UUID.randomUUID()
+    extra.webhookOperationConfigs = Jsons.deserialize("""{"webhookConfigs":[{"id":"$extraConfigId","name":"extra"}]}""")
+    val keptWithoutSecrets =
+      workspace("first", createdAt = 1L, id = kept.workspaceId)
+        .withWebhookOperationConfigs(
+          Jsons.deserialize("""{"webhookConfigs":[{"id":"$keptConfigId","name":"kept","authToken":{"_secret":"kept-coordinate"}}]}"""),
+        )
+    val extraWithSecrets =
+      workspace("second", createdAt = 2L, id = extra.workspaceId)
+        .withWebhookOperationConfigs(
+          Jsons.deserialize("""{"webhookConfigs":[{"id":"$extraConfigId","name":"extra","authToken":"extra-token"}]}"""),
+        )
+    every { workspaceService.getStandardWorkspaceNoSecrets(kept.workspaceId, false) } returns keptWithoutSecrets
+    every { workspaceService.getWorkspaceWithSecrets(extra.workspaceId, false) } returns extraWithSecrets
+    every { operationService.getStandardSyncOperation(operationId) } returns
+      StandardSyncOperation()
+        .withOperationId(operationId)
+        .withWorkspaceId(extra.workspaceId)
+        .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
+        .withOperatorWebhook(OperatorWebhook().withWebhookConfigId(extraConfigId))
+    val writtenWorkspaces = mutableListOf<StandardWorkspace>()
+    every { workspaceService.writeWorkspaceWithSecrets(any()) } answers {
+      writtenWorkspaces.add(firstArg())
+    }
+
+    step.run(orgId, 1L)
+
+    val written = writtenWorkspaces.single()
+    assertEquals(kept.workspaceId, written.workspaceId)
+    val configsById = written.webhookOperationConfigs["webhookConfigs"].associateBy { it["id"].asText() }
+    assertEquals("kept-coordinate", configsById[keptConfigId.toString()]!!["authToken"]["_secret"].asText())
+    assertEquals("extra-token", configsById[extraConfigId.toString()]!!["authToken"].asText())
+    verifyOrder {
+      workspaceService.writeWorkspaceWithSecrets(any())
+      operationService.writeStandardSyncOperation(any())
+    }
   }
 
   @Test

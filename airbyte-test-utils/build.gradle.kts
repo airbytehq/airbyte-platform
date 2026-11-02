@@ -13,6 +13,7 @@ dependencies {
   api(libs.kotlin.logging)
   api(libs.failsafe)
   api(libs.okhttp)
+  api(libs.bundles.micronaut.data.jdbc)
   api(project(":oss:airbyte-db:db-lib"))
   api(project(":oss:airbyte-db:jooq"))
   api(project(":oss:airbyte-config:config-models"))

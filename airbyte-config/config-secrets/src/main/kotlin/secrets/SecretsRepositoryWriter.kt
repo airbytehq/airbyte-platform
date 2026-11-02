@@ -262,9 +262,14 @@ open class SecretsRepositoryWriter(
     fullConfig: ConfigWithProcessedSecrets,
     secretPersistence: SecretPersistence,
   ) {
+    val retainedCoordinates =
+      fullConfig.processedSecrets.values
+        .mapNotNull { it.secretCoordinate }
+        .toSet()
     oldPartialConfig.referencedSecrets.forEach { (path, oldSecretRef) ->
       (oldSecretRef.secretCoordinate as? AirbyteManagedSecretCoordinate)
         ?.takeIf { fullConfig.processedSecrets[path]?.rawValue != null }
+        ?.takeUnless { it in retainedCoordinates }
         ?.takeIf { oldSecretRef.secretStorageId == null }
         ?.let { deleteAirbyteManagedSecretCoordinate(it, secretPersistence) }
     }

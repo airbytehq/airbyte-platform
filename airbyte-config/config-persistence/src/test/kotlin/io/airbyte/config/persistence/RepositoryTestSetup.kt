@@ -26,6 +26,8 @@ import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
+import io.micronaut.inject.qualifiers.Qualifiers
+import io.micronaut.transaction.TransactionOperations
 import io.mockk.every
 import io.mockk.mockk
 import org.jooq.DSLContext
@@ -34,6 +36,7 @@ import org.jooq.exception.IntegrityConstraintViolationException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
+import java.sql.Connection
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -80,6 +83,9 @@ open class RepositoryTestSetup {
       // this line is what runs the migrations
       val database = databaseProviders.createNewConfigsDatabase()
 
+      @Suppress("UNCHECKED_CAST")
+      val configTransactions = context.getBean(TransactionOperations::class.java, Qualifiers.byName("config")) as TransactionOperations<Connection>
+
       val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database)
       try {
         dataplaneGroupService.writeDataplaneGroup(
@@ -102,6 +108,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
+          transactions = configTransactions,
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(

@@ -399,6 +399,7 @@ class WorkspaceOrganizationAccessTestBeans {
         roleResolver = mockk(),
         scimConfigurationService = mockk(),
         scimAccessGate = mockk(),
+        operationsHandler = mockk(),
       )
   }
 }

@@ -386,6 +386,7 @@ class ScimUserLifecycleIntegrationTest {
         secretsRepositoryWriter,
         mockk<SecretPersistenceConfigService>(relaxed = true),
         mockk<MetricClient>(relaxed = true),
+        transactions = transactions,
       )
     var workspaceWriteObservedCommittedUser = false
     val transactionCheckingWorkspaceService =
@@ -509,6 +510,7 @@ class ScimUserLifecycleIntegrationTest {
         secretsRepositoryWriter,
         mockk<SecretPersistenceConfigService>(relaxed = true),
         mockk<MetricClient>(relaxed = true),
+        transactions = transactions,
       )
     var workspaceWriteObservedIncomingIdentity = false
     val identityCheckingWorkspaceService =

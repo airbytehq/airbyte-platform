@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.OperationCreate
 import io.airbyte.api.server.generated.models.OperationIdRequestBody
@@ -22,6 +23,7 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.WorkspaceService
@@ -31,6 +33,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -70,6 +73,30 @@ internal class OperationsHandlerTest {
         .withTombstone(false)
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
         .withOperatorWebhook(operatorWebhook)
+  }
+
+  @Test
+  fun `stale webhook reference returns a bad request problem`() {
+    every { uuidGenerator.get() } returns WEBHOOK_OPERATION_ID
+    every { workspaceService.getWorkspaceWithSecrets(standardSyncOperation.workspaceId, false) } returns
+      StandardWorkspace().withWorkspaceId(standardSyncOperation.workspaceId)
+    every { operationService.writeStandardSyncOperation(any()) } throws WebhookConfigNotFoundException()
+    val request =
+      OperationCreate(
+        workspaceId = standardSyncOperation.workspaceId,
+        name = WEBHOOK_OPERATION_NAME,
+        operatorConfiguration =
+          OperatorConfiguration(
+            operatorType = OperatorType.WEBHOOK,
+            webhook =
+              io.airbyte.api.server.generated.models
+                .OperatorWebhook(webhookConfigId = WEBHOOK_CONFIG_ID),
+          ),
+      )
+
+    val problem = Assertions.assertThrows(BadRequestProblem::class.java) { operationsHandler.createOperation(request) }
+
+    Assertions.assertTrue(problem.problem.getDetail()!!.contains("no longer exists"))
   }
 
   @Test
@@ -341,6 +368,27 @@ internal class OperationsHandlerTest {
     toDelete.add(remainingOperationId)
     operationsHandler.deleteOperationsForConnection(sync, toDelete)
     verify { operationService.updateConnectionOperationIds(syncConnectionId, mutableSetOf()) }
+  }
+
+  @Test
+  fun `deleting an attached operation still works after its webhook config is gone`() {
+    val connectionId = UUID.randomUUID()
+    val operationId = standardSyncOperation.operationId
+    val sync = StandardSync().withConnectionId(connectionId).withOperationIds(listOf(operationId))
+    var attached = true
+    every { connectionService.listStandardSyncsUsingOperation(operationId) } returns emptyList()
+    every { operationService.getStandardSyncOperation(operationId) } returns standardSyncOperation
+    every { operationService.writeStandardSyncOperation(any()) } answers {
+      if (attached) throw WebhookConfigNotFoundException()
+    }
+    every { operationService.updateConnectionOperationIds(connectionId, emptySet()) } answers { attached = false }
+
+    operationsHandler.deleteOperationsForConnection(sync, listOf(operationId))
+
+    verifyOrder {
+      operationService.updateConnectionOperationIds(connectionId, emptySet())
+      operationService.writeStandardSyncOperation(match { it.operationId == operationId && it.tombstone == true })
+    }
   }
 
   @Test

@@ -11,12 +11,16 @@ import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.OperatorWebhook
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.repositories.WebhookConfigNotFoundException
+import io.airbyte.data.repositories.WorkspaceWebhookConfigRepository
 import io.airbyte.data.services.OperationService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.OperatorType
 import io.airbyte.validation.json.JsonValidationException
+import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
@@ -24,6 +28,7 @@ import org.jooq.JSONB
 import org.jooq.Record
 import org.jooq.impl.DSL
 import java.io.IOException
+import java.sql.Connection
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -35,6 +40,8 @@ class OperationServiceJooqImpl
   @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
+    @Named("config") private val transactions: TransactionOperations<Connection>,
+    private val workspaceService: WorkspaceService,
   ) : OperationService {
     private val database = ExceptionWrappingDatabase(database)
 
@@ -64,9 +71,23 @@ class OperationServiceJooqImpl
      * @throws IOException if there is an issue while interacting with db.
      */
     override fun writeStandardSyncOperation(standardSyncOperation: StandardSyncOperation) {
-      database.transaction<Any?> { ctx: DSLContext ->
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(standardSyncOperation.workspaceId, true)
+      transactions.executeWrite { status ->
+        val ctx = DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES)
+        val configs = WorkspaceWebhookConfigRepository.getForUpdate(ctx, workspace)
+        if (
+          standardSyncOperation.operatorType == StandardSyncOperation.OperatorType.WEBHOOK &&
+          (
+            standardSyncOperation.tombstone != true ||
+              WorkspaceWebhookConfigRepository.isOperationAttached(ctx, standardSyncOperation.operationId)
+          )
+        ) {
+          val configId = standardSyncOperation.operatorWebhook?.webhookConfigId
+          if (configs.path("webhookConfigs").none { it.path("id").asText() == configId.toString() }) {
+            throw WebhookConfigNotFoundException()
+          }
+        }
         writeStandardSyncOperation(listOf(standardSyncOperation), ctx)
-        null
       }
     }
 
@@ -90,12 +111,9 @@ class OperationServiceJooqImpl
       connectionId: UUID,
       newOperationIds: Set<UUID>,
     ) {
-      database.transaction<Any?> { ctx: DSLContext ->
-        val existingOperationIds =
-          ctx
-            .selectFrom(Tables.CONNECTION_OPERATION)
-            .where(Tables.CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
-            .fetchSet(Tables.CONNECTION_OPERATION.OPERATION_ID)
+      transactions.executeWrite { status ->
+        val ctx = DSL.using(status.connection, org.jooq.SQLDialect.POSTGRES)
+        val existingOperationIds = WorkspaceWebhookConfigRepository.validateConnectionOperationUpdate(ctx, connectionId, newOperationIds)
         val existingOperationIdsToKeep: Set<UUID?> = existingOperationIds.intersect(newOperationIds)
 
         // DELETE existing connection_operation records that aren't in the input list
