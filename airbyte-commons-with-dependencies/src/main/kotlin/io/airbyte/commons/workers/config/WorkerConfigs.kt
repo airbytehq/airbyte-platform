@@ -102,13 +102,21 @@ class WorkerConfigsProvider(
         kubeResourceConfig.annotations.toKeyValues()
       }
 
+    // if labels are not defined for this specific resource, fallback to the default resource labels
+    val labels: Map<String, String> =
+      if (kubeResourceConfig.labels.isEmpty() && defaultKubeResourceConfig != null) {
+        defaultKubeResourceConfig.labels.toKeyValues()
+      } else {
+        kubeResourceConfig.labels.toKeyValues()
+      }
+
     return WorkerConfigs(
       resourceRequirements = getResourceRequirementsFrom(kubeResourceConfig, defaultKubeResourceConfig),
       workerKubeTolerations = TolerationPOJO.getJobKubeTolerations(airbyteWorkerConfig.job.kubernetes.tolerations),
       workerKubeNodeSelectors = kubeResourceConfig.nodeSelectors.toKeyValues(),
       workerIsolatedKubeNodeSelectors = if (airbyteWorkerConfig.isolated.kube.useCustomNodeSelector) isolatedNodeSelectors else null,
       workerKubeAnnotations = annotations,
-      workerKubeLabels = kubeResourceConfig.labels.toKeyValues(),
+      workerKubeLabels = labels,
       jobImagePullSecrets = airbyteWorkerConfig.job.kubernetes.main.container.imagePullSecret,
       jobImagePullPolicy = airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy,
     )
