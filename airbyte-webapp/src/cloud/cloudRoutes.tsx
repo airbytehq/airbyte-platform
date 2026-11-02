@@ -21,7 +21,7 @@ import { RoutePaths } from "pages/routePaths";
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { EntitlementsLoader } from "./components/EntitlementsLoader";
-import { useFullStoryUserProperties } from "./services/thirdParty/fullstoryGuides/useFullStoryUserProperties";
+import { FullStoryUserProperties } from "./services/thirdParty/fullstoryGuides/FullStoryUserProperties";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
@@ -34,7 +34,6 @@ const AuthLayout = React.lazy(() => import("cloud/views/auth"));
 const DefaultView = React.lazy(() => import("pages/DefaultView"));
 
 const CloudMainViewRoutes = () => {
-  useFullStoryUserProperties();
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
 
   if (loginRedirect) {
@@ -42,15 +41,18 @@ const CloudMainViewRoutes = () => {
   }
 
   return (
-    <Routes>
-      <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
+    <>
+      <FullStoryUserProperties />
+      <Routes>
+        <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
 
-      <Route element={<MainLayout />}>
-        <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
-        <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
-      </Route>
-      <Route path="*" element={<DefaultView />} />
-    </Routes>
+        <Route element={<MainLayout />}>
+          <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
+          <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
+        </Route>
+        <Route path="*" element={<DefaultView />} />
+      </Routes>
+    </>
   );
 };
 

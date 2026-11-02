@@ -63,9 +63,11 @@ export const useGetProductBranding = (): ProductBranding => {
   const isCloudApp = useIsCloudApp();
   const isCloudForTeams = useFeature(FeatureItem.CloudForTeamsBranding);
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus);
+  const needsTrialStatusFallback = planId === undefined;
+  const canCheckTrialStatus = !!currentOrganizationId && isCloudApp && canViewTrialStatus;
   const isCloudInTrial =
     useOrganizationTrialStatus(currentOrganizationId, {
-      enabled: !!currentOrganizationId && isCloudApp && canViewTrialStatus,
+      enabled: needsTrialStatusFallback && canCheckTrialStatus,
     })?.trialStatus === "in_trial";
 
   // If the planId is provided, it means we still need to use Stigg — even if the plan is out of scope.
