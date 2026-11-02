@@ -1,5 +1,7 @@
 import React, { Suspense } from "react";
 
+import { trackError } from "core/utils/datadog";
+
 import { useFullStoryUserProperties } from "./useFullStoryUserProperties";
 
 class FullStoryUserPropertiesErrorBoundary extends React.Component<React.PropsWithChildren, { hasError: boolean }> {
@@ -7,6 +9,10 @@ class FullStoryUserPropertiesErrorBoundary extends React.Component<React.PropsWi
 
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+
+  override componentDidCatch(error: Error) {
+    trackError(error, { component: "FullStoryUserProperties" });
   }
 
   override render(): React.ReactNode {
