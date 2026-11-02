@@ -17,15 +17,8 @@ except `oss/airbyte-webapp/` — see its own AGENTS.md). Read the root
   - `io.airbyte.gradle.kube-reload` — local kube hot-reload
 - **Dependency catalog**: `oss/deps.toml` (referenced as `libs.*` in
   `build.gradle.kts` files). Add new deps there, not inline.
-- **Tests**: JUnit 5 + **MockK** (not Mockito) + JUnit `Assertions`
-  by default, with AssertJ where a collection or exception assertion
-  reads better. mockwebserver for HTTP fakes; Testcontainers where
-  infra is required. Mockito, Hamcrest, Kotest, kotlintest,
-  `kotlin.test`, JUnit 4 and Kotlin's `assert()` are retired in tests.
-  The root task `checkTestFrameworkImports` fails on their imports and
-  on `assert(` calls in Kotlin test sources. `:oss:check` and
-  `:cloud:check` run it, but a module-scoped `check` does not; run it
-  directly with `./gradlew checkTestFrameworkImports`.
+- **Tests**: follow [Kotlin tests](../AGENTS.md#kotlin-tests) in the
+  root `AGENTS.md`.
 
 ## Module layout
 
@@ -257,15 +250,21 @@ Always prefer scoped commands during iteration:
 - **Format a module**: `./gradlew :oss:airbyte-server:spotlessApply`
 - **Format everything (repo)**: `make format.oss`
 - **Check a module (compile + test + spotless check)**:
-  `./gradlew :oss:airbyte-server:check`
+  `./gradlew :oss:airbyte-server:check`. This skips
+  `checkTestFrameworkImports`.
+- **Check test sources for retired test frameworks**:
+  `./gradlew checkTestFrameworkImports` (a file scan, no compile)
 - **Run one test class**:
   `./gradlew :oss:airbyte-server:test --tests "*.MyHandlerTest"`
 - **Full backend build**: `make build.oss` (delegates to
   `tools/bin/workflow/<env>/oss/build-all.sh`)
-- **Full OSS tests**: `make check.oss`
+- **All OSS checks, no tests**: `make check.oss` (runs
+  `:oss:check -x test`, which includes `checkTestFrameworkImports`)
+- **All OSS unit tests**: `make test.unit.oss`
 
-Before declaring work done, run `make check.oss` (or at minimum
-`:check` on every touched module).
+Before declaring work done, run `:check` on every touched module, plus
+`./gradlew checkTestFrameworkImports` if you changed tests. For a full
+pass, run `make check.oss` and `make test.unit.oss`.
 
 ## Logging
 
@@ -302,3 +301,8 @@ To grant or deny entitlements in a local Cloud deployment:
   *and* the controller implements the generated interface.
 - A test passes locally but fails in CI → likely a Testcontainers
   Postgres version mismatch or a missing `@MicronautTest` annotation.
+- The IDE offers `org.junit.Test` or `org.junit.Assert` → that is
+  JUnit 4, still on test classpaths because Testcontainers 1.x depends
+  on it. Use the `org.junit.jupiter.api` versions.
+  `checkTestFrameworkImports` catches the import, but not a fully
+  qualified `@org.junit.Test`: that test compiles and never runs.
