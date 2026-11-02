@@ -8,7 +8,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useExperiment } from "core/services/Experiment";
 import { isDefined } from "core/utils/common";
 
-import { useCancelCommand, pollCommandUntilResolved } from "./commands";
+import { COMMAND_POLLING_INTERVAL_MS, useCancelCommand, pollCommandUntilResolved } from "./commands";
 import { useRemoveConnectionsFromList } from "./connections";
 import { useCurrentWorkspace } from "./workspaces";
 import { ErrorWithJobInfo } from "../errors";
@@ -229,8 +229,6 @@ export const useUpdateSource = () => {
   );
 };
 
-const COMMAND_STATUS_POLLING_INTERVAL = 2000;
-
 type SourceDiscoverOutput = GetDiscoverCommandOutput200 & { catalog: AirbyteCatalog; catalogId: string };
 
 export const useDiscoverSourceSchemaMutation = (source: SourceRead) => {
@@ -332,7 +330,7 @@ export const useDiscoverSchemaQuery = (
     useErrorBoundary,
     enabled: enabled && asyncSchemaDiscoveryEnabled && runCommandQuery.isSuccess && !!runCommandQuery.data?.id, // Only start polling for status once the command has been started
     refetchInterval: (data) =>
-      data?.status === "running" || data?.status === "pending" ? COMMAND_STATUS_POLLING_INTERVAL : false, // Poll until the command is completed or fails
+      data?.status === "running" || data?.status === "pending" ? COMMAND_POLLING_INTERVAL_MS : false, // Poll until the command is completed or fails
     cacheTime: Infinity,
     staleTime: Infinity,
   });

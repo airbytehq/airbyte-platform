@@ -69,7 +69,7 @@ export const useCancelCommand = () => {
   return useMutation(async (commandId: string) => cancelCommand({ id: commandId }, requestOptions));
 };
 
-const COMMAND_POLLING_INTERVAL_MS = 2000;
+export const COMMAND_POLLING_INTERVAL_MS = 500;
 
 /**
  * Polls a command until it resolves (status is not "running" or "pending")
