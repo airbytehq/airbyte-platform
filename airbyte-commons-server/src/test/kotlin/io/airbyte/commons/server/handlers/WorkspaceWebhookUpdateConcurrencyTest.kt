@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.junitpioneer.jupiter.SetSystemProperty
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
@@ -40,7 +39,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Supplier
 
-@SetSystemProperty(key = "INTERNAL_API_HOST", value = "http://localhost:8080")
 internal class WorkspaceWebhookUpdateConcurrencyTest : BaseConfigDatabaseTest() {
   @BeforeEach
   fun setUp() {
