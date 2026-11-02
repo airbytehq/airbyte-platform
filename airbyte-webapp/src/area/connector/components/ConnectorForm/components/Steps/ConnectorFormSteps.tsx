@@ -388,7 +388,7 @@ const StepHeader: React.FC<StepHeaderProps> = ({
     <FlexContainer alignItems="center" justifyContent="space-between">
       <FlexContainer alignItems="center" gap="md">
         {status === StepStatus.COMPLETE ? (
-          <Icon type="checkCircle" color="success" />
+          <Icon type="checkCircle" color="primary" />
         ) : (
           <NumberBadge
             value={stepNumber}
@@ -397,50 +397,50 @@ const StepHeader: React.FC<StepHeaderProps> = ({
           />
         )}
         <FlexContainer direction="column" gap="xs">
-          <FlexContainer alignItems="center" gap="md">
-            <Text
-              as="h2"
-              size="lg"
-              bold
-              color={status === StepStatus.INCOMPLETE ? "grey" : "darkBlue"}
-              ref={titleRef}
-              tabIndex={-1}
-              aria-current={status === StepStatus.ACTIVE ? "step" : undefined}
-            >
-              {section.title}
-              {status !== StepStatus.INCOMPLETE && (
-                <span className={styles.visuallyHidden}>
-                  {" "}
-                  <FormattedMessage
-                    id={
-                      status === StepStatus.COMPLETE
-                        ? "connectorForm.sections.stepCompleted"
-                        : "connectorForm.sections.stepCurrent"
-                    }
-                  />
-                </span>
-              )}
-            </Text>
-            {status === StepStatus.COMPLETE && isCheckPassed && (
-              <Badge variant="green" uppercase={false} data-testid="connector-form-section-check-passed">
-                <FormattedMessage id="connectorForm.sections.checkPassed" />
-              </Badge>
+          <Text
+            as="h2"
+            size="lg"
+            bold
+            color={status === StepStatus.INCOMPLETE ? "grey" : "darkBlue"}
+            ref={titleRef}
+            tabIndex={-1}
+            aria-current={status === StepStatus.ACTIVE ? "step" : undefined}
+          >
+            {section.title}
+            {status !== StepStatus.INCOMPLETE && (
+              <span className={styles.visuallyHidden}>
+                {" "}
+                <FormattedMessage
+                  id={
+                    status === StepStatus.COMPLETE
+                      ? "connectorForm.sections.stepCompleted"
+                      : "connectorForm.sections.stepCurrent"
+                  }
+                />
+              </span>
             )}
-          </FlexContainer>
+          </Text>
           {status === StepStatus.ACTIVE && section.description && <Text color="grey">{section.description}</Text>}
         </FlexContainer>
       </FlexContainer>
       {status === StepStatus.COMPLETE && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="xs"
-          onClick={onEdit}
-          disabled={isEditDisabled}
-          aria-label={formatMessage({ id: "connectorForm.sections.edit" }, { title: section.title })}
-        >
-          <FormattedMessage id="form.edit" />
-        </Button>
+        <FlexContainer alignItems="center" gap="md">
+          {isCheckPassed && (
+            <Badge variant="green" data-testid="connector-form-section-check-passed">
+              <FormattedMessage id="connectorForm.sections.checkPassed" />
+            </Badge>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            onClick={onEdit}
+            disabled={isEditDisabled}
+            aria-label={formatMessage({ id: "connectorForm.sections.edit" }, { title: section.title })}
+          >
+            <FormattedMessage id="form.edit" />
+          </Button>
+        </FlexContainer>
       )}
     </FlexContainer>
   );
