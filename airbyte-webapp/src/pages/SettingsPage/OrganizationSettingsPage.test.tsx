@@ -194,6 +194,51 @@ describe("OrganizationSettingsPage", () => {
     expect(screen.getByText("Plan")).toBeInTheDocument();
   });
 
+  it("hides the Regions nav link when platform.dataplane-health-ui is off", async () => {
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.SelfManagedRegions);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageDataplanes
+    );
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Regions")).not.toBeInTheDocument();
+  });
+
+  it("hides the Regions nav link for an organization without self-managed regions", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "platform.dataplane-health-ui");
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageDataplanes
+    );
+    // The beforeEach default leaves SelfManagedRegions off.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Regions")).not.toBeInTheDocument();
+  });
+
+  it("hides the Regions nav link for an organization reader", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "platform.dataplane-health-ui");
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.SelfManagedRegions);
+    // The beforeEach default leaves ManageDataplanes false, standing in for a reader.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Regions")).not.toBeInTheDocument();
+  });
+
+  it("shows the Regions nav link for a data plane manager when the flag and the feature are on", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "platform.dataplane-health-ui");
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.SelfManagedRegions);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageDataplanes
+    );
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.getByRole("link", { name: "Regions" })).toHaveAttribute("href", "/organizationRegions");
+  });
+
   it("hides the Billing nav link for an organization without billing history when selfServePlusPlan is on", async () => {
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseGeneratedIntent.mockImplementation(

@@ -1,0 +1,43 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$bar-height: 8px;
+
+.bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: $bar-height;
+  border-radius: $bar-height * 0.5;
+  overflow: hidden;
+  background-color: colors.$grey-300;
+}
+
+.segmentContainer {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.segment {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.healthy {
+  background-color: colors.$green-400;
+}
+
+.degraded {
+  background-color: colors.$yellow-500;
+}
+
+.unhealthy {
+  background-color: colors.$red-400;
+}
+
+.unknown {
+  background-color: colors.$grey-300;
+}

@@ -18,15 +18,40 @@ import { RegionsTable } from "pages/SettingsPage/components/RegionsTable";
 
 import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettingsForm";
 
+// With the flag on, self-managed regions move to the Regions page. Pro organizations keep the table here.
+const RegionsSection: React.FC = () => {
+  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
+  const supportsSelfManagedRegions = useFeature(FeatureItem.SelfManagedRegions);
+  const isDataplaneHealthUiEnabled = useExperiment("platform.dataplane-health-ui");
+
+  if (!supportsRegionsTable) {
+    return null;
+  }
+  if (!supportsSelfManagedRegions) {
+    return (
+      <>
+        <Separator />
+        <RegionsTable />
+      </>
+    );
+  }
+  if (isDataplaneHealthUiEnabled) {
+    return null;
+  }
+  return (
+    <>
+      <Separator />
+      <NestedRegionsView />
+    </>
+  );
+};
+
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
   const { formatMessage } = useIntl();
   const organizationId = useCurrentOrganizationId();
   const isDownloadDiagnosticsFlagEnabled = useExperiment("settings.downloadDiagnostics");
   const isDownloadDiagnosticsFeatureEnabled = useFeature(FeatureItem.DiagnosticsExport);
-  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
-  const useNestedRegionsView = useFeature(FeatureItem.SelfManagedRegions);
-
   // if EITHER flag OR feature is enabled, provide diagnostics
   const isDownloadDiagnosticsEnabled = isDownloadDiagnosticsFlagEnabled || isDownloadDiagnosticsFeatureEnabled;
 
@@ -51,12 +76,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
       </FlexContainer>
       <UpdateOrganizationSettingsForm />
 
-      {supportsRegionsTable && (
-        <>
-          <Separator />
-          {useNestedRegionsView ? <NestedRegionsView /> : <RegionsTable />}
-        </>
-      )}
+      <RegionsSection />
 
       {canDownloadDiagnostics && (
         <>

@@ -1,0 +1,21 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.card {
+  padding: variables.$spacing-xl variables.$spacing-lg;
+  border-top: variables.$border-thin solid colors.$grey-100;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-xs;
+  padding: variables.$spacing-md;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$grey-30;
+}

@@ -28,7 +28,7 @@ export const useNestedRegionsData = () => {
   const organizationId = useCurrentOrganizationId();
   const dataplaneGroups = useListDataplaneGroups();
   const { data: workspacesData } = useListWorkspacesInOrganization({ organizationId });
-  const { data: healthData } = useListDataplaneHealth();
+  const { data: healthData } = useListDataplaneHealth({ refetchInterval: 5_000 });
 
   const regionsData = useMemo(() => {
     const workspaces = workspacesData?.pages[0].workspaces ?? [];

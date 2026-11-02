@@ -5,7 +5,11 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { listDataplaneHealth } from "../generated/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 
-export const useListDataplaneHealth = () => {
+interface UseListDataplaneHealthOptions {
+  refetchInterval: number;
+}
+
+export const useListDataplaneHealth = ({ refetchInterval }: UseListDataplaneHealthOptions) => {
   const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
 
@@ -17,7 +21,7 @@ export const useListDataplaneHealth = () => {
     },
     {
       suspense: true,
-      refetchInterval: 5000, // Poll every 5 seconds
+      refetchInterval,
     }
   );
 

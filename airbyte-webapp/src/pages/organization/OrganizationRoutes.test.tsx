@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import { useExperiment } from "core/services/Experiment";
-import { useFeature } from "core/services/features";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { useGeneratedIntent } from "core/utils/rbac";
 
@@ -39,6 +39,7 @@ jest.mock("core/services/features", () => ({
   FeatureItem: {
     AllowAuditLogs: "AllowAuditLogs",
     AllowUpdateSSOConfig: "AllowUpdateSSOConfig",
+    SelfManagedRegions: "SelfManagedRegions",
   },
   useFeature: jest.fn(),
 }));
@@ -53,6 +54,7 @@ jest.mock("core/utils/rbac", () => ({
     ManageOrganizationBilling: "ManageOrganizationBilling",
     ViewOrganizationUsage: "ViewOrganizationUsage",
     UpdateOrganizationPermissions: "UpdateOrganizationPermissions",
+    ManageDataplanes: "ManageDataplanes",
   },
   useGeneratedIntent: jest.fn(),
 }));
@@ -71,6 +73,10 @@ jest.mock("pages/SettingsPage/OrganizationSettingsPage", () => ({
 jest.mock("pages/SettingsPage/pages/ConnectorsPage", () => ({
   DestinationsPage: () => null,
   SourcesPage: () => null,
+}));
+
+jest.mock("pages/SettingsPage/pages/Organization/OrganizationRegionsPage", () => ({
+  OrganizationRegionsPage: () => <div data-testid="organization-regions-page" />,
 }));
 
 jest.mock("pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage", () => ({
@@ -146,6 +152,43 @@ describe("OrganizationRoutes", () => {
     mockUseFeature.mockReturnValue(false);
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(false);
+  });
+
+  const renderRegionsRoute = () =>
+    render(
+      <MemoryRouter initialEntries={["/organization/test-org/settings/organizationRegions"]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+  it("registers the Regions route for a data plane manager when the flag and the feature are on", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "platform.dataplane-health-ui");
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.SelfManagedRegions);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === "ViewOrganizationSettings" || intent === "ManageDataplanes"
+    );
+
+    renderRegionsRoute();
+
+    await waitFor(() => expect(screen.getByTestId("organization-regions-page")).toBeInTheDocument());
+  });
+
+  it("redirects the Regions route to General for an organization reader", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "platform.dataplane-health-ui");
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.SelfManagedRegions);
+    mockUseGeneratedIntent.mockImplementation((intent) => intent === "ViewOrganizationSettings");
+
+    renderRegionsRoute();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/settings/organization")
+    );
+    expect(screen.queryByTestId("organization-regions-page")).not.toBeInTheDocument();
   });
 
   it("redirects non-admin organization settings wildcard routes to organization workspaces", async () => {

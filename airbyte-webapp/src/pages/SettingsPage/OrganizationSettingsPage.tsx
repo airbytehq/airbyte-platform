@@ -15,6 +15,7 @@ import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/feature
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { SettingsRoutePaths } from "pages/routePaths";
+import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/useCanViewRegionsPage";
 
 export const OrganizationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -29,6 +30,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
   const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
+  const showRegionsLink = useCanViewRegionsPage();
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
   // security on all eight group endpoints. No group-specific intent exists.
@@ -102,6 +104,13 @@ export const OrganizationSettingsPage: React.FC = () => {
                     iconType="lock"
                     name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
                     to={SettingsRoutePaths.OrganizationSSO}
+                  />
+                )}
+                {showRegionsLink && (
+                  <SettingsLink
+                    iconType="globe"
+                    name={formatMessage({ id: "settings.organizationSettings.regions" })}
+                    to={SettingsRoutePaths.OrganizationRegions}
                   />
                 )}
                 {defaultWorkspace && (

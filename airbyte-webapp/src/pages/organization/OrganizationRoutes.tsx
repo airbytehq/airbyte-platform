@@ -16,7 +16,9 @@ import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organi
 import { OrganizationAuditLogsPage } from "pages/SettingsPage/pages/Organization/OrganizationAuditLogsPage";
 import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/OrganizationGroupsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
+import { OrganizationRegionsPage } from "pages/SettingsPage/pages/Organization/OrganizationRegionsPage";
 import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
+import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/useCanViewRegionsPage";
 
 import { ContextLayerRoutePaths, RoutePaths, SettingsRoutePaths } from "../routePaths";
 
@@ -45,6 +47,7 @@ export const OrganizationRoutes: React.FC = () => {
   const isCloudApp = useIsCloudApp();
   const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
   const showSemanticSearch = useExperiment("platform.fusion-semantic-search-ui");
+  const showRegionsRoute = useCanViewRegionsPage();
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
   // security on all eight group endpoints. No group-specific intent exists.
@@ -100,6 +103,9 @@ export const OrganizationRoutes: React.FC = () => {
           )}
           {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
             <Route path={SettingsRoutePaths.OrganizationAuditLogs} element={<OrganizationAuditLogsPage />} />
+          )}
+          {showRegionsRoute && (
+            <Route path={SettingsRoutePaths.OrganizationRegions} element={<OrganizationRegionsPage />} />
           )}
           {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
