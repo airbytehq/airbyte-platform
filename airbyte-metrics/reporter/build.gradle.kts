@@ -9,6 +9,8 @@ configurations {
 }
 
 dependencies {
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
