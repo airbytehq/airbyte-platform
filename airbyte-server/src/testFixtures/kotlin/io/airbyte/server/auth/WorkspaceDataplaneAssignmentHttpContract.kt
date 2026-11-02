@@ -177,6 +177,7 @@ abstract class WorkspaceDataplaneAssignmentHttpContract {
           assertEquals(DEFAULT_GROUP, fixture.saved.dataplaneGroupId)
           verify(exactly = 0) { fixture.workspaces.writeWorkspaceWithSecrets(any()) }
           verify(exactly = 0) { fixture.workspaces.writeStandardWorkspaceNoSecrets(any()) }
+          verify(exactly = 0) { fixture.workspaces.writeWorkspacePreservingWebhookConfigs(any(), any()) }
         }
         if (!human) {
           verify(exactly = 0) { fixture.userPersistence.getDefaultUser() }
@@ -264,6 +265,7 @@ abstract class WorkspaceDataplaneAssignmentHttpContract {
       every { workspaces.getWorkspaceBySlugOptional("fixture", true) } returns Optional.empty()
       every { workspaces.writeWorkspaceWithSecrets(any()) } answers { saved = firstArg() }
       every { workspaces.writeStandardWorkspaceNoSecrets(any()) } answers { saved = firstArg() }
+      every { workspaces.writeWorkspacePreservingWebhookConfigs(any(), any()) } answers { saved = firstArg() }
     }
 
     val data =
@@ -313,6 +315,7 @@ abstract class WorkspaceDataplaneAssignmentHttpContract {
         roleResolver = roles,
         scimConfigurationService = mockk(),
         scimAccessGate = mockk(),
+        operationsHandler = mockk(),
       )
 
     fun assignDirectly(
