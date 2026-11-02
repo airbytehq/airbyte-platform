@@ -8,6 +8,7 @@ import { CLOUD_EDITION } from "core/utils/app";
 import { loadDatadog } from "core/utils/datadog";
 import { loadConsentManager } from "core/utils/dataPrivacy";
 import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
+import { preloadRouteCode } from "pages/preloadRouteCode";
 
 import "react-reflex/styles.css";
 import "./dayjs-setup";
@@ -15,6 +16,8 @@ import "./scss/global.scss";
 
 const CloudApp = lazy(() => import(`cloud/App`));
 const App = lazy(() => import(`./App`));
+
+preloadRouteCode(window.location.pathname);
 
 loadConfig()
   .then((config) => {
