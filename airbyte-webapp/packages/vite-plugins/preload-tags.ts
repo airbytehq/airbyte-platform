@@ -1,8 +1,16 @@
-import type { Plugin, HtmlTagDescriptor } from "vite";
+import type { Plugin, HtmlTagDescriptor, Rollup } from "vite";
 
 import path from "node:path";
 
 import { lookup as mimeType } from "mime-types";
+
+const MONACO_MODULE_PATH = /(?:^|[\\/])node_modules[\\/](?:monaco-editor|@monaco-editor)[\\/]/;
+
+// Monaco language/mode chunks load on demand when an editor needs them, so prefetching them on every page wastes bandwidth.
+const isMonacoLanguageChunk = (output: Rollup.OutputChunk | Rollup.OutputAsset): boolean =>
+  output.type === "chunk" &&
+  output.moduleIds.length > 0 &&
+  output.moduleIds.every((moduleId) => MONACO_MODULE_PATH.test(moduleId));
 
 export function preloadTags(): Plugin {
   let basePath: string;
@@ -23,7 +31,11 @@ export function preloadTags(): Plugin {
 
         const tags: HtmlTagDescriptor[] = [];
 
-        for (const file of Object.keys(bundle)) {
+        for (const [file, output] of Object.entries(bundle)) {
+          if (isMonacoLanguageChunk(output)) {
+            continue;
+          }
+
           const mime = mimeType(file);
           const href = `${basePath}${file}`;
           if (mime === "application/javascript") {
