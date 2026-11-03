@@ -21,6 +21,7 @@ const ControlsWithForm = ({
   onSubmitWithoutCheck,
   isEditMode = false,
   isDraftMode = false,
+  isSavingDraft = false,
   dirty = true,
   isValid = false,
   emptyRequiredFields = [],
@@ -30,6 +31,7 @@ const ControlsWithForm = ({
   onSubmitWithoutCheck?: () => Promise<void>;
   isEditMode?: boolean;
   isDraftMode?: boolean;
+  isSavingDraft?: boolean;
   dirty?: boolean;
   isValid?: boolean;
   emptyRequiredFields?: string[];
@@ -51,6 +53,7 @@ const ControlsWithForm = ({
         hasDefinition
         isEditMode={isEditMode}
         isDraftMode={isDraftMode}
+        isSavingDraft={isSavingDraft}
         onSaveDraft={onSaveDraft}
         onSubmitWithoutCheck={onSubmitWithoutCheck}
         errorMessage={errorMessage}
@@ -123,6 +126,12 @@ describe("Controls", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save as a draft" }));
 
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables Save as a draft while a draft is saving", async () => {
+    await render(<ControlsWithForm onSaveDraft={jest.fn().mockResolvedValue(undefined)} isSavingDraft />);
+
+    expect(screen.getByRole("button", { name: "Save as a draft" })).toBeDisabled();
   });
 
   it("allows an unchanged valid edit-mode draft to be set up", async () => {

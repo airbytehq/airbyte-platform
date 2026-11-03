@@ -25,29 +25,34 @@ const mockTrackTestConnectorFailure = jest.fn();
 const mockTrackTestConnectorStarted = jest.fn();
 const mockTrackTestConnectorSuccess = jest.fn();
 let mockOnCheckSection: ((values: typeof formValues) => Promise<unknown>) | undefined;
+const mockMarkFormAsSaved = jest.fn();
 
 jest.mock("area/connector/components/ConnectorForm", () => ({
   ConnectorForm: ({
     onSubmit,
     onCheckSection,
     formHeader,
+    isSavingDraft,
     renderFooter,
   }: {
     onSubmit: (values: typeof formValues) => Promise<void>;
     onCheckSection: (values: typeof formValues) => Promise<unknown>;
     formHeader: React.ReactNode;
+    isSavingDraft?: boolean;
     renderFooter: (props: {
       dirty: boolean;
       isSubmitting: boolean;
       isValid: boolean;
       resetConnectorForm: jest.Mock;
       getValues: () => typeof formValues;
+      markFormAsSaved: () => void;
     }) => React.ReactNode;
   }) => {
     mockOnCheckSection = onCheckSection;
     return (
       <>
         {formHeader}
+        <span data-testid="form-saving-draft">{String(Boolean(isSavingDraft))}</span>
         <button type="button" onClick={() => onSubmit(formValues).catch(() => undefined)}>
           Submit form
         </button>
@@ -57,6 +62,7 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
           isValid: false,
           resetConnectorForm: jest.fn(),
           getValues: () => formValues,
+          markFormAsSaved: mockMarkFormAsSaved,
         })}
       </>
     );
@@ -66,7 +72,7 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
 jest.mock("./components/Controls", () => ({
   Controls: ({ onSaveDraft }: { onSaveDraft?: () => Promise<void> }) =>
     onSaveDraft ? (
-      <button type="button" onClick={() => onSaveDraft()}>
+      <button type="button" onClick={() => onSaveDraft().catch(() => undefined)}>
         Save draft
       </button>
     ) : null,
@@ -117,8 +123,10 @@ jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => ({
 
 const mockUseTestConnectorCommand = useTestConnectorCommand as jest.MockedFunction<typeof useTestConnectorCommand>;
 
-const renderDraftCard = async (testConnector: jest.Mock) => {
-  const saveDraft = jest.fn().mockResolvedValue({ ...mockSource, isDraft: true });
+const renderDraftCard = async (
+  testConnector: jest.Mock,
+  saveDraft: jest.Mock = jest.fn().mockResolvedValue({ ...mockSource, isDraft: true })
+) => {
   const onDraftPromoted = jest.fn().mockResolvedValue(undefined);
   mockUseTestConnectorCommand.mockReturnValue({
     testConnector,
@@ -197,6 +205,69 @@ describe("ConnectorCard draft setup", () => {
     expect(testConnector).toHaveBeenCalledWith(undefined, expect.objectContaining({ sourceId: mockSource.sourceId }));
     expect(onDraftPromoted).not.toHaveBeenCalled();
     expect(mockTrackTestConnectorSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("ConnectorCard save as a draft", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe("while the draft is saving", () => {
+    const renderPendingSave = async () => {
+      let settleSave!: { resolve: (draft: unknown) => void; reject: (error: Error) => void };
+      const saveDraft = jest.fn(
+        () =>
+          new Promise((resolve, reject) => {
+            settleSave = { resolve, reject };
+          })
+      );
+      await renderDraftCard(jest.fn(), saveDraft);
+      await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+      return settleSave;
+    };
+    const formSavingDraft = () => screen.getByTestId("form-saving-draft");
+
+    it("disables the form", async () => {
+      const settleSave = await renderPendingSave();
+
+      expect(formSavingDraft()).toHaveTextContent("true");
+
+      await act(async () => settleSave.resolve({ ...mockSource, isDraft: true }));
+    });
+
+    it("enables the form again once the draft saved", async () => {
+      const settleSave = await renderPendingSave();
+
+      await act(async () => settleSave.resolve({ ...mockSource, isDraft: true }));
+
+      expect(formSavingDraft()).toHaveTextContent("false");
+    });
+
+    it("enables the form again when the draft fails to save", async () => {
+      const settleSave = await renderPendingSave();
+
+      await act(async () => settleSave.reject(new Error("save failed")));
+
+      expect(formSavingDraft()).toHaveTextContent("false");
+    });
+  });
+
+  it("marks the form as saved once the draft saves", async () => {
+    await renderDraftCard(jest.fn());
+
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(mockMarkFormAsSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mark the form as saved when the draft fails to save", async () => {
+    await renderDraftCard(jest.fn(), jest.fn().mockRejectedValue(new Error("save failed")));
+
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(mockMarkFormAsSaved).not.toHaveBeenCalled();
   });
 });
 

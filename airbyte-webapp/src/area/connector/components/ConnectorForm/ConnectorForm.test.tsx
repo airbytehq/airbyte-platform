@@ -13,7 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useFormState } from "react-hook-form";
 
 import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockExperiments } from "test-utils/mockExperiments";
@@ -328,6 +328,7 @@ describe("Connector form", () => {
     onSubmit = async (values) => {
       result = values;
     },
+    isSavingDraft,
   }: {
     formValuesOverride?: Record<string, unknown>;
     specificationOverride?: Partial<ConnectorDefinitionSpecificationRead>;
@@ -339,6 +340,7 @@ describe("Connector form", () => {
     title?: string;
     description?: React.ReactNode;
     onSubmit?: ConnectorFormProps["onSubmit"];
+    isSavingDraft?: boolean;
   } = {}) {
     const renderResult = await render(
       <ConnectorForm
@@ -346,6 +348,7 @@ describe("Connector form", () => {
         formType="source"
         formValues={{ name: "test-name", connectionConfiguration: { ...formValuesOverride } }}
         onSubmit={onSubmit}
+        isSavingDraft={isSavingDraft}
         isEditMode={Boolean(formValuesOverride)}
         renderFooter={renderFooter}
         formAutomation={formAutomation}
@@ -454,6 +457,66 @@ describe("Connector form", () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+  });
+
+  it("should disable the fields while a draft is saving", async () => {
+    const container = await renderForm({ isSavingDraft: true });
+
+    expect(getInputByName(container, "connectionConfiguration.host")).toBeDisabled();
+  });
+
+  describe("marking the form as saved", () => {
+    const renderFooter: ConnectorFormProps["renderFooter"] = ({ dirty, markFormAsSaved }) => (
+      <>
+        <output data-testid="dirty">{String(dirty)}</output>
+        <button type="button" onClick={markFormAsSaved}>
+          Mark as saved
+        </button>
+      </>
+    );
+    const dirty = () => screen.getByTestId("dirty");
+
+    it("should not be dirty after the form is marked as saved", async () => {
+      const container = await renderForm({ renderFooter });
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db.example.com");
+
+      await userEvent.click(screen.getByRole("button", { name: "Mark as saved" }));
+
+      expect(dirty()).toHaveTextContent("false");
+    });
+
+    it("should be dirty again after a change that follows marking the form as saved", async () => {
+      const container = await renderForm({ renderFooter });
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db");
+      await userEvent.click(screen.getByRole("button", { name: "Mark as saved" }));
+
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, ".example.com");
+
+      expect(dirty()).toHaveTextContent("true");
+    });
+
+    it("should keep the typed values after the form is marked as saved", async () => {
+      const container = await renderForm({ renderFooter });
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "db.example.com");
+
+      await userEvent.click(screen.getByRole("button", { name: "Mark as saved" }));
+
+      expect(getInputByName(container, "connectionConfiguration.host")).toHaveValue("db.example.com");
+    });
+
+    it("should keep the validation errors after the form is marked as saved", async () => {
+      const ErrorCount = () => {
+        const { errors } = useFormState();
+        return <output data-testid="error-count">{Object.keys(errors.connectionConfiguration ?? {}).length}</output>;
+      };
+      const container = await renderForm({ renderFooter, formAutomation: <ErrorCount /> });
+      await userEvent.type(getInputByName(container, "connectionConfiguration.host")!, "x");
+      await userEvent.clear(getInputByName(container, "connectionConfiguration.host")!);
+
+      await userEvent.click(screen.getByRole("button", { name: "Mark as saved" }));
+
+      expect(screen.getByTestId("error-count")).toHaveTextContent("1");
+    });
   });
 
   describe("empty required fields", () => {

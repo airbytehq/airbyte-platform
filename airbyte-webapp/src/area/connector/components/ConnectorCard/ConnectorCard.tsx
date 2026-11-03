@@ -121,6 +121,7 @@ export const ConnectorCard = <T extends ConnectorT>({
     props.formType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
   );
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftConnector, setDraftConnector] = useState<T | undefined>(
     props.isEditMode && props.connector.isDraft ? props.connector : undefined
   );
@@ -317,6 +318,7 @@ export const ConnectorCard = <T extends ConnectorT>({
       selectedConnectorDefinition={selectedConnectorDefinition}
       selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
       isTestConnectionInProgress={isTestConnectionInProgress}
+      isSavingDraft={isSavingDraft}
       connectionTestSuccess={connectionTestSuccess}
       onSubmit={(values) => onHandleSubmit(values, skipCheckConnection)}
       onCheckSection={checkSection}
@@ -332,6 +334,7 @@ export const ConnectorCard = <T extends ConnectorT>({
         canEdit,
         resetConnectorForm,
         getValues,
+        markFormAsSaved,
       }) =>
         selectedConnectorDefinitionSpecification && (
           <>
@@ -343,6 +346,7 @@ export const ConnectorCard = <T extends ConnectorT>({
             <Controls
               isEditMode={Boolean(isEditMode)}
               isDraftMode={Boolean(onSaveDraft)}
+              isSavingDraft={isSavingDraft}
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
@@ -384,18 +388,24 @@ export const ConnectorCard = <T extends ConnectorT>({
               onSaveDraft={
                 onSaveDraft
                   ? async () => {
-                      const values = getValues();
-                      const connectorCardValues = {
-                        ...values,
-                        serviceType: Connector.id(selectedConnectorDefinition),
-                      };
-                      const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
-                      setDraftConnector(savedDraft);
-                      registerNotification({
-                        id: "connector.draftSaved",
-                        type: "success",
-                        text: formatMessage({ id: "connectorForm.draftSaved" }, { name: values.name }),
-                      });
+                      setIsSavingDraft(true);
+                      try {
+                        const values = getValues();
+                        const connectorCardValues = {
+                          ...values,
+                          serviceType: Connector.id(selectedConnectorDefinition),
+                        };
+                        const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
+                        setDraftConnector(savedDraft);
+                        markFormAsSaved();
+                        registerNotification({
+                          id: "connector.draftSaved",
+                          type: "success",
+                          text: formatMessage({ id: "connectorForm.draftSaved" }, { name: values.name }),
+                        });
+                      } finally {
+                        setIsSavingDraft(false);
+                      }
                     }
                   : undefined
               }

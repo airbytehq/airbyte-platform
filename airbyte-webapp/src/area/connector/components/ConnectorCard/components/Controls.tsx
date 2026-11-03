@@ -46,6 +46,7 @@ interface IProps {
   isDraftMode?: boolean;
   leftSlot?: React.ReactNode;
   onSubmitWithoutCheck?: () => Promise<void>;
+  isSavingDraft?: boolean;
   onSaveDraft?: () => Promise<void>;
   /** The `id` of the `<form>` element. The submit button needs it when it renders in the footer slot, outside the form. */
   formElementId: string;
@@ -84,6 +85,7 @@ export const Controls: React.FC<IProps> = ({
   onCancelClick,
   leftSlot = null,
   onSubmitWithoutCheck,
+  isSavingDraft = false,
   onSaveDraft,
   formElementId,
   canEdit,
@@ -95,7 +97,6 @@ export const Controls: React.FC<IProps> = ({
     hasDefinition &&
     (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
   const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
   const fillRequiredFieldsMessage = useFillRequiredFieldsMessage(emptyRequiredFields);
   const sectionProgress = useSectionProgress();
@@ -191,14 +192,7 @@ export const Controls: React.FC<IProps> = ({
             variant="secondary"
             isLoading={isSavingDraft}
             disabled={isSubmitting || isSavingDraft}
-            onClick={async () => {
-              setIsSavingDraft(true);
-              try {
-                await onSaveDraft();
-              } finally {
-                setIsSavingDraft(false);
-              }
-            }}
+            onClick={onSaveDraft}
           >
             <FormattedMessage id="connectorForm.saveDraft" />
           </Button>

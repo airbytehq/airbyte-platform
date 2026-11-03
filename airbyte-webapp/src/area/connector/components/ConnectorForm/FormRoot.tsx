@@ -30,6 +30,11 @@ interface RenderFooterArgs {
   isEditMode?: boolean;
   formType: "source" | "destination";
   getValues: () => ConnectorFormValues;
+  /**
+   * Treats the current values as saved: the form is no longer dirty until the next change. Unlike
+   * `resetConnectorForm`, it keeps the values the user entered, along with the validation errors and touched fields.
+   */
+  markFormAsSaved: () => void;
 }
 
 export interface FormRootProps {
@@ -40,6 +45,8 @@ export interface FormRootProps {
   onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
   connectionTestSuccess?: boolean;
   isTestConnectionInProgress?: boolean;
+  /** Disables the fields while a draft saves, so edits cannot slip in between the saved values and the form. */
+  isSavingDraft?: boolean;
   bodyClassName?: string;
   headerBlock?: ReactNode;
   title?: string;
@@ -76,6 +83,7 @@ const FormFooter: React.FC<{
 
 export const FormRoot: React.FC<FormRootProps> = ({
   isTestConnectionInProgress = false,
+  isSavingDraft = false,
   formFields,
   groupStructure,
   sections,
@@ -91,6 +99,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
 }) => {
   const form = useFormContext<ConnectorFormValues>();
   const isSubmitting = form.formState.isSubmitting;
+  const isFormDisabled = isSubmitting || isTestConnectionInProgress || isSavingDraft;
   const dirty = form.formState.isDirty;
   const isValid = form.formState.isValid;
   const { resetConnectorForm, isEditMode, formType } = useConnectorForm();
@@ -108,6 +117,8 @@ export const FormRoot: React.FC<FormRootProps> = ({
         isEditMode,
         formType,
         getValues: () => castValues(form.getValues()),
+        markFormAsSaved: () =>
+          form.reset(castValues(form.getValues()), { keepValues: true, keepErrors: true, keepTouched: true }),
       }}
     />
   );
@@ -117,7 +128,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
       blocks={formFields}
       groupStructure={groupStructure}
       sections={sections}
-      disabled={isSubmitting || isTestConnectionInProgress}
+      disabled={isFormDisabled}
       header={headerBlock}
       title={props.title}
       description={props.description}
@@ -138,7 +149,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
       rootLevel
       blocks={formFields}
       groupStructure={groupStructure}
-      disabled={isSubmitting || isTestConnectionInProgress}
+      disabled={isFormDisabled}
     />
   );
   return (
