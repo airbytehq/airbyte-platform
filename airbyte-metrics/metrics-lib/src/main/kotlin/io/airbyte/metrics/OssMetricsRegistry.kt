@@ -752,6 +752,18 @@ enum class OssMetricsRegistry(
     metricName = "data_obs_outlier_check_errors",
     metricDescription = "number of errors encountered during the outlier check",
   ),
+  WORKLOAD_PRUNING_DELETED(
+    metricName = "workload_pruning_deleted",
+    metricDescription = "number of workloads deleted during scheduled pruning",
+  ),
+  WORKLOAD_PRUNING_DURATION(
+    metricName = "workload_pruning_duration",
+    metricDescription = "duration in milliseconds of scheduled workload pruning",
+  ),
+  WORKLOAD_PRUNING_FAILURE(
+    metricName = "workload_pruning_failure",
+    metricDescription = "number of failed scheduled workload pruning runs",
+  ),
   DATABASE_PRUNING_JOBS_DELETED(
     metricName = "database_pruning_jobs_deleted",
     metricDescription = "number of jobs deleted during database pruning operation",

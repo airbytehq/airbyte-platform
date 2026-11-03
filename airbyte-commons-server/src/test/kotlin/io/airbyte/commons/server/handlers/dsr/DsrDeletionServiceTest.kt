@@ -16,7 +16,9 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.User
+import io.airbyte.config.persistence.DsrConfigPersistence
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.persistence.WorkloadPurge
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretsRepositoryWriter
@@ -37,8 +39,6 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
-import io.airbyte.db.ContextQueryFunction
-import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
 import io.airbyte.domain.models.SecretConfig
 import io.airbyte.domain.models.SecretConfigId
@@ -63,8 +63,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifyOrder
-import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -73,7 +71,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.reflect.InvocationTargetException
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -99,18 +96,19 @@ internal class DsrDeletionServiceTest {
   private lateinit var secretPersistenceService: SecretPersistenceService
   private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
   private lateinit var secretPersistence: SecretPersistence
+  private lateinit var workloadPurge: WorkloadPurge
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
   private lateinit var dsrAuditLogDeletion: DsrAuditLogDeletion
-  private lateinit var configDatabase: Database
+  private lateinit var dsrConfigPersistence: DsrConfigPersistence
   private lateinit var metricClient: MetricClient
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var objectMapper: ObjectMapper
   private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
   private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
   private lateinit var service: DsrDeletionService
-  private var configDeletionCounts = DsrDeletionService.ConfigDeletionCounts.empty()
+  private var configDeletionCounts = DsrConfigPersistence.ConfigDeletionCounts.empty()
 
   private val email = "davin+2@example.com"
   private val datagrailId = "dg-abc-123"
@@ -150,6 +148,7 @@ internal class DsrDeletionServiceTest {
     secretPersistenceService = mockk(relaxed = true)
     secretsRepositoryWriter = mockk(relaxed = true)
     secretPersistence = mockk(relaxed = true)
+    workloadPurge = mockk(relaxed = true)
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
     deletionRequestTimeoutService = mockk(relaxed = true)
@@ -160,18 +159,10 @@ internal class DsrDeletionServiceTest {
     objectMapper = jacksonObjectMapper()
     executionHeartbeatExecutor = mockk(relaxed = true)
     executionHeartbeatFuture = mockk(relaxed = true)
-    configDeletionCounts = DsrDeletionService.ConfigDeletionCounts.empty()
+    configDeletionCounts = DsrConfigPersistence.ConfigDeletionCounts.empty()
 
-    configDatabase = mockk()
-    val dslContext = DSL.using(org.jooq.SQLDialect.POSTGRES)
-    every { configDatabase.query<Any>(any<ContextQueryFunction<Any>>()) } answers {
-      val fn = firstArg<ContextQueryFunction<Any>>()
-      fn.query(dslContext)
-    }
-    every { configDatabase.transaction<DsrDeletionService.ConfigDeletionCounts>(any()) } answers {
-      val fn = firstArg<ContextQueryFunction<DsrDeletionService.ConfigDeletionCounts>>()
-      fn.query(dslContext)
-    }
+    dsrConfigPersistence = mockk()
+    every { dsrConfigPersistence.delete(any(), any()) } answers { configDeletionCounts }
 
     every { userPersistence.getUserByEmail(email) } returns
       Optional.of(
@@ -282,7 +273,7 @@ internal class DsrDeletionServiceTest {
   }
 
   private fun buildService(dsrAuditLogDeletion: DsrAuditLogDeletion? = this.dsrAuditLogDeletion): DsrDeletionService =
-    object : DsrDeletionService(
+    DsrDeletionService(
       userPersistence = userPersistence,
       workspaceRepository = workspaceRepository,
       organizationRepository = organizationRepository,
@@ -303,18 +294,12 @@ internal class DsrDeletionServiceTest {
       objectMapper = objectMapper,
       metricClient = metricClient,
       featureFlagClient = featureFlagClient,
-      configDatabase = configDatabase,
+      dsrConfigPersistence = dsrConfigPersistence,
+      workloadPurge = workloadPurge,
       executionTimeout = Duration.ofMinutes(30),
       executionHeartbeatExecutor = executionHeartbeatExecutor,
       executionHeartbeatInterval = Duration.ofMinutes(1),
-    ) {
-      override fun hardDeleteConfigRows(
-        ctx: DSLContext,
-        manifest: DsrManifest,
-        datagrailId: String,
-        syncWorkloadIds: List<String>,
-      ): DsrDeletionService.ConfigDeletionCounts = configDeletionCounts
-    }
+    )
 
   private fun captureActiveFinalization(
     requestId: UUID,
@@ -357,79 +342,6 @@ internal class DsrDeletionServiceTest {
       1
     }
     return finalizations
-  }
-
-  @Test
-  fun `workload prefix range condition renders C collation`() {
-    val method =
-      DsrDeletionService::class.java.getDeclaredMethod(
-        "prefixRangeCondition",
-        org.jooq.Field::class.java,
-        String::class.java,
-      )
-    method.isAccessible = true
-
-    val condition =
-      method.invoke(
-        service,
-        DSL.field(DSL.name("public", "workload", "id"), String::class.java),
-        "${connectionId}_",
-      ) as org.jooq.Condition
-    val sql = DSL.using(org.jooq.SQLDialect.POSTGRES).renderInlined(condition)
-
-    assertTrue(Regex("(?i)collate\\s+\"C\"").findAll(sql).count() >= 4, sql)
-  }
-
-  @Test
-  fun `workload prefix fallback skips lookup when scope is empty`() {
-    val method =
-      DsrDeletionService::class.java.getDeclaredMethod(
-        "selectDsrWorkloadIds",
-        DSLContext::class.java,
-        List::class.java,
-        List::class.java,
-        List::class.java,
-        List::class.java,
-        List::class.java,
-      )
-    method.isAccessible = true
-
-    val workloadIds =
-      method.invoke(
-        service,
-        DSL.using(org.jooq.SQLDialect.POSTGRES),
-        listOf(connectionId),
-        listOf(sourceId),
-        listOf(UUID.randomUUID()),
-        emptyList<UUID>(),
-        emptyList<UUID>(),
-      ) as List<*>
-
-    assertTrue(workloadIds.isEmpty())
-  }
-
-  @Test
-  fun `workload prefix guard rejects ids outside expected prefixes`() {
-    val method =
-      DsrDeletionService::class.java.getDeclaredMethod(
-        "validateDsrWorkloadIdsMatchExpectedPrefixes",
-        List::class.java,
-        List::class.java,
-      )
-    method.isAccessible = true
-
-    val unexpectedWorkloadId = "${UUID.randomUUID()}_123_0_sync"
-    val exception =
-      assertThrows<InvocationTargetException> {
-        method.invoke(
-          service,
-          listOf("${connectionId}_123_0_sync", unexpectedWorkloadId),
-          listOf("${connectionId}_", "${sourceId}_"),
-        )
-      }
-
-    assertTrue(exception.cause is IllegalStateException)
-    assertTrue(exception.cause!!.message!!.contains(unexpectedWorkloadId))
   }
 
   @Test
@@ -1240,7 +1152,7 @@ internal class DsrDeletionServiceTest {
       DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
     configDeletionCounts =
-      DsrDeletionService.ConfigDeletionCounts(
+      DsrConfigPersistence.ConfigDeletionCounts(
         connections = 1,
         actors = 2,
         builderProjects = 0,
@@ -1460,7 +1372,7 @@ internal class DsrDeletionServiceTest {
       IllegalStateException("must not use tombstone-filtered workspace secret storage lookup")
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
     configDeletionCounts =
-      DsrDeletionService.ConfigDeletionCounts(
+      DsrConfigPersistence.ConfigDeletionCounts(
         connections = 1,
         actors = 2,
         builderProjects = 0,
@@ -1572,7 +1484,7 @@ internal class DsrDeletionServiceTest {
     }
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
     configDeletionCounts =
-      DsrDeletionService.ConfigDeletionCounts(
+      DsrConfigPersistence.ConfigDeletionCounts(
         connections = 1,
         actors = 2,
         builderProjects = 0,
@@ -1592,6 +1504,85 @@ internal class DsrDeletionServiceTest {
     assertNull(finalizations.single().confirmErrors)
     verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) }
     verify(exactly = 1) { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) }
+  }
+
+  @Test
+  fun `workload deletion failure does not block required deletion`() {
+    val requestId = UUID.randomUUID()
+    val ids = listOf("${connectionId}_101_0_sync")
+    every { deletionRequestRepository.findById(requestId) } returns
+      Optional.of(
+        DataSubjectDeletionRequest(
+          id = requestId,
+          email = email,
+          emailHash = emailHash,
+          datagrailId = datagrailId,
+          status = DataSubjectDeletionStatus.running,
+          userId = userId,
+          requestedBy = requestedBy,
+          oncallIssueNumber = oncallIssueNumber,
+          manifest = objectMapper.writeValueAsString(manifest()),
+        ),
+      )
+    every { dbPrune.listSyncWorkloadIdsByScopes(any()) } returns ids
+    every { workloadPurge.deleteByIds(ids) } throws IllegalStateException("workload deletion unavailable")
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertTrue(result.errors.isEmpty())
+    assertEquals(DataSubjectDeletionStatus.completed, finalizations.single().finalStatus)
+    val cleanupCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals("delete_failed", cleanupCounts.get("sync_workload_cleanup_status").asText())
+    assertEquals(1, cleanupCounts.get("sync_workloads_targeted_count").asInt())
+    assertEquals(0, cleanupCounts.get("deleted_sync_workloads_count").asInt())
+    verify(exactly = 1) { dsrConfigPersistence.delete(any(), datagrailId) }
+    verify(exactly = 1) { workloadPurge.deleteByIds(ids) }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+        attributes = arrayOf(MetricAttribute("phase", "delete_workloads"), MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
+  }
+
+  @Test
+  fun `workload lookup failure does not block required deletion`() {
+    val requestId = UUID.randomUUID()
+    every { deletionRequestRepository.findById(requestId) } returns
+      Optional.of(
+        DataSubjectDeletionRequest(
+          id = requestId,
+          email = email,
+          emailHash = emailHash,
+          datagrailId = datagrailId,
+          status = DataSubjectDeletionStatus.running,
+          userId = userId,
+          requestedBy = requestedBy,
+          oncallIssueNumber = oncallIssueNumber,
+          manifest = objectMapper.writeValueAsString(manifest()),
+        ),
+      )
+    every { dbPrune.listSyncWorkloadIdsByScopes(any()) } throws RuntimeException("workload lookup unavailable")
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertTrue(result.errors.isEmpty())
+    assertEquals(DataSubjectDeletionStatus.completed, finalizations.single().finalStatus)
+    val cleanupCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals("lookup_failed", cleanupCounts.get("sync_workload_cleanup_status").asText())
+    assertEquals(0, cleanupCounts.get("sync_workloads_targeted_count").asInt())
+    verify(exactly = 0) { workloadPurge.deleteByIds(any()) }
+    verify(exactly = 1) { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+        attributes = arrayOf(MetricAttribute("phase", "list_sync_workloads"), MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
   }
 
   @Test
@@ -1615,7 +1606,7 @@ internal class DsrDeletionServiceTest {
       listOf("${connectionId}_101_0_sync")
     every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
       DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
-    every { configDatabase.transaction<DsrDeletionService.ConfigDeletionCounts>(any()) } throws
+    every { dsrConfigPersistence.delete(any(), any()) } throws
       RuntimeException("Config DB purge failed for $email")
     val finalizations = captureActiveFinalization(requestId)
 

@@ -192,6 +192,8 @@ object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-work
 
 object DisableDbPrune : Temporary<Boolean>(key = "platform.disable-db-prune", default = false)
 
+object EnableWorkloadPurge : Temporary<Boolean>(key = "platform.enable-workload-purge", default = false)
+
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)

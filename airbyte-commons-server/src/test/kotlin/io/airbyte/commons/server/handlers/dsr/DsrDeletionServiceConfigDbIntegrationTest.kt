@@ -14,7 +14,10 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.User
+import io.airbyte.config.persistence.DsrConfigPersistence
+import io.airbyte.config.persistence.DsrConfigPersistence.ConfigDeletionCounts
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.persistence.WorkloadPurge
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.SecretPersistence
@@ -52,6 +55,9 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DbPrune
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.micronaut.transaction.TransactionCallback
+import io.micronaut.transaction.TransactionOperations
+import io.micronaut.transaction.TransactionStatus
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -69,6 +75,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.sql.Connection
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Optional
@@ -107,6 +114,8 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
   private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
   private lateinit var service: TestDsrDeletionService
+  private lateinit var configPersistence: DsrConfigPersistence
+  private lateinit var workloadPurge: WorkloadPurge
 
   private val email = "davin.integration@example.com"
   private val datagrailId = "dg-integration-123"
@@ -200,6 +209,19 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     seedConfigDatabase()
     stubManifestDependencies()
 
+    val transactions = mockk<TransactionOperations<Connection>>()
+    every { transactions.executeWrite<Any>(any()) } answers {
+      val callback = firstArg<TransactionCallback<Connection, Any>>()
+      database!!.transaction { ctx ->
+        ctx.connectionResult { connection ->
+          val status = mockk<TransactionStatus<Connection>>()
+          every { status.connection } returns connection
+          callback.call(status)
+        }
+      }
+    }
+    configPersistence = DsrConfigPersistence(transactions, userPersistence)
+    workloadPurge = WorkloadPurge(transactions)
     service = TestDsrDeletionService()
   }
 
@@ -245,15 +267,27 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       objectMapper = objectMapper,
       metricClient = metricClient,
       featureFlagClient = TestClient(),
-      configDatabase = database!!,
+      dsrConfigPersistence = configPersistence,
+      workloadPurge = workloadPurge,
       executionHeartbeatExecutor = executionHeartbeatExecutor,
     ) {
     fun hardDeleteConfigRowsForTest(
-      ctx: DSLContext,
       manifest: DsrManifest,
       datagrailId: String,
-      syncWorkloadIds: List<String>,
-    ): ConfigDeletionCounts = hardDeleteConfigRows(ctx, manifest, datagrailId, syncWorkloadIds)
+    ): ConfigDeletionCounts =
+      configPersistence.delete(
+        DsrConfigPersistence.DeletionTargets(
+          userId = manifest.userId,
+          workspaceIds = manifest.workspaceIds,
+          organizationIds = manifest.organizationIds,
+          connectionIds = manifest.connectionIds,
+          sourceIds = manifest.sourceIds,
+          destinationIds = manifest.destinationIds,
+          connectorBuilderProjectIds = manifest.connectorBuilderProjectIds,
+          authUserIds = manifest.authUsers.map { it.authUserId },
+        ),
+        datagrailId,
+      )
   }
 
   @Test
@@ -302,7 +336,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertEquals(1, result.deletedAuthUsersCount)
     assertTrue(result.tombstonedUser)
     assertEquals(1, result.deletedKeycloakUserCount)
-    assertEquals(3, objectMapper.readTree(finalizations.single().executionCounts).get("deleted_jobs_count").asInt())
+    val cleanupCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(3, cleanupCounts.get("deleted_jobs_count").asInt())
+    assertEquals("completed", cleanupCounts.get("sync_workload_cleanup_status").asText())
+    assertEquals(1, cleanupCounts.get("sync_workloads_targeted_count").asInt())
+    assertEquals(1, cleanupCounts.get("deleted_sync_workloads_count").asInt())
 
     assertDeleted("connection", connectionId)
     assertDeleted("actor", sourceId)
@@ -322,12 +360,12 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertDeletedLong("data_worker_usage_reservation", "job_id", dataWorkerUsageReservationJobId)
     assertDeletedString("workload", "id", legacySyncWorkloadId)
     assertDeletedString("workload_queue", "workload_id", legacySyncWorkloadId)
-    assertDeletedString("workload", "id", orphanedSyncWorkloadId)
-    assertDeletedString("workload_queue", "workload_id", orphanedSyncWorkloadId)
-    assertDeletedString("workload", "id", actorCheckWorkloadId)
-    assertDeletedString("workload_queue", "workload_id", actorCheckWorkloadId)
-    assertDeletedString("workload", "id", actorDefinitionDiscoverWorkloadId)
-    assertDeletedString("workload_queue", "workload_id", actorDefinitionDiscoverWorkloadId)
+    assertPresentString("workload", "id", orphanedSyncWorkloadId)
+    assertPresentString("workload_queue", "workload_id", orphanedSyncWorkloadId)
+    assertPresentString("workload", "id", actorCheckWorkloadId)
+    assertPresentString("workload_queue", "workload_id", actorCheckWorkloadId)
+    assertPresentString("workload", "id", actorDefinitionDiscoverWorkloadId)
+    assertPresentString("workload_queue", "workload_id", actorDefinitionDiscoverWorkloadId)
     assertDeletedString("commands", "id", commandId)
     assertDeleted("workspace", workspaceId)
     assertDeleted("organization", organizationId)
@@ -405,7 +443,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
 
     assertThrows(IllegalStateException::class.java) {
       database!!.transaction { ctx ->
-        service.hardDeleteConfigRowsForTest(ctx, manifest(), datagrailId, emptyList())
+        service.hardDeleteConfigRowsForTest(manifest(), datagrailId)
       }
     }
 
@@ -504,7 +542,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         executor.submit {
           database!!.transaction { ctx ->
             deletionTransactionStarted.countDown()
-            service.hardDeleteConfigRowsForTest(ctx, staleManifest, datagrailId, emptyList())
+            service.hardDeleteConfigRowsForTest(staleManifest, datagrailId)
           }
         }
       assertTrue(deletionTransactionStarted.await(10, TimeUnit.SECONDS))
@@ -573,7 +611,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       val deletion =
         executor.submit {
           database!!.transaction { ctx ->
-            service.hardDeleteConfigRowsForTest(ctx, concurrentManifest, datagrailId, emptyList())
+            service.hardDeleteConfigRowsForTest(concurrentManifest, datagrailId)
           }
         }
       assertTrue(waitForAdvisoryLockWaiters(initialWaiters + 1))
@@ -627,7 +665,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       )
 
     database!!.transaction { ctx ->
-      service.hardDeleteConfigRowsForTest(ctx, memberManifest, datagrailId, emptyList())
+      service.hardDeleteConfigRowsForTest(memberManifest, datagrailId)
     }
 
     assertDeleted("scim_resource_mapping", mappingId)
@@ -646,7 +684,98 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   }
 
   @Test
-  fun `workload prefix range only deletes underscore-prefixed workload ids at the C collation boundary`() {
+  fun `required config deletion still cascades commands while leaving workloads`() {
+    service.hardDeleteConfigRowsForTest(manifest(), datagrailId)
+
+    assertDeletedString("commands", "id", commandId)
+    assertDeleted("workspace", workspaceId)
+    assertDeleted("organization", organizationId)
+    assertPresentString("workload", "id", legacySyncWorkloadId)
+    assertPresentString("workload_queue", "workload_id", legacySyncWorkloadId)
+    assertPresentString("commands", "id", unrelatedCommandId)
+  }
+
+  @Test
+  fun `required command cascade failure rolls back config deletion`() {
+    database!!.query { ctx ->
+      ctx.execute("CREATE TABLE dsr_command_blocker (command_id varchar REFERENCES commands(id))")
+      ctx.execute("INSERT INTO dsr_command_blocker VALUES (?)", commandId)
+    }
+    try {
+      assertThrows(org.jooq.exception.DataAccessException::class.java) {
+        service.hardDeleteConfigRowsForTest(manifest(), datagrailId)
+      }
+
+      assertPresent("workspace", workspaceId)
+      assertPresent("organization", organizationId)
+      assertPresent("actor", sourceId)
+      assertPresent("connection", connectionId)
+      assertPresentString("commands", "id", commandId)
+      assertPresent("auth_user", authUserRowId)
+      assertEquals(
+        email,
+        database!!.query {
+          it
+            .select(ConfigTables.USER.EMAIL)
+            .from(ConfigTables.USER)
+            .where(ConfigTables.USER.ID.eq(userId))
+            .fetchOne(ConfigTables.USER.EMAIL)
+        },
+      )
+    } finally {
+      database!!.query { it.execute("DROP TABLE dsr_command_blocker") }
+    }
+  }
+
+  @Test
+  fun `failed exact workload deletion rolls back its queue deletion while DSR completes required cleanup`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = executedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { dbPrune.listSyncWorkloadIdsByScopes(any()) } returns listOf(legacySyncWorkloadId)
+    database!!.query { ctx ->
+      ctx.execute("CREATE TABLE dsr_workload_blocker (workload_id varchar REFERENCES workload(id))")
+      ctx.execute("INSERT INTO dsr_workload_blocker VALUES (?)", legacySyncWorkloadId)
+    }
+    try {
+      val result = service.executeClaimedRequest(requestId)
+
+      assertEquals("COMPLETED", result.status)
+      assertTrue(result.errors.isEmpty())
+      assertDeleted("workspace", workspaceId)
+      assertDeleted("organization", organizationId)
+      assertDeletedString("commands", "id", commandId)
+      assertPresentString("workload", "id", legacySyncWorkloadId)
+      assertPresentString("workload_queue", "workload_id", legacySyncWorkloadId)
+    } finally {
+      database!!.query { it.execute("DROP TABLE dsr_workload_blocker") }
+    }
+  }
+
+  @Test
+  fun `required config deletion uses a twenty minute statement timeout`() {
+    every { userPersistence.lockAuthUserReplacement(any(), userId) } answers {
+      assertEquals("20min", firstArg<DSLContext>().fetchValue("SHOW statement_timeout"))
+    }
+
+    database!!.transaction { ctx ->
+      service.hardDeleteConfigRowsForTest(manifest(), datagrailId)
+    }
+  }
+
+  @Test
+  fun `required config deletion leaves prefix matching workloads for eventual purge`() {
     val matchingWorkloadId = "${connectionId}_boundary_0_sync"
     val lowerNeighborWorkloadId = "$connectionId^boundary_0_sync"
     val upperNeighborWorkloadId = "$connectionId`boundary_0_sync"
@@ -669,11 +798,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     }
 
     database!!.transaction { ctx: DSLContext ->
-      service.hardDeleteConfigRowsForTest(ctx, boundaryManifest, datagrailId, emptyList())
+      service.hardDeleteConfigRowsForTest(boundaryManifest, datagrailId)
     }
 
-    assertDeletedString("workload", "id", matchingWorkloadId)
-    assertDeletedString("workload_queue", "workload_id", matchingWorkloadId)
+    assertPresentString("workload", "id", matchingWorkloadId)
+    assertPresentString("workload_queue", "workload_id", matchingWorkloadId)
     assertPresentString("workload", "id", lowerNeighborWorkloadId)
     assertPresentString("workload_queue", "workload_id", lowerNeighborWorkloadId)
     assertPresentString("workload", "id", upperNeighborWorkloadId)
@@ -726,7 +855,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     }
 
     database!!.transaction { ctx: DSLContext ->
-      service.hardDeleteConfigRowsForTest(ctx, workspaceOnlyManifest, datagrailId, emptyList())
+      service.hardDeleteConfigRowsForTest(workspaceOnlyManifest, datagrailId)
     }
 
     assertDeletedUuidField("data_worker_usage", "workspace_id", workspaceOnlyId)
