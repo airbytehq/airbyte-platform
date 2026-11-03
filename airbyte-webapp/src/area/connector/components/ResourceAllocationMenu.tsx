@@ -178,7 +178,7 @@ export const ResourceAllocationMenu: React.FC = () => {
       <ControlLabels
         htmlFor={controlId}
         label={<FormattedMessage id="form.resourceAllocation" />}
-        optional
+        requirement="optional"
         infoTooltipContent={
           <LabelInfo
             label={<FormattedMessage id="form.resourceAllocation" />}

@@ -1650,6 +1650,48 @@ describe("Connector form", () => {
     });
   });
 
+  describe("required and optional labels", () => {
+    it("marks required fields with an asterisk and labels optional fields as Optional", async () => {
+      await renderForm({
+        propertiesOverride: {
+          notes: { type: "string", title: "Notes", always_show: true },
+        },
+      });
+
+      const hostLabel = screen.getByText("Host").closest("label")!;
+      expect(hostLabel).toHaveTextContent(/^Host\*$/);
+
+      const notesLabel = screen.getByText("Notes").closest("label")!;
+      expect(notesLabel).toHaveTextContent(/^Notes\s*Optional$/);
+      expect(notesLabel).not.toHaveTextContent("*");
+    });
+
+    it("marks a required switch with an asterisk", async () => {
+      await renderForm({
+        specificationOverride: {
+          connectionSpecification: {
+            type: "object",
+            required: ["enabled"],
+            properties: { enabled: { type: "boolean", title: "Enabled" } },
+          },
+        },
+      });
+
+      const enabledLabel = screen.getByText("Enabled").closest("label")!;
+      expect(enabledLabel).toHaveTextContent(/^Enabled\*$/);
+    });
+
+    it("marks required oneOf and array-of-objects group labels with an asterisk", async () => {
+      await renderForm();
+
+      const credentialsLabel = screen.getByText("credentials").closest("label")!;
+      expect(credentialsLabel).toHaveTextContent(/^credentials\*$/);
+
+      const priceListLabel = screen.getByText("priceList").closest("label")!;
+      expect(priceListLabel).toHaveTextContent(/^priceList\*$/);
+    });
+  });
+
   describe("Advanced section", () => {
     it("names the collapsible section of optional fields Advanced", async () => {
       await renderForm({

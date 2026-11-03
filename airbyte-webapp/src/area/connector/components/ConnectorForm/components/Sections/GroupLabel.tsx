@@ -10,5 +10,5 @@ export const getGroupLabelText = (formField: FormConditionItem | FormObjectArray
   `${formField.title || formField.fieldKey}`;
 
 export const GroupLabel: React.FC<GroupLabelProps> = ({ formField }) => {
-  return <PropertyLabel property={formField} label={getGroupLabelText(formField)} optional={false} />;
+  return <PropertyLabel property={formField} label={getGroupLabelText(formField)} hideOptionalLabel />;
 };

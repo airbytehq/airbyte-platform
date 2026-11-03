@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 
 import { LabelInfo } from "components/ui/Label";
-import { ControlLabels } from "components/ui/LabeledControl";
+import { ControlLabels, ControlLabelsProps } from "components/ui/LabeledControl";
 
 import { FormBlock } from "core/form/types";
 
@@ -9,17 +9,27 @@ interface PropertyLabelProps {
   property: FormBlock;
   label: React.ReactNode;
   description?: string;
-  optional?: boolean;
+  hideOptionalLabel?: boolean;
   className?: string;
   htmlFor?: string;
   format?: React.ReactNode;
 }
 
+const getRequirement = (isRequired: boolean, hideOptionalLabel?: boolean): ControlLabelsProps["requirement"] => {
+  if (isRequired) {
+    return "required";
+  }
+  if (hideOptionalLabel) {
+    return undefined;
+  }
+  return "optional";
+};
+
 export const PropertyLabel: React.FC<React.PropsWithChildren<PropertyLabelProps>> = ({
   property,
   label,
   description,
-  optional,
+  hideOptionalLabel,
   className,
   children,
   htmlFor,
@@ -52,7 +62,7 @@ export const PropertyLabel: React.FC<React.PropsWithChildren<PropertyLabelProps>
           />
         )
       }
-      optional={optional ?? !property.isRequired}
+      requirement={getRequirement(property.isRequired, hideOptionalLabel)}
       htmlFor={htmlFor}
       format={format}
     >

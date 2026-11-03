@@ -18,7 +18,7 @@ export interface ControlLabelsProps {
   message?: React.ReactNode;
   label?: React.ReactNode;
   infoTooltipContent?: React.ReactNode;
-  optional?: boolean;
+  requirement?: "required" | "optional";
   htmlFor?: string;
   format?: React.ReactNode;
   labelAction?: React.ReactNode;
@@ -38,12 +38,13 @@ const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<C
         >
           <FlexContainer gap="none" alignItems="center">
             {props.label}
+            {props.requirement === "required" && <span aria-hidden="true">*</span>}
             {props.infoTooltipContent && (
               <InfoTooltip className={styles.tooltip} placement="top-start">
                 {props.infoTooltipContent}
               </InfoTooltip>
             )}
-            {props.optional && (
+            {props.requirement === "optional" && (
               <Text size="sm" className={styles.optionalText}>
                 <FormattedMessage id="form.optional" />
               </Text>

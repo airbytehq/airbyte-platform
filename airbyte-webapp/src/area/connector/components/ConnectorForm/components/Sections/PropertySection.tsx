@@ -88,7 +88,7 @@ export const PropertySection: React.FC<PropertySectionProps> = ({ property, path
             className={styles.switchLabel}
             property={property}
             label={labelText}
-            optional={false}
+            hideOptionalLabel
             htmlFor={switchId}
           />
         }

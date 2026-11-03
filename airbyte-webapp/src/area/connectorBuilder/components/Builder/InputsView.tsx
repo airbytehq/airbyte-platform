@@ -181,7 +181,8 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
             <ControlLabels
               className={styles.itemLabel}
               label={input.definition.title || input.key}
-              optional={!input.required}
+              // Required Builder inputs show no asterisk, because the asterisk is limited to connector forms for now
+              requirement={input.required ? undefined : "optional"}
               infoTooltipContent={input.definition.description}
               htmlFor={inputId}
               labelAction={

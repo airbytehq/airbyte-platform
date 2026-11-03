@@ -29,8 +29,6 @@ Primary.args = {
   },
   label: "Property name",
   description: "The description of the property, placed in the info tooltip",
-  // overrides the property.isRequired value if set
-  optional: true,
   children: <Input type="text" />,
 };
 
