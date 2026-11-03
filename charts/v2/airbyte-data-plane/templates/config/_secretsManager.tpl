@@ -235,11 +235,11 @@ Renders the secretsManager.azureKeyVault.clientIdRefName value
 Renders the secretsManager.azureKeyVault.clientIdRefName environment variable
 */}}
 {{- define "airbyte-data-plane.secretsManager.azureKeyVault.clientIdRefName.env" }}
-- name: AB_AZURE_KEY_CLIENT_ID_REF_NAME
+- name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: AB_AZURE_KEY_CLIENT_ID_REF_NAME
+      key: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
 {{- end }}
 
 {{/*
@@ -253,11 +253,11 @@ Renders the secretsManager.azureKeyVault.clientIdRefKey value
 Renders the secretsManager.azureKeyVault.clientIdRefKey environment variable
 */}}
 {{- define "airbyte-data-plane.secretsManager.azureKeyVault.clientIdRefKey.env" }}
-- name: AB_AZURE_KEY_CLIENT_ID_REF_KEY
+- name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: AB_AZURE_KEY_CLIENT_ID_REF_KEY
+      key: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
 {{- end }}
 
 {{/*
@@ -271,11 +271,11 @@ Renders the secretsManager.azureKeyVault.clientSecretRefName value
 Renders the secretsManager.azureKeyVault.clientSecretRefName environment variable
 */}}
 {{- define "airbyte-data-plane.secretsManager.azureKeyVault.clientSecretRefName.env" }}
-- name: AB_AZURE_KEY_CLIENT_SECRET_REF_NAME
+- name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: AB_AZURE_KEY_CLIENT_SECRET_REF_NAME
+      key: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
 {{- end }}
 
 {{/*
@@ -289,11 +289,11 @@ Renders the secretsManager.azureKeyVault.clientSecretRefKey value
 Renders the secretsManager.azureKeyVault.clientSecretRefKey environment variable
 */}}
 {{- define "airbyte-data-plane.secretsManager.azureKeyVault.clientSecretRefKey.env" }}
-- name: AB_AZURE_KEY_CLIENT_SECRET_REF_KEY
+- name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: AB_AZURE_KEY_CLIENT_SECRET_REF_KEY
+      key: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
 {{- end }}
 
 {{/*
@@ -477,10 +477,10 @@ AWS_KMS_KEY_ARN: {{ include "airbyte-data-plane.secretsManager.awsSecretManager.
 {{- if eq $opt "AZURE_KEY_VAULT" }}
 AB_AZURE_KEY_VAULT_TENANT_ID: {{ include "airbyte-data-plane.secretsManager.azureKeyVault.tenantId" . | quote }}
 AB_AZURE_KEY_VAULT_VAULT_URL: {{ include "airbyte-data-plane.secretsManager.azureKeyVault.vaultUrl" . | quote }}
-AB_AZURE_KEY_CLIENT_ID_REF_NAME: {{ include "airbyte-data-plane.secretsManager.secretName" . | quote }}
-AB_AZURE_KEY_CLIENT_ID_REF_KEY: {{ .Values.secretsManager.azureKeyVault.clientIdSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_ID" | quote }}
-AB_AZURE_KEY_CLIENT_SECRET_REF_NAME: {{ include "airbyte-data-plane.secretsManager.secretName" . | quote }}
-AB_AZURE_KEY_CLIENT_SECRET_REF_KEY: {{ .Values.secretsManager.azureKeyVault.clientSecretSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_SECRET" | quote }}
+AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME: {{ include "airbyte-data-plane.secretsManager.secretName" . | quote }}
+AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY: {{ .Values.secretsManager.azureKeyVault.clientIdSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_ID" | quote }}
+AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME: {{ include "airbyte-data-plane.secretsManager.secretName" . | quote }}
+AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY: {{ .Values.secretsManager.azureKeyVault.clientSecretSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_SECRET" | quote }}
 {{- end }}
 
 {{- if eq $opt "GOOGLE_SECRET_MANAGER" }}

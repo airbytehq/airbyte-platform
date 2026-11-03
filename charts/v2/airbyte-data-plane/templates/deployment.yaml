@@ -47,7 +47,15 @@ spec:
             {{- include "airbyte-data-plane.metrics.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.micronaut.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.storage.envs" . | nindent 12 }}
-            {{- include "airbyte-data-plane.secretsManager.envs" . | nindent 12 }}
+            {{- $extraEnvNames := list }}
+            {{- range .Values.workloadLauncher.extraEnv }}
+            {{- $extraEnvNames = append $extraEnvNames .name }}
+            {{- end }}
+            {{- range (include "airbyte-data-plane.secretsManager.envs" . | fromYamlArray) }}
+            {{- if not (has .name $extraEnvNames) }}
+            {{- toYaml (list .) | nindent 12 }}
+            {{- end }}
+            {{- end }}
             {{- include "airbyte-data-plane.tracking.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.worker.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.workloadApiServer.envs" . | nindent 12 }}

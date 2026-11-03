@@ -77,7 +77,15 @@ spec:
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.storage.envs" . | nindent 8 }}
-        {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
+        {{- $extraEnvNames := list }}
+        {{- range .Values.workloadLauncher.extraEnv }}
+        {{- $extraEnvNames = append $extraEnvNames .name }}
+        {{- end }}
+        {{- range (include "airbyte.secretsManager.envs" . | fromYamlArray) }}
+        {{- if not (has .name $extraEnvNames) }}
+        {{- toYaml (list .) | nindent 8 }}
+        {{- end }}
+        {{- end }}
         {{- include "airbyte.temporal.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}

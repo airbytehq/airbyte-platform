@@ -792,25 +792,25 @@ secretsManager:
       discriminatorOpts:  
         - AZURE_KEY_VAULT
 
-    - env: AB_AZURE_KEY_CLIENT_ID_REF_NAME
+    - env: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
       key: azureKeyVault.clientIdRefName
       valueExp: include "airbyte.secretsManager.secretName" .
       discriminatorOpts:  
         - AZURE_KEY_VAULT
 
-    - env: AB_AZURE_KEY_CLIENT_ID_REF_KEY
+    - env: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
       key: azureKeyVault.clientIdRefKey
       valueExp: .Values.global.secretsManager.azureKeyVault.clientIdSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_ID"
       discriminatorOpts: 
         - AZURE_KEY_VAULT
 
-    - env: AB_AZURE_KEY_CLIENT_SECRET_REF_NAME
+    - env: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
       key: azureKeyVault.clientSecretRefName
       valueExp: include "airbyte.secretsManager.secretName" .
       discriminatorOpts: 
         - AZURE_KEY_VAULT
 
-    - env: AB_AZURE_KEY_CLIENT_SECRET_REF_KEY
+    - env: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
       key: azureKeyVault.clientSecretRefKey
       valueExp: .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_SECRET"
       discriminatorOpts: 

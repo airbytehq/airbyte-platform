@@ -165,6 +165,10 @@ func TestAzureKeyVaultSecretManagerConfig(t *testing.T) {
 		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_VAULT_URL").RefName("airbyte-airbyte-env").Value("http://my-test-vault-url"),
 		helmtests.ExpectedSecretVar().Name("AB_AZURE_KEY_VAULT_CLIENT_ID").RefName("airbyte-airbyte-secrets").Value("test-client-id"),
 		helmtests.ExpectedSecretVar().Name("AB_AZURE_KEY_VAULT_CLIENT_SECRET").RefName("airbyte-airbyte-secrets").Value("test-client-secret"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME").RefName("airbyte-airbyte-env").Value("airbyte-airbyte-secrets"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY").RefName("airbyte-airbyte-env").Value("AB_AZURE_KEY_VAULT_CLIENT_ID"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME").RefName("airbyte-airbyte-env").Value("airbyte-airbyte-secrets"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY").RefName("airbyte-airbyte-env").Value("AB_AZURE_KEY_VAULT_CLIENT_SECRET"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
