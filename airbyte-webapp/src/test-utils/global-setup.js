@@ -1,5 +1,5 @@
 /* eslint-disable import/no-anonymous-default-export */
-import { generateIntents } from "../../packages/vite-plugins";
+import { generateIntents } from "../../packages/vite-plugins/generate-intents";
 
 export default async () => {
   // We need to run the generate intent plugin manually, since Jest doesn't
