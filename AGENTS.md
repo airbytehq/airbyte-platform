@@ -229,9 +229,7 @@ three layers.
     declaration must also allow anonymous access.
   - Put the annotation on the **implementation method**, including each
     Cloud `@Replaces` override. Startup validates the active routes, and the
-    request filter blocks managed routes that were not validated. See
-    [authorization-rollout.md](airbyte-server/authorization-rollout.md) and
-    the [public route matrix](airbyte-server/public-api-authorization.md).
+    request filter blocks managed routes that were not validated.
   - The only Config search exceptions are `POST /api/v1/sources/search`,
     `/destinations/search` and `/connections/search`. They keep their
     current behavior with `@ConfigSearchAccessException`, authentication
