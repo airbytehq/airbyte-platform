@@ -91,5 +91,7 @@ object DatabaseConstants {
 
   const val DATAPLANE_NETWORK_CONFIG_TABLE: String = "dataplane_network_config"
 
+  const val DATAPLANE_DIAGNOSTIC_TABLE: String = "dataplane_diagnostic"
+
   const val DATA_SUBJECT_DELETION_REQUEST_TABLE: String = "data_subject_deletion_request"
 }

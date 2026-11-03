@@ -366,6 +366,22 @@ create table "public"."dataplane_client_credentials" (
   constraint "dataplane_client_credentials_client_id_key" unique ("client_id"),
   constraint "dataplane_client_credentials_dataplane_id_client_id_client__key" unique ("dataplane_id", "client_id", "client_secret")
 );
+create table "public"."dataplane_diagnostic" (
+  "id" uuid not null,
+  "dataplane_id" uuid not null,
+  "organization_id" uuid not null,
+  "diagnostic_kind" varchar(256) not null,
+  "target_id" uuid not null,
+  "status" varchar(256) not null,
+  "checked_at" timestamp(6) with time zone not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "error_code" varchar(256),
+  "error_message" text,
+  "observation" jsonb,
+  constraint "dataplane_diagnostic_pkey" primary key ("id"),
+  constraint "dataplane_diagnostic_dataplane_kind_target_key" unique ("dataplane_id", "diagnostic_kind", "target_id")
+);
 create table "public"."dataplane_group" (
   "id" uuid not null,
   "organization_id" uuid not null,
@@ -992,6 +1008,7 @@ alter table "public"."connector_rollout" add constraint "fk_updated_by" foreign 
 alter table "public"."dataplane" add constraint "dataplane_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
 alter table "public"."dataplane" add constraint "dataplane_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
+alter table "public"."dataplane_diagnostic" add constraint "dataplane_diagnostic_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."dataplane_heartbeat_log" add constraint "dataplane_heartbeat_log_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_network_config" add constraint "dataplane_network_config_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");

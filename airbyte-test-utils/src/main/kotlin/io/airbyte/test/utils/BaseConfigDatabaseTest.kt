@@ -150,6 +150,7 @@ open class BaseConfigDatabaseTest {
               connector_rollout,
               dataplane,
               dataplane_client_credentials,
+              dataplane_diagnostic,
               dataplane_group,
               dataplane_network_config,
               dataplane_heartbeat_log,
