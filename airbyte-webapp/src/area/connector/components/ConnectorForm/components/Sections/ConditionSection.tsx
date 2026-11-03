@@ -1,5 +1,4 @@
 import classNames from "classnames";
-import { JSONSchema7Type } from "json-schema";
 import pick from "lodash/pick";
 import React, { useCallback, useMemo } from "react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
@@ -13,9 +12,14 @@ import { Text } from "components/ui/Text";
 import { TextWithHTML } from "components/ui/TextWithHTML";
 
 import { useOptionalDocumentationPanelContext } from "area/connector/components/ConnectorDocumentationLayout/DocumentationPanelContext";
-import { FormConditionItem, FormGroupItem } from "core/form/types";
+import { FormConditionItem } from "core/form/types";
 
 import styles from "./ConditionSection.module.scss";
+import {
+  getConditionControlType,
+  getVisibleConditionsAndConstValues,
+  hasFieldsOfItsOwn,
+} from "./conditionSectionHelpers";
 import { FormSection } from "./FormSection";
 import { getGroupLabelText, GroupLabel } from "./GroupLabel";
 import { SectionContainer } from "./SectionContainer";
@@ -26,6 +30,8 @@ interface ConditionSectionProps {
   path: string;
   disabled?: boolean;
 }
+
+const SINGLE_OPTION_COUNT = 1;
 
 /**
  * ConditionSection is responsible for handling oneOf sections of form
@@ -80,27 +86,50 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
   const error = get(useFormState({ name: path }).errors, path);
   // errors inside the selected option's fields do not make the selection itself invalid
   const hasSelectionError = error?.message !== undefined;
-  const controlType = getConditionControlType(formField, conditions);
   const isLocked = disabled || formField.readOnly;
+
+  // A single visible option needs no control, except when the saved value matches no visible option (for example
+  // an option dropped from the spec). Then the field keeps its usual control so the user can pick the option.
+  const isOnlyOptionUnselected = options.length === SINGLE_OPTION_COUNT && currentlySelectedCondition === undefined;
+  const controlType = getConditionControlType(formField, conditions);
+
+  const hasSingleOptionWithoutFields = options.length === SINGLE_OPTION_COUNT && !hasFieldsOfItsOwn(conditions[0]);
+
+  if (hasSingleOptionWithoutFields && !isOnlyOptionUnselected) {
+    return null;
+  }
+
+  const getDropdownControl = () => {
+    if (options.length > SINGLE_OPTION_COUNT || isOnlyOptionUnselected) {
+      return (
+        <ListBox<number>
+          options={options}
+          onSelect={onOptionChange}
+          selectedValue={currentlySelectedCondition}
+          isDisabled={isLocked}
+          hasError={hasSelectionError}
+          data-testid={path}
+        />
+      );
+    }
+
+    if (options.length === SINGLE_OPTION_COUNT) {
+      return options[0].label;
+    }
+
+    return undefined;
+  };
 
   return (
     <SectionContainer>
       <GroupControls
         key={`form-field-group-${formField.fieldKey}`}
         label={<GroupLabel formField={formField} />}
-        control={
-          controlType === "dropdown" ? (
-            <ListBox<number>
-              options={options}
-              onSelect={onOptionChange}
-              selectedValue={currentlySelectedCondition}
-              isDisabled={isLocked}
-              hasError={hasSelectionError}
-              data-testid={path}
-            />
-          ) : undefined
-        }
-        controlClassName={classNames(styles.dropdown, { [styles.disabled]: isLocked })}
+        control={controlType === "dropdown" ? getDropdownControl() : undefined}
+        controlClassName={classNames(
+          { [styles.dropdown]: options.length > SINGLE_OPTION_COUNT || isOnlyOptionUnselected },
+          { [styles.disabled]: isLocked }
+        )}
         error={error?.message}
       >
         {controlType === "segmented" && (
@@ -151,47 +180,4 @@ export const ConditionSection: React.FC<ConditionSectionProps> = ({ formField, p
       </GroupControls>
     </SectionContainer>
   );
-};
-
-const MAX_SEGMENTED_CONTROL_OPTIONS = 4;
-
-/**
- * A connector spec's explicit display_type wins. Without one, a oneOf with 2 to 4 visible options
- * renders as a segmented control when the choice changes the fields that follow it.
- * Specs are untrusted input, so an unknown display_type falls through to the default rule.
- */
-const getConditionControlType = (
-  formField: FormConditionItem,
-  visibleConditions: FormGroupItem[]
-): "radio" | "dropdown" | "segmented" => {
-  if (formField.display_type === "radio" || formField.display_type === "dropdown") {
-    return formField.display_type;
-  }
-
-  const hasSegmentedOptionCount =
-    visibleConditions.length >= 2 && visibleConditions.length <= MAX_SEGMENTED_CONTROL_OPTIONS;
-  const choiceChangesFields = visibleConditions.some((condition) =>
-    condition.properties.some((property) => property.const === undefined && !property.airbyte_hidden)
-  );
-
-  return hasSegmentedOptionCount && choiceChangesFields ? "segmented" : "dropdown";
-};
-
-const getVisibleConditionsAndConstValues = (
-  formField: FormConditionItem
-): { conditions: FormGroupItem[]; selectionConstValues: JSONSchema7Type[] } => {
-  const conditions: FormGroupItem[] = [];
-  const selectionConstValues: JSONSchema7Type[] = [];
-
-  formField.conditions.forEach((condition, index) => {
-    if (!condition.airbyte_hidden) {
-      conditions.push(condition);
-      selectionConstValues.push(formField.selectionConstValues[index]);
-    }
-  });
-
-  return {
-    conditions,
-    selectionConstValues,
-  };
 };

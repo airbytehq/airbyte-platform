@@ -88,3 +88,5 @@ export interface FormObjectArrayItem extends FormItem {
 export type FormBlock = FormGroupItem | FormBaseItem | FormConditionItem | FormObjectArrayItem;
 
 export const FORM_PATTERN_ERROR = "form.pattern.error";
+
+export type OneOfControlType = "radio" | "dropdown" | "segmented";

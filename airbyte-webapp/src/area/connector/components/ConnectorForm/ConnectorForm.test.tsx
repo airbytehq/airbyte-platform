@@ -1178,6 +1178,194 @@ describe("Connector form", () => {
       });
     });
 
+    describe("oneOf with a single visible option", () => {
+      const buildSingleOptionOneOf = (
+        ownFields: Record<string, AirbyteJSONSchema> = {},
+        overrides: AirbyteJSONSchema = {}
+      ): AirbyteJSONSchema => ({
+        type: "object",
+        title: "Choice",
+        ...overrides,
+        oneOf: [
+          {
+            title: "only choice",
+            required: Object.keys(ownFields),
+            properties: { type: { type: "string", const: "type_0", default: "type_0" }, ...ownFields },
+          },
+        ],
+      });
+      const ownFields: Record<string, AirbyteJSONSchema> = { field_0: { type: "string" } };
+      const submittedChoice = async (onSubmit: jest.Mock) => {
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+        return onSubmit.mock.calls[0][0].connectionConfiguration.choice;
+      };
+
+      describe("when the option has fields of its own", () => {
+        it("should render the fields of the option", async () => {
+          const container = await renderForm({ propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) } });
+
+          expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toBeInTheDocument();
+        });
+
+        it("should render the title of the option", async () => {
+          await renderForm({ propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) } });
+
+          expect(screen.getByText("only choice")).toBeInTheDocument();
+        });
+
+        it("should submit the saved selection value and fields unchanged", async () => {
+          const onSubmit = jest.fn().mockResolvedValue(undefined);
+          const container = await renderForm({
+            onSubmit,
+            formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "value" } },
+            propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+          });
+
+          await submitForm(container);
+
+          expect(await submittedChoice(onSubmit)).toEqual({ type: "type_0", field_0: "value" });
+        });
+      });
+
+      describe("when the saved selection matches no visible option", () => {
+        const staleChoice = { type: "type_dropped", field_0: "kept" };
+        const dropdown = () => screen.queryByTestId("connectionConfiguration.choice-listbox-button");
+
+        it("should render a dropdown with the only option", async () => {
+          await renderForm({
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+          });
+
+          expect(dropdown()).toBeInTheDocument();
+        });
+
+        it("should render a dropdown when the saved config has no value", async () => {
+          await renderForm({
+            formValuesOverride: { ...filledForm },
+            propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+          });
+
+          expect(dropdown()).toBeInTheDocument();
+        });
+
+        it("should render a dropdown when the option has no fields", async () => {
+          await renderForm({
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildSingleOptionOneOf() },
+          });
+
+          expect(dropdown()).toBeInTheDocument();
+        });
+
+        it("should render the only option as a radio tile when display_type is radio", async () => {
+          await renderForm({
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildOneOfField(1, { display_type: "radio" }) },
+          });
+
+          expect(screen.getByTestId("radio-option.0")).toBeInTheDocument();
+        });
+
+        it("should render the fields of the option once it is selected", async () => {
+          const container = await renderForm({
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+          });
+
+          selectDropdownOption(container, "connectionConfiguration.choice", "only choice");
+
+          expect(getInputByName(container, "connectionConfiguration.choice.field_0")).toBeInTheDocument();
+        });
+
+        it("should submit the selection value of the option once it is selected", async () => {
+          const onSubmit = jest.fn().mockResolvedValue(undefined);
+          const container = await renderForm({
+            onSubmit,
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+          });
+          selectDropdownOption(container, "connectionConfiguration.choice", "only choice");
+
+          await submitForm(container);
+
+          expect(await submittedChoice(onSubmit)).toEqual({ type: "type_0", field_0: "kept" });
+        });
+
+        it("should hide a field with no fields once its option is selected", async () => {
+          await renderForm({
+            formValuesOverride: { ...filledForm, choice: staleChoice },
+            propertiesOverride: { choice: buildSingleOptionOneOf() },
+          });
+          selectDropdownOption(document.body, "connectionConfiguration.choice", "only choice");
+
+          expect(screen.queryByText("Choice")).not.toBeInTheDocument();
+        });
+      });
+
+      it("should not render a dropdown when the saved selection matches the only option", async () => {
+        await renderForm({
+          formValuesOverride: { ...filledForm, choice: { type: "type_0", field_0: "value" } },
+          propertiesOverride: { choice: buildSingleOptionOneOf(ownFields) },
+        });
+
+        expect(screen.queryByTestId("connectionConfiguration.choice-listbox-button")).not.toBeInTheDocument();
+      });
+
+      describe("when the option has no fields of its own", () => {
+        it.each([
+          { key: "choice", title: "Choice" },
+          { key: "credentials", title: "Required choice" },
+        ])("should hide the field $key", async ({ key, title }) => {
+          await renderForm({ propertiesOverride: { [key]: buildSingleOptionOneOf({}, { title }) } });
+
+          expect(screen.queryByText(title)).not.toBeInTheDocument();
+        });
+
+        describe("when the other options are hidden", () => {
+          const hiddenOption: AirbyteJSONSchema = {
+            title: "hidden choice",
+            airbyte_hidden: true,
+            properties: { type: { type: "string", const: "type_hidden", default: "type_hidden" } },
+          };
+          const visibleOption: AirbyteJSONSchema = {
+            title: "only choice",
+            properties: { type: { type: "string", const: "type_0", default: "type_0" } },
+          };
+          const buildChoice = (oneOf: AirbyteJSONSchema[]): AirbyteJSONSchema => ({
+            type: "object",
+            title: "Choice",
+            oneOf,
+          });
+
+          it("should hide the whole field when the visible option is the default", async () => {
+            await renderForm({ propertiesOverride: { choice: buildChoice([visibleOption, hiddenOption]) } });
+
+            expect(screen.queryByText("Choice")).not.toBeInTheDocument();
+          });
+
+          it("should render a dropdown when the default selects a hidden option", async () => {
+            await renderForm({ propertiesOverride: { choice: buildChoice([hiddenOption, visibleOption]) } });
+
+            expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toBeInTheDocument();
+          });
+        });
+
+        it("should submit the saved selection value", async () => {
+          const onSubmit = jest.fn().mockResolvedValue(undefined);
+          const container = await renderForm({
+            onSubmit,
+            formValuesOverride: { ...filledForm, choice: { type: "type_0" } },
+            propertiesOverride: { choice: buildSingleOptionOneOf() },
+          });
+
+          await submitForm(container);
+
+          expect(await submittedChoice(onSubmit)).toEqual({ type: "type_0" });
+        });
+      });
+    });
+
     describe("oneOf control type", () => {
       const unknownDisplayType = { display_type: "Dropdown" } as unknown as AirbyteJSONSchema;
 
@@ -1189,8 +1377,8 @@ describe("Connector form", () => {
         expect(screen.queryByTestId("connectionConfiguration.choice-listbox-button")).not.toBeInTheDocument();
       });
 
-      it.each([1, 5])("should render a oneOf with %i options as a dropdown", async (optionCount) => {
-        await renderForm({ propertiesOverride: { choice: buildOneOfField(optionCount) } });
+      it("should render a oneOf with 5 options as a dropdown", async () => {
+        await renderForm({ propertiesOverride: { choice: buildOneOfField(5) } });
 
         expect(screen.getByTestId("connectionConfiguration.choice-listbox-button")).toHaveAttribute(
           "aria-haspopup",
