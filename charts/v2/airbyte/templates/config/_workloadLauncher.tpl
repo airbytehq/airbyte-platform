@@ -64,12 +64,31 @@ Renders the workloadLauncher.parallelism environment variable
 {{- end }}
 
 {{/*
+Renders the workloadLauncher.directJobRunnerUrl value
+*/}}
+{{- define "airbyte.workloadLauncher.directJobRunnerUrl" }}
+    {{- ternary (printf "http://%s-airbyte-direct-job-runner-svc.%s.svc:%d" .Release.Name (include "airbyte.directJobRunner.namespace" .) (int .Values.directJobRunner.service.port)) "" .Values.directJobRunner.enabled }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.directJobRunnerUrl environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.directJobRunnerUrl.env" }}
+- name: DIRECT_JOB_RUNNER_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DIRECT_JOB_RUNNER_URL
+{{- end }}
+
+{{/*
 Renders the set of all workloadLauncher environment variables
 */}}
 {{- define "airbyte.workloadLauncher.envs" }}
 {{- include "airbyte.workloadLauncher.controlPlane.tokenEndpoint.env" . }}
 {{- include "airbyte.workloadLauncher.enabled.env" . }}
 {{- include "airbyte.workloadLauncher.parallelism.env" . }}
+{{- include "airbyte.workloadLauncher.directJobRunnerUrl.env" . }}
 {{- end }}
 
 {{/*
@@ -79,6 +98,7 @@ Renders the set of all workloadLauncher config map variables
 CONTROL_PLANE_TOKEN_ENDPOINT: {{ include "airbyte.workloadLauncher.controlPlane.tokenEndpoint" . | quote }}
 WORKLOAD_LAUNCHER_ENABLED: {{ include "airbyte.workloadLauncher.enabled" . | quote }}
 WORKLOAD_LAUNCHER_PARALLELISM: {{ include "airbyte.workloadLauncher.parallelism" . | quote }}
+DIRECT_JOB_RUNNER_URL: {{ include "airbyte.workloadLauncher.directJobRunnerUrl" . | quote }}
 {{- end }}
 
 {{/*

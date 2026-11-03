@@ -33,6 +33,7 @@ airbyte:
   version: ${AIRBYTE_VERSION:dev}
   direct-job-runner:
     connect:
+      block-internal-addresses: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES:false}
       blocked-cidrs: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS:}
       overall-timeout: PT10S
   cloud:

@@ -440,6 +440,21 @@ dataplaneGroups:
     - env: DEFAULT_DATAPLANE_GROUP_NAME
       key: defaultDataplaneGroupName
 
+directJobRunner:
+  config:
+    - env: AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT
+      key: maxConcurrent
+      defaultValue: 50
+
+    # Only Airbyte-managed Cloud data planes turn this on. Elsewhere internal addresses are the user's own databases.
+    - env: AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES
+      key: connect.blockInternalAddresses
+      defaultValue: false
+
+    - env: AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS
+      key: connect.blockedCidrs
+      valueExp: join "," .Values.directJobRunner.connect.blockedCidrs
+
 featureFlags:
   keyBasePath: global.featureFlags
   discriminatorField: client
@@ -1440,6 +1455,11 @@ workloadLauncher:
     - env: WORKLOAD_LAUNCHER_PARALLELISM
       key: parallelism
       defaultValue: 10
+
+    # Empty unless the direct job runner is enabled, so the launcher fails CONNECT workloads instead of calling a missing service.
+    - env: DIRECT_JOB_RUNNER_URL
+      key: directJobRunnerUrl
+      valueExp: ternary (printf "http://%s-airbyte-direct-job-runner-svc.%s.svc:%d" .Release.Name (include "airbyte.directJobRunner.namespace" .) (int .Values.directJobRunner.service.port)) "" .Values.directJobRunner.enabled
 
 workloadLauncher.dataPlane:
   config:

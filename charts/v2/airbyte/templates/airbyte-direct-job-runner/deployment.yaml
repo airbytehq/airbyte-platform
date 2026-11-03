@@ -1,0 +1,155 @@
+{{- if .Values.directJobRunner.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ include "airbyte.directJobRunner.namespace" . }}
+  name: {{ .Release.Name }}-direct-job-runner
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.directJobRunner.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.directJobRunner.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{ toYaml .Values.directJobRunner.annotations | nindent 4 }}
+spec:
+  {{- if not .Values.directJobRunner.autoscaling.enabled }}
+  replicas: {{ .Values.directJobRunner.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.directJobRunner.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.directJobRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.directJobRunner.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.directJobRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.directJobRunner.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.directJobRunner.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.directJobRunner.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.directJobRunner.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "airbyte.directJobRunner.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.directJobRunner.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.directJobRunner.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.directJobRunner.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.directJobRunner.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.directJobRunner.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.directJobRunner.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-direct-job-runner-container
+        image: {{ include "imageUrl" (list .Values.directJobRunner.image $) }}
+        imagePullPolicy: "{{ .Values.directJobRunner.image.pullPolicy }}"
+        env:
+        {{- include "airbyte.java_opts.envs" (list .Values.directJobRunner $) | nindent 8 }}
+        {{- include "airbyte.directJobRunner.configEnvs" . | nindent 8 }}
+        {{- include "airbyte.directJobRunner.storageSecretEnvs" . | nindent 8 }}
+        {{- include "airbyte.workloadLauncher.dataPlane.clientId.env" . | nindent 8 }}
+        {{- include "airbyte.workloadLauncher.dataPlane.clientSecret.env" . | nindent 8 }}
+        {{- include "airbyte.datadog.envs" .Values.directJobRunner.datadog | nindent 8 }}
+
+        # Values from env
+        {{- if or .Values.directJobRunner.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.directJobRunner.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        {{- if .Values.directJobRunner.extraEnv }}
+        {{- toYaml .Values.directJobRunner.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.directJobRunner.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: management
+          initialDelaySeconds: {{ .Values.directJobRunner.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.directJobRunner.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.directJobRunner.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.directJobRunner.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.directJobRunner.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.directJobRunner.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: management
+          initialDelaySeconds: {{ .Values.directJobRunner.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.directJobRunner.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.directJobRunner.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.directJobRunner.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.directJobRunner.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: management
+          containerPort: {{ .Values.directJobRunner.management.port }}
+          protocol: TCP
+        {{- if .Values.directJobRunner.debug.enabled }}
+        - name: debug
+          containerPort: 5005
+          protocol: TCP
+        {{- end }}
+        {{- if .Values.directJobRunner.resources }}
+        resources: {{- toYaml .Values.directJobRunner.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.directJobRunner.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.directJobRunner.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
+        - name: gcs-log-creds-volume
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
+          readOnly: true
+        {{- end }}
+        {{- if eq (include "airbyte.cluster.type" .) "data-plane" }}
+        - name: dataplane-creds-volume
+          mountPath: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" . | dir }}
+          readOnly: true
+        {{- end }}
+        {{- if .Values.directJobRunner.extraVolumeMounts }}
+{{- toYaml .Values.directJobRunner.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      securityContext: {{- toYaml .Values.directJobRunner.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ .Values.directJobRunner.storageSecretName | default (include "airbyte.storage.secretName" .) }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
+      {{- end }}
+      {{- if eq (include "airbyte.cluster.type" .) "data-plane" }}
+      - name: dataplane-creds-volume
+        secret:
+          secretName: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretName" . }}
+          items:
+            - key: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" . }}
+              path: "sa.json"
+      {{- end }}
+      {{- if .Values.directJobRunner.extraVolumes }}
+{{- toYaml .Values.directJobRunner.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- end }}

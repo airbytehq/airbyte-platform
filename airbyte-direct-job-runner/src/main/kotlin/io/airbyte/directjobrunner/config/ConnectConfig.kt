@@ -9,6 +9,11 @@ import java.time.Duration
 
 @ConfigurationProperties("airbyte.direct-job-runner.connect")
 data class ConnectConfig(
+  /**
+   * Off by default: on self-managed installs and customer-managed data planes, internal addresses are where the
+   * user's databases live. Only Airbyte-managed Cloud data planes turn it on.
+   */
+  val blockInternalAddresses: Boolean = false,
   val blockedCidrs: List<String> = emptyList(),
   val overallTimeout: Duration = Duration.ofSeconds(10),
 ) {

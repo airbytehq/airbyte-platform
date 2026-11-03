@@ -1,0 +1,17 @@
+{{- if .Values.directJobRunner.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: {{ include "airbyte.directJobRunner.namespace" . }}
+  name: {{ .Release.Name }}-direct-job-runner
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.directJobRunner.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.directJobRunner.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.directJobRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+{{- end }}

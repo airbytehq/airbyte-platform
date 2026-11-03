@@ -1,0 +1,25 @@
+{{- if .Values.directJobRunner.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ include "airbyte.directJobRunner.namespace" . }}
+  name: {{ .Release.Name }}-airbyte-direct-job-runner-svc
+  {{- with .Values.directJobRunner.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.directJobRunner.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "airbyte.selectorLabels" . | nindent 4 }}
+    {{- if .Values.directJobRunner.extraSelectorLabels }}
+    {{ toYaml (mergeOverwrite .Values.directJobRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
+    {{- end }}
+{{- end }}

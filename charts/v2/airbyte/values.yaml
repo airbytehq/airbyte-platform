@@ -2771,6 +2771,114 @@ workloadApiServer:
 
   workloadApi: {}
 
+directJobRunner:
+  # -- Run connect tests (and other direct jobs) in a long-lived Deployment instead of a pod per job. Requires a node
+  # pool for it in data planes that isolate it with nodeSelector/tolerations.
+  enabled: false
+
+  # -- Replicas when autoscaling is disabled
+  replicaCount: 2
+
+  # -- An existing ServiceAccount to run as. When empty, the chart creates <release>-direct-job-runner with no API
+  # token: the runner never calls the Kubernetes API.
+  serviceAccountName: ""
+
+  image:
+    # -- The repository to use for the airbyte-direct-job-runner image.
+    repository: airbyte/direct-job-runner
+    # -- The pull policy to use for the airbyte-direct-job-runner image
+    pullPolicy: IfNotPresent
+
+  datadog:
+    serviceName: airbyte-direct-job-runner
+
+  # -- Size of the executor shared by every direct job type. Extra jobs queue briefly.
+  maxConcurrent: 50
+
+  connect:
+    # -- Block loopback, private, link-local and other internal ranges. Only enable on data planes Airbyte runs:
+    # elsewhere internal addresses are the user's own databases.
+    blockInternalAddresses: false
+    # -- Extra CIDRs to block when blockInternalAddresses is on, such as the cluster's pod and service ranges.
+    blockedCidrs: []
+
+  # -- Secret holding the storage credentials, when global.storage.secretName only exists in the airbyte namespace.
+  # The runner runs in the jobs namespace.
+  storageSecretName: ""
+
+  annotations: {}
+
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  podDisruptionBudget:
+    minAvailable: 1
+
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
+
+  # -- Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  tolerations: []
+
+  affinity: {}
+
+  env_vars: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  service:
+    port: 8080
+
+  debug:
+    enabled: false
+
+  management:
+    port: 8085
+
 featureflagServer:
   enabled: false
 

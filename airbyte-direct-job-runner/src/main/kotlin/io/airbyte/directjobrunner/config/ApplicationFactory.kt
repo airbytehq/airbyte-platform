@@ -20,7 +20,12 @@ class ApplicationFactory {
   fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 
   @Singleton
-  fun blockedAddressMatcher(config: ConnectConfig): BlockedAddressMatcher = BlockedAddressMatcher(config.extraBlockedCidrs)
+  fun blockedAddressMatcher(config: ConnectConfig): BlockedAddressMatcher =
+    if (config.blockInternalAddresses) {
+      BlockedAddressMatcher(config.extraBlockedCidrs)
+    } else {
+      BlockedAddressMatcher(defaultBlockedCidrs = emptyList())
+    }
 
   @Singleton
   fun connectProbe(
