@@ -388,7 +388,6 @@ internal class PayloadKubeInputMapperTest {
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
-    val organizationId = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
@@ -400,11 +399,11 @@ internal class PayloadKubeInputMapperTest {
         every { priority } returns workloadPriority
       }
     val expectedEnv = listOf(EnvVar("key-1", "value-1", null))
-    every { envVarFactory.discoverConnectorEnvVars(launcherConfig, organizationId, workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
     val catalogInputConfig = mockk<JsonNode>()
     val discoverCatalogInput = mockk<StandardDiscoverCatalogInput>()
     every { discoverCatalogInput.connectionConfiguration } returns catalogInputConfig
+    every { envVarFactory.discoverConnectorEnvVars(launcherConfig, discoverCatalogInput, workloadId) } returns expectedEnv
     val resourceReqs1 =
       ResourceRequirements()
         .withCpuLimit("4")
@@ -420,7 +419,6 @@ internal class PayloadKubeInputMapperTest {
 
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
-    every { input.getOrganizationId() } returns organizationId
     every { input.jobRunConfig } returns jobRunConfig
     every { input.launcherConfig } returns launcherConfig
     every { input.discoverCatalogInput } returns discoverCatalogInput

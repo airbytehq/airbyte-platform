@@ -5,7 +5,10 @@
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.config.ActorContext
+import io.airbyte.config.ActorType
 import io.airbyte.config.Configs
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ANONYMOUS
@@ -14,13 +17,18 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ForceDdRemoteConfigVar
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.ManualDiscoverFileTimeoutMinutes
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
+import io.airbyte.featureflag.Source
+import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
@@ -147,15 +155,16 @@ class RuntimeEnvVarFactory(
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun discoverConnectorEnvVars(
     launcherConfig: IntegrationLauncherConfig,
-    organizationId: UUID,
+    discoverInput: StandardDiscoverCatalogInput,
     workloadId: String,
   ): List<EnvVar> =
     getDdConfiguration() +
       resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId)) +
-      getSecretPersistenceEnvVars(organizationId) +
+      getSecretPersistenceEnvVars(discoverInput.actorContext.organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       getDeploymentModeEnvVar() +
+      getManualDiscoverFileTimeoutEnvVars(discoverInput) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
 
@@ -275,6 +284,44 @@ class RuntimeEnvVarFactory(
     return listOf(
       EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
     )
+  }
+
+  /**
+   * Discovers inside a sync keep the sidecar's within-sync timeout, so a longer manual timeout never delays a sync.
+   * Like the sidecar, only manual = false marks a discover inside a sync.
+   */
+  @InternalForTesting
+  internal fun getManualDiscoverFileTimeoutEnvVars(discoverInput: StandardDiscoverCatalogInput): List<EnvVar> {
+    val manual: Boolean? = discoverInput.manual
+    if (manual == false) {
+      return emptyList()
+    }
+
+    val timeoutMinutes = featureFlagClient.intVariation(ManualDiscoverFileTimeoutMinutes, actorFlagContext(discoverInput.actorContext))
+    if (timeoutMinutes <= 0) {
+      return emptyList()
+    }
+
+    return listOf(EnvVar(EnvVarConstants.SIDECAR_FILE_TIMEOUT_MINUTES, timeoutMinutes.toString(), null))
+  }
+
+  /**
+   * Some discover inputs carry an actor context without a workspace, actor or definition id. Leaving a missing id out
+   * of the flag context keeps that from failing every discover launch.
+   */
+  private fun actorFlagContext(actorContext: ActorContext): Multi {
+    val workspaceId: UUID? = actorContext.workspaceId
+    val actorId: UUID? = actorContext.actorId
+    val actorDefinitionId: UUID? = actorContext.actorDefinitionId
+    val actorType: ActorType? = actorContext.actorType
+    val actorContexts =
+      when (actorType) {
+        ActorType.SOURCE -> listOfNotNull(actorId?.let { Source(it) }, actorDefinitionId?.let { SourceDefinition(it) })
+        ActorType.DESTINATION -> listOfNotNull(actorId?.let { Destination(it) }, actorDefinitionId?.let { DestinationDefinition(it) })
+        null -> emptyList()
+      }
+
+    return Multi(listOfNotNull(Organization(actorContext.organizationId), workspaceId?.let { Workspace(it) }) + actorContexts)
   }
 
   /**

@@ -217,7 +217,7 @@ class PayloadKubeInputMapper(
         workerConfigs = workerConfigs,
         connectionId = input.launcherConfig.connectionId,
       )
-    val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, input.getOrganizationId(), workloadId)
+    val runtimeEnvVars = runTimeEnvVarFactory.discoverConnectorEnvVars(input.launcherConfig, input.discoverCatalogInput, workloadId)
     val connectorReqs = resourceRequirementsFactory.discoverConnector(input)
     val initReqs = resourceRequirementsFactory.discoverInit(input)
 

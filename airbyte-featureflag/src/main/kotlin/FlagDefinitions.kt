@@ -299,3 +299,11 @@ object BypassDsrDeletionConnectionLimit : Temporary<Boolean>(key = "platform.byp
  * type in `airbyte_source_type`, instead of replacing the column. Evaluated with the organization and source definition.
  */
 object WidenColumnTypes : Temporary<Boolean>(key = "platform.widen-column-types", default = false)
+
+/**
+ * Overrides the connector sidecar's output file timeout for manual (UI) discovers. Values of 0 or less keep the sidecar
+ * default. Discovers inside a sync keep their own timeout, because a longer wait there delays every sync while the
+ * discover keeps failing. Keep values well under the workload monitor's non-sync timeout (4 hours by default), which
+ * fails the discover with a different error. Evaluated with the organization, workspace, actor and actor definition.
+ */
+object ManualDiscoverFileTimeoutMinutes : Permanent<Int>(key = "platform.manual-discover-file-timeout-minutes", default = 0)

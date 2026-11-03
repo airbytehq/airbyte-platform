@@ -4,17 +4,27 @@
 
 package io.airbyte.workload.launcher.pods.factories
 
+import io.airbyte.config.ActorContext
+import io.airbyte.config.ActorType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectionContext
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkerEnvConstants
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.ConcurrentSourceStreamRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
+import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.ForceDdRemoteConfigVar
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.ManualDiscoverFileTimeoutMinutes
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
+import io.airbyte.featureflag.Source
+import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
@@ -33,8 +43,11 @@ import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companion.MYSQL_SOURCE_NAME
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCHESTRATOR_JAVA_OPTS
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.actorDefinitionId
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.actorId
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.connectorAwsAssumedRoleSecretEnvList
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.organizationId
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.sourceActorContext
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.workspaceId
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.micronaut.logging.LogLevel
@@ -74,6 +87,7 @@ internal class RuntimeEnvVarFactoryTest {
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
     every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, any()) } returns false
     every { ffClient.boolVariation(ForceDdRemoteConfigVar, any()) } returns false
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns 0
     airbyteEdition = AirbyteEdition.COMMUNITY
 
     airbyteWorkerConfig =
@@ -424,7 +438,7 @@ internal class RuntimeEnvVarFactoryTest {
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
         .withDockerImage("image-name")
-    val result = factory.discoverConnectorEnvVars(config, organizationId, WORKLOAD_ID)
+    val result = factory.discoverConnectorEnvVars(config, manualDiscoverInput(sourceActorContext), WORKLOAD_ID)
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
@@ -460,8 +474,115 @@ internal class RuntimeEnvVarFactoryTest {
 
     val expectedEnvVar = EnvVar(DEPLOYMENT_MODE, expectedDeploymentMode, null)
     assertTrue(testFactory.checkConnectorEnvVars(config, organizationId, WORKLOAD_ID).contains(expectedEnvVar))
-    assertTrue(testFactory.discoverConnectorEnvVars(config, organizationId, WORKLOAD_ID).contains(expectedEnvVar))
+    assertTrue(testFactory.discoverConnectorEnvVars(config, manualDiscoverInput(sourceActorContext), WORKLOAD_ID).contains(expectedEnvVar))
     assertTrue(testFactory.specConnectorEnvVars(config, WORKLOAD_ID).contains(expectedEnvVar))
+  }
+
+  @Test
+  fun `sets the manual discover file timeout from the flag evaluated for a source`() {
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns 90
+
+    val result = factory.getManualDiscoverFileTimeoutEnvVars(manualDiscoverInput(sourceActorContext))
+
+    assertEquals(listOf(EnvVar(EnvVarConstants.SIDECAR_FILE_TIMEOUT_MINUTES, "90", null)), result)
+    verify {
+      ffClient.intVariation(
+        ManualDiscoverFileTimeoutMinutes,
+        Multi(listOf(Organization(organizationId), Workspace(workspaceId), Source(actorId), SourceDefinition(actorDefinitionId))),
+      )
+    }
+  }
+
+  @Test
+  fun `evaluates the manual discover file timeout flag with destination contexts for a destination`() {
+    val destinationActorContext =
+      ActorContext()
+        .withOrganizationId(organizationId)
+        .withWorkspaceId(workspaceId)
+        .withActorId(actorId)
+        .withActorDefinitionId(actorDefinitionId)
+        .withActorType(ActorType.DESTINATION)
+
+    factory.getManualDiscoverFileTimeoutEnvVars(manualDiscoverInput(destinationActorContext))
+
+    verify {
+      ffClient.intVariation(
+        ManualDiscoverFileTimeoutMinutes,
+        Multi(listOf(Organization(organizationId), Workspace(workspaceId), Destination(actorId), DestinationDefinition(actorDefinitionId))),
+      )
+    }
+  }
+
+  @Test
+  fun `evaluates the manual discover file timeout flag with the organization alone when other ids are missing`() {
+    val organizationOnlyActorContext = ActorContext().withOrganizationId(organizationId)
+
+    factory.getManualDiscoverFileTimeoutEnvVars(manualDiscoverInput(organizationOnlyActorContext))
+
+    verify { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, Multi(listOf(Organization(organizationId)))) }
+  }
+
+  @Test
+  fun `evaluates the manual discover file timeout flag with the source definition when the source id is missing`() {
+    val definitionOnlyActorContext =
+      ActorContext()
+        .withOrganizationId(organizationId)
+        .withWorkspaceId(workspaceId)
+        .withActorDefinitionId(actorDefinitionId)
+        .withActorType(ActorType.SOURCE)
+
+    factory.getManualDiscoverFileTimeoutEnvVars(manualDiscoverInput(definitionOnlyActorContext))
+
+    verify {
+      ffClient.intVariation(
+        ManualDiscoverFileTimeoutMinutes,
+        Multi(listOf(Organization(organizationId), Workspace(workspaceId), SourceDefinition(actorDefinitionId))),
+      )
+    }
+  }
+
+  @Test
+  fun `skips the manual discover file timeout flag for a discover inside a sync`() {
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns 90
+    val withinSyncDiscoverInput = manualDiscoverInput(sourceActorContext).withManual(false)
+
+    assertEquals(emptyList<EnvVar>(), factory.getManualDiscoverFileTimeoutEnvVars(withinSyncDiscoverInput))
+    verify(exactly = 0) { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) }
+  }
+
+  @Test
+  fun `treats a discover without the manual field as manual, like the sidecar`() {
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns 90
+    val unsetManualDiscoverInput = manualDiscoverInput(sourceActorContext).withManual(null)
+
+    assertEquals(
+      listOf(EnvVar(EnvVarConstants.SIDECAR_FILE_TIMEOUT_MINUTES, "90", null)),
+      factory.getManualDiscoverFileTimeoutEnvVars(unsetManualDiscoverInput),
+    )
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = [0, -1])
+  fun `keeps the sidecar default manual discover file timeout when the flag is not positive`(flagValue: Int) {
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns flagValue
+
+    assertEquals(emptyList<EnvVar>(), factory.getManualDiscoverFileTimeoutEnvVars(manualDiscoverInput(sourceActorContext)))
+  }
+
+  @Test
+  fun `adds the manual discover file timeout to discover connector env vars`() {
+    every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns emptyList()
+    every { factory.getConnectorApmEnvVars(any(), any()) } returns emptyList()
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+    every { ffClient.intVariation(ManualDiscoverFileTimeoutMinutes, any()) } returns 90
+    val config =
+      IntegrationLauncherConfig()
+        .withWorkspaceId(workspaceId)
+        .withDockerImage("image-name")
+
+    val result = factory.discoverConnectorEnvVars(config, manualDiscoverInput(sourceActorContext), WORKLOAD_ID)
+
+    assertTrue(result.contains(EnvVar(EnvVarConstants.SIDECAR_FILE_TIMEOUT_MINUTES, "90", null)), "$result")
   }
 
   @Test
@@ -597,8 +718,20 @@ internal class RuntimeEnvVarFactoryTest {
     const val CONTAINER_ORCHESTRATOR_JAVA_OPTS = "OPTS"
     val organizationId = UUID.randomUUID()!!
     val workspaceId = UUID.randomUUID()!!
+    val actorId = UUID.randomUUID()!!
+    val actorDefinitionId = UUID.randomUUID()!!
+    val sourceActorContext: ActorContext =
+      ActorContext()
+        .withOrganizationId(organizationId)
+        .withWorkspaceId(workspaceId)
+        .withActorId(actorId)
+        .withActorDefinitionId(actorDefinitionId)
+        .withActorType(ActorType.SOURCE)
     val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "credentials", null))
   }
+
+  private fun manualDiscoverInput(actorContext: ActorContext): StandardDiscoverCatalogInput =
+    StandardDiscoverCatalogInput().withActorContext(actorContext).withManual(true)
 
   private fun factoryForEdition(edition: AirbyteEdition): RuntimeEnvVarFactory =
     spyk(
