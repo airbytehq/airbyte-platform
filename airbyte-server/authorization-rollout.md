@@ -1,8 +1,30 @@
 # Authorization verification and rollback (PLAT-1515)
 
-This work is stacked on PLAT-1513. It removes duplicate controller permission checks after shared rules cover their action, caller and saved resource relationships. Micronaut still validates tokens and requires authentication at entry. Public/login declarations, SCIM authentication, header stripping, input checks, identity checks and scoped-token restrictions remain in place.
+The merged PLAT-1513 and PLAT-1515 work uses shared rules for protected
+Config and Public API routes, including Cloud replacements. Micronaut still
+validates tokens and requires authentication for protected routes. Public/login
+declarations, SCIM authentication, header stripping, input checks, identity
+checks and scoped-token restrictions remain in place.
 
-Production rollout and signoff are pending. PLAT-1506 metrics are deferred by request; this branch does not satisfy the ticket's production metrics criterion and must not be used to mark PLAT-1515 Done.
+Production validation and PLAT-1506 metrics are separate follow-up work. This
+document does not establish production rollout signoff.
+
+## Adding or changing an API route
+
+Declare `@AuthorizeOperation` on each implementation method, including Cloud
+overrides. For a protected route, use `PROTECTED` with a concrete, injectable
+`OperationRule` and keep authentication-only `@Secured(IS_AUTHENTICATED)` on the
+method or class. The rule checks the caller, action and resource relationship
+before controller work. It reads parsed method arguments, so body and URL path
+ids use the same mechanism. Public and login methods declare their policy
+without a rule and must allow anonymous access in Micronaut security.
+
+The three Config root searches below are the only protected-route exceptions.
+The workload API and SCIM have separate boundaries. When changing a route,
+check the served route inventory in both OSS and Cloud, and add focused HTTP
+cases for allow, deny and existing response behavior. See the
+[public route matrix](public-api-authorization.md) for the current Public API
+contract.
 
 ## Inventory and compatibility
 

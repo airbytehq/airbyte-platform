@@ -52,7 +52,8 @@ New code follows three layers. Each layer calls only the one below it.
 
 1. **Controller** (`oss/airbyte-server/.../apis/controllers/`)
    implements the generated OpenAPI interface. It owns the HTTP
-   concerns: `@Secured`, `@ExecuteOn`, `@AuditLogging`, converting
+   concerns: `@AuthorizeOperation`, `@Secured`, `@ExecuteOn`,
+   `@AuditLogging`, converting
    generated API models to and from `airbyte-domain:models` types,
    and turning domain exceptions into Problems. It contains no
    business logic and calls domain services only.
@@ -214,34 +215,34 @@ three layers.
   `application.yml` that uses it, and its size must fit the database
   connection pool, because threads beyond the pool's connections just
   wait for one.
-- **Authorize with `@Secured` wherever it works; call `RoleResolver`
-  only where it can't.** Use roles from `AuthRoleConstants`, for
-  example `@Secured(AuthRoleConstants.ORGANIZATION_ADMIN)`. A
-  class-level `@Secured(SecurityRule.IS_AUTHENTICATED)` only requires
-  a logged-in caller. Each method still needs its own role. The
-  annotation is enforced before the controller runs, using the
-  resource ids in the request body (the fields listed in
-  `AuthenticationId`). See
-  [`cloud/AGENTS.md`](../cloud/AGENTS.md#public-vs-internal-api-auth)
-  for how roles are resolved.
-  - **Config API** (`apis/controllers/`): always use `@Secured`. Don't
-    inject `RoleResolver` into a new Config API controller. If the
-    request body identifies the resource by an id that
-    `AuthenticationId` doesn't support, add that id to
-    `AuthenticationId` and its resolver. Don't check roles in the
-    controller. Existing controllers that call `RoleResolver`
-    (`GroupApiController` and others) predate this rule.
-  - **Public API** (`apis/publicapi/controllers/`): use `@Secured`
-    when the resource id is in the request body, as on most create
-    endpoints. When the id is only in the URL path, the annotation
-    can't see it, so call `RoleResolver` at the top of the method:
-    `roleResolver.newRequest().withCurrentUser().withRef(AuthenticationId.SOURCE_ID, sourceId).requireOneOfRoles(...)`.
-  - **Workload API** (`airbyte-workload-api-server`): always authorize
-    with `RoleResolver`, not `@Secured`. Callers are usually dataplanes
-    rather than users, and the owning organization has to be looked up
-    from the workload, dataplane group, or dataplane. Call
-    `WorkloadApi.authorize()`, which does this with
-    `RoleResolver.withCurrentAuthentication()`.
+- **Declare access on every served server API method.** Config and Public API
+  implementation methods use `@AuthorizeOperation`. A protected method names
+  `RouteAccessPolicy.PROTECTED` and a concrete, injectable `OperationRule`.
+  Keep `@Secured(SecurityRule.IS_AUTHENTICATED)` on the class or method as
+  the authentication check; do not put resource roles in `@Secured`. The rule
+  checks the caller, requested action and saved resource relationships before
+  controller work. It receives parsed method arguments, so body and URL path
+  ids follow the same pattern. Do not add a controller `RoleResolver` check
+  as the route's authorization mechanism.
+  - Declare `RouteAccessPolicy.PUBLIC` or `LOGIN` without a rule on routes
+    meant to be anonymously reachable. The existing Micronaut security
+    declaration must also allow anonymous access.
+  - Put the annotation on the **implementation method**, including each
+    Cloud `@Replaces` override. Startup validates the active routes, and the
+    request filter blocks managed routes that were not validated. See
+    [authorization-rollout.md](airbyte-server/authorization-rollout.md) and
+    the [public route matrix](airbyte-server/public-api-authorization.md).
+  - The only Config search exceptions are `POST /api/v1/sources/search`,
+    `/destinations/search` and `/connections/search`. They keep their
+    current behavior with `@ConfigSearchAccessException`, authentication
+    and `@AuthorizeOperation(access = RouteAccessPolicy.PROTECTED)` without
+    a rule. Do not use that marker for another route.
+  - Keep service-level checks when the service also has non-route callers.
+    `RoleResolver` remains available to rules and services; it is not the
+    default controller authorization pattern.
+  - **Workload API** (`airbyte-workload-api-server`) has a separate boundary.
+    Continue to use `WorkloadApi.authorize()` and
+    `RoleResolver.withCurrentAuthentication()` for its dataplane callers.
 
 ## Build & test commands
 
