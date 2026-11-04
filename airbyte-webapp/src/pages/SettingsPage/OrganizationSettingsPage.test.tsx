@@ -1,6 +1,7 @@
-import { screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 
-import { mocked, render } from "test-utils";
+import { mocked, render, TestWrapper } from "test-utils";
 
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { hasOrganizationBillingHistory, useCurrentOrganizationId } from "area/organization/utils";
@@ -234,9 +235,20 @@ describe("OrganizationSettingsPage", () => {
       (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.ManageDataplanes
     );
 
-    await render(<OrganizationSettingsPage />);
+    rtlRender(
+      <TestWrapper route="/organization/org-1/settings/organization">
+        <Routes>
+          <Route path="organization/:organizationId/*">
+            <Route path="settings/*" element={<OrganizationSettingsPage />} />
+          </Route>
+        </Routes>
+      </TestWrapper>
+    );
 
-    expect(screen.getByRole("link", { name: "Regions" })).toHaveAttribute("href", "/organizationRegions");
+    expect(await screen.findByRole("link", { name: "Regions" })).toHaveAttribute(
+      "href",
+      "/organization/org-1/settings/organizationRegions"
+    );
   });
 
   it("hides the Billing nav link for an organization without billing history when selfServePlusPlan is on", async () => {

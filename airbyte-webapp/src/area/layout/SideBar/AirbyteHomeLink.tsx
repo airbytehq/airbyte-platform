@@ -16,7 +16,7 @@ export const AirbyteHomeLink: React.FC = () => {
   return (
     <div className={styles.homeLink}>
       <Link
-        to={RoutePaths.Connections}
+        to={`/${RoutePaths.Connections}`}
         aria-label={formatMessage({ id: "sidebar.homepage" })}
         className={styles.homeLink__link}
       >

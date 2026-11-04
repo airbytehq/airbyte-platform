@@ -67,10 +67,7 @@ const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.Mocked
 describe("Cloud invitation routing", () => {
   it("accepts an invitation when the FullStory hook has no current organization", async () => {
     render(
-      <MemoryRouter
-        initialEntries={["/accept-invite?inviteCode=invite-123"]}
-        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-      >
+      <MemoryRouter initialEntries={["/accept-invite?inviteCode=invite-123"]}>
         <Suspense fallback={<div data-testid="outer-suspense" />}>
           <Routing />
         </Suspense>

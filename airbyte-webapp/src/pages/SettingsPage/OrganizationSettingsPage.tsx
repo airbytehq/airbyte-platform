@@ -7,14 +7,19 @@ import { LoadingPage } from "components";
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { hasOrganizationBillingHistory, useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
-import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
+import {
+  SettingsLink,
+  SettingsNavigation,
+  SettingsNavigationBlock,
+  settingsPagePath,
+} from "area/settings/components/SettingsNavigation";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { SettingsRoutePaths } from "pages/routePaths";
+import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/useCanViewRegionsPage";
 
 export const OrganizationSettingsPage: React.FC = () => {
@@ -55,62 +60,62 @@ export const OrganizationSettingsPage: React.FC = () => {
                 <SettingsLink
                   iconType="gear"
                   name={formatMessage({ id: "settings.general" })}
-                  to={SettingsRoutePaths.Organization}
+                  to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Organization)}
                 />
                 {displayOrganizationUsers && (
                   <SettingsLink
                     iconType="user"
                     name={formatMessage({ id: "settings.members" })}
-                    to={SettingsRoutePaths.OrganizationMembers}
+                    to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.OrganizationMembers)}
                   />
                 )}
                 {isScimProvisioningEnabled && canManageOrganizationPermissions && (
                   <SettingsLink
                     iconType="community"
                     name={formatMessage({ id: "settings.groups" })}
-                    to={SettingsRoutePaths.OrganizationGroups}
+                    to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.OrganizationGroups)}
                   />
                 )}
                 {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
                   <SettingsLink
                     iconType="docs"
                     name={formatMessage({ id: "settings.auditLogs" })}
-                    to={SettingsRoutePaths.OrganizationAuditLogs}
+                    to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.OrganizationAuditLogs)}
                   />
                 )}
                 {isBillingNavVisible && (
                   <SettingsLink
                     iconType="credits"
                     name={formatMessage({ id: "sidebar.billing" })}
-                    to={CloudSettingsRoutePaths.Billing}
+                    to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Billing)}
                   />
                 )}
                 {isCloudApp && canManageOrganizationBilling && isSelfServePlusPlanEnabled && (
                   <SettingsLink
                     iconType="creditCard"
                     name={formatMessage({ id: "sidebar.plan" })}
-                    to={CloudSettingsRoutePaths.Plan}
+                    to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Plan)}
                   />
                 )}
                 {isCloudApp && canViewOrganizationUsage && (
                   <SettingsLink
                     iconType="chart"
                     name={formatMessage({ id: "settings.usage" })}
-                    to={CloudSettingsRoutePaths.OrganizationUsage}
+                    to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.OrganizationUsage)}
                   />
                 )}
                 {canUpdateSSOConfig && (
                   <SettingsLink
                     iconType="lock"
                     name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
-                    to={SettingsRoutePaths.OrganizationSSO}
+                    to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.OrganizationSSO)}
                   />
                 )}
                 {showRegionsLink && (
                   <SettingsLink
                     iconType="globe"
                     name={formatMessage({ id: "settings.organizationSettings.regions" })}
-                    to={SettingsRoutePaths.OrganizationRegions}
+                    to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.OrganizationRegions)}
                   />
                 )}
                 {defaultWorkspace && (
@@ -119,13 +124,13 @@ export const OrganizationSettingsPage: React.FC = () => {
                       iconType="source"
                       count={countNewSourceVersion}
                       name={formatMessage({ id: "tables.sources" })}
-                      to={SettingsRoutePaths.Source}
+                      to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Source)}
                     />
                     <SettingsLink
                       iconType="destination"
                       count={countNewDestinationVersion}
                       name={formatMessage({ id: "tables.destinations" })}
-                      to={SettingsRoutePaths.Destination}
+                      to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Destination)}
                     />
                   </IfFeatureEnabled>
                 )}

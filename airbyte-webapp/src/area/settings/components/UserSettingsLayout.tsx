@@ -10,6 +10,7 @@ import {
   SettingsLink,
   SettingsNavigation,
   SettingsNavigationBlock,
+  settingsPagePath,
 } from "area/settings/components/SettingsNavigation";
 import { useAuthService } from "core/services/auth";
 import { useExperiment } from "core/services/Experiment";
@@ -33,13 +34,13 @@ export const UserSettingsLayout: React.FC<React.PropsWithChildren> = () => {
             <SettingsLink
               iconType="user"
               name={formatMessage({ id: "settings.account" })}
-              to={SettingsRoutePaths.Account}
+              to={settingsPagePath(SettingsRoutePaths.User, SettingsRoutePaths.Account)}
             />
             {applicationSupport !== "none" && (
               <SettingsLink
                 iconType="grid"
                 name={formatMessage({ id: "settings.applications" })}
-                to={SettingsRoutePaths.Applications}
+                to={settingsPagePath(SettingsRoutePaths.User, SettingsRoutePaths.Applications)}
               />
             )}
             {isConsentManagerActive() && (
@@ -53,7 +54,7 @@ export const UserSettingsLayout: React.FC<React.PropsWithChildren> = () => {
               <SettingsLink
                 iconType="gear"
                 name={formatMessage({ id: "settings.advanced" })}
-                to={SettingsRoutePaths.Advanced}
+                to={settingsPagePath(SettingsRoutePaths.User, SettingsRoutePaths.Advanced)}
               />
             )}
           </SettingsNavigationBlock>

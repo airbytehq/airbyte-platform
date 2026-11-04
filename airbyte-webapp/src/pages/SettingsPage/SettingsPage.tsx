@@ -6,13 +6,18 @@ import { LoadingPage } from "components";
 
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
-import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
+import {
+  SettingsLink,
+  SettingsNavigation,
+  SettingsNavigationBlock,
+  settingsPagePath,
+} from "area/settings/components/SettingsNavigation";
 import { useGetInstanceConfiguration } from "core/api";
 import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/AirbyteClient";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { SettingsRoutePaths } from "pages/routePaths";
+import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 
 export const SettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -34,7 +39,7 @@ export const SettingsPage: React.FC = () => {
             <SettingsLink
               iconType="user"
               name={formatMessage({ id: "settings.account" })}
-              to={SettingsRoutePaths.Account}
+              to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Account)}
             />
           </SettingsNavigationBlock>
         )}
@@ -44,13 +49,13 @@ export const SettingsPage: React.FC = () => {
             name={formatMessage({
               id: "settings.general",
             })}
-            to={SettingsRoutePaths.Workspace}
+            to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Workspace)}
           />
           {showWorkspacePicker && canViewWorkspaceSettings && (
             <SettingsLink
               iconType="community"
               name={formatMessage({ id: "settings.members" })}
-              to={SettingsRoutePaths.WorkspaceMembers}
+              to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.WorkspaceMembers)}
             />
           )}
           {canViewWorkspaceSettings && !showWorkspacePicker && (
@@ -59,27 +64,27 @@ export const SettingsPage: React.FC = () => {
                 iconType="source"
                 count={countNewSourceVersion}
                 name={formatMessage({ id: "tables.sources" })}
-                to={SettingsRoutePaths.Source}
+                to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Source)}
               />
 
               <SettingsLink
                 iconType="destination"
                 count={countNewDestinationVersion}
                 name={formatMessage({ id: "tables.destinations" })}
-                to={SettingsRoutePaths.Destination}
+                to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Destination)}
               />
             </>
           )}
           <SettingsLink
             iconType="bell"
             name={formatMessage({ id: "settings.notifications" })}
-            to={SettingsRoutePaths.Notifications}
+            to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Notifications)}
           />
           {canViewWorkspaceSettings && trackingStrategy === InstanceConfigurationResponseTrackingStrategy.segment && (
             <SettingsLink
               iconType="chart"
               name={formatMessage({ id: "settings.metrics" })}
-              to={SettingsRoutePaths.Metrics}
+              to={settingsPagePath(RoutePaths.Settings, SettingsRoutePaths.Metrics)}
             />
           )}
         </SettingsNavigationBlock>

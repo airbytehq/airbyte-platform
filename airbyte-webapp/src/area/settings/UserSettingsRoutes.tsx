@@ -34,7 +34,7 @@ export const UserSettingsRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationsView />} />
         )}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
-        <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
+        <Route path="*" element={<Navigate to={`../${SettingsRoutePaths.Account}`} replace />} />
       </Route>
     </Routes>
   );

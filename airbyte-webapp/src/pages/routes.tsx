@@ -123,11 +123,11 @@ const WorkspacesRoutes: React.FC = () => {
           <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
           <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
           <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
-          <Route path="*" element={<Navigate to={SettingsRoutePaths.Workspace} replace />} />
+          <Route path="*" element={<Navigate to={`../${SettingsRoutePaths.Workspace}`} replace />} />
         </Route>
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
         {authType !== "none" && <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />}
-        <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
+        <Route path="*" element={<Navigate to={`../${RoutePaths.Connections}`} />} />
       </Routes>
     </DefaultErrorBoundary>
   );
@@ -136,7 +136,7 @@ const WorkspacesRoutes: React.FC = () => {
 const PreferencesRoutes = () => (
   <Routes>
     <Route path={RoutePaths.Setup} element={<SetupPage />} />
-    <Route path="*" element={<Navigate to={RoutePaths.Setup} />} />
+    <Route path="*" element={<Navigate to={`/${RoutePaths.Setup}`} />} />
   </Routes>
 );
 
@@ -165,8 +165,8 @@ export const Routing: React.FC = () => {
     })}`;
     const loginRedirectTo =
       loggedOut && originalPathname === "/"
-        ? { pathname: RoutePaths.Login }
-        : { pathname: RoutePaths.Login, search: loginRedirectSearchParam };
+        ? { pathname: `/${RoutePaths.Login}` }
+        : { pathname: `/${RoutePaths.Login}`, search: loginRedirectSearchParam };
 
     return (
       <Routes>

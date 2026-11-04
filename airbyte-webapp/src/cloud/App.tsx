@@ -79,5 +79,7 @@ const App: React.FC = () => {
 
 const router = createBrowserRouter([{ path: "*", element: <App /> }]);
 
-const CloudApp: React.FC = () => <RouterProvider router={router} />;
+// Without transitions, a page that waits for lazy code or suspense data shows its Suspense
+// fallback right away instead of leaving the previous page frozen on screen.
+const CloudApp: React.FC = () => <RouterProvider router={router} useTransitions={false} />;
 export default React.memo(CloudApp);

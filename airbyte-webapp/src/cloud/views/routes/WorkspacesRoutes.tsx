@@ -148,11 +148,11 @@ export const WorkspacesRoutes: React.FC = () => {
           />
         )}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
-        <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Workspace} replace />} />
+        <Route path="*" element={<Navigate to={`../${CloudSettingsRoutePaths.Workspace}`} replace />} />
       </Route>
       <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
       <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
-      <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
+      <Route path="*" element={<Navigate to={`../${RoutePaths.Connections}`} replace />} />
     </Routes>
   );
 };

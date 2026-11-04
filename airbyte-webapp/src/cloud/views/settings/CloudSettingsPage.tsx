@@ -5,8 +5,14 @@ import { Outlet } from "react-router-dom";
 import { LoadingPage } from "components";
 
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
-import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
+import {
+  SettingsLink,
+  SettingsNavigation,
+  SettingsNavigationBlock,
+  settingsPagePath,
+} from "area/settings/components/SettingsNavigation";
 import { FeatureItem, useFeature } from "core/services/features";
+import { RoutePaths } from "pages/routePaths";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
 
@@ -22,47 +28,47 @@ export const CloudSettingsPage: React.FC = () => {
           <SettingsLink
             iconType="gear"
             name={formatMessage({ id: "settings.general" })}
-            to={CloudSettingsRoutePaths.Workspace}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Workspace)}
           />
           <SettingsLink
             iconType="community"
             name={formatMessage({ id: "settings.members" })}
-            to={CloudSettingsRoutePaths.WorkspaceMembers}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.WorkspaceMembers)}
           />
           <SettingsLink
             iconType="source"
             name={formatMessage({ id: "tables.sources" })}
-            to={CloudSettingsRoutePaths.Source}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Source)}
           />
           <SettingsLink
             iconType="destination"
             name={formatMessage({ id: "tables.destinations" })}
-            to={CloudSettingsRoutePaths.Destination}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Destination)}
           />
           {supportsCloudDbtIntegration && (
             <SettingsLink
               iconType="integrations"
               name={formatMessage({ id: "settings.integrationSettings" })}
-              to={CloudSettingsRoutePaths.DbtCloud}
+              to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.DbtCloud)}
             />
           )}
           {supportsPrivateLinks && (
             <SettingsLink
               iconType="lock"
               name={formatMessage({ id: "settings.privateLinks" })}
-              to={CloudSettingsRoutePaths.PrivateLinks}
+              to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.PrivateLinks)}
             />
           )}
           <SettingsLink
             iconType="bell"
             name={formatMessage({ id: "settings.notifications" })}
-            to={CloudSettingsRoutePaths.Notifications}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Notifications)}
           />
 
           <SettingsLink
             iconType="chart"
             name={formatMessage({ id: "settings.usage" })}
-            to={CloudSettingsRoutePaths.Usage}
+            to={settingsPagePath(RoutePaths.Settings, CloudSettingsRoutePaths.Usage)}
           />
         </SettingsNavigationBlock>
       </SettingsNavigation>

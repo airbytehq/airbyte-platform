@@ -29,7 +29,7 @@ const ConnectorBuilderRoutes: React.FC = () => (
       <Route path={ConnectorBuilderRoutePaths.Generate} element={<ConnectorBuilderGeneratePage />} />
       <Route path={ConnectorBuilderRoutePaths.Fork} element={<ConnectorBuilderForkPage />} />
       <Route index element={<ConnectorBuilderListPage />} />
-      <Route path="*" element={<Navigate to="." replace />} />
+      <Route path="*" element={<Navigate to=".." replace />} />
     </Routes>
   </Suspense>
 );

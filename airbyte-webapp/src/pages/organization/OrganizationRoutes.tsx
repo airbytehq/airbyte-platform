@@ -60,7 +60,7 @@ export const OrganizationRoutes: React.FC = () => {
       <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
       <Route element={<OrganizationSettingsLayout />}>
         <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />
-        <Route path="*" element={<Navigate to={RoutePaths.Workspaces} replace />} />
+        <Route path="*" element={<Navigate to={`../${RoutePaths.Workspaces}`} replace />} />
       </Route>
       {isCloudApp && (
         <>
@@ -118,7 +118,7 @@ export const OrganizationRoutes: React.FC = () => {
           )}
           <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
           <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
-          <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
+          <Route path="*" element={<Navigate to={`../${SettingsRoutePaths.Organization}`} replace />} />
         </Route>
       )}
     </Routes>

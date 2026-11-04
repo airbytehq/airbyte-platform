@@ -1319,6 +1319,7 @@ exports[`CreateConnectionForm should render 1`] = `
             >
               <a
                 class="<removed-for-snapshot-test>"
+                data-discover="true"
                 href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52"
               >
                 Back to Define destination

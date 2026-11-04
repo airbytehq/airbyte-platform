@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
-import { useBlocker as unstable_useBlocker } from "react-router-dom";
+import { useBlocker as useReactRouterBlocker } from "react-router-dom";
 
-export type Blocker = Extract<ReturnType<typeof unstable_useBlocker>, { state: "blocked" }>;
+export type Blocker = Extract<ReturnType<typeof useReactRouterBlocker>, { state: "blocked" }>;
 export type BlockerFn = (blocker: Blocker) => void;
 
 const context = createContext<{ setBlocker: (blockerFn: BlockerFn | undefined) => void } | null>(null);
@@ -14,7 +14,7 @@ const context = createContext<{ setBlocker: (blockerFn: BlockerFn | undefined) =
 export const BlockerService: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const currentBlockerRef = useRef<BlockerFn>();
   // Assume we want to block if there's a blocker currently set in the provider
-  const blocker = unstable_useBlocker(() => !!currentBlockerRef.current);
+  const blocker = useReactRouterBlocker(() => !!currentBlockerRef.current);
 
   // Once the actual blocker state changes to `blocked` we call the blocker callback
   // which could show a confirmation modal, and pass the blocker along, so it can

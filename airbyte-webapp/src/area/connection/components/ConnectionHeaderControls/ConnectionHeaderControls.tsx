@@ -47,7 +47,7 @@ export const ConnectionHeaderControls: React.FC = () => {
   const { syncWithCapacityCheck, isCheckingCapacity } = useSyncWithCapacityCheck(syncConnection);
 
   const onScheduleBtnClick = () => {
-    navigate(`${ConnectionRoutePaths.Settings}`, {
+    navigate(`../${connection.connectionId}/${ConnectionRoutePaths.Settings}`, {
       state: { action: "scheduleType" },
     });
   };

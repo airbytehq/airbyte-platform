@@ -37,6 +37,12 @@ export const SettingsNavigationBlock: React.FC<PropsWithChildren<SettingsNavigat
   );
 };
 
+/**
+ * Settings layouts are splat routes (`settings/*`, `user/*`), so a plain relative link from a layout resolves
+ * against the current page URL. Going up to the parent route first gives the same link on every settings page.
+ */
+export const settingsPagePath = (layoutPath: string, page: string) => `../${layoutPath}/${page}`;
+
 interface SettingsLinkProps {
   name: string | React.ReactNode;
   iconType: IconType;

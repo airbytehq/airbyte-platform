@@ -92,7 +92,7 @@ const WorkspaceNavItems: React.FC<WorkspaceNavItemsProps> = ({ workspace }) => {
 const OrganizationNavItems = () => {
   const organizationId = useCurrentOrganizationId();
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
-  const basePath = `${RoutePaths.Organization}/${organizationId}/`;
+  const basePath = `/${RoutePaths.Organization}/${organizationId}/`;
   return (
     <MenuContent data-testid="navMainItems">
       <NavItem
