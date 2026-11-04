@@ -33,6 +33,7 @@ import { Controls } from "./components/Controls";
 import SlowLoadingMessage from "./components/SlowLoadingMessage";
 import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
+import { useCheckSection } from "./useCheckSection";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
 import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 
@@ -138,8 +139,6 @@ export const ConnectorCard = <T extends ConnectorT>({
     reset,
     isSuccess: connectionTestSuccess,
   } = useTestConnectorCommand(props);
-  // A separate check for "Continue" between form sections, so its result never shows as the outcome of "Save & Test"
-  const { testConnector: testSection } = useTestConnectorCommand({ formType: props.formType });
   const isCloudApp = useIsCloudApp();
   const { trackTestConnectorFailure, trackTestConnectorSuccess, trackTestConnectorStarted } =
     useAnalyticsTrackFunctions(props.formType);
@@ -165,6 +164,8 @@ export const ConnectorCard = <T extends ConnectorT>({
     }
     return definition;
   }, [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]);
+
+  const checkSection = useCheckSection(props.formType, selectedConnectorDefinition);
 
   // Handle Doc panel
   useEffect(() => {
@@ -197,14 +198,6 @@ export const ConnectorCard = <T extends ConnectorT>({
     } catch (e) {
       trackTestConnectorFailure(selectedConnectorDefinition, CommandErrorWithJobInfo.getJobInfo(e), e.message);
       throw e;
-    }
-  };
-
-  const checkSection = async (values: ConnectorFormValues) => {
-    const output = await testSection({ ...values, serviceType: Connector.id(selectedConnectorDefinition) });
-    // A failed check throws with its job info, but a check that was aborted resolves as failed
-    if (output.status !== "succeeded") {
-      throw new Error(formatMessage({ id: "connector.check.failed" }));
     }
   };
 

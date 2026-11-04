@@ -11,7 +11,7 @@ import { FormSection } from "./components/Sections/FormSection";
 import { ConnectorFormSteps } from "./components/Steps/ConnectorFormSteps";
 import { useConnectorForm } from "./connectorFormContext";
 import { getEmptyRequiredFields } from "./requiredFields";
-import { ConnectorFormValues } from "./types";
+import { CheckSection, ConnectorFormValues } from "./types";
 import { useAuthentication } from "./useAuthentication";
 
 interface RenderFooterArgs {
@@ -42,7 +42,7 @@ export interface FormRootProps {
   groupStructure?: GroupDetails[];
   sections?: SectionDetails[];
   /** Create mode with sections only. See `ConnectorFormSteps`. */
-  onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
+  onCheckSection?: CheckSection;
   connectionTestSuccess?: boolean;
   isTestConnectionInProgress?: boolean;
   /** Disables the fields while a draft saves, so edits cannot slip in between the saved values and the form. */

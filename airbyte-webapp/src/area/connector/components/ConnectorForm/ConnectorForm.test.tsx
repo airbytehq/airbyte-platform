@@ -2740,6 +2740,58 @@ describe("Connector form", () => {
         expect(onCheckSection).toHaveBeenCalledTimes(3);
       });
 
+      describe("Connect target", () => {
+        const tunnelMethod = {
+          type: "object",
+          title: "SSH tunnel",
+          display_type: "radio",
+          group: "db",
+          oneOf: [
+            {
+              title: "No tunnel",
+              required: ["tunnel_method"],
+              properties: { tunnel_method: { type: "string", const: "NO_TUNNEL" } },
+            },
+            {
+              title: "SSH key",
+              required: ["tunnel_method"],
+              properties: { tunnel_method: { type: "string", const: "SSH_KEY_AUTH" } },
+            },
+          ],
+        };
+        const renderWithTunnelMethod = (onCheckSection: jest.Mock) =>
+          renderForm({
+            specificationOverride: {
+              connectionSpecification: {
+                ...sectionedSpec,
+                properties: { ...sectionedSpec.properties, tunnel_method: tunnelMethod },
+              },
+            },
+            onCheckSection,
+          });
+
+        it("passes the host and port when the same section selects no tunnel", async () => {
+          const onCheckSection = jest.fn().mockResolvedValue(undefined);
+          const container = await renderWithTunnelMethod(onCheckSection);
+
+          await completeConnectionSection(container);
+
+          await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(1));
+          expect(onCheckSection.mock.calls[0][1]).toEqual({ host: "db.example.com", port: 5432 });
+        });
+
+        it("passes no target when the same section selects an SSH tunnel", async () => {
+          const onCheckSection = jest.fn().mockResolvedValue(undefined);
+          const container = await renderWithTunnelMethod(onCheckSection);
+
+          await userEvent.click(getByTestId(getSection("connection"), "radio-option.1"));
+          await completeConnectionSection(container);
+
+          await waitFor(() => expect(onCheckSection).toHaveBeenCalledTimes(1));
+          expect(onCheckSection.mock.calls[0][1]).toBeUndefined();
+        });
+      });
+
       it("does not check a section without check: true", async () => {
         const onCheckSection = jest.fn().mockResolvedValue(undefined);
         const container = await renderForm({

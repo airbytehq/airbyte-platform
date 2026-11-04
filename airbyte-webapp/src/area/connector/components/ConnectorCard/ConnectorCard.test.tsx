@@ -10,6 +10,7 @@ import {
 } from "test-utils/mock-data/mockDestination";
 import { mockSourceDefinition, mockSourceDefinitionSpecification } from "test-utils/mock-data/mockSource";
 
+import { CheckSection } from "area/connector/components/ConnectorForm";
 import { useTestConnectorCommand } from "core/api";
 import messages from "locales/en.json";
 
@@ -24,7 +25,8 @@ const formValues = {
 const mockTrackTestConnectorFailure = jest.fn();
 const mockTrackTestConnectorStarted = jest.fn();
 const mockTrackTestConnectorSuccess = jest.fn();
-let mockOnCheckSection: ((values: typeof formValues) => Promise<unknown>) | undefined;
+let mockOnCheckSection: CheckSection | undefined;
+const mockTestConnectTarget = jest.fn();
 const mockMarkFormAsSaved = jest.fn();
 
 jest.mock("area/connector/components/ConnectorForm", () => ({
@@ -36,7 +38,7 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
     renderFooter,
   }: {
     onSubmit: (values: typeof formValues) => Promise<void>;
-    onCheckSection: (values: typeof formValues) => Promise<unknown>;
+    onCheckSection: CheckSection;
     formHeader: React.ReactNode;
     isSavingDraft?: boolean;
     renderFooter: (props: {
@@ -98,6 +100,7 @@ jest.mock("area/organization/components/CloudInviteUsersButton", () => ({
 
 jest.mock("core/api", () => ({
   CommandErrorWithJobInfo: { getJobInfo: jest.fn() },
+  useConnectCommand: () => mockTestConnectTarget,
   useTestConnectorCommand: jest.fn(),
 }));
 
@@ -453,5 +456,72 @@ describe("ConnectorCard section check", () => {
     renderCardWithSectionCheck(jest.fn().mockResolvedValue({ id: "command-id", status: "failed" }));
 
     await expect(mockOnCheckSection?.(sectionValues)).rejects.toThrow(messages["connector.check.failed"]);
+  });
+
+  describe("with a Connect target", () => {
+    const connectTarget = { host: "db.example.com", port: 5432 };
+
+    it("passes the check with the Connect command and runs no connector check", async () => {
+      const sectionTestConnector = jest.fn();
+      mockTestConnectTarget.mockResolvedValue({ id: "command-id", reachable: true, error_code: "none" });
+      renderCardWithSectionCheck(sectionTestConnector);
+
+      await mockOnCheckSection?.(sectionValues, connectTarget);
+
+      expect(mockTestConnectTarget).toHaveBeenCalledWith(connectTarget);
+      expect(sectionTestConnector).not.toHaveBeenCalled();
+    });
+
+    it("fails the check with the message for its error code", async () => {
+      const sectionTestConnector = jest.fn();
+      mockTestConnectTarget.mockResolvedValue({ id: "command-id", reachable: false, error_code: "dns_failed" });
+      renderCardWithSectionCheck(sectionTestConnector);
+
+      await expect(mockOnCheckSection?.(sectionValues, connectTarget)).rejects.toThrow(
+        new Error("Airbyte could not find the host db.example.com. Check the host name.")
+      );
+      expect(sectionTestConnector).not.toHaveBeenCalled();
+    });
+
+    it("runs the section check when the server refuses the Connect command", async () => {
+      const sectionTestConnector = jest.fn().mockResolvedValue({ id: "command-id", status: "succeeded" });
+      mockTestConnectTarget.mockResolvedValue(undefined);
+      renderCardWithSectionCheck(sectionTestConnector);
+
+      await mockOnCheckSection?.(sectionValues, connectTarget);
+
+      expect(sectionTestConnector).toHaveBeenCalledWith({
+        ...sectionValues,
+        serviceType: mockSourceDefinition.sourceDefinitionId,
+      });
+    });
+
+    it("runs the section check when the Connect command fails on the platform side", async () => {
+      const sectionTestConnector = jest.fn().mockResolvedValue({ id: "command-id", status: "succeeded" });
+      mockTestConnectTarget.mockResolvedValue({
+        id: "command-id",
+        reachable: false,
+        error_code: "unknown",
+        failure_reason: { externalMessage: "The connect test failed" },
+      });
+      renderCardWithSectionCheck(sectionTestConnector);
+
+      await mockOnCheckSection?.(sectionValues, connectTarget);
+
+      expect(sectionTestConnector).toHaveBeenCalledWith({
+        ...sectionValues,
+        serviceType: mockSourceDefinition.sourceDefinitionId,
+      });
+    });
+
+    it("fails the check with any other error from the Connect command, and runs no section check", async () => {
+      const blockedAddressError = new Error("Destination is not allowed");
+      const sectionTestConnector = jest.fn();
+      mockTestConnectTarget.mockRejectedValue(blockedAddressError);
+      renderCardWithSectionCheck(sectionTestConnector);
+
+      await expect(mockOnCheckSection?.(sectionValues, connectTarget)).rejects.toBe(blockedAddressError);
+      expect(sectionTestConnector).not.toHaveBeenCalled();
+    });
   });
 });

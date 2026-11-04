@@ -8,14 +8,22 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectorHelper, ConnectorT } from "core/domain/connector";
 
 import { ApiCallOptions } from "../apiCall";
-import { CommandErrorWithJobInfo } from "../errors";
-import { runCheckCommand, getCommandStatus, getCheckCommandOutput, cancelCommand } from "../generated/AirbyteClient";
+import { CommandErrorWithJobInfo, HttpError } from "../errors";
+import {
+  runCheckCommand,
+  getCommandStatus,
+  getCheckCommandOutput,
+  cancelCommand,
+  runConnectCommand,
+  getConnectCommandOutput,
+} from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
   GetCheckCommandOutput200,
   GetCheckCommandOutput200Status,
   JobConfigType,
   LogEvents,
+  RunConnectCommandBody,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 
@@ -216,4 +224,58 @@ export const useTestConnectorCommand = (
       mutation.reset();
     },
   };
+};
+
+/**
+ * Runs the Connect command. Resolves with `false` when the server refuses the command with a 409. Only this request can
+ * treat a 409 as a refusal, because the output endpoint also returns a 409 while the command runs.
+ */
+const tryRunConnectCommand = async (body: RunConnectCommandBody, options: ApiCallOptions) => {
+  try {
+    await runConnectCommand(body, options);
+    return true;
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 409) {
+      return false;
+    }
+    throw e;
+  }
+};
+
+/**
+ * Tests whether the data plane of the workspace can open a TCP connection to a host and port, without a connector.
+ * Resolves with the result of the probe, or with `undefined` when the server refuses to run the command with a 409, so
+ * that the caller can run another check. Rejects when any other request fails, when the command was cancelled, or when
+ * the component unmounts.
+ */
+export const useConnectCommand = () => {
+  const { formatMessage } = useIntl();
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // The probe ends on its own, so an unmount only stops the requests and does not cancel the command
+  useEffect(() => () => abortControllerRef.current?.abort(DOM_EXCEPTION_COMPONENT_UNMOUNTED), []);
+
+  const { mutateAsync } = useMutation(async ({ host, port }: Pick<RunConnectCommandBody, "host" | "port">) => {
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const { signal } = abortController;
+    const options = { ...requestOptions, signal };
+    const commandId = uuidv4();
+
+    const isAccepted = await tryRunConnectCommand({ id: commandId, workspace_id: workspaceId, host, port }, options);
+    if (!isAccepted) {
+      return undefined;
+    }
+
+    const status = await pollCommandUntilResolved(commandId, requestOptions, signal);
+    if (status === "cancelled") {
+      throw new Error(formatMessage({ id: "connector.check.failed" }));
+    }
+
+    return getConnectCommandOutput({ id: commandId }, options);
+  });
+
+  return mutateAsync;
 };

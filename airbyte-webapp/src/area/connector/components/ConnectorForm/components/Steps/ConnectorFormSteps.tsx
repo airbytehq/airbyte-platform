@@ -25,7 +25,7 @@ import { SectionProgressProvider } from "./SectionProgress";
 import { useSectionChecks } from "./useSectionChecks";
 import { useConnectorForm } from "../../connectorFormContext";
 import { getEmptyRequiredFields, useFillRequiredFieldsMessage } from "../../requiredFields";
-import { ConnectorFormValues } from "../../types";
+import { CheckSection, ConnectorFormValues } from "../../types";
 import { useAuthentication } from "../../useAuthentication";
 import { FormSection } from "../Sections/FormSection";
 
@@ -43,10 +43,10 @@ interface ConnectorFormStepsProps {
   /**
    * Create mode only: runs a connector check before the user leaves a section that is not the last one and declares
    * `check: true`. The connector config holds the fields of the section and of the sections before it, and the section
-   * id under `check-section`. Resolves when the check passed. Rejects with the error to show in the section when the
-   * check fails.
+   * id under `check-section`. `connectTarget` is set when the section can use the Connect command instead. Resolves
+   * when the check passed. Rejects with the error to show in the section when the check fails.
    */
-  onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
+  onCheckSection?: CheckSection;
 }
 
 export const ConnectorFormSteps: React.FC<ConnectorFormStepsProps> = ({

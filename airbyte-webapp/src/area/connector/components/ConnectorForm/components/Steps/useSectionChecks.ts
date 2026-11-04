@@ -4,10 +4,11 @@ import { useIntl } from "react-intl";
 
 import { FormBlock, SectionDetails } from "core/form/types";
 
+import { getConnectTarget } from "./connectTarget";
 import { getSectionCheckValues } from "./sectionCheckValues";
 import { isSameOrChildPath } from "./sectionPaths";
 import { useConnectorForm } from "../../connectorFormContext";
-import { ConnectorFormValues } from "../../types";
+import { CheckSection, ConnectorFormValues } from "../../types";
 
 interface SectionCheckError {
   sectionId: string;
@@ -19,7 +20,7 @@ interface UseSectionChecksProps {
   sections: SectionDetails[];
   blocksBySection: FormBlock[][];
   pathsBySection: string[][];
-  onCheckSection?: (values: ConnectorFormValues) => Promise<void>;
+  onCheckSection?: CheckSection;
 }
 
 // Returns the same set when it holds none of the ids, so that typing in a field does not re-render the form
@@ -69,7 +70,8 @@ export const useSectionChecks = ({
     setSectionCheckError(undefined);
     setCheckingSectionId(section.id);
     try {
-      await onCheckSection(getSectionCheckValues(castValues(getValues()), sections, blocksBySection, sectionIndex));
+      const values = getSectionCheckValues(castValues(getValues()), sections, blocksBySection, sectionIndex);
+      await onCheckSection(values, getConnectTarget(values.connectionConfiguration, blocksBySection[sectionIndex]));
       setPassedSectionIds((sectionIds) => new Set(sectionIds).add(section.id));
       return true;
     } catch (e) {
