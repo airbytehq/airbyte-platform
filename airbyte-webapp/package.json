@@ -3,11 +3,11 @@
   "private": true,
   "packageManager": "pnpm@8.6.12",
   "engines": {
-    "node": "20.19.0",
+    "node": "22.23.4",
     "pnpm": "8.6.12"
   },
   "volta": {
-    "node": "20.19.0",
+    "node": "22.23.4",
     "pnpm": "8.6.12"
   },
   "scripts": {

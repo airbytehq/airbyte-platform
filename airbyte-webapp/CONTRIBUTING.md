@@ -27,8 +27,8 @@ Please also check our [styleguide](./STYLEGUIDE.md) for details around code styl
 
 ## Webapp conventions
 
-- Use `pnpm@8.6.12` and Node 20.19.0, as pinned by the project. Run commands from
-  `oss/airbyte-webapp/`.
+- Use the Node.js version in `.nvmrc` (`nvm install && nvm use`) and the pnpm
+  version in `package.json`. Run commands from `oss/airbyte-webapp/`.
 - All user-facing text uses React Intl. Add keys to `src/locales/en.json` (or
   `en.errors.json` for error messages), and remove unused keys when removing code.
 - Do not edit or commit generated API artifacts under `src/core/api/generated/`.
