@@ -146,8 +146,8 @@ dependencies:
     specifier: ^23.0.7
     version: 23.0.7
   launchdarkly-js-client-sdk:
-    specifier: ^3.1.0
-    version: 3.1.0
+    specifier: ^3.9.6
+    version: 3.9.6
   lodash:
     specifier: ^4.18.0
     version: 4.18.0
@@ -170,8 +170,8 @@ dependencies:
     specifier: ^1.0.1
     version: 1.0.1
   query-string:
-    specifier: ^8.1.0
-    version: 8.1.0
+    specifier: ^9.5.1
+    version: 9.5.1
   react:
     specifier: ^18.2.0
     version: 18.2.0
@@ -6749,8 +6749,8 @@ packages:
       character-entities: 2.0.2
     dev: false
 
-  /decode-uri-component@0.4.1:
-    resolution: {integrity: sha512-+8VxcR21HhTy8nOt6jf20w0c9CADrw1O8d+VZ/YzzCt4bJ3uBjw+D1q2osAB8RnpwwaeYBxy0HyKQxD5JBMuuQ==}
+  /decode-uri-component@0.5.1:
+    resolution: {integrity: sha512-vWHQkXgg2cE3BB4rR0c+PYw9BCQzLoNIRMI7AunIkZst74tw/vpPp7VLoYtsR/cy1f55g3XDWUslfeCZjiZJyA==}
     engines: {node: '>=14.16'}
     dev: false
 
@@ -9548,19 +9548,18 @@ packages:
       language-subtag-registry: 0.3.22
     dev: true
 
-  /launchdarkly-js-client-sdk@3.1.0:
-    resolution: {integrity: sha512-8aM3Wp5ZAS/TCIELOYkEs4CFzih/g7sO+YCHNQ5g0k80WDMTmTcGLMLhCKmrzaQnMK21HiBwbkBpAYnyzr5yUQ==}
+  /launchdarkly-js-client-sdk@3.9.6:
+    resolution: {integrity: sha512-WiuAuRmD/YZGE6TYzt78lhObGAWioWEy39fYWjOVKJv4zupKAGwBXQb902Y3OD15XYf2J1kqyulN9G/AZgDJNw==}
     dependencies:
       escape-string-regexp: 4.0.0
-      launchdarkly-js-sdk-common: 5.0.1
+      launchdarkly-js-sdk-common: 5.8.3
     dev: false
 
-  /launchdarkly-js-sdk-common@5.0.1:
-    resolution: {integrity: sha512-NPPU/9bT4hUCbglCCMAm9XGDWnRKs3aJ1OMhRF8g6xTUWAjOO2FieoGjwVbUVvOYKIiINVVtAWUiuVYbix1lqw==}
+  /launchdarkly-js-sdk-common@5.8.3:
+    resolution: {integrity: sha512-IYf022xU3x3UMESumqbkkbPi2F4qEkZt+MEW2lwNKDuekWE6s/rm2PHF0el6gZKtDP5qn84w2UtvPydsnIttTA==}
     dependencies:
       base64-js: 1.5.1
       fast-deep-equal: 2.0.1
-      uuid: 8.3.2
     dev: false
 
   /less@4.2.0:
@@ -11314,11 +11313,11 @@ packages:
       side-channel: 1.1.1
     dev: true
 
-  /query-string@8.1.0:
-    resolution: {integrity: sha512-BFQeWxJOZxZGix7y+SByG3F36dA0AbTy9o6pSmKFcFz7DAj0re9Frkty3saBn3nHo3D0oZJ/+rx3r8H8r8Jbpw==}
-    engines: {node: '>=14.16'}
+  /query-string@9.5.1:
+    resolution: {integrity: sha512-/zO3RwuRCMTIcEgq6YMv4OrtEE1XzBG7w5N6zc6ydYnkWYOWsnLI/5894hYEzfESfMOT4cHCsRTIdxsSl1KjGg==}
+    engines: {node: '>=18'}
     dependencies:
-      decode-uri-component: 0.4.1
+      decode-uri-component: 0.5.1
       filter-obj: 5.1.0
       split-on-first: 3.0.0
     dev: false
@@ -13670,12 +13669,6 @@ packages:
   /uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
     hasBin: true
-
-  /uuid@8.3.2:
-    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
-    dev: false
 
   /uvu@0.5.6:
     resolution: {integrity: sha512-+g8ENReyr8YsOc6fv/NVJs2vFdHBnBNdfE49rshrTzDWOlUx4Gq7KOS2GD8eqhy2j+Ejq29+SbKH8yjkAqXqoA==}

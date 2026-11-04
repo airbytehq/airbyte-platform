@@ -18,8 +18,7 @@ export function createUserContext(user: UserRead | null, locale: string): LDSing
       kind,
       anonymous: true,
       locale,
-      // @ts-expect-error LaunchDarkly's typescript types specify that key must be defined, but actually they handle a null or undefined key. It's even recommended in their docs to omit the key for anonymous users https://docs.launchdarkly.com/sdk/client-side/javascript/migration-2-to-3#understanding-changes-to-anonymous-users
-      key: undefined,
+      // No key: LaunchDarkly generates and stores one for anonymous contexts.
     };
   }
 
