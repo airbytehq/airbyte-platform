@@ -499,7 +499,9 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
         is AirbyteConfig -> every { instance.version } returns "fixture"
         is DataplaneHealthService -> {
           every { instance.recordHeartbeat(any(), "fixture", null) } just Runs
+          every { instance.recordDiagnostics(any(), any(), emptyList()) } just Runs
           every { instance.getDataplaneHealthInfos(listOf(DATAPLANE), any()) } returns emptyList()
+          every { instance.getDiagnostics(any(), listOf(DATAPLANE)) } returns emptyList()
         }
         is FeatureFlagClient -> every { instance.boolVariation(any(), any()) } returns false
       }

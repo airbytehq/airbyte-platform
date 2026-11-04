@@ -4,11 +4,17 @@
 
 package io.airbyte.data.services
 
+import io.airbyte.commons.json.Jsons
+import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
+import io.airbyte.domain.models.DataplaneDiagnostic
+import io.airbyte.domain.models.DataplaneDiagnosticKind
+import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.HeartbeatData
+import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -16,8 +22,14 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import io.airbyte.data.repositories.entities.DataplaneDiagnostic as DataplaneDiagnosticEntity
 
 private val logger = KotlinLogging.logger {}
+
+// Values of dataplane_diagnostic.status.
+private const val STATUS_PASSED = "PASSED"
+private const val STATUS_FAILED = "FAILED"
+private const val STATUS_UNABLE_TO_COMPLETE = "UNABLE_TO_COMPLETE"
 
 /**
  * Service for managing dataplane health monitoring and heartbeat logging.
@@ -25,6 +37,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class DataplaneHealthService(
   private val heartbeatLogRepository: DataplaneHeartbeatLogRepository,
+  private val diagnosticRepository: DataplaneDiagnosticRepository,
 ) {
   companion object {
     const val UNKNOWN_VERSION = "unknown"
@@ -69,6 +82,87 @@ class DataplaneHealthService(
 
     heartbeatLogRepository.save(log)
     logger.debug { "Recorded heartbeat for dataplane $dataplaneId" }
+  }
+
+  /**
+   * Saves the latest result of each check. A result older than the saved one for the same check and target is ignored.
+   */
+  fun recordDiagnostics(
+    dataplaneId: UUID,
+    organizationId: UUID,
+    diagnostics: List<DataplaneDiagnostic>,
+  ) {
+    diagnostics.forEach { diagnostic ->
+      // The table keeps the status as text, with error columns empty for a passed check.
+      val (status, errorCode, errorMessage) =
+        when (val outcome = diagnostic.outcome) {
+          DataplaneDiagnosticOutcome.Passed -> Triple(STATUS_PASSED, null, null)
+          is DataplaneDiagnosticOutcome.Failed -> Triple(STATUS_FAILED, outcome.errorCode, outcome.errorMessage)
+          is DataplaneDiagnosticOutcome.UnableToComplete -> Triple(STATUS_UNABLE_TO_COMPLETE, outcome.errorCode, outcome.errorMessage)
+        }
+
+      diagnosticRepository.upsertLatest(
+        dataplaneId = dataplaneId,
+        organizationId = organizationId,
+        diagnosticKind = diagnostic.kind.name,
+        targetId = diagnostic.targetId,
+        status = status,
+        checkedAt = diagnostic.checkedAt,
+        errorCode = errorCode,
+        errorMessage = errorMessage,
+        observation = Jsons.serialize(diagnostic.observation),
+      )
+    }
+  }
+
+  /**
+   * Returns the saved check results for the organization's [dataplaneIds]. A row with a kind or status this version
+   * of Airbyte doesn't know, such as one written by a newer release before a rollback, is left out.
+   */
+  fun getDiagnostics(
+    organizationId: UUID,
+    dataplaneIds: List<UUID>,
+  ): List<SavedDataplaneDiagnostic> {
+    if (dataplaneIds.isEmpty()) {
+      return emptyList()
+    }
+
+    return diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(organizationId, dataplaneIds).mapNotNull { toSavedDiagnostic(it) }
+  }
+
+  private fun toSavedDiagnostic(row: DataplaneDiagnosticEntity): SavedDataplaneDiagnostic? {
+    val kind = DataplaneDiagnosticKind.entries.find { it.name == row.diagnosticKind }
+    val outcome =
+      when (row.status) {
+        STATUS_PASSED -> DataplaneDiagnosticOutcome.Passed
+        STATUS_FAILED -> DataplaneDiagnosticOutcome.Failed(row.errorCode.orEmpty(), row.errorMessage.orEmpty())
+        STATUS_UNABLE_TO_COMPLETE -> DataplaneDiagnosticOutcome.UnableToComplete(row.errorCode.orEmpty(), row.errorMessage.orEmpty())
+        else -> null
+      }
+    if (kind == null || outcome == null) {
+      logger.warn { "Skipping saved diagnostic ${row.id}: unknown kind ${row.diagnosticKind} or status ${row.status}" }
+      return null
+    }
+
+    // JSON nulls inside the observation are dropped, since the domain model keeps no null values.
+    val observation =
+      Jsons
+        .deserializeToMap(row.observation)
+        .orEmpty()
+        .mapNotNull { (key, value) -> value?.let { key to it } }
+        .toMap()
+    return SavedDataplaneDiagnostic(
+      dataplaneId = row.dataplaneId,
+      diagnostic =
+        DataplaneDiagnostic(
+          kind = kind,
+          targetId = row.targetId,
+          outcome = outcome,
+          checkedAt = row.checkedAt,
+          observation = observation,
+        ),
+      updatedAt = checkNotNull(row.updatedAt) { "dataplane_diagnostic.updated_at is NOT NULL" },
+    )
   }
 
   /**

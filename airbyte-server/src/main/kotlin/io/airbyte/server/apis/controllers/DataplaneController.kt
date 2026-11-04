@@ -10,6 +10,8 @@ import io.airbyte.api.server.generated.models.AccessToken
 import io.airbyte.api.server.generated.models.DataplaneCreateRequestBody
 import io.airbyte.api.server.generated.models.DataplaneCreateResponse
 import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticRead
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticResult
 import io.airbyte.api.server.generated.models.DataplaneHealthHistoryBucket
 import io.airbyte.api.server.generated.models.DataplaneHealthListResponse
 import io.airbyte.api.server.generated.models.DataplaneHealthRead
@@ -36,9 +38,13 @@ import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneHealthService
 import io.airbyte.data.services.ServiceAccountNotFound
+import io.airbyte.domain.models.DataplaneDiagnostic
+import io.airbyte.domain.models.DataplaneDiagnosticKind
+import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
@@ -48,6 +54,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.server.services.DataplaneService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -60,6 +67,13 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.stream.Collectors
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticKind as ApiDataplaneDiagnosticKind
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticStatus as ApiDataplaneDiagnosticStatus
+
+private val logger = KotlinLogging.logger {}
+
+// Size of dataplane_diagnostic.error_code. A longer code would fail the save and the whole heartbeat.
+private const val MAX_DIAGNOSTIC_ERROR_CODE_LENGTH = 256
 
 @Context
 @Controller
@@ -242,6 +256,13 @@ open class DataplaneController(
       dataplaneVersion = xAirbyteVersion,
     )
 
+    val diagnostics = req.diagnostics.orEmpty().mapNotNull { toDataplaneDiagnostic(it, dataplane.id) }
+    dataplaneHealthService.recordDiagnostics(
+      dataplaneId = dataplane.id,
+      organizationId = dataplaneGroup.organizationId,
+      diagnostics = diagnostics,
+    )
+
     return DataplaneHeartbeatResponse(
       dataplaneName = dataplane.name,
       dataplaneId = dataplane.id,
@@ -251,6 +272,61 @@ open class DataplaneController(
       organizationId = dataplaneGroup.organizationId,
     )
   }
+
+  /**
+   * Returns null for a result the data plane filled in wrong, so one bad check never stops the check-in from being recorded.
+   */
+  private fun toDataplaneDiagnostic(
+    result: DataplaneDiagnosticResult,
+    dataplaneId: UUID,
+  ): DataplaneDiagnostic? {
+    val errorCode = result.errorCode
+    val errorMessage = result.errorMessage
+    val hasError = !errorCode.isNullOrBlank() && !errorMessage.isNullOrBlank()
+    val outcome =
+      when (result.status) {
+        ApiDataplaneDiagnosticStatus.PASSED -> DataplaneDiagnosticOutcome.Passed
+        ApiDataplaneDiagnosticStatus.FAILED -> if (hasError) DataplaneDiagnosticOutcome.Failed(errorCode, errorMessage) else null
+        ApiDataplaneDiagnosticStatus.UNABLE_TO_COMPLETE ->
+          if (hasError) DataplaneDiagnosticOutcome.UnableToComplete(errorCode, errorMessage) else null
+      }
+    if (outcome == null) {
+      logger.warn {
+        "Skipping ${result.kind} diagnostic for dataplane $dataplaneId, target ${result.targetId}: status ${result.status} needs error_code and error_message"
+      }
+      return null
+    }
+    if (errorCode.orEmpty().length > MAX_DIAGNOSTIC_ERROR_CODE_LENGTH) {
+      logger.warn {
+        "Skipping ${result.kind} diagnostic for dataplane $dataplaneId, target ${result.targetId}: error_code is longer than $MAX_DIAGNOSTIC_ERROR_CODE_LENGTH characters"
+      }
+      return null
+    }
+
+    val kind =
+      when (result.kind) {
+        ApiDataplaneDiagnosticKind.SECRET_STORAGE -> DataplaneDiagnosticKind.SECRET_STORAGE
+      }
+    val observation = result.observation.orEmpty()
+    val missingKeys = requiredObservationKeys(kind).filter { it !in observation }
+    if (missingKeys.isNotEmpty()) {
+      logger.warn { "Skipping $kind diagnostic for dataplane $dataplaneId, target ${result.targetId}: observation is missing $missingKeys" }
+      return null
+    }
+
+    return DataplaneDiagnostic(
+      kind = kind,
+      targetId = result.targetId,
+      outcome = outcome,
+      checkedAt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(result.checkedAt), ZoneOffset.UTC),
+      observation = observation,
+    )
+  }
+
+  private fun requiredObservationKeys(kind: DataplaneDiagnosticKind): List<String> =
+    when (kind) {
+      DataplaneDiagnosticKind.SECRET_STORAGE -> listOf("scope_type", "scope_id")
+    }
 
   private fun reportDataplaneMetric(
     metric: OssMetricsRegistry,
@@ -303,6 +379,7 @@ open class DataplaneController(
 
     val includeHealthHistory = featureFlagClient.boolVariation(DataplaneHealthUi, Organization(request.organizationId))
     val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, includeHealthHistory)
+    val diagnosticsByDataplane = dataplaneHealthService.getDiagnostics(request.organizationId, dataplanes.map { it.id }).groupBy { it.dataplaneId }
 
     val dataplaneHealthReads =
       healthInfos.map { healthInfo ->
@@ -334,9 +411,35 @@ open class DataplaneController(
             } else {
               null
             },
+          diagnostics = diagnosticsByDataplane[healthInfo.dataplaneId].orEmpty().map { toDiagnosticRead(it) },
         )
       }
 
     return DataplaneHealthListResponse(dataplanes = dataplaneHealthReads)
+  }
+
+  private fun toDiagnosticRead(saved: SavedDataplaneDiagnostic): DataplaneDiagnosticRead {
+    val diagnostic = saved.diagnostic
+    val (status, errorCode, errorMessage) =
+      when (val outcome = diagnostic.outcome) {
+        DataplaneDiagnosticOutcome.Passed -> Triple(ApiDataplaneDiagnosticStatus.PASSED, null, null)
+        is DataplaneDiagnosticOutcome.Failed -> Triple(ApiDataplaneDiagnosticStatus.FAILED, outcome.errorCode, outcome.errorMessage)
+        is DataplaneDiagnosticOutcome.UnableToComplete ->
+          Triple(ApiDataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, outcome.errorCode, outcome.errorMessage)
+      }
+
+    return DataplaneDiagnosticRead(
+      kind =
+        when (diagnostic.kind) {
+          DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
+        },
+      targetId = diagnostic.targetId,
+      status = status,
+      checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),
+      updatedAt = saved.updatedAt.toInstant().toEpochMilli(),
+      errorCode = errorCode,
+      errorMessage = errorMessage,
+      observation = diagnostic.observation,
+    )
   }
 }

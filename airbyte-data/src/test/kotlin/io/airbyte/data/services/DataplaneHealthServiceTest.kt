@@ -4,6 +4,9 @@
 
 package io.airbyte.data.services
 
+import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.json.Jsons
+import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
 import io.airbyte.data.services.DataplaneHealthService.Companion.HISTORY_BUCKET_COUNT
@@ -12,7 +15,11 @@ import io.airbyte.data.services.DataplaneHealthService.Companion.HISTORY_WINDOW_
 import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIOD_DURATION
 import io.airbyte.data.services.DataplaneHealthService.Companion.UNKNOWN_VERSION
 import io.airbyte.data.services.DataplaneHealthService.Companion.historyWindowStart
+import io.airbyte.domain.models.DataplaneDiagnostic
+import io.airbyte.domain.models.DataplaneDiagnosticKind
+import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo.HealthStatus
+import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -23,10 +30,166 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
+import io.airbyte.data.repositories.entities.DataplaneDiagnostic as DataplaneDiagnosticEntity
 
 internal class DataplaneHealthServiceTest {
   private val heartbeatLogRepository = mockk<DataplaneHeartbeatLogRepository>(relaxed = true)
-  private val dataplaneHealthService = DataplaneHealthService(heartbeatLogRepository)
+  private val diagnosticRepository = mockk<DataplaneDiagnosticRepository>(relaxed = true)
+  private val dataplaneHealthService = DataplaneHealthService(heartbeatLogRepository, diagnosticRepository)
+
+  @Test
+  fun `recordDiagnostics saves each result with its status and error`() {
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val observation = mapOf("scope_type" to "workspace", "scope_id" to "11111111-1111-1111-1111-111111111111")
+    val passed = diagnostic(DataplaneDiagnosticOutcome.Passed, checkedAt, observation)
+    val failed = diagnostic(DataplaneDiagnosticOutcome.Failed("ACCESS_DENIED", "Access denied"), checkedAt, observation)
+    val unableToComplete = diagnostic(DataplaneDiagnosticOutcome.UnableToComplete("TIMEOUT", "Timed out"), checkedAt, emptyMap())
+
+    dataplaneHealthService.recordDiagnostics(dataplaneId, organizationId, listOf(passed, failed, unableToComplete))
+
+    verify(exactly = 1) {
+      diagnosticRepository.upsertLatest(
+        dataplaneId,
+        organizationId,
+        "SECRET_STORAGE",
+        passed.targetId,
+        "PASSED",
+        checkedAt,
+        null,
+        null,
+        Jsons.serialize(observation),
+      )
+      diagnosticRepository.upsertLatest(
+        dataplaneId,
+        organizationId,
+        "SECRET_STORAGE",
+        failed.targetId,
+        "FAILED",
+        checkedAt,
+        "ACCESS_DENIED",
+        "Access denied",
+        Jsons.serialize(observation),
+      )
+      diagnosticRepository.upsertLatest(
+        dataplaneId,
+        organizationId,
+        "SECRET_STORAGE",
+        unableToComplete.targetId,
+        "UNABLE_TO_COMPLETE",
+        checkedAt,
+        "TIMEOUT",
+        "Timed out",
+        "{}",
+      )
+    }
+  }
+
+  @Test
+  fun `recordDiagnostics saves nothing for an empty list`() {
+    dataplaneHealthService.recordDiagnostics(UUID.randomUUID(), UUID.randomUUID(), emptyList())
+
+    verify(exactly = 0) { diagnosticRepository.upsertLatest(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `getDiagnostics returns saved results and skips rows with an unknown kind or status`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneIds = listOf(UUID.randomUUID())
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val updatedAt = checkedAt.plusSeconds(30)
+    val observation = mapOf("scope_type" to "workspace", "scope_id" to "11111111-1111-1111-1111-111111111111")
+    val passedRow = diagnosticRow(dataplaneIds.first(), "SECRET_STORAGE", "PASSED", checkedAt, updatedAt, observation = Jsons.jsonNode(observation))
+    val failedRow =
+      diagnosticRow(
+        dataplaneIds.first(),
+        "SECRET_STORAGE",
+        "FAILED",
+        checkedAt,
+        updatedAt,
+        errorCode = "ACCESS_DENIED",
+        errorMessage = "Access denied",
+      )
+    val unknownKindRow = diagnosticRow(dataplaneIds.first(), "IMAGE_PULL", "PASSED", checkedAt, updatedAt)
+    val unknownStatusRow = diagnosticRow(dataplaneIds.first(), "SECRET_STORAGE", "SKIPPED", checkedAt, updatedAt)
+    every { diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(organizationId, dataplaneIds) } returns
+      listOf(passedRow, failedRow, unknownKindRow, unknownStatusRow)
+
+    val result = dataplaneHealthService.getDiagnostics(organizationId, dataplaneIds)
+
+    val expected =
+      listOf(
+        SavedDataplaneDiagnostic(
+          dataplaneId = dataplaneIds.first(),
+          diagnostic =
+            DataplaneDiagnostic(
+              DataplaneDiagnosticKind.SECRET_STORAGE,
+              passedRow.targetId,
+              DataplaneDiagnosticOutcome.Passed,
+              checkedAt,
+              observation,
+            ),
+          updatedAt = updatedAt,
+        ),
+        SavedDataplaneDiagnostic(
+          dataplaneId = dataplaneIds.first(),
+          diagnostic =
+            DataplaneDiagnostic(
+              DataplaneDiagnosticKind.SECRET_STORAGE,
+              failedRow.targetId,
+              DataplaneDiagnosticOutcome.Failed("ACCESS_DENIED", "Access denied"),
+              checkedAt,
+              emptyMap(),
+            ),
+          updatedAt = updatedAt,
+        ),
+      )
+    assertEquals(expected, result)
+  }
+
+  @Test
+  fun `getDiagnostics returns nothing and skips the query for no dataplanes`() {
+    assertEquals(emptyList<SavedDataplaneDiagnostic>(), dataplaneHealthService.getDiagnostics(UUID.randomUUID(), emptyList()))
+
+    verify(exactly = 0) { diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(any(), any()) }
+  }
+
+  private fun diagnosticRow(
+    dataplaneId: UUID,
+    kind: String,
+    status: String,
+    checkedAt: OffsetDateTime,
+    updatedAt: OffsetDateTime,
+    errorCode: String? = null,
+    errorMessage: String? = null,
+    observation: JsonNode? = null,
+  ) = DataplaneDiagnosticEntity(
+    id = UUID.randomUUID(),
+    dataplaneId = dataplaneId,
+    organizationId = UUID.randomUUID(),
+    diagnosticKind = kind,
+    targetId = UUID.randomUUID(),
+    status = status,
+    checkedAt = checkedAt,
+    errorCode = errorCode,
+    errorMessage = errorMessage,
+    observation = observation,
+    createdAt = checkedAt,
+    updatedAt = updatedAt,
+  )
+
+  private fun diagnostic(
+    outcome: DataplaneDiagnosticOutcome,
+    checkedAt: OffsetDateTime,
+    observation: Map<String, Any>,
+  ) = DataplaneDiagnostic(
+    kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+    targetId = UUID.randomUUID(),
+    outcome = outcome,
+    checkedAt = checkedAt,
+    observation = observation,
+  )
 
   @Test
   fun `recordHeartbeat saves log with correct fields`() {

@@ -25429,6 +25429,11 @@ components:
       properties:
         client_id:
           type: string
+        diagnostics:
+          type: array
+          description: Latest completed result of each diagnostic check. A check left out keeps its saved result.
+          items:
+            $ref: "#/components/schemas/DataplaneDiagnosticResult"
     DataplaneHeartbeatResponse:
       type: object
       required:
@@ -25508,6 +25513,11 @@ components:
           description: 48 periods of 15 minutes aligned to the clock (:00, :15, :30, :45 UTC), oldest first. The last period is the current one, graded on the check-ins so far. Present only when the data plane health UI is enabled for the organization.
           items:
             $ref: "#/components/schemas/DataplaneHealthHistoryBucket"
+        diagnostics:
+          type: array
+          description: Saved result of each diagnostic check the data plane has reported.
+          items:
+            $ref: "#/components/schemas/DataplaneDiagnosticRead"
     HeartbeatRecord:
       type: object
       required:
@@ -25534,6 +25544,81 @@ components:
             - DEGRADED
             - UNHEALTHY
             - UNKNOWN
+    DataplaneDiagnosticKind:
+      type: string
+      description: Which diagnostic check produced the result.
+      enum:
+        - SECRET_STORAGE
+    DataplaneDiagnosticStatus:
+      type: string
+      description: Outcome of one check attempt. UNABLE_TO_COMPLETE means the check could not tell whether the operation works.
+      enum:
+        - PASSED
+        - FAILED
+        - UNABLE_TO_COMPLETE
+    DataplaneDiagnosticResult:
+      type: object
+      description: One completed check, as reported by the data plane.
+      required:
+        - kind
+        - target_id
+        - status
+        - checked_at
+      properties:
+        kind:
+          $ref: "#/components/schemas/DataplaneDiagnosticKind"
+        target_id:
+          type: string
+          format: uuid
+          description: What was checked, such as a secret store ID. The data plane ID for checks on the whole data plane.
+        status:
+          $ref: "#/components/schemas/DataplaneDiagnosticStatus"
+        checked_at:
+          type: integer
+          format: int64
+          description: When the check finished, in epoch milliseconds.
+        error_code:
+          type: string
+          description: Short failure code. Required unless status is PASSED.
+        error_message:
+          type: string
+          description: Failure explanation that is safe to show the customer. Required unless status is PASSED.
+        observation:
+          type: object
+          description: Details specific to the kind of check.
+          additionalProperties: true
+    DataplaneDiagnosticRead:
+      type: object
+      description: The saved result of one check.
+      required:
+        - kind
+        - target_id
+        - status
+        - checked_at
+        - updated_at
+      properties:
+        kind:
+          $ref: "#/components/schemas/DataplaneDiagnosticKind"
+        target_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/DataplaneDiagnosticStatus"
+        checked_at:
+          type: integer
+          format: int64
+          description: When the check finished, in epoch milliseconds.
+        updated_at:
+          type: integer
+          format: int64
+          description: When Airbyte last received this result, in epoch milliseconds.
+        error_code:
+          type: string
+        error_message:
+          type: string
+        observation:
+          type: object
+          additionalProperties: true
     DataplaneInitRequestBody:
       required:
         - client_id

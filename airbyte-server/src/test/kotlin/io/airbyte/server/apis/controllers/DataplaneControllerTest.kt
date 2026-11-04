@@ -5,6 +5,9 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticRead
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticResult
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticStatus
 import io.airbyte.api.server.generated.models.DataplaneHealthHistoryBucket
 import io.airbyte.api.server.generated.models.DataplaneHealthRead
 import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
@@ -23,28 +26,38 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneHealthService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
+import io.airbyte.domain.models.DataplaneDiagnostic
+import io.airbyte.domain.models.DataplaneDiagnosticKind
+import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
+import io.airbyte.api.server.generated.models.DataplaneDiagnosticKind as ApiDataplaneDiagnosticKind
 import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
 class DataplaneControllerTest {
   companion object {
     private const val TEST_DATAPLANE_VERSION = "test-123"
     private const val TEST_CONTROL_PLANE_VERSION = "1.0.0"
+    private val CHECKED_AT = OffsetDateTime.of(2026, 11, 3, 10, 0, 0, 0, ZoneOffset.UTC)
 
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
@@ -278,6 +291,118 @@ class DataplaneControllerTest {
       )
     }
   }
+
+  @Test
+  fun `heartbeat records no diagnostics when the data plane sends none`() {
+    val (_, _, recorded) = heartbeatWithDiagnostics(null)
+
+    Assertions.assertEquals(emptyList<DataplaneDiagnostic>(), recorded)
+  }
+
+  @Test
+  fun `heartbeat records each diagnostic for the data plane's organization`() {
+    val passed = secretStorageResult(DataplaneDiagnosticStatus.PASSED)
+    val failed = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "ACCESS_DENIED", errorMessage = "Access denied")
+    val unableToComplete =
+      secretStorageResult(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, errorCode = "TIMEOUT", errorMessage = "Timed out")
+
+    val (_, _, recorded) = heartbeatWithDiagnostics(listOf(passed, failed, unableToComplete))
+
+    val expected =
+      listOf(
+        expectedDiagnostic(passed, DataplaneDiagnosticOutcome.Passed),
+        expectedDiagnostic(failed, DataplaneDiagnosticOutcome.Failed("ACCESS_DENIED", "Access denied")),
+        expectedDiagnostic(unableToComplete, DataplaneDiagnosticOutcome.UnableToComplete("TIMEOUT", "Timed out")),
+      )
+    Assertions.assertEquals(expected, recorded)
+  }
+
+  @Test
+  fun `heartbeat skips invalid diagnostics and still records the check-in and valid ones`() {
+    val valid = secretStorageResult(DataplaneDiagnosticStatus.PASSED)
+    val failedWithoutMessage = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "ACCESS_DENIED")
+    val unableToCompleteWithoutCode = secretStorageResult(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, errorMessage = "Timed out")
+    val failedWithBlankCode = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "", errorMessage = "Access denied")
+    val missingScopeId = secretStorageResult(DataplaneDiagnosticStatus.PASSED).copy(observation = mapOf("scope_type" to "workspace"))
+    val missingObservation = secretStorageResult(DataplaneDiagnosticStatus.PASSED).copy(observation = null)
+    val errorCodeTooLong = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "E".repeat(257), errorMessage = "Access denied")
+    val errorCodeAtLimit = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "E".repeat(256), errorMessage = "Access denied")
+
+    val (_, dataplaneId, recorded) =
+      heartbeatWithDiagnostics(
+        listOf(
+          valid,
+          errorCodeAtLimit,
+          failedWithoutMessage,
+          unableToCompleteWithoutCode,
+          failedWithBlankCode,
+          missingScopeId,
+          missingObservation,
+          errorCodeTooLong,
+        ),
+      )
+
+    val expected =
+      listOf(
+        expectedDiagnostic(valid, DataplaneDiagnosticOutcome.Passed),
+        expectedDiagnostic(errorCodeAtLimit, DataplaneDiagnosticOutcome.Failed("E".repeat(256), "Access denied")),
+      )
+    Assertions.assertEquals(expected, recorded)
+    verify {
+      dataplaneHealthService.recordHeartbeat(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = TEST_CONTROL_PLANE_VERSION,
+        dataplaneVersion = TEST_DATAPLANE_VERSION,
+      )
+    }
+  }
+
+  private data class RecordedDiagnostics(
+    val organizationId: UUID,
+    val dataplaneId: UUID,
+    val diagnostics: List<DataplaneDiagnostic>,
+  )
+
+  private fun heartbeatWithDiagnostics(diagnostics: List<DataplaneDiagnosticResult>?): RecordedDiagnostics {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, organizationId = organizationId)
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+    val recorded = slot<List<DataplaneDiagnostic>>()
+    every { dataplaneHealthService.recordDiagnostics(dataplaneId, organizationId, capture(recorded)) } just Runs
+
+    dataplaneController.heartbeatDataplane(DataplaneHeartbeatRequestBody(clientId = clientId, diagnostics = diagnostics), TEST_DATAPLANE_VERSION)
+
+    return RecordedDiagnostics(organizationId, dataplaneId, recorded.captured)
+  }
+
+  private fun secretStorageResult(
+    status: DataplaneDiagnosticStatus,
+    errorCode: String? = null,
+    errorMessage: String? = null,
+  ) = DataplaneDiagnosticResult(
+    kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE,
+    targetId = UUID.randomUUID(),
+    status = status,
+    checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+    errorCode = errorCode,
+    errorMessage = errorMessage,
+    observation = mapOf("scope_type" to "workspace", "scope_id" to UUID.randomUUID().toString()),
+  )
+
+  private fun expectedDiagnostic(
+    result: DataplaneDiagnosticResult,
+    outcome: DataplaneDiagnosticOutcome,
+  ) = DataplaneDiagnostic(
+    kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+    targetId = result.targetId,
+    outcome = outcome,
+    checkedAt = CHECKED_AT,
+    observation = result.observation.orEmpty(),
+  )
 
   private fun createDataplane(
     id: UUID? = null,
@@ -556,6 +681,78 @@ class DataplaneControllerTest {
     Assertions.assertNull(health.controlPlaneVersion)
     Assertions.assertNull(health.dataplaneVersion)
   }
+
+  @Test
+  fun `listDataplaneHealth returns each data plane's saved diagnostics`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplaneWithResults = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneWithoutResults = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val dataplaneIds = listOf(dataplaneWithResults.id, dataplaneWithoutResults.id)
+    val updatedAt = CHECKED_AT.plusSeconds(30)
+    val observation = mapOf("scope_type" to "workspace", "scope_id" to UUID.randomUUID().toString())
+    val passed =
+      DataplaneDiagnostic(DataplaneDiagnosticKind.SECRET_STORAGE, UUID.randomUUID(), DataplaneDiagnosticOutcome.Passed, CHECKED_AT, observation)
+    val failed =
+      DataplaneDiagnostic(
+        DataplaneDiagnosticKind.SECRET_STORAGE,
+        UUID.randomUUID(),
+        DataplaneDiagnosticOutcome.Failed("ACCESS_DENIED", "Access denied"),
+        CHECKED_AT,
+        emptyMap(),
+      )
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplaneWithResults, dataplaneWithoutResults)
+    every { dataplaneHealthService.getDataplaneHealthInfos(dataplaneIds, false) } returns dataplaneIds.map { unknownHealthInfo(it) }
+    every { dataplaneHealthService.getDiagnostics(mockOrganizationId, dataplaneIds) } returns
+      listOf(
+        SavedDataplaneDiagnostic(dataplaneWithResults.id, passed, updatedAt),
+        SavedDataplaneDiagnostic(dataplaneWithResults.id, failed, updatedAt),
+      )
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    val expected =
+      mapOf(
+        dataplaneWithResults.id to
+          listOf(
+            DataplaneDiagnosticRead(
+              kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE,
+              targetId = passed.targetId,
+              status = DataplaneDiagnosticStatus.PASSED,
+              checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+              updatedAt = updatedAt.toInstant().toEpochMilli(),
+              observation = observation,
+            ),
+            DataplaneDiagnosticRead(
+              kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE,
+              targetId = failed.targetId,
+              status = DataplaneDiagnosticStatus.FAILED,
+              checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+              updatedAt = updatedAt.toInstant().toEpochMilli(),
+              errorCode = "ACCESS_DENIED",
+              errorMessage = "Access denied",
+              observation = emptyMap(),
+            ),
+          ),
+        dataplaneWithoutResults.id to emptyList(),
+      )
+    Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to it.diagnostics })
+  }
+
+  private fun unknownHealthInfo(dataplaneId: UUID) =
+    DataplaneHealthInfo(
+      dataplaneId = dataplaneId,
+      status = DataplaneHealthInfo.HealthStatus.UNKNOWN,
+      lastHeartbeatTimestamp = null,
+      secondsSinceLastHeartbeat = null,
+      recentHeartbeats = emptyList(),
+      controlPlaneVersion = null,
+      dataplaneVersion = null,
+      healthHistory = emptyList(),
+    )
 
   @Test
   fun `listDataplaneHealth handles empty organization`() {
