@@ -5,10 +5,12 @@
 package io.airbyte.workload.launcher.authn
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_HEARTBEAT_RATE
+import io.airbyte.workload.launcher.diagnostics.DiagnosticProbe
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventPublisher
@@ -32,6 +34,7 @@ class DataplaneIdentityService(
   private val airbyteInternalApiClientConfig: AirbyteInternalApiClientConfig,
   private val airbyteApiClient: AirbyteApiClient,
   private val eventPublisher: ApplicationEventPublisher<DataplaneConfig>,
+  private val diagnosticProbes: List<DiagnosticProbe>,
 ) {
   var authNDrivenDataplaneConfig: DataplaneConfig? = null
     private set
@@ -68,7 +71,7 @@ class DataplaneIdentityService(
     try {
       val heartbeatResponse =
         airbyteApiClient.dataplaneApi.heartbeatDataplane(
-          DataplaneHeartbeatRequestBody(clientId = airbyteInternalApiClientConfig.auth.clientId),
+          DataplaneHeartbeatRequestBody(clientId = airbyteInternalApiClientConfig.auth.clientId, diagnostics = latestDiagnostics()),
         )
       publishConfigChange(
         DataplaneConfig(
@@ -93,6 +96,19 @@ class DataplaneIdentityService(
       logger.warn(e) { "Failed to heartbeat" }
     }
   }
+
+  /**
+   * A probe that throws is left out of this heartbeat, so one broken check never stops the data plane from checking in.
+   */
+  private fun latestDiagnostics(): List<DataplaneDiagnosticResult> =
+    diagnosticProbes.flatMap { probe ->
+      try {
+        probe.latestCompletedResults().toList()
+      } catch (e: Exception) {
+        logger.warn(e) { "Leaving out the results of ${probe.javaClass.name} from this heartbeat" }
+        emptyList()
+      }
+    }
 
   private fun publishConfigChange(config: DataplaneConfig) {
     if (config != authNDrivenDataplaneConfig) {

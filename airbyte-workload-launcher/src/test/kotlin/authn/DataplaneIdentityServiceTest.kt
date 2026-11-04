@@ -5,6 +5,9 @@
 package io.airbyte.workload.launcher.authn
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.DataplaneDiagnosticKind
+import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
+import io.airbyte.api.client.model.generated.DataplaneDiagnosticStatus
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
@@ -13,11 +16,13 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
 import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig.AuthConfig
+import io.airbyte.workload.launcher.diagnostics.DiagnosticProbe
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.Ordering
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -49,6 +54,7 @@ internal class DataplaneIdentityServiceTest {
         airbyteInternalApiClientConfig = airbyteInternalApiClientConfig,
         airbyteApiClient = apiClient,
         eventPublisher = eventPublisher,
+        diagnosticProbes = emptyList(),
       )
   }
 
@@ -108,7 +114,7 @@ internal class DataplaneIdentityServiceTest {
       apiClient.dataplaneApi
     } returns
       mockk {
-        every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneClientId)) } returns heartbeatResponse
+        every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = emptyList())) } returns heartbeatResponse
       }
 
     service.heartbeat()
@@ -136,7 +142,7 @@ internal class DataplaneIdentityServiceTest {
       mockk {
         every {
           heartbeatDataplane(
-            DataplaneHeartbeatRequestBody(dataplaneClientId),
+            DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = emptyList()),
           )
         } returns heartbeatResponse andThen
           heartbeatResponse andThen
@@ -188,6 +194,77 @@ internal class DataplaneIdentityServiceTest {
       eventPublisher.publishEvent(match { !it.dataplaneEnabled })
     }
   }
+
+  @Test
+  fun `Heartbeat sends the latest results of every probe`() {
+    val secretStoreResults = listOf(diagnosticResult(), diagnosticResult())
+    val otherProbeResults = listOf(diagnosticResult())
+    val sent = slot<DataplaneHeartbeatRequestBody>()
+    every { apiClient.dataplaneApi } returns mockk { every { heartbeatDataplane(capture(sent)) } returns defaultHeartbeatResponse }
+
+    serviceWithProbes(probeReturning(secretStoreResults), probeReturning(otherProbeResults)).heartbeat()
+
+    assertEquals(DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = secretStoreResults + otherProbeResults), sent.captured)
+  }
+
+  @Test
+  fun `Heartbeat leaves out a probe that throws and still checks in`() {
+    val workingProbeResults = listOf(diagnosticResult())
+    val brokenProbe = mockk<DiagnosticProbe> { every { latestCompletedResults() } throws IllegalStateException("probe broke") }
+    val sent = slot<DataplaneHeartbeatRequestBody>()
+    every { apiClient.dataplaneApi } returns mockk { every { heartbeatDataplane(capture(sent)) } returns defaultHeartbeatResponse }
+
+    serviceWithProbes(brokenProbe, probeReturning(workingProbeResults)).heartbeat()
+
+    assertEquals(DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = workingProbeResults), sent.captured)
+    verify { eventPublisher.publishEvent(defaultHeartbeatResponse.toConfig()) }
+  }
+
+  @Test
+  fun `Heartbeat leaves out a probe whose results can't be read and still checks in`() {
+    val workingProbeResults = listOf(diagnosticResult())
+    val unreadableResults =
+      object : AbstractList<DataplaneDiagnosticResult>() {
+        override val size = 1
+
+        override fun get(index: Int): DataplaneDiagnosticResult = throw ConcurrentModificationException("results changed while being read")
+      }
+    val sent = slot<DataplaneHeartbeatRequestBody>()
+    every { apiClient.dataplaneApi } returns mockk { every { heartbeatDataplane(capture(sent)) } returns defaultHeartbeatResponse }
+
+    serviceWithProbes(probeReturning(unreadableResults), probeReturning(workingProbeResults)).heartbeat()
+
+    assertEquals(DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = workingProbeResults), sent.captured)
+  }
+
+  @Test
+  fun `Heartbeat sends an empty diagnostics list when no probe has results`() {
+    val sent = slot<DataplaneHeartbeatRequestBody>()
+    every { apiClient.dataplaneApi } returns mockk { every { heartbeatDataplane(capture(sent)) } returns defaultHeartbeatResponse }
+
+    serviceWithProbes(probeReturning(emptyList())).heartbeat()
+
+    assertEquals(DataplaneHeartbeatRequestBody(dataplaneClientId, diagnostics = emptyList()), sent.captured)
+  }
+
+  private fun serviceWithProbes(vararg probes: DiagnosticProbe) =
+    DataplaneIdentityService(
+      airbyteInternalApiClientConfig = airbyteInternalApiClientConfig,
+      airbyteApiClient = apiClient,
+      eventPublisher = eventPublisher,
+      diagnosticProbes = probes.toList(),
+    )
+
+  private fun probeReturning(results: List<DataplaneDiagnosticResult>) = mockk<DiagnosticProbe> { every { latestCompletedResults() } returns results }
+
+  private fun diagnosticResult() =
+    DataplaneDiagnosticResult(
+      kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+      targetId = UUID.randomUUID(),
+      status = DataplaneDiagnosticStatus.PASSED,
+      checkedAt = 1_793_750_400_000L,
+      observation = mapOf("scope_type" to "workspace", "scope_id" to UUID.randomUUID().toString()),
+    )
 
   @Test
   fun `getters returns api config based values`() {
