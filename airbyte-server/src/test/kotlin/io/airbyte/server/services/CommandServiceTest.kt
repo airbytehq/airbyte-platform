@@ -1242,13 +1242,78 @@ class CommandServiceTest {
     assertEquals(expectedOutput, output)
   }
 
+  @Test
+  fun `getReplicationOutput preserves a successful empty sync`() {
+    val expectedOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(
+          ReplicationAttemptSummary()
+            .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED)
+            .withRecordsSynced(0L)
+            .withBytesSynced(0L),
+        ).withFailures(emptyList())
+    every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } returns expectedOutput
+
+    val output = service.getReplicationOutput(COMMAND_ID)
+
+    assertEquals(expectedOutput, output)
+  }
+
   @ParameterizedTest
-  @CsvSource("FAILURE,FAILED", "CANCELLED,CANCELLED", "SUCCESS,COMPLETED")
-  fun `getReplicationOutput returns an output derived from the workload when the output is not found`(
+  @CsvSource(
+    "launch,true",
+    "launch,false",
+    "workload-monitor-heartbeat,true",
+    "workload-monitor-heartbeat,false",
+    "airbyte_platform,true",
+    "airbyte_platform,false",
+  )
+  fun `getReplicationOutput fails when workload output is unavailable`(
+    terminationSource: String,
+    outputMissing: Boolean,
+  ) {
+    val terminationReason = "Replication workload failed before reporting its output"
+    val workload: Workload =
+      mockk {
+        every { status } returns WorkloadStatus.FAILURE
+        every { this@mockk.terminationSource } returns terminationSource
+        every { this@mockk.terminationReason } returns terminationReason
+      }
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    if (outputMissing) {
+      every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } returns null
+    } else {
+      every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } throws DocStoreAccessException("Unable to read output", IllegalStateException())
+    }
+
+    val output = service.getReplicationOutput(COMMAND_ID)
+
+    assertEquals(StandardSyncSummary.ReplicationStatus.FAILED, output?.replicationAttemptSummary?.status)
+    val failure = output?.failures?.singleOrNull()
+    org.junit.jupiter.api
+      .assertNotNull(failure)
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM, failure.failureOrigin)
+    assertEquals(FailureReason.FailureType.SYSTEM_ERROR, failure.failureType)
+    assertEquals(terminationReason, failure.internalMessage)
+    assertEquals(terminationReason, failure.externalMessage)
+    org.junit.jupiter.api
+      .assertNotNull(failure.timestamp)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "FAILURE,FAILED,true",
+    "FAILURE,FAILED,false",
+    "CANCELLED,CANCELLED,true",
+    "CANCELLED,CANCELLED,false",
+    "SUCCESS,COMPLETED,true",
+    "SUCCESS,COMPLETED,false",
+  )
+  fun `getReplicationOutput returns an output derived from the workload when output is unavailable`(
     workloadStatus: WorkloadStatus,
     expectedStatus: StandardSyncSummary.ReplicationStatus,
+    outputMissing: Boolean,
   ) {
-    every { featureFlagClient.boolVariation(any(), any()) } returns true
     val workload: Workload =
       mockk {
         every { status } returns workloadStatus
@@ -1256,10 +1321,17 @@ class CommandServiceTest {
         every { terminationReason } returns "probably the workload monitor"
       }
     every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
-    every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } throws Exception("bang")
+    if (outputMissing) {
+      every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } returns null
+    } else {
+      every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } throws DocStoreAccessException("Unable to read output", IllegalStateException())
+    }
+
     val output = service.getReplicationOutput(COMMAND_ID)
-    assertEquals(expectedStatus, output!!.replicationAttemptSummary.status)
-    assertNotNull(output.failures.first().timestamp)
+
+    assertEquals(expectedStatus, output?.replicationAttemptSummary?.status)
+    org.junit.jupiter.api
+      .assertNotNull(output?.failures?.first()?.timestamp)
   }
 
   @Test

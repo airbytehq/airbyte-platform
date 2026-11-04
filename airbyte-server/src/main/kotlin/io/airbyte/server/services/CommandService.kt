@@ -47,9 +47,7 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
-import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.ReplicationCommandFallsBackToWorkloadStatus
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -1117,23 +1115,21 @@ class CommandService(
 
           val fallbackOutput = ReplicationOutput().withFailures(listOf(failureReason))
 
-          if (featureFlagClient.boolVariation(ReplicationCommandFallsBackToWorkloadStatus, Empty)) {
-            // Fallback to the workload status when we can't read the output
-            if (workload.status == WorkloadStatus.FAILURE) {
-              fallbackOutput.replicationAttemptSummary =
-                ReplicationAttemptSummary()
-                  .withStatus(StandardSyncSummary.ReplicationStatus.FAILED)
-            }
-            if (workload.status == WorkloadStatus.CANCELLED) {
-              fallbackOutput.replicationAttemptSummary =
-                ReplicationAttemptSummary()
-                  .withStatus(StandardSyncSummary.ReplicationStatus.CANCELLED)
-            }
-            if (workload.status == WorkloadStatus.SUCCESS) {
-              fallbackOutput.replicationAttemptSummary =
-                ReplicationAttemptSummary()
-                  .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED)
-            }
+          // Fallback to the workload status when we can't read the output
+          if (workload.status == WorkloadStatus.FAILURE) {
+            fallbackOutput.replicationAttemptSummary =
+              ReplicationAttemptSummary()
+                .withStatus(StandardSyncSummary.ReplicationStatus.FAILED)
+          }
+          if (workload.status == WorkloadStatus.CANCELLED) {
+            fallbackOutput.replicationAttemptSummary =
+              ReplicationAttemptSummary()
+                .withStatus(StandardSyncSummary.ReplicationStatus.CANCELLED)
+          }
+          if (workload.status == WorkloadStatus.SUCCESS) {
+            fallbackOutput.replicationAttemptSummary =
+              ReplicationAttemptSummary()
+                .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED)
           }
 
           fallbackOutput
