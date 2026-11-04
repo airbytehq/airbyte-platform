@@ -17,6 +17,7 @@ import { PropertySection } from "./PropertySection";
 import { SectionContainer } from "./SectionContainer";
 import { DisplayType, useGroupsAndSections } from "./useGroupsAndSections";
 import { useAuthentication } from "../../useAuthentication";
+import { getFieldPath } from "../../utils";
 
 interface FormNodeProps {
   formField: FormBlock;
@@ -72,7 +73,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
 }) => {
   const { shouldShowAuthButton } = useAuthentication();
 
-  const groups = useGroupsAndSections(blocks, groupStructure, Boolean(rootLevel));
+  const groups = useGroupsAndSections(blocks, groupStructure, Boolean(rootLevel), path, skipAppend);
   const groupElements = groups.map((sectionGroup, index) => {
     const collapsedNamedGroup = Boolean(
       sectionGroup.sections.length === 1 &&
@@ -88,7 +89,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
         initiallyOpen={section.initiallyOpen}
       >
         {section.blocks.map((formField) => {
-          const sectionPath = path ? (skipAppend ? path : `${path}.${formField.fieldKey}`) : formField.path;
+          const sectionPath = getFieldPath(formField, path, skipAppend);
 
           return (
             <React.Fragment key={formField.path}>

@@ -57,16 +57,41 @@ export function userProvidedOauthInputPaths(
   return getOAuthPaths("oauthUserInputFromConnectorConfigSpecification", connector);
 }
 
+const isBlankDefault = (value: FormBlock["default"]) =>
+  value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+
+// Keep secrets and `false` defaults expanded: users must still enter a credential or tick a box such as accepting terms
+export function hasCollapsibleDefault(block: FormBlock): boolean {
+  if (block._type !== "formItem" || block.const !== undefined || block.isSecret) {
+    return false;
+  }
+  return !isBlankDefault(block.default) && block.default !== false;
+}
+
+export const getFieldPath = (block: FormBlock, path?: string, skipAppend?: boolean) =>
+  path ? (skipAppend ? path : `${path}.${block.fieldKey}`) : block.path;
+
+// Treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
+// Treat formGroup as required, because the optional/required validations only apply to the nested fields inside of it
+// Treat const values as required, since they aren't rendered anyway and otherwise can mess up ordering of optional fields
+// Treat required fields with a usable default as optional, so they sort into the collapsed section
+const sortsAsRequired = (block: FormBlock) => {
+  if (
+    block._type === "formCondition" ||
+    block._type === "formGroup" ||
+    block.always_show ||
+    block.const !== undefined
+  ) {
+    return true;
+  }
+  return block.isRequired && !hasCollapsibleDefault(block);
+};
+
 export function OrderComparator(a: FormBlock, b: FormBlock): number {
   const aIsNumber = Number.isInteger(a.order);
   const bIsNumber = Number.isInteger(b.order);
-  // Treat being a formCondition as required, because a value must be selected for it regardless of being optional or required
-  // Treat formGroup as required, because the optional/required validations only apply to the nested fields inside of it
-  // Treat const values as required, since they aren't rendered anyway and otherwise can mess up ordering of optional fields
-  const aIsRequired =
-    a.isRequired || a._type === "formCondition" || a._type === "formGroup" || a.always_show || a.const !== undefined;
-  const bIsRequired =
-    b.isRequired || b._type === "formCondition" || b._type === "formGroup" || b.always_show || b.const !== undefined;
+  const aIsRequired = sortsAsRequired(a);
+  const bIsRequired = sortsAsRequired(b);
 
   switch (true) {
     case aIsRequired && !bIsRequired:

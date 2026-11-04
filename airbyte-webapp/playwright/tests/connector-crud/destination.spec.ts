@@ -25,8 +25,27 @@ const configWithMaxEntries = (maxEntryCount: number) => ({
 /** The configuration that the End-to-End Testing form saves when the user changes no field. */
 const defaultConfig = configWithMaxEntries(100);
 
-const maxEntryCountInput = (page: Page) =>
-  page.locator("input[name='connectionConfiguration.test_destination.logging_config.max_entry_count']");
+const maxEntryCountInputSelector =
+  "input[name='connectionConfiguration.test_destination.logging_config.max_entry_count']";
+const maxEntryCountInput = (page: Page) => page.locator(maxEntryCountInputSelector);
+
+async function expandMaxEntryCountSection(page: Page) {
+  const sections = page.getByTestId("optional-fields");
+
+  for (let index = 0; index < (await sections.count()); index++) {
+    const section = sections.nth(index);
+    const panelId = await section.getAttribute("aria-controls");
+
+    if (panelId && (await page.locator(`[id="${panelId}"] ${maxEntryCountInputSelector}`).count()) > 0) {
+      if ((await section.getAttribute("aria-expanded")) !== "true") {
+        await section.click();
+      }
+      return;
+    }
+  }
+
+  throw new Error("Could not find an optional section containing the max entry count input");
+}
 
 /** The ID of the destination whose page is open, from the URL. */
 function destinationIdInUrl(page: Page) {
@@ -126,6 +145,8 @@ test.describe("Existing destination", () => {
     });
 
     await test.step("set the number of entries to 10 and save", async () => {
+      await expect(maxEntryCountInput(page)).toBeHidden();
+      await expandMaxEntryCountSection(page);
       await maxEntryCountInput(page).fill("10");
       await submitButton(page).click();
       await expect(page.locator("[data-id='success-result']")).toBeVisible();
@@ -148,6 +169,7 @@ test.describe("Existing destination", () => {
     });
 
     await test.step("set the number of entries to 20 and save again", async () => {
+      await expandMaxEntryCountSection(page);
       await maxEntryCountInput(page).fill("20");
       await expect(submitButton(page)).toBeEnabled();
       await submitButton(page).click();

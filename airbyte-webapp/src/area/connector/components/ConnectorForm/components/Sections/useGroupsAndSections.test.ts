@@ -1,6 +1,7 @@
-import { FormGroupItem, FormBaseItem, FormBlock, GroupDetails } from "core/form/types";
+import { FormGroupItem, FormBaseItem, FormConditionItem, FormBlock, GroupDetails } from "core/form/types";
 
 import { DisplayType, generateGroupsAndSections, Section } from "./useGroupsAndSections";
+import { getFieldPath, hasCollapsibleDefault } from "../../utils";
 
 function object(
   items: FormBlock[],
@@ -30,7 +31,19 @@ function item(
     group,
     hidden,
     always_show,
-  }: { required?: boolean; order?: number; group?: string; hidden?: boolean; always_show?: boolean } = {
+    default: defaultValue,
+    const: constValue,
+    enum: enumValues,
+  }: {
+    required?: boolean;
+    order?: number;
+    group?: string;
+    hidden?: boolean;
+    always_show?: boolean;
+    default?: FormBaseItem["default"];
+    const?: FormBaseItem["const"];
+    enum?: FormBaseItem["enum"];
+  } = {
     required: false,
     order: undefined,
     group: undefined,
@@ -45,7 +58,23 @@ function item(
     path: name,
     airbyte_hidden: hidden,
     always_show,
+    default: defaultValue,
+    const: constValue,
+    enum: enumValues,
     type: "string",
+  };
+}
+
+function condition(name: string, defaultValue: string): FormConditionItem {
+  return {
+    _type: "formCondition",
+    fieldKey: name,
+    isRequired: true,
+    path: name,
+    default: defaultValue,
+    conditions: [object([item("api_key", { required: true })], "api")],
+    selectionKey: "authType",
+    selectionConstValues: [defaultValue],
   };
 }
 
@@ -65,11 +94,44 @@ function section(blocks: FormBlock[], displayType: DisplayType = "expanded"): Se
 
 const isHiddenField = jest.fn(() => false);
 
-function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = []) {
-  return generateGroupsAndSections(blocks, groups, true, isHiddenField);
+function generate(blocks: FormBlock | FormBlock[], groups: GroupDetails[] = [], rootLevel = true) {
+  return generateGroupsAndSections(blocks, groups, rootLevel, isHiddenField);
 }
 
 describe("useGroupsAndSections", () => {
+  it("should keep required fields with blank defaults expanded", () => {
+    const emptyStringDefault = item("s3_bucket_region", {
+      required: true,
+      default: "",
+      enum: ["", "us-east-1", "us-west-1"],
+    });
+    const nullDefault = item("required_with_null_default", { required: true, default: null });
+
+    expect(generate([emptyStringDefault, nullDefault])).toEqual([
+      sectionGroup([section([nullDefault, emptyStringDefault])]),
+    ]);
+  });
+
+  it("should treat zero as a collapsible default", () => {
+    expect(hasCollapsibleDefault(item("zero_default", { required: true, default: 0 }))).toBe(true);
+  });
+
+  it("should not collapse required fields whose default the user must still change", () => {
+    expect(hasCollapsibleDefault(item("accept_terms", { required: true, default: false }))).toBe(false);
+    expect(hasCollapsibleDefault(item("columns", { required: true, default: [] }))).toBe(false);
+    expect(hasCollapsibleDefault({ ...item("api_key", { required: true, default: "key" }), isSecret: true })).toBe(
+      false
+    );
+  });
+
+  it("should resolve field paths with and without a path prefix", () => {
+    const field = item("region");
+
+    expect(getFieldPath(field)).toBe("region");
+    expect(getFieldPath(field, "connectionConfiguration")).toBe("connectionConfiguration.region");
+    expect(getFieldPath(field, "connectionConfiguration.auth", true)).toBe("connectionConfiguration.auth");
+  });
+
   it("should put optional fields in the back", () => {
     expect(generate([item("a"), item("b"), item("c", { required: true })])).toEqual([
       sectionGroup([section([item("c", { required: true })]), section([item("a"), item("b")], "collapsed-footer")]),
@@ -90,6 +152,58 @@ describe("useGroupsAndSections", () => {
         section([item("b", { order: 0 }), item("a", { order: 1 }), item("d", { order: 3 })], "collapsed-footer"),
       ]),
     ]);
+  });
+
+  it("should collapse required fields with defaults into the root footer", () => {
+    const requiredField = item("required", { required: true });
+    const defaultedRequiredField = item("required_with_default", { required: true, default: "safe-value" });
+
+    expect(generate([defaultedRequiredField, requiredField])).toEqual([
+      sectionGroup([section([requiredField]), section([defaultedRequiredField], "collapsed-footer")]),
+    ]);
+  });
+
+  it("should collapse required fields with defaults inline when nested", () => {
+    const requiredField = item("required", { required: true });
+    const defaultedRequiredField = item("required_with_default", { required: true, default: "safe-value" });
+
+    expect(generate([defaultedRequiredField, requiredField], [], false)).toEqual([
+      sectionGroup([section([requiredField]), section([defaultedRequiredField], "collapsed-inline")]),
+    ]);
+  });
+
+  it("should order required fields with defaults alongside optional fields when nested", () => {
+    const requiredField = item("required", { required: true, order: 2 });
+    const defaultedRequiredField = item("required_with_default", { required: true, default: "safe-value", order: 1 });
+    const optionalField = item("optional", { order: 0 });
+
+    expect(generate([defaultedRequiredField, requiredField, optionalField], [], false)).toEqual([
+      sectionGroup([section([requiredField]), section([optionalField, defaultedRequiredField], "collapsed-inline")]),
+    ]);
+  });
+
+  it("should keep required fields with defaults expanded when always_show is true", () => {
+    const field = item("required_with_default", { required: true, default: "safe-value", always_show: true });
+
+    expect(generate(field)).toEqual([sectionGroup([section([field])])]);
+  });
+
+  it("should keep required fields without defaults expanded", () => {
+    const field = item("required_without_default", { required: true });
+
+    expect(generate(field)).toEqual([sectionGroup([section([field])])]);
+  });
+
+  it("should keep required const fields with defaults expanded", () => {
+    const field = item("required_const", { required: true, default: "fixed-value", const: "fixed-value" });
+
+    expect(generate(field)).toEqual([sectionGroup([section([field])])]);
+  });
+
+  it("should keep required oneOf conditions with defaults expanded", () => {
+    const authCondition = condition("auth", "api");
+
+    expect(generate(authCondition)).toEqual([sectionGroup([section([authCondition])])]);
   });
 
   it("should order optional fields with 'always_show: true' normally", () => {

@@ -8,7 +8,7 @@ import { FormBlock, GroupDetails } from "core/form/types";
 import { naturalComparator } from "core/utils/objects";
 
 import { useAuthentication } from "../../useAuthentication";
-import { OrderComparator } from "../../utils";
+import { getFieldPath, hasCollapsibleDefault, OrderComparator } from "../../utils";
 import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID } from "../Steps/specSections";
 
 export interface Section {
@@ -41,14 +41,13 @@ export type DisplayType = "expanded" | "collapsed-inline" | "collapsed-footer" |
  *
  * Section algorithm:
  * * Order form blocks by the following rules:
- *   * Order required form blocks in front of optional form blocks
+ *   * Order required form blocks without collapsible defaults in front of optional form blocks
  *   * Within required and optional sections, if `order` is defined, respect it
  *   * Use regular string sorting on the `fieldKey` of the form block as tie breaker if order is not defined
  * * Step through the form blocks and determine the display type for each - if consecutive blocks have the same display type, they go into the same section:
- *   * If a block is required, it is of type `expanded`
- *   * If an optional block has `always_show` set, it is of type `expanded` and it is ordered along with required fields according to its `order`
- *   * If a block is a condition block, it is of type `expanded`
- *   * Otherwise it is `collapsed-footer`
+ *   * Required blocks without a collapsible default, blocks with `always_show`, condition blocks, and non-resource-allocation groups are `expanded`
+ *   * Otherwise, if a block has `order` or is nested in another form group, it is `collapsed-inline`
+ *   * Otherwise, it is `collapsed-footer`
  *   * If a `collapsed-footer` directly follows a `collapsed-inline`, the footer is merged into the inline section
  * * If there is just one section and it's not `expanded`, turn it into a `collapsed-group` section
  * * If there are multiple sections and the last is `collapsed-inline`, turn it into a `collapsed-footer`
@@ -60,7 +59,9 @@ export type DisplayType = "expanded" | "collapsed-inline" | "collapsed-footer" |
 export function useGroupsAndSections(
   blocks: FormBlock | FormBlock[],
   groupStructure: GroupDetails[],
-  rootLevel: boolean
+  rootLevel: boolean,
+  path?: string,
+  skipAppend?: boolean
 ) {
   const { formState } = useFormContext();
   const { isHiddenAuthField } = useAuthentication();
@@ -84,11 +85,13 @@ export function useGroupsAndSections(
         if (section.displayType === "expanded") {
           return section;
         }
-        const hasError = section.blocks.some((block) => Boolean(get(formState.errors, block.path)));
+        const hasError = section.blocks.some((block) =>
+          Boolean(get(formState.errors, getFieldPath(block, path, skipAppend)))
+        );
         const initiallyOpen = section.blocks
           .filter((block) => block.const === undefined) // ignore const blocks because they are hidden
           .some((block) => {
-            const initialValue = get(formState.defaultValues, block.path);
+            const initialValue = get(formState.defaultValues, getFieldPath(block, path, skipAppend));
             // check if both are empty first, because the "unchanged" value that gets saved for an optional field with no default can vary (undefined, false, [], etc.)
             return isEmpty(block.default) && isEmpty(initialValue) ? false : !isEqual(block.default, initialValue);
           });
@@ -103,7 +106,7 @@ export function useGroupsAndSections(
         sections,
       };
     });
-  }, [formState, sectionGroups]); // have to depend on full formState object to get this to be recalculated when errors change
+  }, [formState, path, skipAppend, sectionGroups]); // have to depend on full formState object to get this to be recalculated when errors change
 
   return sectionGroupsWithMetadata;
 }
@@ -226,7 +229,7 @@ function splitSections(
 
 const getDisplayType = (block: FormBlock, rootLevel: boolean) => {
   if (
-    block.isRequired ||
+    (block.isRequired && !hasCollapsibleDefault(block)) ||
     block.always_show ||
     block._type === "formCondition" ||
     (block._type === "formGroup" && block.fieldKey !== "resourceAllocation")

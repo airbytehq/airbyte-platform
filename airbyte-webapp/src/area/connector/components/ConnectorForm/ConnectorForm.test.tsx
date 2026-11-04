@@ -765,6 +765,38 @@ describe("Connector form", () => {
       workTime: ["day"],
     };
 
+    const requiredDefaultField = "required_with_default";
+    const requiredDefaultValue = "safe-default";
+    const schemaWithRequiredDefault = {
+      type: "object",
+      required: [requiredDefaultField],
+      properties: {
+        [requiredDefaultField]: { type: "string", default: requiredDefaultValue },
+      },
+    } as unknown as ConnectorDefinitionSpecificationRead["connectionSpecification"];
+    const arrayItemDefaultValue = 5;
+    const schemaWithArrayItemDefault = {
+      type: "object",
+      required: ["streams"],
+      properties: {
+        streams: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["limit"],
+            properties: {
+              limit: { type: "integer", title: "Limit", default: arrayItemDefaultValue },
+            },
+          },
+        },
+      },
+    } as unknown as ConnectorDefinitionSpecificationRead["connectionSpecification"];
+    const getOptionalSectionForInput = (container: HTMLElement, input: HTMLElement) =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('[data-testid="optional-fields"]')).find((section) => {
+        const panelId = section.getAttribute("aria-controls");
+        return panelId ? container.querySelector(`[id="${panelId}"]`)?.contains(input) : false;
+      });
+
     it("should render optional field hidden, but allow to open and edit", async () => {
       const container = await renderForm({
         formValuesOverride: { ...filledForm },
@@ -804,6 +836,78 @@ describe("Connector form", () => {
           additional_same_group: "input1",
           additional_separate_group: "input2",
         },
+      });
+    });
+
+    it("should collapse a required field with a default and submit its default value", async () => {
+      const container = await renderForm({
+        specificationOverride: { connectionSpecification: schemaWithRequiredDefault },
+      });
+      const defaultedInput = getInputByName(
+        container,
+        `connectionConfiguration.${requiredDefaultField}`
+      ) as HTMLInputElement;
+      const optionalSection = getOptionalSectionForInput(container, defaultedInput);
+
+      expect(defaultedInput).not.toBeVisible();
+      expect(defaultedInput.getAttribute("value")).toEqual(requiredDefaultValue);
+      expect(optionalSection).toBeDefined();
+
+      await userEvent.click(optionalSection!);
+      expect(defaultedInput).toBeVisible();
+
+      await submitForm(container);
+
+      expect(result).toEqual({
+        name: "test-name",
+        connectionConfiguration: {
+          [requiredDefaultField]: requiredDefaultValue,
+        },
+      });
+    });
+
+    it("should show a collapsed-section error indicator when a required default field is cleared", async () => {
+      const container = await renderForm({
+        specificationOverride: { connectionSpecification: schemaWithRequiredDefault },
+      });
+      const defaultedInput = getInputByName(
+        container,
+        `connectionConfiguration.${requiredDefaultField}`
+      ) as HTMLInputElement;
+      const optionalSection = getOptionalSectionForInput(container, defaultedInput)!;
+
+      expect(defaultedInput).not.toBeVisible();
+
+      await userEvent.click(optionalSection);
+      await userEvent.clear(defaultedInput);
+      await submitForm(container);
+
+      expect(result).toBeUndefined();
+      await waitFor(() => expect(optionalSection.querySelector('[class*="errorIndicator"]')).toBeInTheDocument());
+    });
+
+    it("should keep required defaults in object-array items collapsed and show their errors", async () => {
+      const container = await renderForm({
+        formValuesOverride: { streams: [{ limit: arrayItemDefaultValue }] },
+        specificationOverride: { connectionSpecification: schemaWithArrayItemDefault },
+      });
+      const objectItemButton = screen.getByRole("button", { name: `Limit: ${arrayItemDefaultValue}` });
+      await userEvent.click(objectItemButton);
+
+      const defaultedInput = getInputByName(container, "connectionConfiguration.streams.0.limit") as HTMLInputElement;
+      const optionalSection = getOptionalSectionForInput(container, defaultedInput)!;
+
+      expect(defaultedInput).not.toBeVisible();
+      expect(defaultedInput.value).toEqual(String(arrayItemDefaultValue));
+      expect(optionalSection).toHaveAttribute("aria-expanded", "false");
+
+      await userEvent.click(optionalSection);
+      await userEvent.clear(defaultedInput);
+      await submitForm(container);
+
+      expect(result).toBeUndefined();
+      await waitFor(() => {
+        expect(screen.getByTestId("optional-fields").querySelector('[class*="errorIndicator"]')).toBeInTheDocument();
       });
     });
 
@@ -2235,6 +2339,7 @@ describe("Connector form", () => {
             ),
             properties: {
               ...sectionedSpec.properties,
+              ssl_mode: { ...sectionedSpec.properties.ssl_mode, always_show: true },
               schemas: { type: "string", title: "Schemas", group: "db" },
             },
           },
