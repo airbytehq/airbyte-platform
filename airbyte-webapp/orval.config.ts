@@ -1,8 +1,7 @@
 import fs from "node:fs";
-import path from "node:path";
 
 import traverse, { SchemaObject } from "json-schema-traverse";
-import { defineConfig, Options } from "orval";
+import { defineConfig, InputOptions, InputTransformerFn, Options } from "orval";
 
 import * as apis from "./src/core/api/apis";
 
@@ -13,6 +12,7 @@ type InfoFn = NonNullable<Exclude<Options["output"], string | undefined>["overri
 
 const JAVA_PROBLEM_BASE_CLASS = "io.airbyte.api.problems.ProblemResponse";
 const BASE_FIELDS_SCHEMA = "BaseProblemFields";
+const CDK_DEFINITIONS_REF = "#/definitions/";
 
 const header: InfoFn = (info) => [
   `eslint-disable`,
@@ -32,21 +32,6 @@ const createTypeReexportFile = (name: string) => {
     console.log(`Write type re-export file for ${name}...`);
     fs.writeFileSync(`./src/core/api/types/${name}.ts`, `export * from "../generated/${name}.schemas";\n`);
   };
-};
-
-/**
- * A post processing hook that will do all required transformation on the generated files.
- */
-const postProcessFileContent = (files: string[]) => {
-  console.log(`Post process generated content in ${path.basename(files[0])}...`);
-  const newContent = fs
-    .readFileSync(files[0], { encoding: "utf-8" })
-    // Make the options parameter mandatory, so it can't be forgetten to be passed in
-    .replace(/options\?: SecondParameter/g, "options: SecondParameter")
-    // Turn optional parameters (e.g. GET with non required parameters) into a `| undefined` type instead
-    // so they can be before the now mandatory options parameters.
-    .replace(/\?: ([^,]+),((?:[\s\S][^)])*options: SecondParameter)/g, ": $1 | undefined,$2");
-  fs.writeFileSync(files[0], newContent);
 };
 
 /**
@@ -80,9 +65,13 @@ const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, excludedP
     output: {
       mode: "split",
       target: `./src/core/api/generated/${name}.ts`,
-      prettier: true,
+      formatter: "prettier",
+      // The options carry the access token, so a caller must not be able to forget them.
+      optionsParamRequired: true,
       override: {
         header,
+        // The webapp imports the alias types of oneOf/anyOf/allOf members, e.g. DeclarativeComponentSchemaStreamsItem.
+        aliasCombinedTypes: true,
         // Do only use the mutator if an `apiFn` to call has been specified.
         ...(apiFn
           ? {
@@ -95,10 +84,62 @@ const createApi = (inputSpecFile: string, name: string, apiFn?: ApiFn, excludedP
       },
     },
     hooks: {
-      afterAllFilesWrite: [postProcessFileContent, createTypeReexportFile(name)],
+      afterAllFilesWrite: [createTypeReexportFile(name)],
     },
   };
 };
+
+/**
+ * The connector manifest spec only wraps the CDK's declarative component schema, a JSON Schema file with its own
+ * `definitions`. Orval inlines that file without rewriting the `#/definitions/...` refs inside it, and rejects JSON
+ * Schema keywords in an OpenAPI 3.0 spec. Moving the definitions into `components.schemas` and declaring OpenAPI 3.1,
+ * whose schema object is JSON Schema, keeps the type names that the webapp imports.
+ */
+const hoistCdkSchemaDefinitions: InputTransformerFn = (spec) => {
+  const wrapperSchemas = spec.components?.schemas ?? {};
+  if (Object.keys(wrapperSchemas).join() !== "ConnectorManifest") {
+    throw new Error("connector_manifest_openapi.yaml should define only the ConnectorManifest schema.");
+  }
+  const connectorManifest = wrapperSchemas.ConnectorManifest;
+  if (typeof connectorManifest !== "object" || "$ref" in connectorManifest) {
+    throw new Error("The ConnectorManifest schema should inline the CDK declarative component schema.");
+  }
+
+  // traverse visits schema positions only, so literals such as examples and defaults keep their `#/definitions/` text.
+  traverse(connectorManifest as SchemaObject, {
+    cb: (schema) => {
+      if (typeof schema.$ref === "string" && schema.$ref.startsWith(CDK_DEFINITIONS_REF)) {
+        schema.$ref = `#/components/schemas/${schema.$ref.slice(CDK_DEFINITIONS_REF.length)}`;
+      }
+    },
+  });
+
+  const { definitions, ...declarativeComponentSchema } = connectorManifest as typeof connectorManifest & {
+    definitions?: object;
+  };
+
+  return {
+    ...spec,
+    openapi: "3.1.0",
+    components: {
+      ...spec.components,
+      schemas: {
+        ...definitions,
+        DeclarativeComponentSchema: declarativeComponentSchema,
+        ConnectorManifest: { $ref: "#/components/schemas/DeclarativeComponentSchema" },
+      },
+    },
+  };
+};
+
+const withCdkSchemaDefinitions = (options: Options): Options => ({
+  ...options,
+  input: {
+    ...(options.input as InputOptions),
+    parserOptions: { externalRefs: { allow: ["../../../../build/declarative_component_schema.yaml"] } },
+    override: { transformer: hoistCdkSchemaDefinitions },
+  },
+});
 
 const errorTypeGeneration = (inputSpec: string): Options => {
   return {
@@ -193,6 +234,7 @@ const errorTypeGeneration = (inputSpec: string): Options => {
       target: "./src/core/api/errors/problems.ts",
       override: {
         header,
+        aliasCombinedTypes: true,
       },
     },
   };
@@ -204,9 +246,8 @@ export default defineConfig({
     // Required to exclude, due to us not being able to convert JSON parameters
     "/public/v1/oauth/callback",
   ]),
-  connectorManifest: createApi(
-    "./src/core/services/connectorBuilder/connector_manifest_openapi.yaml",
-    "ConnectorManifest"
+  connectorManifest: withCdkSchemaDefinitions(
+    createApi("./src/core/services/connectorBuilder/connector_manifest_openapi.yaml", "ConnectorManifest")
   ),
   apiErrorTypes: errorTypeGeneration("../airbyte-api/problems-api/src/main/openapi/api-problems.yaml"),
 });
