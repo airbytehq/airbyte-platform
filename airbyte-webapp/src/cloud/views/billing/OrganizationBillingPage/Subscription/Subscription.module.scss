@@ -1,9 +1,10 @@
+@use "scss/colors";
 @use "scss/variables";
 
 .subscription__header {
-  row-gap: variables.$spacing-sm;
-}
+  row-gap: variables.$spacing-lg;
 
-.subscription__changePlan {
-  margin-left: auto;
+  .subscription__changePlanLink:hover {
+    color: colors.$white;
+  }
 }

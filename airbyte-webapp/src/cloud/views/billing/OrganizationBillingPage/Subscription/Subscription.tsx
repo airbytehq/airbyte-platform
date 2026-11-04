@@ -36,10 +36,10 @@ export const Subscription: React.FC = () => {
         <Heading as="h2" size="sm">
           <FormattedMessage id="settings.organization.billing.subscription" />
         </Heading>
-        <div className={styles.subscription__changePlan}>
+        <div>
           <FlexContainer gap="sm" alignItems="center">
             {isSelfServePlusPlanEnabled && (
-              <Link to={planPagePath} variant="button">
+              <Link to={planPagePath} variant="buttonPrimary" className={styles.subscription__changePlanLink}>
                 <FormattedMessage id="settings.organization.billing.subscription.changePlan" />
               </Link>
             )}
