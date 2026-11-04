@@ -142,6 +142,7 @@ object MetricTags {
   const val RESULT_TAG: String = "result"
   const val STAGE_NAME_TAG: String = "stage_name"
   const val STATUS_TAG: String = "status"
+  const val TIMEOUT_BUDGET_EXHAUSTED_TAG: String = "timeout_budget_exhausted"
   const val WORKLOAD_CANCEL_REASON_TAG: String = "cancel_reason"
   const val WORKLOAD_CANCEL_SOURCE_TAG: String = "cancel_source"
   const val WORKLOAD_ID_TAG: String = "workload_id"

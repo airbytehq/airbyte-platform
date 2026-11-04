@@ -9,6 +9,7 @@ import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.directjobrunner.connect.ConnectProbe
+import io.airbyte.metrics.MetricClient
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -31,5 +32,6 @@ class ApplicationFactory {
   fun connectProbe(
     matcher: BlockedAddressMatcher,
     config: ConnectConfig,
-  ): ConnectProbe = ConnectProbe(matcher = matcher, overallTimeout = config.overallTimeout)
+    metricClient: MetricClient,
+  ): ConnectProbe = ConnectProbe(matcher = matcher, overallTimeout = config.overallTimeout, metricClient = metricClient)
 }

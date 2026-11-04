@@ -7,8 +7,11 @@ package io.airbyte.directjobrunner.connect
 import io.airbyte.commons.net.BlockedAddressMatcher
 import io.airbyte.config.ConnectErrorCode
 import io.airbyte.config.ConnectInput
+import io.airbyte.metrics.MetricClient
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -26,6 +29,32 @@ import java.util.UUID
 class ConnectProbeTest {
   private val workspaceId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
+  private val meterRegistry = SimpleMeterRegistry()
+  private val metricClient = MetricClient(meterRegistry)
+
+  private fun probeCount(
+    outcome: String,
+    timeoutBudgetExhausted: Boolean = false,
+  ): Double =
+    meterRegistry
+      .find("connect_probe")
+      .tags("outcome", outcome, "timeout_budget_exhausted", timeoutBudgetExhausted.toString())
+      .counter()
+      ?.count() ?: 0.0
+
+  private fun durationCount(
+    metric: String,
+    result: String,
+  ): Long =
+    meterRegistry
+      .find(metric)
+      .tags("result", result)
+      .summary()
+      ?.count() ?: 0L
+
+  private fun tcpAttempts(result: String) = durationCount("connect_probe_tcp_connect_duration", result)
+
+  private fun dnsLookups(result: String) = durationCount("connect_probe_dns_duration", result)
 
   private fun input(
     host: String = "db.example.com",
@@ -40,32 +69,37 @@ class ConnectProbeTest {
     connector: TcpConnector = TcpConnector { _, _ -> },
     matcher: BlockedAddressMatcher = BlockedAddressMatcher(),
     overallTimeout: Duration = Duration.ofSeconds(10),
-  ) = ConnectProbe(matcher, overallTimeout, resolver, connector)
+  ) = ConnectProbe(matcher, overallTimeout, metricClient, resolver, connector)
 
   @Test
   fun `connects to an open port`() {
     ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
       // loopback is blocked by default, so use a matcher without the default ranges against the real resolver and socket
-      val allowLoopback = ConnectProbe(BlockedAddressMatcher(defaultBlockedCidrs = emptyList()), Duration.ofSeconds(10))
+      val allowLoopback = ConnectProbe(BlockedAddressMatcher(defaultBlockedCidrs = emptyList()), Duration.ofSeconds(10), metricClient)
 
       val output = allowLoopback.probe(input(host = "127.0.0.1", port = server.localPort))
 
       assertTrue(output.reachable)
       assertEquals(ConnectErrorCode.NONE, output.errorCode)
       assertEquals(listOf("127.0.0.1"), output.resolvedAddresses)
+      assertEquals(1.0, probeCount("reachable"))
+      assertEquals(1L, dnsLookups("success"))
+      assertEquals(1L, tcpAttempts("connected"))
     }
   }
 
   @Test
   fun `reports connection refused for a closed port`() {
     val closedPort = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { it.localPort }
-    val allowLoopback = ConnectProbe(BlockedAddressMatcher(defaultBlockedCidrs = emptyList()), Duration.ofSeconds(10))
+    val allowLoopback = ConnectProbe(BlockedAddressMatcher(defaultBlockedCidrs = emptyList()), Duration.ofSeconds(10), metricClient)
 
     val output = allowLoopback.probe(input(host = "127.0.0.1", port = closedPort))
 
     assertFalse(output.reachable)
     assertEquals(ConnectErrorCode.CONNECTION_REFUSED, output.errorCode)
     assertTrue(output.message.contains("Connection refused by 127.0.0.1:$closedPort"), output.message)
+    assertEquals(1.0, probeCount("connection_refused"))
+    assertEquals(1L, tcpAttempts("connection_refused"))
   }
 
   @Test
@@ -79,6 +113,8 @@ class ConnectProbeTest {
     assertFalse(output.reachable)
     assertEquals(ConnectErrorCode.TIMEOUT, output.errorCode)
     assertTrue(output.message.contains("8.8.8.8:5432"), output.message)
+    assertEquals(1.0, probeCount("timeout"))
+    assertEquals(1L, tcpAttempts("timeout"))
   }
 
   @Test
@@ -91,6 +127,8 @@ class ConnectProbeTest {
 
     assertEquals(ConnectErrorCode.UNKNOWN, output.errorCode)
     assertTrue(output.message.contains("No route to host"), output.message)
+    assertEquals(1.0, probeCount("unknown"))
+    assertEquals(1L, tcpAttempts("unknown"))
   }
 
   @Test
@@ -101,6 +139,9 @@ class ConnectProbeTest {
     assertEquals(ConnectErrorCode.DNS_FAILED, output.errorCode)
     assertTrue(output.resolvedAddresses.isEmpty())
     assertTrue(output.message.contains("nope.example.com"), output.message)
+    assertEquals(1.0, probeCount("dns_failed"))
+    assertEquals(1L, dnsLookups("failure"))
+    assertEquals(0L, dnsLookups("success"))
   }
 
   @ParameterizedTest
@@ -123,6 +164,10 @@ class ConnectProbeTest {
     assertEquals(ConnectErrorCode.CONNECTION_REFUSED, output.errorCode)
     assertTrue(output.message.contains("not allowed"))
     assertTrue(output.resolvedAddresses.isEmpty())
+    // The output reports a refusal; only the metric records that the destination was blocked.
+    assertEquals(1.0, probeCount("blocked"))
+    assertEquals(0.0, probeCount("connection_refused"))
+    assertNull(meterRegistry.find("connect_probe_tcp_connect_duration").summary())
   }
 
   @Test
@@ -167,6 +212,9 @@ class ConnectProbeTest {
     assertTrue(output.reachable)
     assertEquals(listOf("2606:4700:4700:0:0:0:0:1111", "1.1.1.1"), attempted)
     assertEquals(ConnectErrorCode.NONE, output.errorCode)
+    assertEquals(1.0, probeCount("reachable"))
+    assertEquals(1L, tcpAttempts("unknown"))
+    assertEquals(1L, tcpAttempts("connected"))
   }
 
   @Test
@@ -211,5 +259,18 @@ class ConnectProbeTest {
 
     assertTrue(attempted.size < 3, "attempted ${attempted.size}")
     assertEquals(ConnectErrorCode.TIMEOUT, output.errorCode)
+    assertEquals(1.0, probeCount("timeout", timeoutBudgetExhausted = true))
+    assertEquals(attempted.size.toLong(), tcpAttempts("timeout"))
+  }
+
+  @Test
+  fun `a failure within the overall budget does not count as the budget running out`() {
+    probe(
+      resolver = { listOf(ip("8.8.8.8")) },
+      connector = { _, _ -> throw ConnectException("refused") },
+    ).probe(input())
+
+    assertEquals(1.0, probeCount("connection_refused", timeoutBudgetExhausted = false))
+    assertEquals(0.0, probeCount("connection_refused", timeoutBudgetExhausted = true))
   }
 }

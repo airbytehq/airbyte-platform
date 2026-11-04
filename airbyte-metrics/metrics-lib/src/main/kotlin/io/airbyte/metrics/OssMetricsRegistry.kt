@@ -468,6 +468,42 @@ enum class OssMetricsRegistry(
     metricName = "direct_job_dispatch",
     metricDescription = "Number of direct jobs the workload launcher handed to the direct job runner, by result",
   ),
+  DIRECT_JOB_SUBMISSION(
+    metricName = "direct_job_submission",
+    metricDescription = "Number of direct jobs the direct job runner was handed, by workload type and result",
+  ),
+  DIRECT_JOB_QUEUE_WAIT(
+    metricName = "direct_job_queue_wait",
+    metricDescription = "Milliseconds an accepted direct job waited for a thread in the direct job runner, by workload type",
+  ),
+  DIRECT_JOB_RUN(
+    metricName = "direct_job_run",
+    metricDescription = "Number of direct jobs the direct job runner finished, by workload type and result",
+  ),
+  DIRECT_JOB_RUN_DURATION(
+    metricName = "direct_job_run_duration",
+    metricDescription = "Milliseconds a direct job handler ran, excluding reporting the result, by workload type and handler result",
+  ),
+  DIRECT_JOB_FAILURE_REPORT_ERROR(
+    metricName = "direct_job_failure_report_error",
+    metricDescription = "Number of failed direct jobs the direct job runner could not mark failed; they stay running until their deadline",
+  ),
+  DIRECT_JOB_IN_FLIGHT(
+    metricName = "direct_job_in_flight",
+    metricDescription = "Number of direct jobs accepted and not yet finished in a direct job runner pod",
+  ),
+  CONNECT_PROBE(
+    metricName = "connect_probe",
+    metricDescription = "Number of connect probes, by outcome and whether the overall timeout ran out",
+  ),
+  CONNECT_PROBE_DNS_DURATION(
+    metricName = "connect_probe_dns_duration",
+    metricDescription = "Milliseconds a connect probe spent resolving the host, by result",
+  ),
+  CONNECT_PROBE_TCP_CONNECT_DURATION(
+    metricName = "connect_probe_tcp_connect_duration",
+    metricDescription = "Milliseconds of each TCP connection attempt a connect probe made, by result",
+  ),
   JOB_OUTPUT_WRITE(
     metricName = "job_output_write",
     metricDescription = "Write a job output in the output folder",

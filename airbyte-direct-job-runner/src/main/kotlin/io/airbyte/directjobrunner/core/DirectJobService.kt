@@ -6,6 +6,10 @@ package io.airbyte.directjobrunner.core
 
 import io.airbyte.config.FailureReason
 import io.airbyte.config.WorkloadType
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
@@ -14,9 +18,11 @@ import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
+import java.util.function.ToDoubleFunction
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,6 +30,9 @@ private val ELIGIBLE_STATUSES = setOf<WorkloadStatus?>(WorkloadStatus.CLAIMED, W
 
 /** Name of the executor direct jobs run on, configured under `micronaut.executors`. */
 const val DIRECT_JOB_EXECUTOR = "direct-jobs"
+
+private const val RUN_SUCCEEDED = "success"
+private const val RUN_FAILED = "failure"
 
 sealed interface DirectJobSubmission {
   data object Accepted : DirectJobSubmission
@@ -55,6 +64,7 @@ class DirectJobService(
   private val workloadApiClient: WorkloadApiClient,
   @Named(DIRECT_JOB_EXECUTOR) private val executor: ExecutorService,
   handlers: List<DirectJobHandler>,
+  private val metricClient: MetricClient,
 ) {
   private val handlersByType: Map<WorkloadType, DirectJobHandler> =
     handlers.groupBy { it.workloadType }.mapValues { (type, registered) ->
@@ -62,7 +72,10 @@ class DirectJobService(
       registered.single()
     }
 
-  private val inFlight: MutableSet<String> = ConcurrentHashMap.newKeySet()
+  private val inFlight: MutableSet<String> =
+    ConcurrentHashMap.newKeySet<String>().also { inFlight ->
+      metricClient.gauge(OssMetricsRegistry.DIRECT_JOB_IN_FLIGHT, inFlight, ToDoubleFunction { it.size.toDouble() })
+    }
 
   /**
    * Validates the workload and marks it running synchronously, then runs the job in the background. The workload
@@ -70,26 +83,30 @@ class DirectJobService(
    */
   fun submit(workloadId: String): DirectJobSubmission {
     if (!inFlight.add(workloadId)) {
-      return DirectJobSubmission.Duplicate
+      // The workload has not been read yet, so its type is unknown.
+      return recordSubmission(MetricTags.UNKNOWN, DirectJobSubmission.Duplicate)
     }
 
     var handedOff = false
     try {
       val workload = workloadApiClient.workloadGet(workloadId)
 
-      val handler = handlersByType[workload.type] ?: return DirectJobSubmission.Unsupported(workload.type)
+      val workloadType = workload.type.toString()
+      val handler =
+        handlersByType[workload.type] ?: return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
 
       if (workload.status !in ELIGIBLE_STATUSES) {
-        return DirectJobSubmission.NotEligible(workload.status)
+        return recordSubmission(workloadType, DirectJobSubmission.NotEligible(workload.status))
       }
 
       // Mark the workload running before acknowledging, so a re-delivery to any runner sees RUNNING and is rejected.
       workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId, OffsetDateTime.now().plus(handler.runningDeadline)))
 
       val inputPayload = workload.inputPayload
-      executor.execute { run(handler, workloadId, inputPayload) }
+      val queuedNanos = System.nanoTime()
+      executor.execute { run(handler, workloadId, inputPayload, queuedNanos) }
       handedOff = true
-      return DirectJobSubmission.Accepted
+      return recordSubmission(workloadType, DirectJobSubmission.Accepted)
     } finally {
       if (!handedOff) {
         inFlight.remove(workloadId)
@@ -97,19 +114,73 @@ class DirectJobService(
     }
   }
 
+  private fun recordSubmission(
+    workloadType: String,
+    submission: DirectJobSubmission,
+  ): DirectJobSubmission {
+    val result =
+      when (submission) {
+        DirectJobSubmission.Accepted -> "accepted"
+        DirectJobSubmission.Duplicate -> "duplicate"
+        is DirectJobSubmission.NotEligible -> "not_eligible"
+        is DirectJobSubmission.Unsupported -> "unsupported"
+      }
+    metricClient.count(
+      OssMetricsRegistry.DIRECT_JOB_SUBMISSION,
+      1,
+      MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType),
+      MetricAttribute(MetricTags.RESULT_TAG, result),
+    )
+    return submission
+  }
+
   private fun run(
     handler: DirectJobHandler,
     workloadId: String,
     inputPayload: String,
+    queuedNanos: Long,
   ) {
+    val workloadType = MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, handler.workloadType.toString())
+    metricClient.distribution(OssMetricsRegistry.DIRECT_JOB_QUEUE_WAIT, elapsedMs(queuedNanos), workloadType)
+
+    val result =
+      try {
+        runHandler(handler, workloadId, inputPayload, workloadType)
+        workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
+        RUN_SUCCEEDED
+      } catch (e: Exception) {
+        logger.error(e) { "Direct job ${handler.workloadType} for workload $workloadId failed unexpectedly" }
+        failWorkload(handler.workloadType, workloadId, e)
+        RUN_FAILED
+      } finally {
+        inFlight.remove(workloadId)
+      }
+
+    metricClient.count(OssMetricsRegistry.DIRECT_JOB_RUN, 1, workloadType, MetricAttribute(MetricTags.RESULT_TAG, result))
+  }
+
+  /**
+   * Times the handler alone. Reporting the result to the workload API is excluded: its retries can add seconds that
+   * have nothing to do with the job.
+   */
+  private fun runHandler(
+    handler: DirectJobHandler,
+    workloadId: String,
+    inputPayload: String,
+    workloadType: MetricAttribute,
+  ) {
+    val startNanos = System.nanoTime()
+    var result = RUN_FAILED
     try {
       handler.run(workloadId, inputPayload)
-      workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
-    } catch (e: Exception) {
-      logger.error(e) { "Direct job ${handler.workloadType} for workload $workloadId failed unexpectedly" }
-      failWorkload(handler.workloadType, workloadId, e)
+      result = RUN_SUCCEEDED
     } finally {
-      inFlight.remove(workloadId)
+      metricClient.distribution(
+        OssMetricsRegistry.DIRECT_JOB_RUN_DURATION,
+        elapsedMs(startNanos),
+        workloadType,
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
     }
   }
 
@@ -129,6 +200,9 @@ class DirectJobService(
       )
     } catch (e: Exception) {
       logger.error(e) { "Unable to mark workload $workloadId as failed" }
+      metricClient.count(OssMetricsRegistry.DIRECT_JOB_FAILURE_REPORT_ERROR, 1, MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, type.toString()))
     }
   }
+
+  private fun elapsedMs(startNanos: Long): Double = Duration.ofNanos(System.nanoTime() - startNanos).toMillis().toDouble()
 }
