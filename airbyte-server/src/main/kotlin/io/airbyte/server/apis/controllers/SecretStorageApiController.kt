@@ -164,6 +164,7 @@ class SecretStorageApiController(
 private fun SecretStorageWithConfig.toApiModel(): SecretStorageRead =
   SecretStorageRead(
     id = this.secretStorage.id.value,
+    descriptor = this.secretStorage.descriptor,
     isConfiguredFromEnvironment = this.secretStorage.configuredFromEnvironment,
     config = this.config,
     scopeId = this.secretStorage.scopeId,

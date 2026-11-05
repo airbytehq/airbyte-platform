@@ -22426,6 +22426,8 @@ components:
       properties:
         id:
           $ref: "#/components/schemas/SecretStorageId"
+        descriptor:
+          type: string
         secretStorageType:
           $ref: "#/components/schemas/SecretStorageType"
         isConfiguredFromEnvironment:

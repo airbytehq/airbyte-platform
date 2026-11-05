@@ -39,6 +39,7 @@ import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -127,6 +128,7 @@ internal class SecretStorageApiControllerTest {
     val body = response.body()
     assertNotNull(body)
     assertEquals(secretStorageId.value, body.id)
+    assertEquals("my-storage", body.descriptor)
     assertEquals("value", body.config!!.get("key").asText())
     assertEquals(secretStorage.scopeId, body.scopeId)
     assertEquals(io.airbyte.api.server.generated.models.ScopeType.WORKSPACE, body.scopeType)
@@ -135,24 +137,13 @@ internal class SecretStorageApiControllerTest {
   }
 
   @Test
-  fun testListSecretStorage() {
-    val secretStorageId = SecretStorageId(UUID.randomUUID())
+  fun testListSecretStorageReturnsPersistedDescriptorsWithoutConfig() {
     val scopeId = UUID.randomUUID()
-    val secretStorage =
-      SecretStorage(
-        id = secretStorageId,
-        scopeType = SecretStorageScopeType.WORKSPACE,
-        scopeId = scopeId,
-        configuredFromEnvironment = false,
-        storageType = SecretStorageType.GOOGLE_SECRET_MANAGER,
-        descriptor = "my-storage",
-        createdBy = UUID.randomUUID(),
-        updatedBy = UUID.randomUUID(),
-        createdAt = OffsetDateTime.now(),
-        updatedAt = OffsetDateTime.now(),
-      )
+    val namedStorage = secretStorage(scopeId = scopeId, descriptor = "my-storage")
+    val blankDescriptorStorage = secretStorage(scopeId = scopeId, descriptor = "")
     every { authorizationData.workspaceAndOrganization(scopeId) } returns WorkspaceAndOrganization(scopeId, UUID.randomUUID())
-    every { secretStorageService.listSecretStorage(SecretStorageScopeType.WORKSPACE, scopeId) } returns listOf(secretStorage)
+    every { secretStorageService.listSecretStorage(SecretStorageScopeType.WORKSPACE, scopeId) } returns
+      listOf(namedStorage, blankDescriptorStorage)
 
     val path = "/api/v1/secret_storage/list"
     val request = HttpRequest.POST(path, SecretStorageListRequestBody(scopeType = ScopeType.WORKSPACE, scopeId = scopeId))
@@ -162,8 +153,35 @@ internal class SecretStorageApiControllerTest {
 
     val body = response.body()
     assertNotNull(body)
-    assertEquals(1, body.secretStorages.size)
-    assertEquals(secretStorageId.value, body.secretStorages[0].id)
+    assertEquals(
+      listOf(namedStorage, blankDescriptorStorage).map {
+        SecretStorageRead(
+          id = it.id.value,
+          descriptor = it.descriptor,
+          secretStorageType = io.airbyte.api.server.generated.models.SecretStorageType.GOOGLE_SECRET_MANAGER,
+          isConfiguredFromEnvironment = false,
+          scopeType = ScopeType.WORKSPACE,
+          scopeId = scopeId,
+          config = null,
+        )
+      },
+      body.secretStorages,
+    )
+    verify(exactly = 0) { secretStorageService.hydrateStorageConfig(any()) }
+  }
+
+  @Test
+  fun testListSecretStorageReturnsEmptyList() {
+    val scopeId = UUID.randomUUID()
+    every { authorizationData.workspaceAndOrganization(scopeId) } returns WorkspaceAndOrganization(scopeId, UUID.randomUUID())
+    every { secretStorageService.listSecretStorage(SecretStorageScopeType.WORKSPACE, scopeId) } returns emptyList()
+
+    val path = "/api/v1/secret_storage/list"
+    val request = HttpRequest.POST(path, SecretStorageListRequestBody(scopeType = ScopeType.WORKSPACE, scopeId = scopeId))
+    val response: HttpResponse<SecretStorageReadList> = client.toBlocking().exchange(request, SecretStorageReadList::class.java)
+
+    assertStatus(HttpStatus.OK, response.status)
+    assertEquals(SecretStorageReadList(secretStorages = emptyList()), response.body())
   }
 
   @Test
@@ -231,8 +249,26 @@ internal class SecretStorageApiControllerTest {
     val body = response.body()
     assertNotNull(body)
     assertEquals(requestBody.scopeId, body.scopeId)
+    assertEquals("My Storage", body.descriptor)
     assertEquals(ScopeType.ORGANIZATION, body.scopeType)
     assertEquals(io.airbyte.api.server.generated.models.SecretStorageType.AWS_SECRETS_MANAGER, body.secretStorageType)
     assertNull(body.config)
   }
+
+  private fun secretStorage(
+    scopeId: UUID,
+    descriptor: String,
+  ): SecretStorage =
+    SecretStorage(
+      id = SecretStorageId(UUID.randomUUID()),
+      scopeType = SecretStorageScopeType.WORKSPACE,
+      scopeId = scopeId,
+      configuredFromEnvironment = false,
+      storageType = SecretStorageType.GOOGLE_SECRET_MANAGER,
+      descriptor = descriptor,
+      createdBy = UUID.randomUUID(),
+      updatedBy = UUID.randomUUID(),
+      createdAt = OffsetDateTime.now(),
+      updatedAt = OffsetDateTime.now(),
+    )
 }
