@@ -10,9 +10,11 @@ import { isSourceDefinition } from "core/domain/connector/source";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 
 import styles from "./ConnectorCardHeader.module.scss";
+import { CopyConfigButton, FormCopyConfigButton } from "./CopyConfigButton";
 
 interface ConnectorCardHeaderProps {
   connectorDefinition: ConnectorDefinition;
+  /** Set this when the header renders outside the connector form, which Copy JSON reads from. */
   actionsDisabled?: boolean;
 }
 
@@ -28,6 +30,7 @@ export const ConnectorCardHeader: React.FC<ConnectorCardHeaderProps> = ({ connec
       {isSourceDefinition(connectorDefinition) && (
         <ForkConnectorButton sourceDefinition={connectorDefinition} iconOnly disabled={actionsDisabled} />
       )}
+      {actionsDisabled ? <CopyConfigButton /> : <FormCopyConfigButton />}
       <CloudInviteUsersButton disabled={actionsDisabled} />
     </FlexContainer>
   </FlexContainer>

@@ -153,6 +153,41 @@ describe("maskSecrets", () => {
     });
   });
 
+  it("should mask secrets in oneOf options without a const discriminator and in array items", () => {
+    const schema = {
+      properties: {
+        ssl_mode: {
+          type: "object",
+          oneOf: [
+            { properties: { mode: { type: "string", enum: ["disable"] } } },
+            {
+              properties: {
+                mode: { type: "string", enum: ["verify-full"] },
+                client_key: { type: "string", airbyte_secret: true },
+              },
+            },
+          ],
+        },
+        streams: {
+          type: "array",
+          items: { type: "object", properties: { token: { type: "string", airbyte_secret: true } } },
+        },
+        tags: { type: "array" },
+      },
+    };
+    const config = {
+      ssl_mode: { mode: "verify-full", client_key: "secret" },
+      streams: [{ token: "secret" }],
+      tags: ["a", "b"],
+    };
+
+    expect(maskSecrets(config, schema)).toEqual({
+      ssl_mode: { mode: "verify-full", client_key: "******" },
+      streams: [{ token: "******" }],
+      tags: ["a", "b"],
+    });
+  });
+
   it("should not mask empty, null, or undefined values", () => {
     const config = {
       password1: "",

@@ -1,3 +1,6 @@
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 /**
  * Recursively masks values in a configuration object based on the schema's airbyte_secret property
  */
@@ -5,43 +8,14 @@ export const maskSecrets = (
   config: Record<string, unknown>,
   schema: Record<string, unknown>
 ): Record<string, unknown> => {
-  // Create a copy of the config to avoid mutating the original
-  const maskedConfig = { ...config };
-
-  // Handle oneOf schemas
-  if (schema.oneOf && Array.isArray(schema.oneOf)) {
-    // Find the matching schema in oneOf based on discriminator
-    // In JSON Schema, discriminator fields are often defined with 'const' values
-    const oneOfSchemas = schema.oneOf as Array<Record<string, unknown>>;
-
-    // Try to find a discriminator field by looking for properties with 'const' values
-    for (const subSchema of oneOfSchemas) {
-      if (typeof subSchema === "object" && subSchema.properties && typeof subSchema.properties === "object") {
-        const properties = subSchema.properties as Record<string, unknown>;
-
-        // Check each property to see if it's a potential discriminator
-        let matchingSchema = null;
-        for (const [propKey, propSchema] of Object.entries(properties)) {
-          if (
-            typeof propSchema === "object" &&
-            propSchema !== null &&
-            "const" in propSchema &&
-            propKey in config &&
-            config[propKey] === propSchema.const
-          ) {
-            // Found a matching schema based on the discriminator
-            matchingSchema = subSchema;
-            break;
-          }
-        }
-
-        if (matchingSchema) {
-          // Apply masking using the matching schema
-          return maskSecrets(config, matchingSchema);
-        }
-      }
-    }
-  }
+  // Mask with every oneOf option, not only the selected one. A schema can declare its discriminator in several ways,
+  // and an option that is not recognized must not leave a secret unmasked. The server masks secrets the same way.
+  const oneOfOptions = Array.isArray(schema.oneOf) ? schema.oneOf.filter(isPlainObject) : [];
+  const maskedConfig = oneOfOptions.reduce<Record<string, unknown>>(
+    (masked, option) => maskSecrets(masked, option),
+    // Create a copy of the config to avoid mutating the original
+    { ...config }
+  );
 
   // If schema doesn't have properties, return the config as is
   if (!schema.properties || typeof schema.properties !== "object") {
@@ -83,6 +57,14 @@ export const maskSecrets = (
         maskedConfig[key] as Record<string, unknown>,
         propertySchema as Record<string, unknown>
       );
+      return;
+    }
+
+    // Handle arrays whose items have their own schema, unless the whole array is a secret
+    const value = maskedConfig[key];
+    const itemSchema = isPlainObject(propertySchema) && !propertySchema.airbyte_secret && propertySchema.items;
+    if (Array.isArray(value) && isPlainObject(itemSchema)) {
+      maskedConfig[key] = value.map((item) => (isPlainObject(item) ? maskSecrets(item, itemSchema) : item));
       return;
     }
 

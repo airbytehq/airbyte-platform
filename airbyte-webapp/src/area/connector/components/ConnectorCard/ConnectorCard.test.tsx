@@ -34,12 +34,14 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
     onSubmit,
     onCheckSection,
     formHeader,
+    formAutomation,
     isSavingDraft,
     renderFooter,
   }: {
     onSubmit: (values: typeof formValues) => Promise<void>;
     onCheckSection: CheckSection;
     formHeader: React.ReactNode;
+    formAutomation: React.ReactNode;
     isSavingDraft?: boolean;
     renderFooter: (props: {
       dirty: boolean;
@@ -54,6 +56,7 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
     return (
       <>
         {formHeader}
+        {formAutomation}
         <span data-testid="form-saving-draft">{String(Boolean(isSavingDraft))}</span>
         <button type="button" onClick={() => onSubmit(formValues).catch(() => undefined)}>
           Submit form
@@ -81,6 +84,16 @@ jest.mock("./components/Controls", () => ({
 }));
 
 jest.mock("area/connector/components/ConnectorIcon", () => ({ ConnectorIcon: () => null }));
+
+jest.mock("./components/CopyConfigButton", () => ({
+  CopyConfigButton: () => (
+    <button type="button" disabled>
+      Copy JSON
+    </button>
+  ),
+  FormCopyConfigButton: () => <button type="button">Copy JSON</button>,
+  ShareFormConfigJson: () => <span data-testid="share-form-config-json" />,
+}));
 
 jest.mock("pages/connectorBuilder/components/ForkConnectorButton", () => ({
   ForkConnectorButton: ({ iconOnly, disabled }: { iconOnly?: boolean; disabled?: boolean }) => (
@@ -306,11 +319,12 @@ describe("ConnectorCard header", () => {
     jest.clearAllMocks();
   });
 
-  it("shows the connector name with Fork in Builder and Invite users for a new source", () => {
+  it("shows the connector name with Fork in Builder, Copy JSON and Invite users for a new source", () => {
     renderCard(newSourceCardProps);
 
     expect(screen.getByRole("heading", { name: mockSourceDefinition.name })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Fork in Builder icon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy JSON" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Invite users" })).toBeInTheDocument();
   });
 
@@ -338,6 +352,16 @@ describe("ConnectorCard header", () => {
     expect(screen.queryByRole("heading", { name: mockSourceDefinition.name })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Fork in Builder/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Invite users" })).not.toBeInTheDocument();
+  });
+
+  it("shares the form values for Copy JSON in edit mode", () => {
+    renderCard({
+      ...newSourceCardProps,
+      isEditMode: true,
+      connector: { ...mockSource, sourceDefinitionId: mockSourceDefinition.sourceDefinitionId },
+    });
+
+    expect(screen.getByTestId("share-form-config-json")).toBeInTheDocument();
   });
 });
 
@@ -379,6 +403,7 @@ describe("ConnectorCard while the spec loads", () => {
 
     expect(screen.getByRole("heading", { name: mockSourceDefinition.name })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Fork in Builder icon" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy JSON" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Invite users" })).toBeDisabled();
   });
 

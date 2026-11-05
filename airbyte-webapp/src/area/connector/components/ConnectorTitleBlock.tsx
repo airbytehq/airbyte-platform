@@ -13,6 +13,8 @@ import { isSourceDefinition } from "core/domain/connector/source";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 
 import { BreakingChangeBanner } from "./BreakingChangeBanner";
+import { CopyConfigButton } from "./ConnectorCard/components/CopyConfigButton";
+import { useSharedConfigJson } from "./ConnectorCard/CopyConfigContext";
 import styles from "./ConnectorTitleBlock.module.scss";
 
 type Connector = SourceRead | DestinationRead;
@@ -28,6 +30,7 @@ export const ConnectorTitleBlock = <T extends Connector>({
   connectorDefinition,
   actorDefinitionVersion,
 }: ConnectorTitleBlockProps<T>) => {
+  const getConfigJson = useSharedConfigJson();
   const titleInfo = connectorDefinition.custom ? (
     `${connectorDefinition.name}`
   ) : (
@@ -59,7 +62,10 @@ export const ConnectorTitleBlock = <T extends Connector>({
             </FlexContainer>
           </FlexContainer>
         </FlexContainer>
-        {isSourceDefinition(connectorDefinition) && <ForkConnectorButton sourceDefinition={connectorDefinition} />}
+        <FlexContainer alignItems="center" gap="sm">
+          {isSourceDefinition(connectorDefinition) && <ForkConnectorButton sourceDefinition={connectorDefinition} />}
+          {getConfigJson && <CopyConfigButton getConfigJson={getConfigJson} />}
+        </FlexContainer>
       </FlexContainer>
       {shouldDisplayBreakingChangeBanner(actorDefinitionVersion) && (
         <BreakingChangeBanner

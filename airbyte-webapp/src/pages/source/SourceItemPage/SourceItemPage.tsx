@@ -7,6 +7,7 @@ import LoadingPage from "components/ui/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { StepsTypes } from "area/connector/components/ConnectorBlocks";
+import { CopyConfigProvider } from "area/connector/components/ConnectorCard/CopyConfigContext";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { ConnectorNavigationTabs } from "area/connector/components/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "area/connector/components/ConnectorTitleBlock";
@@ -38,26 +39,28 @@ export const SourceItemPage: React.FC = () => {
 
   return (
     <DefaultErrorBoundary>
-      <ConnectorDocumentationWrapper>
-        <div className={styles.container}>
-          <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
-          <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} className={styles.pageHeader}>
-            <ConnectorTitleBlock
-              connector={source}
-              connectorDefinition={sourceDefinition}
-              actorDefinitionVersion={actorDefinitionVersion}
-            />
-            <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
-          </PageHeaderWithNavigation>
-          <Suspense fallback={<LoadingPage />}>
-            <DefaultErrorBoundary>
-              <div className={styles.pageBody}>
-                <Outlet />
-              </div>
-            </DefaultErrorBoundary>
-          </Suspense>
-        </div>
-      </ConnectorDocumentationWrapper>
+      <CopyConfigProvider>
+        <ConnectorDocumentationWrapper>
+          <div className={styles.container}>
+            <HeadTitle titles={[{ id: "admin.sources" }, { title: source.name }]} />
+            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} className={styles.pageHeader}>
+              <ConnectorTitleBlock
+                connector={source}
+                connectorDefinition={sourceDefinition}
+                actorDefinitionVersion={actorDefinitionVersion}
+              />
+              <ConnectorNavigationTabs connectorType="source" connector={source} id={source.sourceId} />
+            </PageHeaderWithNavigation>
+            <Suspense fallback={<LoadingPage />}>
+              <DefaultErrorBoundary>
+                <div className={styles.pageBody}>
+                  <Outlet />
+                </div>
+              </DefaultErrorBoundary>
+            </Suspense>
+          </div>
+        </ConnectorDocumentationWrapper>
+      </CopyConfigProvider>
     </DefaultErrorBoundary>
   );
 };

@@ -7,6 +7,7 @@ import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
 import { StepsTypes } from "area/connector/components/ConnectorBlocks";
+import { CopyConfigProvider } from "area/connector/components/ConnectorCard/CopyConfigContext";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { ConnectorNavigationTabs } from "area/connector/components/ConnectorNavigationTabs";
 import { ConnectorTitleBlock } from "area/connector/components/ConnectorTitleBlock";
@@ -38,30 +39,32 @@ export const DestinationItemPage: React.FC = () => {
 
   return (
     <DefaultErrorBoundary>
-      <ConnectorDocumentationWrapper>
-        <div className={styles.container}>
-          <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
-          <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} className={styles.pageHeader}>
-            <ConnectorTitleBlock
-              connector={destination}
-              connectorDefinition={destinationDefinition}
-              actorDefinitionVersion={actorDefinitionVersion}
-            />
-            <ConnectorNavigationTabs
-              connectorType="destination"
-              connector={destination}
-              id={destination.destinationId}
-            />
-          </PageHeaderWithNavigation>
-          <Suspense fallback={<LoadingPage />}>
-            <DefaultErrorBoundary>
-              <div className={styles.pageBody}>
-                <Outlet />
-              </div>
-            </DefaultErrorBoundary>
-          </Suspense>
-        </div>
-      </ConnectorDocumentationWrapper>
+      <CopyConfigProvider>
+        <ConnectorDocumentationWrapper>
+          <div className={styles.container}>
+            <HeadTitle titles={[{ id: "admin.destinations" }, { title: destination.name }]} />
+            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} className={styles.pageHeader}>
+              <ConnectorTitleBlock
+                connector={destination}
+                connectorDefinition={destinationDefinition}
+                actorDefinitionVersion={actorDefinitionVersion}
+              />
+              <ConnectorNavigationTabs
+                connectorType="destination"
+                connector={destination}
+                id={destination.destinationId}
+              />
+            </PageHeaderWithNavigation>
+            <Suspense fallback={<LoadingPage />}>
+              <DefaultErrorBoundary>
+                <div className={styles.pageBody}>
+                  <Outlet />
+                </div>
+              </DefaultErrorBoundary>
+            </Suspense>
+          </div>
+        </ConnectorDocumentationWrapper>
+      </CopyConfigProvider>
     </DefaultErrorBoundary>
   );
 };

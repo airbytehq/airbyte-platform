@@ -30,6 +30,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { ConnectorCardHeader } from "./components/ConnectorCardHeader";
 import { Controls } from "./components/Controls";
+import { ShareFormConfigJson } from "./components/CopyConfigButton";
 import SlowLoadingMessage from "./components/SlowLoadingMessage";
 import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
@@ -66,7 +67,7 @@ interface ConnectorCardBaseProps<T extends ConnectorT> {
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
   preFooterSlot?: React.ReactNode;
-  /** Reaches ConnectorForm through the props spread. Renders inside the form context, outside the footer. */
+  /** Reaches ConnectorForm next to the automation of ConnectorCard. Renders inside the form context, outside the footer. */
   formAutomation?: React.ReactNode;
   skipCheckConnection?: boolean;
   onSaveDraft?: (values: ConnectorCardValues, existingDraft?: T) => Promise<T>;
@@ -318,6 +319,12 @@ export const ConnectorCard = <T extends ConnectorT>({
       formValues={formValues}
       connectorId={connectorId}
       formHeader={!isEditMode && <ConnectorCardHeader connectorDefinition={selectedConnectorDefinition} />}
+      formAutomation={
+        <>
+          {props.formAutomation}
+          {isEditMode && <ShareFormConfigJson />}
+        </>
+      }
       renderFooter={({
         dirty,
         isSubmitting,
