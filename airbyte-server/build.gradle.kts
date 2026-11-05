@@ -310,9 +310,9 @@ airbyte {
 
 tasks.named<Test>("test") {
   // Micronaut retains metadata from closed contexts, so limit how many test classes share a JVM.
-  forkEvery = 5
-  maxParallelForks = 2
-  maxHeapSize = "1g"
+  forkEvery = 25
+  maxParallelForks = 4
+  maxHeapSize = "2g"
 
   environment(
     mapOf(
