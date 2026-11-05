@@ -2797,7 +2797,7 @@ directJobRunner:
 
   # -- Threads for checks, a separate pool. Each check is a connector JVM (heap capped at 512m, ~300MB RSS), so raise
   # this only with resources.limits.memory. Extra checks queue.
-  checkThreads: 30
+  checkThreads: 6
 
   # -- On shutdown the runner waits up to 80s for running jobs to finish, so this must be longer.
   terminationGracePeriodSeconds: 90
@@ -2850,16 +2850,19 @@ directJobRunner:
 
   # One check's connector JVM uses 1-2 cores while it runs. A request below that makes CPU-based autoscaling add a
   # runner pod for every check.
+  # 2 cores also spreads runner pods over more nodes as they scale, and still fits a 4-vCPU EKS node.
+  # Memory covers the runner (~450Mi) plus up to checkThreads connector JVMs (~250-300MB each). Going over the limit
+  # OOM-kills the pod and every check running on it, so raise it together with checkThreads.
   resources:
     requests:
-      cpu: 1
-      memory: 512Mi
+      cpu: 2
+      memory: 2Gi
     limits:
-      memory: 1Gi
+      memory: 3Gi
 
   autoscaling:
     enabled: true
-    minReplicas: 2
+    minReplicas: 4
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
 
@@ -2872,7 +2875,16 @@ directJobRunner:
   # -- Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   tolerations: []
 
-  affinity: {}
+  # -- At most one runner pod per node. Checks are CPU-bound connector JVMs, so pods sharing a node slow every check on
+  # it; with one per node, scaling up adds nodes. Keep autoscaling.maxReplicas within the node pool's max.
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: direct-job-runner
+              app.kubernetes.io/instance: '{{ .Release.Name }}'
+          topologyKey: kubernetes.io/hostname
 
   env_vars: {}
   extraEnv: []

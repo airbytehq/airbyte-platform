@@ -27,7 +27,7 @@ Renders the directJobRunner.maxConcurrent environment variable
 Renders the directJobRunner.checkThreads value
 */}}
 {{- define "airbyte.directJobRunner.checkThreads" }}
-    {{- .Values.directJobRunner.checkThreads | default 30 }}
+    {{- .Values.directJobRunner.checkThreads | default 6 }}
 {{- end }}
 
 {{/*

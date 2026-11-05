@@ -17,6 +17,8 @@ data class CheckConnectorConfig(
   val installDir: String = "",
   val checkTimeout: Duration = Duration.ofSeconds(60),
   val maxHeap: String = "512m",
+  /** CPUs each connector JVM sizes its GC and JIT threads for. Without it every JVM sizes them for the whole node. */
+  val activeProcessorCount: Int = 2,
 ) {
   /** The connector's name: `source-postgres` for `airbyte/source-postgres:3.8.10`. */
   val name: String get() = image.substringAfterLast('/').substringBefore(':')

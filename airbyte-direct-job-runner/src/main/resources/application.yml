@@ -31,7 +31,7 @@ micronaut:
     # Checks. Each one is a connector JVM (~300MB), so size this together with the runner's memory; extra checks queue.
     direct-checks:
       type: fixed
-      n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS:30}
+      n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS:6}
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   version: ${AIRBYTE_VERSION:dev}

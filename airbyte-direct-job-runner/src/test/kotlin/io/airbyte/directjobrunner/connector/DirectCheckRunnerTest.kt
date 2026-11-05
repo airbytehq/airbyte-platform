@@ -160,7 +160,7 @@ class DirectCheckRunnerTest {
         .readAllLines(capturedEnv)
         .filter { it.contains('=') }
         .associate { it.substringBefore('=') to it.substringAfter('=') }
-    assertEquals("-Xms64m -Xmx512m", env["SOURCE_POSTGRES_OPTS"])
+    assertEquals("-Xms64m -Xmx512m -XX:ActiveProcessorCount=2", env["SOURCE_POSTGRES_OPTS"])
     assertTrue(env.getValue("JAVA_OPTS").contains("--add-opens=java.base/java.lang=ALL-UNNAMED"))
     assertFalse(env.containsKey("HOME"))
     assertFalse(env.containsKey("USER"))

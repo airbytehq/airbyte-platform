@@ -154,8 +154,26 @@ func TestDirectJobRunnerScheduling(t *testing.T) {
 	assert.Equal(t, map[string]string{"airbyte/node-pool": "direct-jobs"}, spec.NodeSelector)
 	require.Len(t, spec.Tolerations, 1)
 	assert.Equal(t, corev1.Toleration{Key: "airbyte/node-pool", Operator: "Equal", Value: "direct-jobs", Effect: "NoSchedule"}, spec.Tolerations[0])
+	// At most one runner pod per node, and the rule must select the runner's own pods.
+	require.NotNil(t, spec.Affinity)
+	require.NotNil(t, spec.Affinity.PodAntiAffinity)
+	terms := spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+	require.Len(t, terms, 1)
+	assert.Equal(t, "kubernetes.io/hostname", terms[0].TopologyKey)
+	for k, v := range terms[0].LabelSelector.MatchLabels {
+		assert.Equal(t, v, deployment.Spec.Template.Labels[k], "pod label %s", k)
+	}
 	// Replicas are owned by the HPA when autoscaling is on.
 	assert.Nil(t, deployment.Spec.Replicas)
+}
+
+func TestDirectJobRunnerAffinityCanBeRemoved(t *testing.T) {
+	// Single-node clusters (local dev) drop the one-runner-per-node rule with null.
+	values := directJobRunnerOpts()
+	values["directJobRunner.affinity"] = "null"
+	deployment := helmtests.GetDeployment(renderDirectJobRunner(t, values).String(), "airbyte-direct-job-runner")
+	require.NotNil(t, deployment)
+	assert.Nil(t, deployment.Spec.Template.Spec.Affinity)
 }
 
 func TestDirectJobRunnerAutoscaling(t *testing.T) {
@@ -164,13 +182,13 @@ func TestDirectJobRunnerAutoscaling(t *testing.T) {
 
 		hpa, ok := chartYaml.GetResourceByKindAndName("HorizontalPodAutoscaler", "airbyte-direct-job-runner").(*autoscalingv2.HorizontalPodAutoscaler)
 		require.True(t, ok, "the HPA was not rendered")
-		assert.Equal(t, int32(2), *hpa.Spec.MinReplicas)
+		assert.Equal(t, int32(4), *hpa.Spec.MinReplicas)
 		assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
 
 		deployment := helmtests.GetDeployment(chartYaml.String(), "airbyte-direct-job-runner")
 		require.NotNil(t, deployment)
 		assert.Nil(t, deployment.Spec.Replicas)
-		assert.Equal(t, "1", deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+		assert.Equal(t, "2", deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
 	})
 
 	t.Run("without autoscaling, 2 fixed replicas and no HPA", func(t *testing.T) {
@@ -312,11 +330,19 @@ func TestDirectJobRunnerTerminationGracePeriod(t *testing.T) {
 }
 
 func TestDirectJobRunnerCheckThreads(t *testing.T) {
-	t.Run("defaults to 30", func(t *testing.T) {
+	t.Run("defaults to 6", func(t *testing.T) {
 		env := directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))
 
-		assert.Equal(t, "30", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
+		assert.Equal(t, "6", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
 		assert.Equal(t, "50", env["AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT"].Value)
+	})
+
+	t.Run("falls back to 6 when set to null", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.checkThreads"] = "null"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "6", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
 	})
 
 	t.Run("can be raised separately from the other pool", func(t *testing.T) {

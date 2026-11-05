@@ -83,8 +83,9 @@ class DirectCheckRunner(
       clear()
       putAll(System.getenv().filterKeys { it in INHERITED_ENV })
       put("JAVA_OPTS", CONNECTOR_JAVA_OPTS)
-      // The launcher defaults to 75% of container memory for both initial and max heap; cap both.
-      put(config.jvmOptsEnvVar, "-Xms64m -Xmx${config.maxHeap}")
+      // The launcher defaults to 75% of container memory for both initial and max heap; cap both. Several connector JVMs
+      // share a node, so each also sizes its GC and JIT threads for activeProcessorCount CPUs, not all of them.
+      put(config.jvmOptsEnvVar, "-Xms64m -Xmx${config.maxHeap} -XX:ActiveProcessorCount=${config.activeProcessorCount}")
       // What a check pod's connector gets (RuntimeEnvVarFactory.checkConnectorEnvVars and the launcher's
       // airbyteMetadataEnvMap). The edition changes the result: on Cloud the connector rejects unencrypted
       // connections, so without it the runner would pass checks a sync then fails. Bulk CDK connectors such as
