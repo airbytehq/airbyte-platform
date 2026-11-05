@@ -1,9 +1,14 @@
-import { ZodEffects, ZodNullable, ZodOptional, ZodType, ZodTypeAny } from "zod";
+import { ZodNullable, ZodOptional, ZodType } from "zod";
+
+/**
+ * Zod parses every element of an array that has no maximum and keeps one issue per failing element, so a huge
+ * array can exhaust memory (GHSA-mrhx-c7xc-m3w5). An array schema rejects an oversized input before it parses any
+ * element only when `.max()` comes before any refinement. The limit is far above any real list in the webapp.
+ */
+export const MAX_ARRAY_LENGTH = 100_000;
 
 type IsNullable<T> = Extract<T, null> extends never ? false : true;
 type IsOptional<T> = Extract<T, undefined> extends never ? false : true;
-
-type ZodWithEffects<T extends ZodTypeAny> = T | ZodEffects<T, unknown, unknown>;
 
 /**
  * Converts a TypeScript type to a Zod schema type, preserving nullability and optionality.
@@ -17,8 +22,8 @@ type ZodWithEffects<T extends ZodTypeAny> = T | ZodEffects<T, unknown, unknown>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ToZodSchema<T extends Record<string, any>> = {
   [K in keyof T]-?: IsNullable<T[K]> extends true
-    ? ZodWithEffects<ZodNullable<ZodType<T[K]>>>
+    ? ZodNullable<ZodType<T[K]>>
     : IsOptional<T[K]> extends true
-    ? ZodWithEffects<ZodOptional<ZodType<T[K]>>>
-    : ZodWithEffects<ZodType<T[K]>>;
+    ? ZodOptional<ZodType<T[K]>>
+    : ZodType<T[K]>;
 };

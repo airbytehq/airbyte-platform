@@ -1,9 +1,7 @@
 import { Row } from "@tanstack/react-table";
-import get from "lodash/get";
 import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -16,6 +14,7 @@ import { links } from "core/utils/links";
 
 import styles from "./StreamPKCell.module.scss";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { getStreamConfigFieldError } from "../../../ConnectionForm/schemas/validators";
 import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 import {
   checkIsFieldHashed,
@@ -63,10 +62,7 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
         disabledReason: <FormattedMessage id="connectionForm.hashing.preventing.tip" />,
       })) ?? [];
 
-  const pkConfigValidationError: ValidationError | undefined = get(
-    errors,
-    `syncCatalog.streams[${stream?.name}_${stream?.namespace}].config.primaryKey`
-  );
+  const hasPkConfigError = !!getStreamConfigFieldError(errors, `${stream?.name}_${stream?.namespace}`, "primaryKey");
 
   const onChange = (selectedPKs: string[]) => {
     const numberOfFieldsInStream = Object.keys(stream?.jsonSchema?.properties ?? {}).length ?? 0;
@@ -113,7 +109,7 @@ export const StreamPKCell: React.FC<NextPKCellProps> = ({ row, updateStreamField
           value={config?.primaryKey?.map(getFieldPathDisplayName)}
           onChange={onChange}
           maxSelectedLabels={1}
-          error={pkConfigValidationError}
+          error={hasPkConfigError}
           buttonErrorText={<FormattedMessage id="form.error.pk.missing" />}
           buttonAddText={<FormattedMessage id="form.error.pk.addMissing" />}
           buttonEditText={<FormattedMessage id="form.error.pk.edit" />}

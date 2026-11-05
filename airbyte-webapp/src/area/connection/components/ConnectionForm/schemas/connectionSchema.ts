@@ -12,7 +12,7 @@ import {
   SelectedFieldInfo,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { ToZodSchema } from "core/utils/zod";
+import { MAX_ARRAY_LENGTH, ToZodSchema } from "core/utils/zod";
 
 import { mapperSchema } from "./mapperSchema";
 import { namespaceFormatSchema } from "./namespaceDefinitionSchema";
@@ -24,7 +24,7 @@ import {
 } from "./validators";
 
 const fieldSchema = z.object({
-  fieldPath: z.array(z.string()).optional(),
+  fieldPath: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
 } satisfies ToZodSchema<SelectedFieldInfo>);
 
 export const tagSchema = z.object({
@@ -39,11 +39,11 @@ export const tagSchema = z.object({
  */
 const streamZodSchema = z.object({
   name: z.string(),
-  jsonSchema: z.record(z.any()).optional(),
-  supportedSyncModes: z.array(z.nativeEnum(SyncMode)).optional(),
+  jsonSchema: z.record(z.string(), z.any()).optional(),
+  supportedSyncModes: z.array(z.nativeEnum(SyncMode)).max(MAX_ARRAY_LENGTH).optional(),
   sourceDefinedCursor: z.boolean().optional(),
-  defaultCursorField: z.array(z.string()).optional(),
-  sourceDefinedPrimaryKey: z.array(z.array(z.string())).optional(),
+  defaultCursorField: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
+  sourceDefinedPrimaryKey: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
   namespace: z.string().optional(),
   isResumable: z.boolean().optional(),
   isFileBased: z.boolean().optional(),
@@ -56,17 +56,17 @@ const streamConfigZodSchema = z.object({
   syncMode: z.nativeEnum(SyncMode),
   destinationSyncMode: z.nativeEnum(DestinationSyncMode),
   namespace: z.string().optional(),
-  cursorField: z.array(z.string()).optional(),
+  cursorField: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
   selected: z.boolean().optional(),
   suggested: z.boolean().optional(),
   fieldSelectionEnabled: z.boolean().optional(),
-  selectedFields: z.array(fieldSchema).optional(),
-  hashedFields: z.array(fieldSchema).optional(),
+  selectedFields: z.array(fieldSchema).max(MAX_ARRAY_LENGTH).optional(),
+  hashedFields: z.array(fieldSchema).max(MAX_ARRAY_LENGTH).optional(),
   includeFiles: z.boolean().optional(),
   destinationObjectName: z.string().optional(),
-  mappers: z.array(mapperSchema).optional(),
+  mappers: z.array(mapperSchema).max(MAX_ARRAY_LENGTH).optional(),
   aliasName: z.string().optional(),
-  primaryKey: z.array(z.array(z.string())).optional(),
+  primaryKey: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
   minimumGenerationId: z.number().optional(),
   generationId: z.number().optional(),
   syncId: z.number().optional(),
@@ -86,6 +86,7 @@ const streamAndConfigurationZodSchema = z.object({
 const syncCatalogZodSchema = z.object({
   streams: z
     .array(streamAndConfigurationZodSchema)
+    .max(MAX_ARRAY_LENGTH)
     .superRefine(atLeastOneStreamSelectedValidation)
     .superRefine(streamConfigurationValidation)
     .superRefine(hashFieldCollisionValidation),
@@ -110,7 +111,7 @@ export const useConnectionValidationZodSchema = () => {
           syncCatalog: syncCatalogZodSchema,
           notifySchemaChanges: z.boolean().optional(),
           backfillPreference: z.nativeEnum(SchemaChangeBackfillPreference).optional(),
-          tags: z.array(tagSchema).optional(),
+          tags: z.array(tagSchema).max(MAX_ARRAY_LENGTH).optional(),
           onDemandEnabled: z.boolean().optional(),
           semanticSearch: z.boolean().optional(),
         })

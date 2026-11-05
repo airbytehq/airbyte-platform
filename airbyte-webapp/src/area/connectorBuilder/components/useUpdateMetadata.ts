@@ -18,7 +18,9 @@ export const useUpdateMetadata = (streamId: StreamId) => {
     if (!streamName || streamId.type === "generated_stream") {
       return;
     }
-    if (!prevName) {
+    // Write only when the entry is missing. Otherwise the effect writes the metadata again on every run after the stream
+    // gets its first name, and each write runs the effect again.
+    if (!prevName && metadata?.autoImportSchema?.[streamName] === undefined) {
       const metadataClone = cloneDeep(metadata);
       const newMetadata = {
         ...metadataClone,

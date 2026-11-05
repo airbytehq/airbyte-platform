@@ -47,6 +47,7 @@ import {
   ConnectorBuilderMainRHFContext,
 } from "core/services/connectorBuilder/ConnectorBuilderStateService";
 import { useExperiment } from "core/services/Experiment";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
 
@@ -120,7 +121,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
           validate: z
             .object({
               field_name: z.string().trim().optional(),
-              field_path: z.array(z.string()).optional(),
+              field_path: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
               inject_into: z.string(),
             })
             .superRefine((val, ctx) => {
@@ -130,16 +131,13 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
                   message: formatMessage({ id: "form.empty.error" }),
                   path: ["field_name"],
                 });
-                return false;
               } else if (val.inject_into === "body_json" && (!val.field_path || val.field_path?.length === 0)) {
                 ctx.addIssue({
                   code: z.ZodIssueCode.custom,
                   message: formatMessage({ id: "form.empty.error" }),
                   path: ["field_path"],
                 });
-                return false;
               }
-              return true;
             }),
         },
         OAuthAuthenticator: {

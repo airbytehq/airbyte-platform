@@ -465,6 +465,62 @@ describe("Connector form", () => {
     expect(getInputByName(container, "connectionConfiguration.host")).toBeDisabled();
   });
 
+  describe("submitting the form", () => {
+    const renderFooter: ConnectorFormProps["renderFooter"] = ({ dirty, isSubmitting }) => (
+      <>
+        <output data-testid="dirty">{String(dirty)}</output>
+        <output data-testid="submitting">{String(isSubmitting)}</output>
+        <button type="submit">Submit</button>
+      </>
+    );
+    const specificationOverride: Partial<ConnectorDefinitionSpecificationRead> = {
+      connectionSpecification: {
+        type: "object",
+        properties: { message: { type: "string", multiline: true, title: "Message" } },
+      },
+    };
+    const dirty = () => screen.getByTestId("dirty");
+    const getMessageInput = (container: HTMLElement) =>
+      container.querySelector<HTMLTextAreaElement>("textarea[name='connectionConfiguration.message']")!;
+
+    const renderFormWithPendingSubmit = async () => {
+      let finishSubmit: () => void = () => undefined;
+      const onSubmit = jest.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finishSubmit = resolve;
+          })
+      );
+      const container = await renderForm({ onSubmit, renderFooter, specificationOverride });
+      await userEvent.type(getMessageInput(container), "hello");
+      await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+      await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+      const submit = async () => {
+        finishSubmit();
+        await waitFor(() => expect(screen.getByTestId("submitting")).toHaveTextContent("false"));
+      };
+      return { container, submit };
+    };
+
+    it("should not be dirty after a submit", async () => {
+      const { submit } = await renderFormWithPendingSubmit();
+
+      await submit();
+
+      expect(dirty()).toHaveTextContent("false");
+    });
+
+    it("should stay dirty after a submit when a field changed while the submission ran", async () => {
+      const { container, submit } = await renderFormWithPendingSubmit();
+      await userEvent.type(getMessageInput(container), " world");
+
+      await submit();
+
+      expect(getMessageInput(container)).toHaveValue("hello world");
+      expect(dirty()).toHaveTextContent("true");
+    });
+  });
+
   describe("marking the form as saved", () => {
     const renderFooter: ConnectorFormProps["renderFooter"] = ({ dirty, markFormAsSaved }) => (
       <>

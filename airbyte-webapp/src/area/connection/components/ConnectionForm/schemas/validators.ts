@@ -1,3 +1,5 @@
+import get from "lodash/get";
+import { FieldError, FieldErrors } from "react-hook-form";
 import { z, RefinementCtx } from "zod";
 
 import { AirbyteStreamAndConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
@@ -9,7 +11,7 @@ import { isNonNullable } from "core/utils/isNonNullable";
  */
 export const atLeastOneStreamSelectedValidation = (streams: AirbyteStreamAndConfiguration[], ctx: RefinementCtx) => {
   if (streams?.some(({ config }) => !!config?.selected)) {
-    return true;
+    return;
   }
 
   ctx.addIssue({
@@ -17,8 +19,70 @@ export const atLeastOneStreamSelectedValidation = (streams: AirbyteStreamAndConf
     message: "connectionForm.streams.required",
     fatal: true,
   });
+};
 
-  return false;
+type StreamConfigFieldErrors = Record<string, FieldError | undefined>;
+
+interface StreamConfigErrorNode {
+  config?: StreamConfigFieldErrors;
+  [part: string]: StreamConfigErrorNode | StreamConfigFieldErrors | undefined;
+}
+
+type StreamConfigErrors = Record<string, StreamConfigErrorNode | undefined>;
+
+// A stream name such as `type.events` also creates a `type` key, but its value is an object, not a string.
+const isFieldError = (node: object): node is FieldError => typeof (node as { type?: unknown }).type === "string";
+
+/**
+ * Returns the stream configuration errors keyed by `${streamName}_${streamNamespace}`, nested one level under each part
+ * of a key that contains a period. react-hook-form keeps them on `syncCatalog.streams` after a full validation, and
+ * under `syncCatalog.streams.root` after only the streams array is validated, because the keys are not array indexes.
+ * A field error under `root` belongs to the whole array.
+ */
+export const getStreamConfigErrors = (errors: FieldErrors | undefined): StreamConfigErrors => {
+  const { root, ...streamErrors } = ((errors?.syncCatalog as FieldErrors | undefined)?.streams ??
+    {}) as StreamConfigErrors & {
+    root?: StreamConfigErrors | FieldError;
+  };
+  const rootStreamErrors = root && !isFieldError(root) ? root : {};
+  return { ...streamErrors, ...rootStreamErrors };
+};
+
+type StreamConfigField = "primaryKey" | "cursorField";
+
+const hasConfigFieldMessage = (node: unknown, field: StreamConfigField, message: string): boolean => {
+  if (typeof node !== "object" || node === null || isFieldError(node)) {
+    return false;
+  }
+  const streamNode = node as StreamConfigErrorNode;
+  if (streamNode.config?.[field]?.message === message) {
+    return true;
+  }
+  return Object.values(node).some((child) => hasConfigFieldMessage(child, field, message));
+};
+
+/**
+ * Returns whether the error of a configuration field of any stream has this message. The search goes below the first
+ * level, because react-hook-form nests the error under each part of a stream name or namespace that contains a period.
+ */
+export const hasStreamConfigFieldErrorMessage = (
+  errors: FieldErrors | undefined,
+  field: StreamConfigField,
+  message: string
+) => hasConfigFieldMessage(getStreamConfigErrors(errors), field, message);
+
+/**
+ * Returns the error of one configuration field of one stream, from the same two places as `getStreamConfigErrors`. The
+ * lookup follows the path, because react-hook-form nests the error under each part of a stream name or namespace that
+ * contains a period.
+ */
+export const getStreamConfigFieldError = (
+  errors: FieldErrors | undefined,
+  streamIdentifier: string,
+  field: StreamConfigField
+) => {
+  const path: string = `[${streamIdentifier}].config.${field}`;
+  return get(errors, `syncCatalog.streams${path}`) ?? get(errors, `syncCatalog.streams.root${path}`);
 };
 
 /**

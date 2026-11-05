@@ -31,10 +31,10 @@ interface AdvancedTestSettingsFormValues {
 }
 
 const testLimitsValidation = z.object({
-  recordLimit: z.coerce.number().min(1).max(MAX_RECORD_LIMIT),
-  pageLimit: z.coerce.number().min(1).max(MAX_PAGE_LIMIT),
-  sliceLimit: z.coerce.number().min(1).max(MAX_SLICE_LIMIT),
-  streamLimit: z.coerce.number().min(1).max(MAX_STREAM_LIMIT),
+  recordLimit: z.coerce.number<number>().min(1).max(MAX_RECORD_LIMIT),
+  pageLimit: z.coerce.number<number>().min(1).max(MAX_PAGE_LIMIT),
+  sliceLimit: z.coerce.number<number>().min(1).max(MAX_SLICE_LIMIT),
+  streamLimit: z.coerce.number<number>().min(1).max(MAX_STREAM_LIMIT),
   testState: z
     .string()
     .refine(

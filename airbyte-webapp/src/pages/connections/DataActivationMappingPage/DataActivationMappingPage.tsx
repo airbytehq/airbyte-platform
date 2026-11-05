@@ -19,7 +19,11 @@ import { CreateConnectionFlowLayout } from "area/connection/components/CreateCon
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { StreamMappings } from "area/dataActivation/components/ConnectionForm/StreamMappings";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { DataActivationConnectionFormSchema, EMPTY_STREAM } from "area/dataActivation/utils";
+import {
+  DataActivationConnectionFormOutput,
+  DataActivationConnectionFormSchema,
+  EMPTY_STREAM,
+} from "area/dataActivation/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useDestinationDefinitionList, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -47,10 +51,12 @@ export const DataActivationMappingPage: React.FC = () => {
     throw new Error("Source ID and Destination ID are required");
   }
 
-  const methods = useForm<DataActivationConnectionFormValues>({
+  const methods = useForm<DataActivationConnectionFormValues, unknown, DataActivationConnectionFormOutput>({
     defaultValues: streamMappings || { streams: [EMPTY_STREAM] },
     mode: "onChange",
-    resolver: zodResolver(DataActivationConnectionFormSchema),
+    resolver: zodResolver<DataActivationConnectionFormValues, unknown, DataActivationConnectionFormOutput>(
+      DataActivationConnectionFormSchema
+    ),
   });
 
   const { destinationDefinitionMap } = useDestinationDefinitionList();
@@ -59,7 +65,7 @@ export const DataActivationMappingPage: React.FC = () => {
     throw new Error("Destination definition not found");
   }
 
-  const handleSubmit = (formValues: DataActivationConnectionFormValues) => {
+  const handleSubmit = (formValues: DataActivationConnectionFormOutput) => {
     setStreamMappings(formValues);
     // Manually clear the form change, because we're navigating before the form submission is fully complete
     clearFormChange(FORM_ID);

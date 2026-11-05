@@ -253,7 +253,7 @@ export const useFusionWorkspaceConnectors = (
   });
   const connectors = actors.map((actor, index) => ({
     ...actor,
-    state: states[index]?.data ? fusionEnablementState(states[index].data!) : undefined,
+    state: states[index]?.data ? fusionEnablementState(states[index].data) : undefined,
     enabled: states[index]?.data?.enable_agent_access ?? false,
     loading: hydrate && actor.supported && states[index]?.isLoading,
     error: states[index]?.isError,

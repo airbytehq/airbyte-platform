@@ -145,7 +145,7 @@ export const useAuthentication = (): AuthenticationHook => {
     }
     return implicitAuthFieldPaths.reduce<Record<string, string>>((authErrors, fieldName) => {
       const { error } = getFieldState(fieldName as FieldPath<ConnectorFormValues>);
-      if (submitCount > 0 && error && error.type) {
+      if (submitCount > 0 && typeof error?.type === "string" && error.type) {
         authErrors[fieldName] = error.type;
       }
       return authErrors;

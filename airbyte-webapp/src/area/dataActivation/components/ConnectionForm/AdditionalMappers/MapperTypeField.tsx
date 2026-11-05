@@ -34,7 +34,7 @@ export const MapperTypeField: React.FC<MapperTypeFieldProps> = ({ name, disabled
         <ListBox
           options={options}
           isDisabled={disabled}
-          selectedValue={field.value.type}
+          selectedValue={field.value?.type}
           onSelect={(value) => {
             // Note: we are manually using typeof field.value here, because field.onChange does not have a strict type
             // check: https://github.com/react-hook-form/react-hook-form/pull/10342

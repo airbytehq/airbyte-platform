@@ -289,6 +289,40 @@ describe("SchemaForm", () => {
     });
   });
 
+  it("does not show the minimum items message after the array of objects reaches the minimum", async () => {
+    const minItemsSchema = {
+      type: "object",
+      properties: {
+        friends: {
+          type: "array",
+          title: "Friends",
+          minItems: 1,
+          items: {
+            type: "object",
+            title: "Friend",
+            required: ["name"],
+            properties: { name: { type: "string", title: "Name" } },
+          },
+        },
+      },
+      required: ["friends"],
+      additionalProperties: false,
+    } as const;
+    await render(
+      <SchemaForm schema={minItemsSchema} onSubmit={() => Promise.resolve()}>
+        <SchemaFormControl />
+        <button type="submit">Submit</button>
+      </SchemaForm>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add Friend" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Alice");
+
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Name" })).toHaveValue("Alice"));
+    expect(screen.queryByText("Must have at least 1 items")).not.toBeInTheDocument();
+  });
+
   it("handles array of strings correctly", async () => {
     await render(
       <SchemaForm schema={arraySchema} onSubmit={() => Promise.resolve()}>

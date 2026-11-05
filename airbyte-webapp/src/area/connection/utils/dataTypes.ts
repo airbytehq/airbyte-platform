@@ -8,7 +8,7 @@ export interface AirbyteConnectorData {
 }
 
 const wellKnownTypesPrefix = "WellKnownTypes.json#/definitions/";
-const wellKnownTypeToDataTypeKey = {
+const wellKnownTypeToDataTypeKey: Record<string, string> = {
   [`${wellKnownTypesPrefix}String`]: "string",
   [`${wellKnownTypesPrefix}BinaryData`]: "binary_data",
   [`${wellKnownTypesPrefix}Number`]: "number",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { PublicPermissionType } from "core/api/types/AirbyteClient";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
 /**
  * `permissionsByResourceType` (`AccessManagementPage/components/util.tsx`) is annotated
@@ -90,5 +91,5 @@ const workspacePermissionRowSchema = z
 
 export const groupPermissionsFormSchema = z.object({
   organizationPermission: z.array(organizationPermissionRowSchema).max(1),
-  workspacePermissions: z.array(workspacePermissionRowSchema),
-}) as unknown as z.ZodSchema<GroupPermissionsFormValues>;
+  workspacePermissions: z.array(workspacePermissionRowSchema).max(MAX_ARRAY_LENGTH),
+}) as unknown as z.ZodType<GroupPermissionsFormValues, GroupPermissionsFormValues>;

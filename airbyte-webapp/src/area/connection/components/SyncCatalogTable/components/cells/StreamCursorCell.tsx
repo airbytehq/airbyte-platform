@@ -1,9 +1,7 @@
 import { Row } from "@tanstack/react-table";
-import get from "lodash/get";
 import React from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import ValidationError from "yup/lib/ValidationError";
 
 import { Option } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -17,6 +15,7 @@ import { links } from "core/utils/links";
 
 import styles from "./StreamCursorCell.module.scss";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
+import { getStreamConfigFieldError } from "../../../ConnectionForm/schemas/validators";
 import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 import {
   checkIsFieldHashed,
@@ -73,9 +72,10 @@ export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStr
       ? getFieldPathDisplayName(config?.cursorField ?? [])
       : "";
 
-  const cursorConfigValidationError: ValidationError | undefined = get(
+  const hasCursorConfigError = !!getStreamConfigFieldError(
     errors,
-    `syncCatalog.streams[${stream?.name}_${stream?.namespace}].config.cursorField`
+    `${stream?.name}_${stream?.namespace}`,
+    "cursorField"
   );
 
   const onChange = (cursor: string) => {
@@ -101,7 +101,7 @@ export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStr
           options={cursorOptions}
           value={cursorValue}
           onChange={onChange}
-          error={cursorConfigValidationError}
+          error={hasCursorConfigError}
           // in case we have a source defined cursor, but the value is not in the list of options show a placeholder
           buttonPlaceholder={
             cursorType === "sourceDefined" && (

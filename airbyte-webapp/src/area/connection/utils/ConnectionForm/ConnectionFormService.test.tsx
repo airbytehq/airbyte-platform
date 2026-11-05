@@ -167,6 +167,82 @@ describe("ConnectionFormService", () => {
       expect(result.current.getErrorMessage(false, errors)).toBe("Select at least 1 stream to sync.");
     });
 
+    it("should return an error message if the streams field error is under root", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
+
+      const errors: FieldErrors<FormConnectionFormValues> = {
+        syncCatalog: {
+          streams: {
+            root: { type: "custom", message: "connectionForm.streams.required" },
+          },
+        },
+      };
+
+      expect(result.current.getErrorMessage(false, errors)).toBe("Select at least 1 stream to sync.");
+    });
+
+    it("should return the primary key error message for a stream name and namespace that contain a period", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
+
+      const primaryKeyError = { type: "custom", message: "connectionForm.primaryKey.required" };
+      const errors = {
+        syncCatalog: { streams: { users: { view_my: { schema: { config: { primaryKey: primaryKeyError } } } } } },
+      } as unknown as FieldErrors<FormConnectionFormValues>;
+
+      expect(result.current.getErrorMessage(false, errors)).toBe("Primary key missing");
+    });
+
+    it("should return the primary key error message when a stream name starts with type and a period", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
+
+      const primaryKeyError = { type: "custom", message: "connectionForm.primaryKey.required" };
+      const errors = {
+        syncCatalog: {
+          streams: {
+            users_public: { config: { primaryKey: primaryKeyError } },
+            type: { events_public: { config: { primaryKey: primaryKeyError } } },
+          },
+        },
+      } as unknown as FieldErrors<FormConnectionFormValues>;
+
+      expect(result.current.getErrorMessage(false, errors)).toBe("Primary key missing");
+    });
+
+    it("should return the primary key error message for a plain stream identifier", async () => {
+      const { result } = renderHook(useConnectionFormService, {
+        wrapper: ({ children }) => (
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
+            {children}
+          </Wrapper>
+        ),
+      });
+
+      const primaryKeyError = { type: "custom", message: "connectionForm.primaryKey.required" };
+      const errors = {
+        syncCatalog: { streams: { users_public: { config: { primaryKey: primaryKeyError } } } },
+      } as unknown as FieldErrors<FormConnectionFormValues>;
+
+      expect(result.current.getErrorMessage(false, errors)).toBe("Primary key missing");
+    });
+
     it("should not return an error message if the form is valid", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (

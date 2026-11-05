@@ -40,7 +40,7 @@ interface FormProps<T extends FormValues> {
   /**
    * Zod schema for form validation
    */
-  zodSchema?: z.ZodSchema<T>;
+  zodSchema?: z.ZodType<T, T>;
   defaultValues: DefaultValues<T>;
   children?: ReactNode | undefined;
   trackDirtyChanges?: boolean;
@@ -76,7 +76,8 @@ export const Form = <T extends FormValues>({
   trackDirtyChanges = false,
   reinitializeDefaultValues = false,
   mode = "onChange",
-  reValidateMode,
+  // An explicit `undefined` would replace the react-hook-form default, and react-hook-form reads it as "onSubmit".
+  reValidateMode = "onChange",
   disabled = false,
   dataTestId,
   id,

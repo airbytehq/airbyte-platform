@@ -32,7 +32,7 @@ import {
   SyncMode,
   UserReadInConnectionEvent,
 } from "core/api/types/AirbyteClient";
-import { ToZodSchema } from "core/utils/zod";
+import { MAX_ARRAY_LENGTH, ToZodSchema } from "core/utils/zod";
 
 import { CatalogChangeEventItem } from "./components/CatalogChangeEventItem";
 import { ClearEventItem } from "./components/ClearEventItem";
@@ -118,7 +118,7 @@ const jobRunningStreamSchema = z.object({
  * @typedef {import("core/api/types/AirbyteClient").FieldSchema}
  */
 const fieldSchema = z.object({
-  schema: z.record(z.any()).optional(),
+  schema: z.record(z.string(), z.any()).optional(),
 } satisfies ToZodSchema<FieldSchema>);
 
 /**
@@ -135,7 +135,7 @@ const fieldSchemaUpdateSchema = z.object({
 const fieldTransformSchema = z.object({
   addField: fieldSchema.optional(),
   breaking: z.boolean(),
-  fieldName: z.array(z.string()),
+  fieldName: z.array(z.string()).max(MAX_ARRAY_LENGTH),
   removeField: fieldSchema.optional(),
   transformType: z.nativeEnum(FieldTransformTransformType),
   updateFieldSchema: fieldSchemaUpdateSchema.optional(),
@@ -145,8 +145,8 @@ const fieldTransformSchema = z.object({
  * @typedef {import("core/api/types/AirbyteClient").StreamAttributePrimaryKeyUpdate}
  */
 const streamAttributePrimaryKeyUpdateSchema = z.object({
-  newPrimaryKey: z.array(z.array(z.string())).optional(),
-  oldPrimaryKey: z.array(z.array(z.string())).optional(),
+  newPrimaryKey: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
+  oldPrimaryKey: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
 } satisfies ToZodSchema<StreamAttributePrimaryKeyUpdate>);
 
 /**
@@ -162,8 +162,8 @@ const streamAttributeTransformSchema = z.object({
  * @typedef {import("core/api/types/AirbyteClient").StreamTransformUpdateStream}
  */
 const streamTransformUpdateStreamSchema = z.object({
-  fieldTransforms: z.array(fieldTransformSchema),
-  streamAttributeTransforms: z.array(streamAttributeTransformSchema),
+  fieldTransforms: z.array(fieldTransformSchema).max(MAX_ARRAY_LENGTH),
+  streamAttributeTransforms: z.array(streamAttributeTransformSchema).max(MAX_ARRAY_LENGTH),
 } satisfies ToZodSchema<StreamTransformUpdateStream>);
 
 /**
@@ -179,7 +179,7 @@ const streamTransformSchema = z.object({
  * @typedef {import("core/api/types/AirbyteClient").CatalogDiff}
  */
 const catalogDiffSchema = z.object({
-  transforms: z.array(streamTransformSchema),
+  transforms: z.array(streamTransformSchema).max(MAX_ARRAY_LENGTH),
 } satisfies ToZodSchema<CatalogDiff>);
 
 const connectorUpdateSchema = z.object({
@@ -196,7 +196,7 @@ const connectorUpdateSchema = z.object({
 const streamFieldStatusChangedSchema = z.object({
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
-  fields: z.array(z.string()).optional(),
+  fields: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
   status: z.nativeEnum(StreamFieldStatusChangedStatus).optional(),
 });
 
@@ -213,27 +213,27 @@ const syncModeChangedSchema = z.object({
 } satisfies ToZodSchema<StreamSyncModeDiff>);
 
 const streamPrimaryKeyDiffSchema = z.object({
-  current: z.array(z.array(z.string())).optional(),
-  prev: z.array(z.array(z.string())).optional(),
+  current: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
+  prev: z.array(z.array(z.string()).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH).optional(),
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
 } satisfies ToZodSchema<StreamPrimaryKeyDiff>);
 
 const streamCursorFieldDiffSchema = z.object({
-  current: z.array(z.string()).optional(),
-  prev: z.array(z.string()).optional(),
+  current: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
+  prev: z.array(z.string()).max(MAX_ARRAY_LENGTH).optional(),
   streamName: z.string().optional(),
   streamNamespace: z.string().optional(),
 } satisfies ToZodSchema<StreamCursorFieldDiff>);
 
 const catalogConfigDiffSchema = z.object({
-  streamsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
-  streamsDisabled: z.array(streamFieldStatusChangedSchema).optional(),
-  fieldsEnabled: z.array(streamFieldStatusChangedSchema).optional(),
-  fieldsDisabled: z.array(streamFieldStatusChangedSchema).optional(),
-  syncModesChanged: z.array(syncModeChangedSchema).optional(),
-  cursorFieldsChanged: z.array(streamCursorFieldDiffSchema).optional(),
-  primaryKeysChanged: z.array(streamPrimaryKeyDiffSchema).optional(),
+  streamsEnabled: z.array(streamFieldStatusChangedSchema).max(MAX_ARRAY_LENGTH).optional(),
+  streamsDisabled: z.array(streamFieldStatusChangedSchema).max(MAX_ARRAY_LENGTH).optional(),
+  fieldsEnabled: z.array(streamFieldStatusChangedSchema).max(MAX_ARRAY_LENGTH).optional(),
+  fieldsDisabled: z.array(streamFieldStatusChangedSchema).max(MAX_ARRAY_LENGTH).optional(),
+  syncModesChanged: z.array(syncModeChangedSchema).max(MAX_ARRAY_LENGTH).optional(),
+  cursorFieldsChanged: z.array(streamCursorFieldDiffSchema).max(MAX_ARRAY_LENGTH).optional(),
+  primaryKeysChanged: z.array(streamPrimaryKeyDiffSchema).max(MAX_ARRAY_LENGTH).optional(),
 } satisfies ToZodSchema<CatalogConfigDiff>);
 
 export type TimelineFailureReason = Omit<FailureReason, "timestamp">;
@@ -261,7 +261,7 @@ export const userInEventSchema = z.object({
 // artificial job events
 export const jobRunningSummarySchema = z.object({
   jobId: z.number(),
-  streams: z.array(jobRunningStreamSchema),
+  streams: z.array(jobRunningStreamSchema).max(MAX_ARRAY_LENGTH),
   configType: z.enum([JobConfigType.clear, JobConfigType.reset_connection, JobConfigType.sync, JobConfigType.refresh]),
 });
 
@@ -289,7 +289,7 @@ export const syncFailureEventSummarySchema = jobSummarySchema.extend({
 });
 
 export const refreshEventSummarySchema = jobSummarySchema.extend({
-  streams: z.array(streamDescriptorSchema),
+  streams: z.array(streamDescriptorSchema).max(MAX_ARRAY_LENGTH),
   failureReason: jobFailureReasonSchema.nullish(),
 });
 
@@ -299,7 +299,7 @@ export const clearEventSummarySchema = jobSummarySchema
     recordsLoaded: true,
   })
   .extend({
-    streams: z.array(streamDescriptorSchema),
+    streams: z.array(streamDescriptorSchema).max(MAX_ARRAY_LENGTH),
   });
 
 export const jobStartedSummarySchema = jobSummarySchema
@@ -309,7 +309,7 @@ export const jobStartedSummarySchema = jobSummarySchema
     endTimeEpochSeconds: true,
   })
   .extend({
-    streams: z.array(streamDescriptorSchema).optional(),
+    streams: z.array(streamDescriptorSchema).max(MAX_ARRAY_LENGTH).optional(),
   });
 
 export const connectionDisabledEventSummarySchema = z.object({
@@ -369,6 +369,7 @@ export const connectionSettingsUpdateEventSummaryPatchesShape = {
 export const connectionSettingsUpdateEventSummarySchema = z.object({
   patches: z
     .record(
+      z.string(),
       z.object({
         from: z.union([z.string(), z.boolean(), scheduleDataSchema]).optional(),
         to: z.union([z.string(), z.boolean(), scheduleDataSchema]).optional(),
@@ -413,7 +414,7 @@ export const generalEventSchema = z.object({
   eventType: z.union([z.nativeEnum(ConnectionEventType), z.nativeEnum(ConnectionRunningEventType)]),
   summary: z
     .object({
-      patches: z.record(z.unknown()).optional(),
+      patches: z.record(z.string(), z.unknown()).optional(),
     })
     .passthrough(),
 });

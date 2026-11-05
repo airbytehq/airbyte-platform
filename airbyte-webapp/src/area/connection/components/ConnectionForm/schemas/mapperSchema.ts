@@ -14,7 +14,7 @@ import {
   EncryptionMapperAESConfigurationAlgorithm,
   EncryptionMapperAESConfiguration,
 } from "core/api/types/AirbyteClient";
-import { ToZodSchema } from "core/utils/zod";
+import { MAX_ARRAY_LENGTH, ToZodSchema } from "core/utils/zod";
 
 /**
  * Hashing mapper configuration schema
@@ -75,13 +75,15 @@ export const rowFilteringMapperConfigurationSchema = z.object({
       }),
       z.object({
         type: z.literal("NOT"),
-        conditions: z.array(
-          z.object({
-            type: z.literal("EQUAL"),
-            fieldName: z.string().nonempty("form.empty.error"),
-            comparisonValue: z.string().nonempty("form.empty.error"),
-          })
-        ),
+        conditions: z
+          .array(
+            z.object({
+              type: z.literal("EQUAL"),
+              fieldName: z.string().nonempty("form.empty.error"),
+              comparisonValue: z.string().nonempty("form.empty.error"),
+            })
+          )
+          .max(MAX_ARRAY_LENGTH),
       }),
     ]),
   } satisfies ToZodSchema<RowFilteringMapperConfiguration>),

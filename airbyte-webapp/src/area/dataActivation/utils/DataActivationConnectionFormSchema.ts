@@ -7,6 +7,7 @@ import {
   StreamMapperType,
   SyncMode,
 } from "core/api/types/AirbyteClient";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFilteringMapperForm";
 
 // This allows us to programatically set the sync mode back to null, but still validates that a user selects a sync mode
@@ -55,7 +56,7 @@ const someDestinationSyncMode = z.object({
   // The minimum requirement is important. An array of length 0 indicates that the user should select a matching key for
   // the given destination operation, but has not done so yet. A null value indicates that the destination operation does
   // not require matching keys.
-  matchingKeys: z.array(z.string()).min(1, "form.empty.error").nullable(),
+  matchingKeys: z.array(z.string()).max(MAX_ARRAY_LENGTH).min(1, "form.empty.error").nullable(),
 });
 
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
@@ -97,13 +98,15 @@ const DataActivationStreamSchema = z
         path: [],
       }),
     destinationObjectName: z.string().trim().nonempty("form.empty.error"),
-    fields: z.array(
-      z.object({
-        sourceFieldName: z.string().nonempty("form.empty.error"),
-        destinationFieldName: z.string().nonempty("form.empty.error"),
-        additionalMappers: z.array(additionalMappersSchema),
-      })
-    ),
+    fields: z
+      .array(
+        z.object({
+          sourceFieldName: z.string().nonempty("form.empty.error"),
+          destinationFieldName: z.string().nonempty("form.empty.error"),
+          additionalMappers: z.array(additionalMappersSchema).max(MAX_ARRAY_LENGTH),
+        })
+      )
+      .max(MAX_ARRAY_LENGTH),
   })
   .and(sourceSyncMode)
   .and(destinationSyncMode)
@@ -125,7 +128,7 @@ const DataActivationStreamSchema = z
   });
 
 export const DataActivationConnectionFormSchema = z.object({
-  streams: z.array(DataActivationStreamSchema),
+  streams: z.array(DataActivationStreamSchema).max(MAX_ARRAY_LENGTH),
 });
 
 export type DataActivationConnectionFormOutput = z.infer<typeof DataActivationConnectionFormSchema>;

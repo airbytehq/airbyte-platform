@@ -13,7 +13,7 @@ import {
   SyncMode,
 } from "core/api/types/AirbyteClient";
 import { isNonNullable } from "core/utils/isNonNullable";
-import { ToZodSchema } from "core/utils/zod";
+import { MAX_ARRAY_LENGTH, ToZodSchema } from "core/utils/zod";
 import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFilteringMapperForm";
 
 import { DataActivationField, DataActivationStream, DataActivationConnectionFormValues } from "../types";
@@ -78,13 +78,15 @@ const filterOutMapper = z.object({
   mapperConfiguration: z.object({
     conditions: z.object({
       type: z.literal("NOT"),
-      conditions: z.array(
-        z.object({
-          type: z.literal("EQUAL"),
-          fieldName: z.string(),
-          comparisonValue: z.string(),
-        })
-      ),
+      conditions: z
+        .array(
+          z.object({
+            type: z.literal("EQUAL"),
+            fieldName: z.string(),
+            comparisonValue: z.string(),
+          })
+        )
+        .max(MAX_ARRAY_LENGTH),
     }),
   }),
 });

@@ -192,11 +192,10 @@ export const useBuilderErrors = () => {
         }
 
         // Must nest the error object under a "manifest" key in order
-        // to produce the correct full error paths
+        // to produce the correct full error paths. getFieldState types the error as one FieldError, but for an object
+        // path it holds the nested field errors.
         const builderStateErrors: FieldErrors<BuilderState> = {
-          manifest: {
-            ...error,
-          },
+          manifest: { ...error } as unknown as FieldErrors<BuilderState>["manifest"],
         };
 
         const errorPathAndView = getErrorPathAndView(builderStateErrors, limitToViews);

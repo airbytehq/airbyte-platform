@@ -13,6 +13,7 @@ import { Text } from "components/ui/Text";
 import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { ConnectionStream, JobReadResponse, RefreshMode } from "core/api/types/AirbyteClient";
 import { links } from "core/utils/links";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
 import styles from "./ConnectionRefreshModal.module.scss";
 import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";
@@ -135,7 +136,7 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
 
   const refreshConnectionFormSchema = z.object({
     refreshMode: z.nativeEnum(RefreshMode),
-    streams: z.array(z.custom<ConnectionStream>()).optional(),
+    streams: z.array(z.custom<ConnectionStream>()).max(MAX_ARRAY_LENGTH).optional(),
   });
 
   return (

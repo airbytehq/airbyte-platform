@@ -12,7 +12,7 @@ import { DbtCloudJob, isSameJob, useDbtIntegration } from "core/api/cloud";
 import { DbtCloudJobInfo } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
-import { ToZodSchema } from "core/utils/zod";
+import { MAX_ARRAY_LENGTH, ToZodSchema } from "core/utils/zod";
 
 import { DbtCloudTransformationsFormControls } from "./DbtCloudTransformationsFormControls";
 
@@ -24,7 +24,7 @@ const DbtCloudJobSchema = z.object({
 } satisfies ToZodSchema<DbtCloudJob>);
 
 const dbtJobsValidationSchema = z.object({
-  jobs: z.array(DbtCloudJobSchema),
+  jobs: z.array(DbtCloudJobSchema).max(MAX_ARRAY_LENGTH),
 });
 
 export type DbtCloudTransformationsFormValues = z.infer<typeof dbtJobsValidationSchema>;

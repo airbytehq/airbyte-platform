@@ -1,4 +1,6 @@
+import cloneDeep from "lodash/cloneDeep";
 import React, { useCallback, useId } from "react";
+import { UseFormReturn } from "react-hook-form";
 import { AnyObjectSchema } from "yup";
 
 import { Form } from "components/ui/forms";
@@ -76,13 +78,16 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   );
 
   const onFormSubmit = useCallback(
-    async (values: ConnectorFormValues) => {
+    async (values: ConnectorFormValues, methods: UseFormReturn<ConnectorFormValues>) => {
       const valuesToSend = castValues(values);
+      // Take the new default values before the submission runs, so an edit made during it keeps the form dirty. They
+      // are the form values, not the cast ones, because react-hook-form compares the two again after the reset. The
+      // deep copy matters: react-hook-form writes nested field changes into the objects that getValues() returns.
+      const submittedFormValues = cloneDeep(methods.getValues());
       await onSubmit(valuesToSend);
       clearFormChange(formId);
-      // do not reset form values to avoid casting oddities
       return {
-        resetValues: valuesToSend,
+        resetValues: submittedFormValues,
         keepStateOptions: {
           keepValues: true,
         },

@@ -5,6 +5,7 @@ import { useIntl } from "react-intl";
 import { ExternalLink } from "components/ui/Link";
 
 import { FormConnectionFormValues } from "area/connection/components/ConnectionForm/formConfig";
+import { hasStreamConfigFieldErrorMessage } from "area/connection/components/ConnectionForm/schemas/validators";
 import { HttpProblem } from "core/api";
 import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
@@ -51,15 +52,14 @@ const useConnectionForm = ({ connection, schemaError, refreshSchema }: Connectio
       }
 
       if (!formValid) {
-        const hasNoStreamsSelectedError = errors?.syncCatalog?.streams?.message === "connectionForm.streams.required";
-        const hasHashCollisionError =
-          errors?.syncCatalog?.streams?.message === "connectionForm.streams.hashFieldCollision";
+        // The resolver puts an array-level error under `root` when a stream's child field was validated with it.
+        const streamsErrorMessage =
+          errors?.syncCatalog?.streams?.root?.message ?? errors?.syncCatalog?.streams?.message;
+        const hasNoStreamsSelectedError = streamsErrorMessage === "connectionForm.streams.required";
+        const hasHashCollisionError = streamsErrorMessage === "connectionForm.streams.hashFieldCollision";
 
         const hasPrimaryKeyOrCursorError = (field: "primaryKey" | "cursorField") =>
-          errors?.syncCatalog?.streams &&
-          Object.entries(
-            errors?.syncCatalog?.streams as FieldErrors<FormConnectionFormValues["syncCatalog"]["streams"]>
-          ).some(([_, streamNode]) => streamNode?.config?.[field]?.message === `connectionForm.${field}.required`);
+          hasStreamConfigFieldErrorMessage(errors, field, `connectionForm.${field}.required`);
 
         const pkError = hasPrimaryKeyOrCursorError("primaryKey");
         const cursorError = hasPrimaryKeyOrCursorError("cursorField");

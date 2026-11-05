@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
-import { Controller, FormProvider, useForm } from "react-hook-form";
+import { Controller, FormProvider, Resolver, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -74,7 +74,10 @@ export const OnboardingSurvey: React.FC = () => {
   const currentFields = getSurveyFieldsByStep(currentStep);
 
   const form = useForm<OnboardingSurveyFormValues>({
-    resolver: zodResolver(createValidationSchema(currentStep, formatMessage)),
+    // The schema checks only the current step's fields, so its type cannot match the full form values.
+    resolver: zodResolver(
+      createValidationSchema(currentStep, formatMessage)
+    ) as unknown as Resolver<OnboardingSurveyFormValues>,
     mode: "onChange",
     defaultValues: {
       [SURVEY_FIELD_IDS.OCCUPATION]: "",

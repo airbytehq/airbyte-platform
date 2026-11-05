@@ -117,8 +117,7 @@ export const FormRoot: React.FC<FormRootProps> = ({
         isEditMode,
         formType,
         getValues: () => castValues(form.getValues()),
-        markFormAsSaved: () =>
-          form.reset(castValues(form.getValues()), { keepValues: true, keepErrors: true, keepTouched: true }),
+        markFormAsSaved: () => form.reset(form.getValues(), { keepValues: true, keepErrors: true, keepTouched: true }),
       }}
     />
   );

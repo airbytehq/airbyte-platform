@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, useForm, useFormState } from "react-hook-form";
+import { FormProvider, Resolver, useForm, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -99,7 +99,8 @@ export const ConfigureDataActivationConnectionPage: React.FC = () => {
         basicSchedule: BASIC_FREQUENCY_DEFAULT_VALUE,
       },
     },
-    resolver: zodResolver(zodSchema),
+    // zodSchema checks only `name`, so a successful submit receives `{ name }` and none of the other form values.
+    resolver: zodResolver(zodSchema) as unknown as Resolver<FormConnectionFormValues>,
     mode: "onChange",
   });
 

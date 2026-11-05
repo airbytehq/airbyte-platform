@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getPatternDescriptor } from "area/connector/components/ConnectorForm/utils";
 import { FORM_PATTERN_ERROR } from "core/form/types";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
 import { OverrideByObjectField } from "./Controls/types";
 import { getSelectedOptionSchema, verifyArrayItems } from "./SchemaForm";
@@ -31,7 +32,7 @@ export const dynamicValidator = <TSchema extends FieldValues>(
       );
 
       // Use zodResolver which is CSP-compliant
-      const resolver = zodResolver(zodSchema);
+      const resolver = zodResolver(zodSchema as z.ZodType<TSchema, TSchema>);
       const result = await resolver(data, context, options);
 
       // Add NON_I18N_ERROR_TYPE to all errors to avoid missing translation console errors
@@ -61,7 +62,7 @@ export const dynamicValidator = <TSchema extends FieldValues>(
 
       // Return empty errors if schema conversion or validation fails
       return {
-        values: {} as TSchema,
+        values: {},
         errors: {
           _form: {
             type: "validation",
@@ -75,6 +76,13 @@ export const dynamicValidator = <TSchema extends FieldValues>(
 
 const REQUIRED_ERROR = "form.empty.error";
 const INVALID_TYPE_ERROR = "form.invalid_type.error";
+
+// A missing value is a type error in Zod 4, so one error map must tell it apart from a value of the wrong type.
+const typeErrorParams = (formatMessage: IntlShape["formatMessage"], invalidTypeMessageId: string) => ({
+  error: (issue: { input?: unknown }) =>
+    formatMessage({ id: issue.input === undefined ? REQUIRED_ERROR : invalidTypeMessageId }),
+});
+
 export const convertJsonSchemaToZodSchema = (
   rootSchema: AirbyteJsonSchema,
   schema: AirbyteJsonSchema,
@@ -125,7 +133,7 @@ export const convertJsonSchemaToZodSchema = (
           const result = zodSchema.safeParse(value);
           if (!result.success) {
             result.error.issues.forEach((issue) => {
-              ctx.addIssue(issue);
+              ctx.addIssue({ ...issue });
             });
           }
         } catch (error) {
@@ -189,17 +197,16 @@ export const convertJsonSchemaToZodSchema = (
 
         const zodProperties = Object.fromEntries(
           Object.entries(properties).map(([propertyKey, propertyValue]) => {
+            // Zod 4 rejects an absent key unless its schema is optional, even for z.any().
             if (isBoolean(propertyValue)) {
-              return [propertyKey, z.any()];
+              return [propertyKey, z.any().optional()];
             }
             const isFieldRequired = required.includes(propertyKey);
             if (value[propertyKey] === undefined || value[propertyKey] === null || value[propertyKey] === "") {
-              return [
-                propertyKey,
-                z.any().refine((_value) => (isFieldRequired ? false : true), {
-                  message: formatMessage({ id: REQUIRED_ERROR }),
-                }),
-              ];
+              const missingValueSchema = isFieldRequired
+                ? z.any().refine(() => false, { message: formatMessage({ id: REQUIRED_ERROR }) })
+                : z.any().optional();
+              return [propertyKey, missingValueSchema];
             }
             return [
               propertyKey,
@@ -219,7 +226,7 @@ export const convertJsonSchemaToZodSchema = (
           const result = zodObject.safeParse(value);
           if (!result.success) {
             result.error.issues.forEach((issue) => {
-              ctx.addIssue(issue);
+              ctx.addIssue({ ...issue });
             });
           }
         } catch (error) {
@@ -234,10 +241,7 @@ export const convertJsonSchemaToZodSchema = (
     // For simple schemas, we can build them manually
     if (schema.type === "string") {
       // Create a base string schema with custom required error message
-      let zodString = z.string({
-        required_error: formatMessage({ id: REQUIRED_ERROR }),
-        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
-      });
+      let zodString = z.string(typeErrorParams(formatMessage, INVALID_TYPE_ERROR));
 
       // Add string-specific validations with custom error messages
       if (schema.minLength) {
@@ -273,13 +277,11 @@ export const convertJsonSchemaToZodSchema = (
       });
     } else if (schema.type === "number" || schema.type === "integer") {
       // Create a base number schema with custom error messages
-      let zodNumber = z.number({
-        required_error: formatMessage({ id: REQUIRED_ERROR }),
-        invalid_type_error: formatMessage({ id: "form.invalidNumber" }),
-      });
+      let zodNumber = z.number(typeErrorParams(formatMessage, "form.invalidNumber"));
 
       if (schema.type === "integer") {
-        zodNumber = zodNumber.int(formatMessage({ id: "form.invalidInteger" }));
+        // Zod 4's .int() also rejects integers above Number.MAX_SAFE_INTEGER.
+        zodNumber = zodNumber.refine(Number.isInteger, { message: formatMessage({ id: "form.invalidInteger" }) });
       }
 
       // Add number-specific validations with custom error messages
@@ -306,10 +308,7 @@ export const convertJsonSchemaToZodSchema = (
         message: formatMessage({ id: REQUIRED_ERROR }),
       });
     } else if (schema.type === "boolean") {
-      const zodBoolean = z.boolean({
-        required_error: formatMessage({ id: REQUIRED_ERROR }),
-        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
-      });
+      const zodBoolean = z.boolean(typeErrorParams(formatMessage, INVALID_TYPE_ERROR));
 
       if (!isRequired) {
         return zodBoolean.optional();
@@ -324,23 +323,17 @@ export const convertJsonSchemaToZodSchema = (
       return zodNull;
     } else if (schema.type === "array" && schema.items) {
       const itemsSchema = verifyArrayItems(schema.items, rootSchema);
-      const arraySchema = z.array(
-        convertJsonSchemaToZodSchema(rootSchema, itemsSchema, formatMessage, isRequired, overrideByObjectField),
-        {
-          required_error: formatMessage({ id: REQUIRED_ERROR }),
-          invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
-        }
-      );
+      const maxItems = Math.min(schema.maxItems ?? MAX_ARRAY_LENGTH, MAX_ARRAY_LENGTH);
+      let arraySchema = z
+        .array(
+          convertJsonSchemaToZodSchema(rootSchema, itemsSchema, formatMessage, isRequired, overrideByObjectField),
+          typeErrorParams(formatMessage, INVALID_TYPE_ERROR)
+        )
+        .max(maxItems, { message: formatMessage({ id: "form.maxItems.error" }, { max: maxItems }) });
 
-      // Add array-specific validations with custom error messages
       if (schema.minItems) {
-        return arraySchema.min(schema.minItems, {
+        arraySchema = arraySchema.min(schema.minItems, {
           message: formatMessage({ id: "form.minItems.error" }, { min: schema.minItems }),
-        });
-      }
-      if (schema.maxItems) {
-        return arraySchema.max(schema.maxItems, {
-          message: formatMessage({ id: "form.maxItems.error" }, { max: schema.maxItems }),
         });
       }
 

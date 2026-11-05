@@ -3,8 +3,9 @@ import { z } from "zod";
 
 import { useCurrentWorkspace, useListDataplaneGroups } from "core/api";
 import { useExperiment } from "core/services/Experiment";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
-const airbyteCloudIpAddressesByDataplanesSchema = z.record(z.array(z.string()));
+const airbyteCloudIpAddressesByDataplanesSchema = z.record(z.string(), z.array(z.string()).max(MAX_ARRAY_LENGTH));
 
 export const useAirbyteCloudIpsByDataplane = (): string[] => {
   const { dataplaneGroupId } = useCurrentWorkspace();

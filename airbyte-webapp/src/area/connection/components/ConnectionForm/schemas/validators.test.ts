@@ -1,3 +1,4 @@
+import { FieldErrors } from "react-hook-form";
 import { z } from "zod";
 
 import { AirbyteStreamAndConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
@@ -6,6 +7,8 @@ import {
   atLeastOneStreamSelectedValidation,
   streamConfigurationValidation,
   hashFieldCollisionValidation,
+  getStreamConfigErrors,
+  getStreamConfigFieldError,
 } from "./validators";
 
 describe("atLeastOneStreamSelectedValidation", () => {
@@ -17,7 +20,7 @@ describe("atLeastOneStreamSelectedValidation", () => {
     jest.clearAllMocks();
   });
 
-  it("should return true when at least one stream is selected", () => {
+  it("should add no issue when at least one stream is selected", () => {
     const streams: AirbyteStreamAndConfiguration[] = [
       {
         config: {
@@ -31,13 +34,12 @@ describe("atLeastOneStreamSelectedValidation", () => {
       },
     ];
 
-    const result = atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
+    atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
 
-    expect(result).toBe(true);
     expect(mockRefinementCtx.addIssue).not.toHaveBeenCalled();
   });
 
-  it("should return true when at least one stream is selected among multiple streams", () => {
+  it("should add no issue when at least one stream is selected among multiple streams", () => {
     const streams: AirbyteStreamAndConfiguration[] = [
       {
         config: {
@@ -71,13 +73,12 @@ describe("atLeastOneStreamSelectedValidation", () => {
       },
     ];
 
-    const result = atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
+    atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
 
-    expect(result).toBe(true);
     expect(mockRefinementCtx.addIssue).not.toHaveBeenCalled();
   });
 
-  it("should return false and add an issue when no streams are selected", () => {
+  it("should add an issue when no streams are selected", () => {
     const streams: AirbyteStreamAndConfiguration[] = [
       {
         config: {
@@ -91,9 +92,8 @@ describe("atLeastOneStreamSelectedValidation", () => {
       },
     ];
 
-    const result = atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
+    atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
 
-    expect(result).toBe(false);
     expect(mockRefinementCtx.addIssue).toHaveBeenCalledWith({
       code: z.ZodIssueCode.custom,
       message: "connectionForm.streams.required",
@@ -101,12 +101,11 @@ describe("atLeastOneStreamSelectedValidation", () => {
     });
   });
 
-  it("should return false and add an issue when streams array is empty", () => {
+  it("should add an issue when streams array is empty", () => {
     const streams: AirbyteStreamAndConfiguration[] = [];
 
-    const result = atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
+    atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
 
-    expect(result).toBe(false);
     expect(mockRefinementCtx.addIssue).toHaveBeenCalledWith({
       code: z.ZodIssueCode.custom,
       message: "connectionForm.streams.required",
@@ -123,9 +122,8 @@ describe("atLeastOneStreamSelectedValidation", () => {
       },
     ];
 
-    const result = atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
+    atLeastOneStreamSelectedValidation(streams, mockRefinementCtx);
 
-    expect(result).toBe(false);
     expect(mockRefinementCtx.addIssue).toHaveBeenCalledWith({
       code: z.ZodIssueCode.custom,
       message: "connectionForm.streams.required",
@@ -624,5 +622,75 @@ describe("hashFieldCollisionValidation", () => {
       code: z.ZodIssueCode.custom,
       message: "connectionForm.streams.hashFieldCollision",
     });
+  });
+});
+
+describe("getStreamConfigErrors", () => {
+  const primaryKeyError = { type: "custom", message: "connectionForm.primaryKey.required" };
+
+  it("returns no stream errors when the form has no errors", () => {
+    expect(getStreamConfigErrors(undefined)).toEqual({});
+  });
+
+  it("ignores an error that belongs to the whole streams array", () => {
+    const streamsErrors = Object.assign([], { root: { type: "custom", message: "connectionForm.streams.required" } });
+    const errors = { syncCatalog: { streams: streamsErrors } } as unknown as FieldErrors;
+
+    expect(getStreamConfigErrors(errors)).toEqual({});
+  });
+
+  it("returns the stream errors set directly on the streams", () => {
+    const errors = { syncCatalog: { streams: { users_public: { config: { primaryKey: primaryKeyError } } } } };
+
+    expect(getStreamConfigErrors(errors)).toEqual({ users_public: { config: { primaryKey: primaryKeyError } } });
+  });
+
+  it("returns the stream errors under the root of the streams array when a stream name starts with type and a period", () => {
+    const streamsErrors = Object.assign([], {
+      root: { type: { events_public: { config: { primaryKey: primaryKeyError } } } },
+    });
+    const errors = { syncCatalog: { streams: streamsErrors } } as unknown as FieldErrors;
+
+    expect(getStreamConfigErrors(errors)).toEqual({
+      type: { events_public: { config: { primaryKey: primaryKeyError } } },
+    });
+  });
+
+  it("returns the stream errors set under the root of the streams array", () => {
+    const streamsErrors = Object.assign([], { root: { users_public: { config: { primaryKey: primaryKeyError } } } });
+    const errors = { syncCatalog: { streams: streamsErrors } } as unknown as FieldErrors;
+
+    expect(getStreamConfigErrors(errors)).toEqual({ users_public: { config: { primaryKey: primaryKeyError } } });
+  });
+});
+
+describe("getStreamConfigFieldError", () => {
+  const primaryKeyError = { type: "custom", message: "connectionForm.primaryKey.required" };
+
+  it("returns no error when the form has no errors", () => {
+    expect(getStreamConfigFieldError(undefined, "users_public", "primaryKey")).toBeUndefined();
+  });
+
+  it("returns no error for a field of the stream that has no error", () => {
+    const errors = { syncCatalog: { streams: { users_public: { config: { primaryKey: primaryKeyError } } } } };
+
+    expect(getStreamConfigFieldError(errors, "users_public", "cursorField")).toBeUndefined();
+  });
+
+  it("returns the error nested under each part of a stream name and namespace that contain a period", () => {
+    const errors = {
+      syncCatalog: { streams: { users: { view_my: { schema: { config: { primaryKey: primaryKeyError } } } } } },
+    } as unknown as FieldErrors;
+
+    expect(getStreamConfigFieldError(errors, "users.view_my.schema", "primaryKey")).toEqual(primaryKeyError);
+  });
+
+  it("returns the error nested under the root of the streams array for a stream name with a period", () => {
+    const streamsErrors = Object.assign([], {
+      root: { users: { view_public: { config: { primaryKey: primaryKeyError } } } },
+    });
+    const errors = { syncCatalog: { streams: streamsErrors } } as unknown as FieldErrors;
+
+    expect(getStreamConfigFieldError(errors, "users.view_public", "primaryKey")).toEqual(primaryKeyError);
   });
 });

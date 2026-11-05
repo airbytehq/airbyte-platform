@@ -56,7 +56,9 @@ export const EditDataActivationMappingsPage = () => {
   const methods = useForm<DataActivationConnectionFormValues, unknown, DataActivationConnectionFormOutput>({
     defaultValues: createFormDefaultValues(connection.syncCatalog),
     mode: "onChange",
-    resolver: zodResolver(DataActivationConnectionFormSchema),
+    resolver: zodResolver<DataActivationConnectionFormValues, unknown, DataActivationConnectionFormOutput>(
+      DataActivationConnectionFormSchema
+    ),
   });
   const { mutateAsync: updateConnection } = useUpdateConnection();
   const { registerNotification } = useNotificationService();

@@ -242,7 +242,7 @@ const CronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) 
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const { errors } = useFormState<FormConnectionFormValues>();
   const cronExpression = useWatch({ name: "scheduleData.cron.cronExpression", control });
-  const cronExpressionDescription = useDescribeCronExpression(cronExpression);
+  const cronExpressionDescription = useDescribeCronExpression(cronExpression ?? "");
 
   const error = errors?.scheduleData?.cron?.cronExpression;
 

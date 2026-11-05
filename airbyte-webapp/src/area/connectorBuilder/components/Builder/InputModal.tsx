@@ -14,6 +14,7 @@ import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderMainRHFContext } from "core/services/connectorBuilder/ConnectorBuilderStateService";
+import { MAX_ARRAY_LENGTH } from "core/utils/zod";
 
 import styles from "./InputModal.module.scss";
 import { DefinitionFormControl, convertToBuilderFormInputs, convertToConnectionSpecification } from "./InputsView";
@@ -122,6 +123,7 @@ export const InputModal = ({
       description: z.string().optional(),
       enum: z
         .array(z.string())
+        .max(MAX_ARRAY_LENGTH)
         .optional()
         .refine((values) => (values ? new Set(values).size === values.length : true), "connectorBuilder.enumDuplicate"),
       airbyte_secret: z.boolean().optional(),

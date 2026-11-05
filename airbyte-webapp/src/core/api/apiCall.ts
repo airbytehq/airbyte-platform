@@ -84,7 +84,7 @@ async function parseResponse<T>(
      * it correct. So I am making an assumption that if it's not explicitly JSON, it's a binary file.
      */
     return responseType === "blob" || response.headers.get("content-type") !== "application/json"
-      ? response.blob()
+      ? ((await response.blob()) as T)
       : response.json();
   }
 
