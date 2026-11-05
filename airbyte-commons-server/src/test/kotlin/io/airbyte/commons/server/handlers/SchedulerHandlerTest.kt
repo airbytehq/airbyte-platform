@@ -1664,7 +1664,7 @@ internal class SchedulerHandlerTest {
     val data = problem.problem.getData() as ProblemManualSyncTooFrequentData
     assertEquals(connectionId, data.connectionId)
     assertEquals(minimumInterval.toMinutes(), data.minimumIntervalMinutes)
-    val expectedRetryAfterSeconds = minimumInterval.minus(timeSinceLastSync).seconds
+    val expectedRetryAfterSeconds = minimumInterval.minus(Duration.ofMinutes(5)).minus(timeSinceLastSync).seconds
     assertTrue(data.retryAfterSeconds in (expectedRetryAfterSeconds - 5)..expectedRetryAfterSeconds, "$data")
     verify { eventRunner wasNot Called }
   }
@@ -2725,14 +2725,20 @@ internal class SchedulerHandlerTest {
       listOf(
         Arguments.of(Duration.ofHours(1), Duration.ofMinutes(30), "Please wait 1 hour between syncs."),
         Arguments.of(Duration.ofHours(1), Duration.ZERO, "Please wait 1 hour between syncs."),
+        // just inside the 5 minute grace period
+        Arguments.of(Duration.ofHours(1), Duration.ofMinutes(54), "Please wait 1 hour between syncs."),
         Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(5), "Please wait 15 minutes between syncs."),
+        Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(9), "Please wait 15 minutes between syncs."),
       )
 
     @JvmStatic
     private fun manualSyncAllowedCases() =
       listOf(
         Arguments.of(Duration.ofHours(1), Duration.ofMinutes(61)),
+        // within the 5 minute grace period before the interval ends
+        Arguments.of(Duration.ofHours(1), Duration.ofMinutes(56)),
         Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(30)),
+        Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(11)),
         Arguments.of(Duration.ZERO, Duration.ZERO),
       )
   }

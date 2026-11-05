@@ -521,7 +521,8 @@ open class SchedulerHandler
       val timeSinceLastSync = Duration.between(Instant.ofEpochSecond(lastSuccessfulSyncJob.createdAtInSecond), Instant.now())
 
       val minimumInterval = connectionScheduleHelper.minimumManualSyncInterval(connectionId)
-      if (timeSinceLastSync >= minimumInterval) {
+      val enforcedInterval = minimumInterval.minus(MANUAL_SYNC_GRACE_PERIOD)
+      if (timeSinceLastSync >= enforcedInterval) {
         return
       }
 
@@ -530,7 +531,7 @@ open class SchedulerHandler
         ProblemManualSyncTooFrequentData()
           .connectionId(connectionId)
           .minimumIntervalMinutes(minimumInterval.toMinutes())
-          .retryAfterSeconds(minimumInterval.minus(timeSinceLastSync).seconds),
+          .retryAfterSeconds(enforcedInterval.minus(timeSinceLastSync).seconds),
       )
     }
 
@@ -787,6 +788,9 @@ open class SchedulerHandler
     }
 
     companion object {
+      // The cooldown counts from the last successful sync job's creation, which can trail the user's request
+      // (Temporal latency, a workflow restarting between runs) or lead it (negative jitter on basic schedules).
+      private val MANUAL_SYNC_GRACE_PERIOD: Duration = Duration.ofMinutes(5)
       private val VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET: Set<ErrorCode?> = setOf(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING)
     }
   }
