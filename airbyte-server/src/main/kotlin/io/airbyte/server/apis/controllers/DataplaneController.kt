@@ -385,6 +385,7 @@ open class DataplaneController(
       healthInfos.map { healthInfo ->
         val dataplane = dataplaneMap[healthInfo.dataplaneId]!!
         val dataplaneGroup = dataplaneGroupMap[dataplane.dataplaneGroupId]!!
+        val savedDiagnostics = diagnosticsByDataplane[healthInfo.dataplaneId].orEmpty()
 
         DataplaneHealthRead(
           dataplaneId = healthInfo.dataplaneId,
@@ -411,12 +412,19 @@ open class DataplaneController(
             } else {
               null
             },
-          diagnostics = diagnosticsByDataplane[healthInfo.dataplaneId].orEmpty().map { toDiagnosticRead(it) },
+          diagnostics = savedDiagnostics.map { toDiagnosticRead(it) },
+          unsupportedDiagnosticKinds =
+            dataplaneHealthService.unsupportedDiagnosticKinds(healthInfo.dataplaneVersion, savedDiagnostics).map { toApiKind(it) },
         )
       }
 
     return DataplaneHealthListResponse(dataplanes = dataplaneHealthReads)
   }
+
+  private fun toApiKind(kind: DataplaneDiagnosticKind): ApiDataplaneDiagnosticKind =
+    when (kind) {
+      DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
+    }
 
   private fun toDiagnosticRead(saved: SavedDataplaneDiagnostic): DataplaneDiagnosticRead {
     val diagnostic = saved.diagnostic
@@ -429,10 +437,7 @@ open class DataplaneController(
       }
 
     return DataplaneDiagnosticRead(
-      kind =
-        when (diagnostic.kind) {
-          DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
-        },
+      kind = toApiKind(diagnostic.kind),
       targetId = diagnostic.targetId,
       status = status,
       checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),

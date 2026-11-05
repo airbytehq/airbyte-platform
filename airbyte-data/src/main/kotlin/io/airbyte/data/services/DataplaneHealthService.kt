@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.version.Version
 import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
@@ -51,6 +52,11 @@ class DataplaneHealthService(
     val HISTORY_WINDOW_DURATION: Duration = Duration.ofHours(12)
     val HISTORY_BUCKET_DURATION: Duration = Duration.ofMinutes(15)
     val HISTORY_BUCKET_COUNT: Int = (HISTORY_WINDOW_DURATION.toMillis() / HISTORY_BUCKET_DURATION.toMillis()).toInt()
+
+    /**
+     * The first Airbyte release that has each check.
+     */
+    val MINIMUM_DIAGNOSTIC_VERSIONS: Map<DataplaneDiagnosticKind, Version> = emptyMap()
 
     /**
      * Periods are aligned to the clock (:00, :15, :30, :45 UTC) so a silence stays in the same period from one poll to the next.
@@ -128,6 +134,38 @@ class DataplaneHealthService(
     }
 
     return diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(organizationId, dataplaneIds).mapNotNull { toSavedDiagnostic(it) }
+  }
+
+  /**
+   * Returns the checks this data plane is too old to run. A saved result wins over the version.
+   */
+  fun unsupportedDiagnosticKinds(
+    dataplaneVersion: String?,
+    savedDiagnostics: List<SavedDataplaneDiagnostic>,
+    minimumVersions: Map<DataplaneDiagnosticKind, Version> = MINIMUM_DIAGNOSTIC_VERSIONS,
+  ): List<DataplaneDiagnosticKind> {
+    val reportedKinds = savedDiagnostics.map { it.diagnostic.kind }.toSet()
+    return minimumVersions.filter { (kind, minimum) -> kind !in reportedKinds && isOlderThan(dataplaneVersion, minimum) }.keys.toList()
+  }
+
+  /**
+   * A version we can't compare counts as new enough. [Version.lessThan] alone would call `1.x.0` older than `2.5.0`.
+   */
+  private fun isOlderThan(
+    version: String?,
+    minimum: Version,
+  ): Boolean {
+    if (version == null) {
+      return false
+    }
+
+    return try {
+      val parsed = Version(version)
+      val isReleaseNumber = listOf(parsed.getMajorVersion(), parsed.getMinorVersion(), parsed.getPatchVersion()).all { it?.toIntOrNull() != null }
+      isReleaseNumber && parsed.lessThan(minimum)
+    } catch (e: IllegalArgumentException) {
+      false
+    }
   }
 
   private fun toSavedDiagnostic(row: DataplaneDiagnosticEntity): SavedDataplaneDiagnostic? {

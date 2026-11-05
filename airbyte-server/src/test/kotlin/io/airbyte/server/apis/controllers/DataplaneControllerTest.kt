@@ -742,6 +742,36 @@ class DataplaneControllerTest {
     Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to it.diagnostics })
   }
 
+  @Test
+  fun `listDataplaneHealth returns the checks each data plane is too old to run`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val oldDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val newDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val dataplaneIds = listOf(oldDataplane.id, newDataplane.id)
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(oldDataplane, newDataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(dataplaneIds, false) } returns
+      listOf(
+        unknownHealthInfo(oldDataplane.id).copy(dataplaneVersion = "2.4.0"),
+        unknownHealthInfo(newDataplane.id).copy(dataplaneVersion = "2.6.0"),
+      )
+    every { dataplaneHealthService.getDiagnostics(mockOrganizationId, dataplaneIds) } returns emptyList()
+    every { dataplaneHealthService.unsupportedDiagnosticKinds("2.4.0", emptyList()) } returns listOf(DataplaneDiagnosticKind.SECRET_STORAGE)
+    every { dataplaneHealthService.unsupportedDiagnosticKinds("2.6.0", emptyList()) } returns emptyList()
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    val expected =
+      mapOf(
+        oldDataplane.id to listOf(ApiDataplaneDiagnosticKind.SECRET_STORAGE),
+        newDataplane.id to emptyList(),
+      )
+    Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to it.unsupportedDiagnosticKinds })
+  }
+
   private fun unknownHealthInfo(dataplaneId: UUID) =
     DataplaneHealthInfo(
       dataplaneId = dataplaneId,

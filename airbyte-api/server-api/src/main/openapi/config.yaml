@@ -25518,6 +25518,11 @@ components:
           description: Saved result of each diagnostic check the data plane has reported.
           items:
             $ref: "#/components/schemas/DataplaneDiagnosticRead"
+        unsupported_diagnostic_kinds:
+          type: array
+          description: Checks this data plane's version is too old to run. A check with a saved result is never listed.
+          items:
+            $ref: "#/components/schemas/DataplaneDiagnosticKind"
     HeartbeatRecord:
       type: object
       required:

@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.version.Version
 import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
@@ -27,6 +28,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -154,6 +157,50 @@ internal class DataplaneHealthServiceTest {
 
     verify(exactly = 0) { diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(any(), any()) }
   }
+
+  @Test
+  fun `unsupportedDiagnosticKinds lists a check when the version is older than its minimum`() {
+    assertEquals(listOf(DataplaneDiagnosticKind.SECRET_STORAGE), unsupportedKinds("2.4.9"))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["2.5.0", "2.5.1", "2.10.0", "3.0.0"])
+  fun `unsupportedDiagnosticKinds leaves out a check when the version is new enough`(version: String) {
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), unsupportedKinds(version))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["dev", "dev-e7c34d6-1cede71", UNKNOWN_VERSION, "", "2.5", "2.x.0", "1.x.0", "2.4.x"])
+  fun `unsupportedDiagnosticKinds leaves out a check when the version can't be compared`(version: String) {
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), unsupportedKinds(version))
+  }
+
+  @Test
+  fun `unsupportedDiagnosticKinds leaves out a check when the version is missing`() {
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), unsupportedKinds(null))
+  }
+
+  @Test
+  fun `unsupportedDiagnosticKinds leaves out a check with a saved result even when the version is older`() {
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val saved = SavedDataplaneDiagnostic(UUID.randomUUID(), diagnostic(DataplaneDiagnosticOutcome.Passed, checkedAt, emptyMap()), checkedAt)
+
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), unsupportedKinds("2.4.9", listOf(saved)))
+  }
+
+  @Test
+  fun `unsupportedDiagnosticKinds lists nothing while no check has a minimum version`() {
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), dataplaneHealthService.unsupportedDiagnosticKinds("0.0.1", emptyList()))
+  }
+
+  private fun unsupportedKinds(
+    dataplaneVersion: String?,
+    savedDiagnostics: List<SavedDataplaneDiagnostic> = emptyList(),
+  ) = dataplaneHealthService.unsupportedDiagnosticKinds(
+    dataplaneVersion,
+    savedDiagnostics,
+    mapOf(DataplaneDiagnosticKind.SECRET_STORAGE to Version("2.5.0")),
+  )
 
   private fun diagnosticRow(
     dataplaneId: UUID,
