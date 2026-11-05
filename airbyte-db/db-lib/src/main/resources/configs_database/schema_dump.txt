@@ -510,6 +510,7 @@ create table "public"."organization" (
   "tombstone" boolean not null default false,
   "is_agentic" boolean not null default false,
   "semantic_search_enabled" boolean not null default false,
+  "onboarding_status" varchar(2147483647),
   constraint "organization_pkey" primary key ("id")
 );
 create table "public"."organization_domain_verification" (
