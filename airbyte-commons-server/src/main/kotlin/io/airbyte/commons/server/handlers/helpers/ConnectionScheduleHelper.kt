@@ -36,6 +36,7 @@ import jakarta.inject.Singleton
 import org.joda.time.DateTimeZone
 import org.quartz.CronExpression
 import java.text.ParseException
+import java.time.Duration
 import java.util.Locale
 import java.util.UUID
 
@@ -233,6 +234,35 @@ class ConnectionScheduleHelper(
           .validationErrorMessage(validationErrorMessage),
       )
     }
+  }
+
+  /**
+   * How long a connection must wait after its last sync job before a manual sync may start. Orgs that
+   * may schedule syncs every minute have no wait, orgs on the 15-minute tier wait 15 minutes, and
+   * everyone else waits an hour. An entitlement check that gives no definitive answer (e.g. Stigg is
+   * down) means no wait, so an outage never blocks a paying customer's sync.
+   */
+  fun minimumManualSyncInterval(connectionId: UUID): Duration {
+    val workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId)
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
+
+    val context = Multi(listOf(Organization(organizationId), Workspace(workspaceId)))
+    if (featureFlagClient.boolVariation(SubOneHourSyncSchedules, context)) {
+      return Duration.ZERO
+    }
+
+    val orgId = OrganizationId(organizationId)
+    val fasterSync = entitlementService.checkEntitlement(orgId, FasterSyncFrequencyEntitlement)
+    if (fasterSync.isEntitled || !fasterSync.isEntitlementCheckSuccessful) {
+      return Duration.ZERO
+    }
+
+    val fifteenMinuteSync = entitlementService.checkEntitlement(orgId, FifteenMinuteSyncFrequencyEntitlement)
+    if (!fifteenMinuteSync.isEntitlementCheckSuccessful) {
+      return Duration.ZERO
+    }
+
+    return if (fifteenMinuteSync.isEntitled) Duration.ofMinutes(FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES) else Duration.ofHours(1)
   }
 
   private fun minimumAllowedSubHourIntervalMinutes(

@@ -207,6 +207,27 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       assertEquals(5, resultScope2?.id)
       assertNull(resultScope3)
     }
+
+    @Test
+    fun `filtered by config types skips succeeded jobs of other types`() {
+      val jobs =
+        listOf(
+          createJob(1, scope1, JobStatus.succeeded, JobConfigType.sync),
+          // most recent sync or refresh success for scope1
+          createJob(2, scope1, JobStatus.succeeded, JobConfigType.refresh),
+          createJob(3, scope1, JobStatus.failed, JobConfigType.sync),
+          createJob(4, scope1, JobStatus.succeeded, JobConfigType.reset_connection),
+          // scope2 only has a succeeded reset
+          createJob(5, scope2, JobStatus.succeeded, JobConfigType.reset_connection),
+        )
+
+      jobsRepository.saveAll(jobs)
+
+      val syncTypes = listOf(JobConfigType.sync.literal, JobConfigType.refresh.literal)
+      assertEquals(2, jobsRepository.lastSuccessfulJobForScopeWithConfigTypes(scope1, syncTypes)?.id)
+      assertNull(jobsRepository.lastSuccessfulJobForScopeWithConfigTypes(scope2, syncTypes))
+      assertNull(jobsRepository.lastSuccessfulJobForScopeWithConfigTypes(scope3, syncTypes))
+    }
   }
 
   @Nested

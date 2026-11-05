@@ -27,15 +27,18 @@ import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.SubOneHourSyncSchedules
 import io.airbyte.featureflag.TestClient
 import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.time.Duration
 import java.util.UUID
 
 internal class ConnectionSchedulerHelperTest {
@@ -43,13 +46,14 @@ internal class ConnectionSchedulerHelperTest {
   private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf()))
   private val cronExpressionHelper = CronExpressionHelper()
   val entitlementService: EntitlementService = mockk<EntitlementService>()
+  private val featureFlagClient: FeatureFlagClient = mockk<TestClient>()
 
   @BeforeEach
   fun setup() {
     val workspaceHelper = mockk<WorkspaceHelper>()
     every { workspaceHelper.getWorkspaceForSourceId(any()) } returns WORKSPACE_ID
+    every { workspaceHelper.getWorkspaceForConnectionId(any()) } returns WORKSPACE_ID
     every { workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID) } returns ORGANIZATION_ID
-    val featureFlagClient: FeatureFlagClient = mockk<TestClient>()
     every { featureFlagClient.boolVariation(any(), any()) } returns false
     every { entitlementService.checkEntitlement(any(), any()) } returns EntitlementResult("unknown-feature", false, null)
     connectionScheduleHelper =
@@ -932,6 +936,52 @@ internal class ConnectionSchedulerHelperTest {
         ),
       )
     }
+  }
+
+  @Test
+  fun `manual syncs wait an hour without a sub-hour entitlement`() {
+    assertEquals(Duration.ofHours(1), connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
+  }
+
+  @Test
+  fun `manual syncs wait fifteen minutes with the fifteen-minute entitlement`() {
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null)
+
+    assertEquals(Duration.ofMinutes(15), connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
+  }
+
+  @Test
+  fun `manual syncs do not wait with the faster sync frequency entitlement`() {
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null)
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null)
+
+    assertEquals(Duration.ZERO, connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
+  }
+
+  @Test
+  fun `manual syncs do not wait when the faster sync entitlement check fails`() {
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement) } returns
+      EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, "Stigg unavailable", isEntitlementCheckSuccessful = false)
+
+    assertEquals(Duration.ZERO, connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
+  }
+
+  @Test
+  fun `manual syncs do not wait when the fifteen-minute entitlement check fails`() {
+    every { entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement) } returns
+      EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, false, "Stigg unavailable", isEntitlementCheckSuccessful = false)
+
+    assertEquals(Duration.ZERO, connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
+  }
+
+  @Test
+  fun `manual syncs do not wait when sub-hour schedules are allowed by flag`() {
+    every { featureFlagClient.boolVariation(SubOneHourSyncSchedules, any()) } returns true
+
+    assertEquals(Duration.ZERO, connectionScheduleHelper!!.minimumManualSyncInterval(UUID.randomUUID()))
   }
 
   companion object {

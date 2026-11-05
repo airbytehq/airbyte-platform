@@ -4,8 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.model.generated.ProblemManualSyncTooFrequentData
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.ManualSyncTooFrequentProblem
 import io.airbyte.api.server.generated.models.CheckConnectionRead
 import io.airbyte.api.server.generated.models.ConnectionIdRequestBody
 import io.airbyte.api.server.generated.models.ConnectionStream
@@ -36,6 +38,7 @@ import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
+import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper
 import io.airbyte.commons.server.helpers.SecretSanitizer
@@ -47,6 +50,8 @@ import io.airbyte.commons.temporal.ManualOperationResult
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.Job
+import io.airbyte.config.JobStatus
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardCheckConnectionOutput
@@ -62,6 +67,7 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
@@ -81,6 +87,8 @@ import io.airbyte.validation.json.JsonSchemaValidator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
@@ -119,6 +127,8 @@ open class SchedulerHandler
     private val metricClient: MetricClient,
     private val secretSanitizer: SecretSanitizer,
     private val dataWorkerUsageService: DataWorkerUsageService,
+    private val connectionScheduleHelper: ConnectionScheduleHelper,
+    private val jobService: JobService,
   ) {
     private val jobCreationAndStatusUpdateHelper =
       JobCreationAndStatusUpdateHelper(
@@ -495,9 +505,41 @@ open class SchedulerHandler
       organizationId: UUID? = null,
       returnAfterJobId: Boolean = false,
     ): JobInfoRead {
+      throwIfManualSyncTooFrequent(connectionIdRequestBody.connectionId)
       ensureConnectionActorsReady(connectionIdRequestBody.connectionId)
       return submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId, returnAfterJobId)
     }
+
+    private fun throwIfManualSyncTooFrequent(connectionId: UUID) {
+      // A job that is still running is reported as a 409 conflict by the sync submission below.
+      val runningJobs = jobPersistence.listJobsForConnectionWithStatuses(connectionId, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
+      if (runningJobs.isNotEmpty()) {
+        return
+      }
+
+      val lastSuccessfulSyncJob = jobService.lastSuccessfulJobForScope(connectionId.toString(), Job.SYNC_REPLICATION_TYPES) ?: return
+      val timeSinceLastSync = Duration.between(Instant.ofEpochSecond(lastSuccessfulSyncJob.createdAtInSecond), Instant.now())
+
+      val minimumInterval = connectionScheduleHelper.minimumManualSyncInterval(connectionId)
+      if (timeSinceLastSync >= minimumInterval) {
+        return
+      }
+
+      throw ManualSyncTooFrequentProblem(
+        "Please wait ${describeInterval(minimumInterval)} between syncs.",
+        ProblemManualSyncTooFrequentData()
+          .connectionId(connectionId)
+          .minimumIntervalMinutes(minimumInterval.toMinutes())
+          .retryAfterSeconds(minimumInterval.minus(timeSinceLastSync).seconds),
+      )
+    }
+
+    private fun describeInterval(interval: Duration): String =
+      if (interval.toMinutesPart() == 0) {
+        "${interval.toHours()} hour" + if (interval.toHours() == 1L) "" else "s"
+      } else {
+        "${interval.toMinutes()} minutes"
+      }
 
     fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead {
       ensureConnectionActorsReady(connectionIdRequestBody.connectionId)

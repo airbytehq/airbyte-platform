@@ -4,8 +4,10 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.problems.model.generated.ProblemManualSyncTooFrequentData
 import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.ManualSyncTooFrequentProblem
 import io.airbyte.api.server.generated.models.AirbyteStream
 import io.airbyte.api.server.generated.models.AirbyteStreamAndConfiguration
 import io.airbyte.api.server.generated.models.AirbyteStreamConfiguration
@@ -56,6 +58,7 @@ import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
+import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.helpers.DestinationHelpers
 import io.airbyte.commons.server.helpers.SecretSanitizer
@@ -104,6 +107,7 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
@@ -136,6 +140,7 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -146,6 +151,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.nio.file.Path
+import java.time.Duration
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
@@ -186,6 +193,8 @@ internal class SchedulerHandlerTest {
   private lateinit var secretStorageService: SecretStorageService
   private lateinit var secretSanitizer: SecretSanitizer
   private lateinit var dataWorkerUsageService: DataWorkerUsageService
+  private lateinit var connectionScheduleHelper: ConnectionScheduleHelper
+  private lateinit var jobService: JobService
 
   @BeforeEach
   fun setup() {
@@ -280,6 +289,11 @@ internal class SchedulerHandlerTest {
 
     dataWorkerUsageService = mockk(relaxUnitFun = true)
 
+    connectionScheduleHelper = mockk()
+    every { connectionScheduleHelper.minimumManualSyncInterval(any()) } returns Duration.ofHours(1)
+    jobService = mockk()
+    every { jobService.lastSuccessfulJobForScope(any(), any()) } returns null
+
     every { jobPersistence.getJob(any()) } returns job
     every { jobPersistence.listJobsForConnectionWithStatuses(any(), any(), any()) } returns emptyList()
     every { connectionsHandler.applySchemaChange(any(), any(), any(), any(), any()) } returns mockk()
@@ -320,6 +334,8 @@ internal class SchedulerHandlerTest {
         metricClient,
         secretSanitizer,
         dataWorkerUsageService,
+        connectionScheduleHelper,
+        jobService,
       )
   }
 
@@ -1613,6 +1629,96 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  fun `manual sync with no previous successful sync job skips the frequency check`() {
+    val connectionId = UUID.randomUUID()
+    every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(null, JOB_ID, null)
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
+
+    schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
+
+    verify { eventRunner.startNewManualSync(connectionId) }
+    verify { jobService.lastSuccessfulJobForScope(connectionId.toString(), Job.SYNC_REPLICATION_TYPES) }
+    verify { connectionScheduleHelper wasNot Called }
+  }
+
+  @ParameterizedTest
+  @MethodSource("manualSyncTooFrequentCases")
+  fun `manual sync within the minimum interval is rejected`(
+    minimumInterval: Duration,
+    timeSinceLastSync: Duration,
+    expectedDetail: String,
+  ) {
+    val connectionId = UUID.randomUUID()
+    every {
+      jobService.lastSuccessfulJobForScope(connectionId.toString(), Job.SYNC_REPLICATION_TYPES)
+    } returns successfulSyncJobCreatedAgo(connectionId, timeSinceLastSync)
+    every { connectionScheduleHelper.minimumManualSyncInterval(connectionId) } returns minimumInterval
+
+    val problem =
+      assertThrows<ManualSyncTooFrequentProblem> {
+        schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
+      }
+
+    assertEquals(429, problem.problem.getStatus())
+    assertEquals(expectedDetail, problem.problem.getDetail())
+    val data = problem.problem.getData() as ProblemManualSyncTooFrequentData
+    assertEquals(connectionId, data.connectionId)
+    assertEquals(minimumInterval.toMinutes(), data.minimumIntervalMinutes)
+    val expectedRetryAfterSeconds = minimumInterval.minus(timeSinceLastSync).seconds
+    assertTrue(data.retryAfterSeconds in (expectedRetryAfterSeconds - 5)..expectedRetryAfterSeconds, "$data")
+    verify { eventRunner wasNot Called }
+  }
+
+  @ParameterizedTest
+  @MethodSource("manualSyncAllowedCases")
+  fun `manual sync outside the minimum interval is started`(
+    minimumInterval: Duration,
+    timeSinceLastSync: Duration,
+  ) {
+    val connectionId = UUID.randomUUID()
+    every {
+      jobService.lastSuccessfulJobForScope(connectionId.toString(), Job.SYNC_REPLICATION_TYPES)
+    } returns successfulSyncJobCreatedAgo(connectionId, timeSinceLastSync)
+    every { connectionScheduleHelper.minimumManualSyncInterval(connectionId) } returns minimumInterval
+    every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(null, JOB_ID, null)
+    every { jobConverter.getJobInfoRead(any()) } returns sampleJobInfoRead()
+
+    schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
+
+    verify { eventRunner.startNewManualSync(connectionId) }
+  }
+
+  @Test
+  fun `manual sync while a job is running is a conflict even within the minimum interval`() {
+    val connectionId = UUID.randomUUID()
+    val runningJob = successfulSyncJobCreatedAgo(connectionId, Duration.ZERO).copy(status = JobStatus.RUNNING)
+    every {
+      jobPersistence.listJobsForConnectionWithStatuses(connectionId, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
+    } returns listOf(runningJob)
+    every {
+      jobService.lastSuccessfulJobForScope(connectionId.toString(), Job.SYNC_REPLICATION_TYPES)
+    } returns successfulSyncJobCreatedAgo(connectionId, Duration.ofMinutes(5))
+    every { eventRunner.startNewManualSync(connectionId) } returns
+      ManualOperationResult("A sync is already running", null, ErrorCode.WORKFLOW_RUNNING)
+
+    val error =
+      assertThrows<ValueConflictKnownException> {
+        schedulerHandler.syncConnection(ConnectionIdRequestBody(connectionId = connectionId))
+      }
+
+    assertEquals(409, error.getHttpCode())
+    verify { connectionScheduleHelper wasNot Called }
+  }
+
+  private fun successfulSyncJobCreatedAgo(
+    connectionId: UUID,
+    timeSinceCreation: Duration,
+  ): Job {
+    val createdAt = Instant.now().minus(timeSinceCreation).epochSecond
+    return job.copy(scope = connectionId.toString(), status = JobStatus.SUCCEEDED, createdAtInSecond = createdAt, updatedAtInSecond = createdAt)
+  }
+
+  @Test
   fun `draft actors cannot sync reset or create jobs`() {
     val connectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -2612,6 +2718,22 @@ internal class SchedulerHandlerTest {
         Arguments.of(Optional.of<String?>("succeeded"), true, jobFailedWithFailureReason),
         Arguments.of(Optional.of<String?>("failed"), false, jobSuccessStatusFailed),
         Arguments.of(Optional.of<String?>("failed"), true, jobFailedWithFailureReason),
+      )
+
+    @JvmStatic
+    private fun manualSyncTooFrequentCases() =
+      listOf(
+        Arguments.of(Duration.ofHours(1), Duration.ofMinutes(30), "Please wait 1 hour between syncs."),
+        Arguments.of(Duration.ofHours(1), Duration.ZERO, "Please wait 1 hour between syncs."),
+        Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(5), "Please wait 15 minutes between syncs."),
+      )
+
+    @JvmStatic
+    private fun manualSyncAllowedCases() =
+      listOf(
+        Arguments.of(Duration.ofHours(1), Duration.ofMinutes(61)),
+        Arguments.of(Duration.ofMinutes(15), Duration.ofMinutes(30)),
+        Arguments.of(Duration.ZERO, Duration.ZERO),
       )
   }
 

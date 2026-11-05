@@ -58,6 +58,14 @@ interface JobService {
   fun lastSuccessfulJobForScope(scope: String): Job?
 
   /**
+   * Get the last successful job of one of [configTypes] for a given scope.
+   */
+  fun lastSuccessfulJobForScope(
+    scope: String,
+    configTypes: Set<ConfigType>,
+  ): Job?
+
+  /**
    * Counts the number of failed jobs since the last successful job for a given scope.
    */
   fun countFailedJobsSinceLastSuccessForScope(scope: String): Int

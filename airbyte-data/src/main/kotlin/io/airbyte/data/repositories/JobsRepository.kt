@@ -78,6 +78,23 @@ interface JobsRepository : PageableRepository<Job, Long> {
     SELECT *
     FROM jobs
     WHERE scope = :scope
+      AND config_type = ANY(array[:configTypes]::job_config_type[])
+      AND status = 'succeeded'
+    ORDER BY created_at DESC
+    LIMIT 1
+    """,
+    nativeQuery = true,
+  )
+  fun lastSuccessfulJobForScopeWithConfigTypes(
+    scope: String,
+    configTypes: Collection<String>,
+  ): Job?
+
+  @Query(
+    """
+    SELECT *
+    FROM jobs
+    WHERE scope = :scope
       AND created_at < (
           SELECT created_at
           FROM jobs

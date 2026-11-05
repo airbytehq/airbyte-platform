@@ -317,6 +317,27 @@ components:
               default: The source or destination is still a draft and cannot be used yet. Finish its setup with a successful connection check, then retry.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ManualSyncTooFrequentProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 429
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#429-manual-sync-too-frequent
+            title:
+              type: string
+              default: manual-sync-too-frequent
+            detail:
+              type: string
+              default: Please wait 1 hour between syncs.
+            data:
+              $ref: "#/components/schemas/ProblemManualSyncTooFrequentData"
     ConnectionLockedProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1502,6 +1523,22 @@ components:
           format: uuid
         statusReason:
           type: string
+    ProblemManualSyncTooFrequentData:
+      type: object
+      required:
+        - connectionId
+        - minimumIntervalMinutes
+        - retryAfterSeconds
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        minimumIntervalMinutes:
+          type: integer
+          format: int64
+        retryAfterSeconds:
+          type: integer
+          format: int64
     ProblemLicenseEntitlementData:
       type: object
       required:

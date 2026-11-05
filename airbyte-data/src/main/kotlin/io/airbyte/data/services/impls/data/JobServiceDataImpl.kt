@@ -94,6 +94,11 @@ class JobServiceDataImpl(
 
   override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
 
+  override fun lastSuccessfulJobForScope(
+    scope: String,
+    configTypes: Set<JobConfig.ConfigType>,
+  ): Job? = jobsRepository.lastSuccessfulJobForScopeWithConfigTypes(scope, configTypes.map { it.toEntity().literal })?.toConfigModel()
+
   override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)
 
   override fun getPriorJobWithStatusForScopeAndJobId(
