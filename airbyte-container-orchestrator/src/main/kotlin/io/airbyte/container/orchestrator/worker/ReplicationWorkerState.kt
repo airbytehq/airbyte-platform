@@ -61,13 +61,7 @@ class ReplicationWorkerState {
           t,
         ) { "Reached failure limit ($MAX_FAILURES_TO_KEEP). Adding truncation notice. Additional failures will be logged but not stored." }
         replicationFailures +=
-          FailureReason().apply {
-            failureType = FailureReason.FailureType.SYSTEM_ERROR
-            failureOrigin = FailureReason.FailureOrigin.AIRBYTE_PLATFORM
-            internalMessage = "Truncated additional failures to prevent serialization issues"
-            externalMessage = "Additional failures were truncated for performance reasons. Check logs for complete failure details."
-            timestamp = System.currentTimeMillis()
-          }
+          FailureHelper.truncationNotice("Truncated additional failures to prevent serialization issues")
       }
       else -> {
         logger.warn(

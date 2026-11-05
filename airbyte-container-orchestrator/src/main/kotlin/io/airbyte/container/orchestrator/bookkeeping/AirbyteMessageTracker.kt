@@ -16,6 +16,7 @@ import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.helper.MAX_FAILURES_TO_KEEP
 import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -94,7 +95,15 @@ class AirbyteMessageTracker(
       srcErrorTraceMsgs.map {
         FailureHelper.sourceFailure(it, jobId, attempt)
       } + dstErrorTraceMsgs.map { FailureHelper.destinationFailure(it, jobId, attempt) }
-    return allErrors.sortedBy { it.timestamp }
+    val sortedErrors = allErrors.sortedBy { it.timestamp }
+    if (sortedErrors.size <= MAX_FAILURES_TO_KEEP) {
+      return sortedErrors
+    }
+
+    val droppedCount = sortedErrors.size - MAX_FAILURES_TO_KEEP
+    logger.warn { "Truncated $droppedCount additional connector error trace messages to prevent serialization issues" }
+    return sortedErrors.take(MAX_FAILURES_TO_KEEP) +
+      FailureHelper.truncationNotice("Truncated $droppedCount additional connector error trace messages to prevent serialization issues")
   }
 
   /**

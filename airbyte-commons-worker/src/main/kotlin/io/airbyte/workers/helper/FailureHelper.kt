@@ -34,6 +34,14 @@ private const val CONNECTOR_COMMAND_METADATA_KEY = "connector_command"
  * Failure helpers. Repository for all failures that happen in the worker.
  */
 object FailureHelper {
+  fun truncationNotice(internalMessage: String): FailureReason =
+    FailureReason()
+      .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+      .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+      .withInternalMessage(internalMessage)
+      .withExternalMessage("Additional failures were truncated for performance reasons. Check logs for complete failure details.")
+      .withTimestamp(System.currentTimeMillis())
+
   /**
    * Create generic failure.
    *

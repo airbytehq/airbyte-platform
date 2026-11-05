@@ -18,6 +18,7 @@ import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.helper.FailureHelper.destinationFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
+import io.airbyte.workers.helper.MAX_FAILURES_TO_KEEP
 import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.mockk.Called
@@ -218,6 +219,66 @@ internal class AirbyteMessageTrackerTest {
   }
 
   @Test
+  fun testErrorTraceMessageFailureCapsSourceErrors() {
+    val messages = (300 downTo 1).map { AirbyteMessageUtils.createErrorMessage("source trace $it", it.toDouble()) }
+    messages.forEach(messageTracker::acceptFromSource)
+
+    val before = System.currentTimeMillis()
+    val failures = messageTracker.errorTraceMessageFailure(123, 2)
+    val after = System.currentTimeMillis()
+
+    assertEquals(MAX_FAILURES_TO_KEEP + 1, failures.size)
+    assertEquals(messages.reversed().take(MAX_FAILURES_TO_KEEP).map { sourceFailure(it.trace, 123, 2) }, failures.take(MAX_FAILURES_TO_KEEP))
+    assertEquals(FailureReason.FailureType.SYSTEM_ERROR, failures.last().failureType)
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM, failures.last().failureOrigin)
+    assertTrue(failures.last().timestamp in before..after, "${failures.last()}")
+    assertEquals(
+      "Additional failures were truncated for performance reasons. Check logs for complete failure details.",
+      failures.last().externalMessage,
+    )
+    assertEquals(
+      "Truncated ${300 - MAX_FAILURES_TO_KEEP} additional connector error trace messages to prevent serialization issues",
+      failures.last().internalMessage,
+    )
+  }
+
+  @Test
+  fun testErrorTraceMessageFailureAtLimit() {
+    val messages = (MAX_FAILURES_TO_KEEP downTo 1).map { AirbyteMessageUtils.createErrorMessage("source trace $it", it.toDouble()) }
+    messages.forEach(messageTracker::acceptFromSource)
+
+    assertEquals(messages.reversed().map { sourceFailure(it.trace, 123, 2) }, messageTracker.errorTraceMessageFailure(123, 2))
+  }
+
+  @Test
+  fun testErrorTraceMessageFailureCapsMixedErrorsInTimestampOrder() {
+    val messages = (30 downTo 1).map { AirbyteMessageUtils.createErrorMessage("trace $it", it.toDouble()) }
+    messages.forEachIndexed { index, message ->
+      if (index % 2 == 0) {
+        messageTracker.acceptFromSource(message)
+      } else {
+        messageTracker.acceptFromDestination(message)
+      }
+    }
+    val expected =
+      messages
+        .mapIndexed { index, message ->
+          if (index % 2 == 0) sourceFailure(message.trace, 123, 2) else destinationFailure(message.trace, 123, 2)
+        }.sortedBy { it.timestamp }
+        .take(MAX_FAILURES_TO_KEEP)
+
+    val failures = messageTracker.errorTraceMessageFailure(123, 2)
+
+    assertEquals(MAX_FAILURES_TO_KEEP + 1, failures.size)
+    assertEquals(expected, failures.take(MAX_FAILURES_TO_KEEP))
+    assertEquals(
+      "Truncated ${30 - MAX_FAILURES_TO_KEEP} additional connector error trace messages to prevent serialization issues",
+      failures.last().internalMessage,
+    )
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM, failures.last().failureOrigin)
+  }
+
+  @Test
   fun testErrorTraceMessageFailureWithMultipleTraceErrors() {
     val srcMsg1 = AirbyteMessageUtils.createErrorMessage("source trace 1", 123.0)
     val srcMsg2 = AirbyteMessageUtils.createErrorMessage("source trace 2", 124.0)
@@ -250,6 +311,6 @@ internal class AirbyteMessageTrackerTest {
 
   @Test
   fun testErrorTraceMessageFailureWithNoTraceErrors() {
-    assertTrue(messageTracker.errorTraceMessageFailure(123L, 1).isEmpty())
+    assertEquals(emptyList<FailureReason>(), messageTracker.errorTraceMessageFailure(123L, 1))
   }
 }
