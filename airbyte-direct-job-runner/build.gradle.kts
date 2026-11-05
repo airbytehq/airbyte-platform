@@ -17,6 +17,7 @@ dependencies {
   implementation(libs.jackson.kotlin)
   implementation(libs.kotlin.logging)
   implementation(libs.slf4j.api)
+  implementation(libs.airbyte.protocol)
 
   implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -25,6 +26,8 @@ dependencies {
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-worker-models"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   runtimeOnly(libs.snakeyaml)

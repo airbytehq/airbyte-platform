@@ -39,6 +39,17 @@ private val RETRY_INITIAL_DELAY: Duration = Duration.ofMillis(100)
 private val RETRY_MAX_DELAY: Duration = Duration.ofSeconds(1)
 private val JSON_MEDIA_TYPE = "application/json".toMediaType()
 
+/** What happened when a workload was offered to the direct job runner. */
+sealed interface DirectJobDispatch {
+  /** The runner took the workload, or already had it. */
+  data object Accepted : DirectJobDispatch
+
+  /** The runner did not take the workload; [reason] is the metric's result tag. */
+  data class Rejected(
+    val reason: String,
+  ) : DirectJobDispatch
+}
+
 /**
  * Hands a claimed workload to the direct job runner instead of launching a pod. Only the workload ID is sent: the
  * runner reads the workload itself and picks the handler for its type, so this client is the same for every direct
@@ -62,10 +73,23 @@ class DirectJobRunnerClient(
       .withMaxRetries(MAX_RETRIES)
       .build()
 
+  /** Offers the workload to the runner and fails it when the runner does not take it. For jobs that have no pod. */
   fun submit(msg: LauncherInput) {
+    val dispatchStatus = dispatch(msg)
+    if (dispatchStatus is DirectJobDispatch.Rejected) {
+      record(msg, dispatchStatus.reason)
+      throw WorkloadLauncherException(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE)
+    }
+  }
+
+  /**
+   * Offers the workload to the runner and records the handoffs it took. A rejection is left to the caller to record,
+   * because what happens next (a failure or a pod) is the caller's choice.
+   */
+  fun dispatch(msg: LauncherInput): DirectJobDispatch {
     if (runnerUrl.isBlank()) {
       logger.warn { "Cannot submit direct job ${msg.workloadId}: no direct job runner URL is configured" }
-      throw failed(msg)
+      return DirectJobDispatch.Rejected("not_configured")
     }
 
     val request =
@@ -80,25 +104,28 @@ class DirectJobRunnerClient(
         Failsafe.with(retryPolicy).get(CheckedSupplier { httpClient.newCall(request).execute().use { it.code } })
       } catch (e: FailsafeException) {
         logger.warn(e) { "Could not reach the direct job runner for workload ${msg.workloadId}" }
-        throw failed(msg)
+        return DirectJobDispatch.Rejected("unreachable")
       }
 
-    when (status) {
-      ACCEPTED -> record(msg, "accepted")
+    return when (status) {
+      ACCEPTED -> accepted(msg, "accepted")
       CONFLICT -> {
         logger.info { "The direct job runner already has workload ${msg.workloadId}" }
-        record(msg, "duplicate")
+        accepted(msg, "duplicate")
       }
       else -> {
         logger.warn { "The direct job runner rejected workload ${msg.workloadId} with status $status" }
-        throw failed(msg)
+        DirectJobDispatch.Rejected("rejected")
       }
     }
   }
 
-  private fun failed(msg: LauncherInput): WorkloadLauncherException {
-    record(msg, "failed")
-    return WorkloadLauncherException(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE)
+  private fun accepted(
+    msg: LauncherInput,
+    result: String,
+  ): DirectJobDispatch {
+    record(msg, result)
+    return DirectJobDispatch.Accepted
   }
 
   private fun record(

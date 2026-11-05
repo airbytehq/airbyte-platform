@@ -13,10 +13,10 @@ are dropped because those secrets may not exist in the jobs namespace.
 */}}
 {{- define "airbyte.directJobRunner.configEnvs" }}
 {{- $vars := dict }}
-{{- range $tpl := list "airbyte.common.configVars" "airbyte.cluster.configVars" "airbyte.workloadApiServer.configVars" "airbyte.workloadLauncher.configVars" "airbyte.micronaut.configVars" "airbyte.metrics.configVars" "airbyte.storage.configVars" "airbyte.directJobRunner.configVars" }}
+{{- range $tpl := list "airbyte.common.configVars" "airbyte.cluster.configVars" "airbyte.workloadApiServer.configVars" "airbyte.workloadLauncher.configVars" "airbyte.micronaut.configVars" "airbyte.metrics.configVars" "airbyte.storage.configVars" "airbyte.secretsManager.configVars" "airbyte.directJobRunner.configVars" }}
 {{- $vars = merge $vars (include $tpl $ | fromYaml) }}
 {{- end }}
-{{- range $tpl := list "airbyte.common.envs" "airbyte.cluster.envs" "airbyte.workloadApiServer.envs" "airbyte.workloadLauncher.controlPlane.tokenEndpoint.env" "airbyte.micronaut.envs" "airbyte.metrics.envs" "airbyte.storage.envs" "airbyte.directJobRunner.envs" }}
+{{- range $tpl := list "airbyte.common.envs" "airbyte.cluster.envs" "airbyte.workloadApiServer.envs" "airbyte.workloadLauncher.controlPlane.tokenEndpoint.env" "airbyte.micronaut.envs" "airbyte.metrics.envs" "airbyte.storage.envs" "airbyte.secretsManager.envs" "airbyte.directJobRunner.envs" }}
 {{- range $env := (include $tpl $ | fromYamlArray) }}
 {{- if and $env.valueFrom $env.valueFrom.configMapKeyRef }}
 {{- $key := $env.valueFrom.configMapKeyRef.key }}
@@ -54,4 +54,20 @@ on the shared one, which not every jobs namespace has. Set directJobRunner.servi
 */}}
 {{- define "airbyte.directJobRunner.serviceAccountName" }}
 {{- .Values.directJobRunner.serviceAccountName | default (printf "%s-direct-job-runner" .Release.Name) }}
+{{- end }}
+
+{{/*
+Secret-backed secret store credentials, for hydrating check configs. They point at the secrets check pods read in the
+jobs namespace: the Vault token comes from authTokenRefName, like the launcher passes to check pods.
+*/}}
+{{- define "airbyte.directJobRunner.secretsManagerSecretEnvs" }}
+{{- range $env := (include "airbyte.secretsManager.envs" . | fromYamlArray) }}
+{{- if and $env.valueFrom $env.valueFrom.secretKeyRef }}
+{{- if eq $env.name "VAULT_AUTH_TOKEN" }}
+{{- $_ := set $env.valueFrom.secretKeyRef "name" (include "airbyte.secretsManager.vault.authTokenRefName" $) }}
+{{- $_ := set $env.valueFrom.secretKeyRef "key" (include "airbyte.secretsManager.vault.authTokenSecretKey" $) }}
+{{- end }}
+{{ list $env | toYaml }}
+{{- end }}
+{{- end }}
 {{- end }}

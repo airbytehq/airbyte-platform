@@ -46,6 +46,13 @@ class DirectJobControllerTest {
   }
 
   @Test
+  fun `a runner that is shutting down returns 503`() {
+    every { service.submit("w1") } returns DirectJobSubmission.ShuttingDown
+
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, controller.submit(DirectJobRequest("w1")).status)
+  }
+
+  @Test
   fun `blank workload id returns 400 without calling the service`() {
     assertEquals(HttpStatus.BAD_REQUEST, controller.submit(DirectJobRequest("  ")).status)
 

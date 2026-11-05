@@ -6,6 +6,7 @@ import (
 	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -157,16 +158,32 @@ func TestDirectJobRunnerScheduling(t *testing.T) {
 	assert.Nil(t, deployment.Spec.Replicas)
 }
 
-func TestDirectJobRunnerWithoutAutoscaling(t *testing.T) {
-	values := directJobRunnerOpts()
-	values["directJobRunner.autoscaling.enabled"] = "false"
-	chartYaml := renderDirectJobRunner(t, values)
+func TestDirectJobRunnerAutoscaling(t *testing.T) {
+	t.Run("defaults to an HPA that owns replicas", func(t *testing.T) {
+		chartYaml := renderDirectJobRunner(t, directJobRunnerOpts())
 
-	helmtests.AssertNoResource(t, chartYaml.String(), "HorizontalPodAutoscaler", "airbyte-direct-job-runner")
-	deployment := helmtests.GetDeployment(chartYaml.String(), "airbyte-direct-job-runner")
-	require.NotNil(t, deployment)
-	require.NotNil(t, deployment.Spec.Replicas)
-	assert.Equal(t, int32(2), *deployment.Spec.Replicas)
+		hpa, ok := chartYaml.GetResourceByKindAndName("HorizontalPodAutoscaler", "airbyte-direct-job-runner").(*autoscalingv2.HorizontalPodAutoscaler)
+		require.True(t, ok, "the HPA was not rendered")
+		assert.Equal(t, int32(2), *hpa.Spec.MinReplicas)
+		assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
+
+		deployment := helmtests.GetDeployment(chartYaml.String(), "airbyte-direct-job-runner")
+		require.NotNil(t, deployment)
+		assert.Nil(t, deployment.Spec.Replicas)
+		assert.Equal(t, "1", deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+	})
+
+	t.Run("without autoscaling, 2 fixed replicas and no HPA", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.autoscaling.enabled"] = "false"
+		chartYaml := renderDirectJobRunner(t, values)
+
+		helmtests.AssertNoResource(t, chartYaml.String(), "HorizontalPodAutoscaler", "airbyte-direct-job-runner")
+		deployment := helmtests.GetDeployment(chartYaml.String(), "airbyte-direct-job-runner")
+		require.NotNil(t, deployment)
+		require.NotNil(t, deployment.Spec.Replicas)
+		assert.Equal(t, int32(2), *deployment.Spec.Replicas)
+	})
 }
 
 func TestDirectJobRunnerServiceAccount(t *testing.T) {
@@ -247,5 +264,67 @@ func TestDirectJobRunnerDataPlaneGcsVolumes(t *testing.T) {
 
 		assert.Equal(t, "jobs-gcs-creds", volumes["gcs-log-creds-volume"])
 		assert.Equal(t, "dataplane-creds", volumes["dataplane-creds-volume"])
+	})
+}
+
+func TestDirectJobRunnerSecretsManager(t *testing.T) {
+	values := directJobRunnerOpts()
+	values["global.jobs.kube.namespace"] = "jobs"
+	values["global.secretsManager.type"] = "GOOGLE_SECRET_MANAGER"
+	values["global.secretsManager.secretName"] = "airbyte-secrets"
+	values["global.secretsManager.googleSecretManager.projectId"] = "my-project"
+	values["global.secretsManager.googleSecretManager.credentialsSecretKey"] = "SECRET_STORE_GCP_CREDENTIALS"
+	env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+	assert.Equal(t, "GOOGLE_SECRET_MANAGER", env["SECRET_PERSISTENCE"].Value)
+	assert.Equal(t, "my-project", env["SECRET_STORE_GCP_PROJECT_ID"].Value)
+	require.NotNil(t, env["SECRET_STORE_GCP_CREDENTIALS"].ValueFrom)
+	assert.Equal(t, "airbyte-secrets", env["SECRET_STORE_GCP_CREDENTIALS"].ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "SECRET_STORE_GCP_CREDENTIALS", env["SECRET_STORE_GCP_CREDENTIALS"].ValueFrom.SecretKeyRef.Key)
+}
+
+func TestDirectJobRunnerVaultTokenRef(t *testing.T) {
+	values := directJobRunnerOpts()
+	values["global.secretsManager.type"] = "VAULT"
+	values["global.secretsManager.vault.authTokenRefName"] = "workload-launcher-secrets"
+	env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+	assert.Equal(t, "VAULT", env["SECRET_PERSISTENCE"].Value)
+	require.NotNil(t, env["VAULT_AUTH_TOKEN"].ValueFrom)
+	assert.Equal(t, "workload-launcher-secrets", env["VAULT_AUTH_TOKEN"].ValueFrom.SecretKeyRef.Name)
+}
+
+func TestDirectJobRunnerTerminationGracePeriod(t *testing.T) {
+	t.Run("defaults to 90s, longer than the runner's 80s drain", func(t *testing.T) {
+		deployment := helmtests.GetDeployment(renderDirectJobRunner(t, directJobRunnerOpts()).String(), "airbyte-direct-job-runner")
+		require.NotNil(t, deployment)
+		require.NotNil(t, deployment.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.Equal(t, int64(90), *deployment.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+
+	t.Run("can be overridden", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.terminationGracePeriodSeconds"] = "120"
+		deployment := helmtests.GetDeployment(renderDirectJobRunner(t, values).String(), "airbyte-direct-job-runner")
+		require.NotNil(t, deployment)
+		assert.Equal(t, int64(120), *deployment.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+}
+
+func TestDirectJobRunnerCheckThreads(t *testing.T) {
+	t.Run("defaults to 30", func(t *testing.T) {
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))
+
+		assert.Equal(t, "30", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
+		assert.Equal(t, "50", env["AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT"].Value)
+	})
+
+	t.Run("can be raised separately from the other pool", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.checkThreads"] = "6"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "6", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
+		assert.Equal(t, "50", env["AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT"].Value)
 	})
 }

@@ -121,6 +121,15 @@ object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inje
 
 object FusionLaunchEnabled : Temporary<Boolean>(key = "platform.fusion-launch-enabled", default = false)
 
+/**
+ * Comma-separated connector images (`airbyte/source-postgres:3.8.10`) whose checks the direct job runner may take,
+ * per data plane group. Only images baked into the runner's image work; the runner rejects any other to a pod.
+ */
+object DirectCheckImages : Temporary<String>(key = "platform.direct-check-images", default = "")
+
+/** Sends a workspace's checks for [DirectCheckImages] to the direct job runner instead of a pod. */
+object UseDirectCheck : Temporary<Boolean>(key = "platform.use-direct-check", default = false)
+
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)

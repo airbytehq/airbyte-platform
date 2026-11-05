@@ -28,6 +28,7 @@ class ConnectJobHandler(
   override fun run(
     workloadId: String,
     inputPayload: String,
+    logPath: String,
   ) {
     val input = payloadDeserializer.toConnectInput(inputPayload)
     val output = probe.probe(input)

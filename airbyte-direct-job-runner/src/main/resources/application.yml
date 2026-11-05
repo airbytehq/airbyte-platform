@@ -24,14 +24,46 @@ micronaut:
     io:
       type: fixed
       n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
-    # Direct jobs of every type. Jobs are short and I/O-bound, so extra work queues briefly.
-    direct-jobs:
+    # CONNECT jobs (and any other direct job that isn't a check). Short and I/O-bound, so extra work queues briefly.
+    connect:
       type: fixed
       n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT:50}
+    # Checks. Each one is a connector JVM (~300MB), so size this together with the runner's memory; extra checks queue.
+    direct-checks:
+      type: fixed
+      n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS:30}
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   version: ${AIRBYTE_VERSION:dev}
+  secret:
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
+    store:
+      aws:
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kms-key-arn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+        # injects actual secret values
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+      gcp:
+        credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
+        project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+        region: ${SECRET_STORE_GCP_REGION:}
+      vault:
+        address: ${VAULT_ADDRESS:}
+        prefix: ${VAULT_PREFIX:}
+        # injects the actual secret value
+        token: ${VAULT_AUTH_TOKEN:vaultAuthTokenForTest}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+    use-runtime-persistence: ${USE_RUNTIME_SECRET_PERSISTENCE:false}
   direct-job-runner:
+    check-connector:
+      image: ${CHECK_CONNECTOR_IMAGE:}
     connect:
       block-internal-addresses: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES:false}
       blocked-cidrs: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS:}

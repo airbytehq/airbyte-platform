@@ -12,6 +12,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherDirectJobRunnerConfig
 import io.airbyte.workers.exception.WorkloadLauncherException
+import io.airbyte.workload.launcher.config.ApplicationBeanFactory
 import io.mockk.mockk
 import io.mockk.verify
 import okhttp3.OkHttpClient
@@ -113,7 +114,7 @@ class DirectJobRunnerClientTest {
 
     assertEquals(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE, e.message)
     assertEquals(4, server.requestCount)
-    verifyResult("failed")
+    verifyResult("rejected")
   }
 
   @Test
@@ -124,7 +125,7 @@ class DirectJobRunnerClientTest {
 
     assertEquals(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE, e.message)
     assertEquals(1, server.requestCount)
-    verifyResult("failed")
+    verifyResult("rejected")
   }
 
   @Test
@@ -134,7 +135,7 @@ class DirectJobRunnerClientTest {
     assertThrows<WorkloadLauncherException> { client().submit(msg) }
 
     assertEquals(1, server.requestCount)
-    verifyResult("failed")
+    verifyResult("rejected")
   }
 
   @Test
@@ -144,7 +145,7 @@ class DirectJobRunnerClientTest {
     val e = assertThrows<WorkloadLauncherException> { client("http://localhost:$unusedPort").submit(msg) }
 
     assertEquals(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE, e.message)
-    verifyResult("failed")
+    verifyResult("unreachable")
   }
 
   @Test
@@ -153,6 +154,40 @@ class DirectJobRunnerClientTest {
 
     assertEquals(DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE, e.message)
     assertEquals(0, server.requestCount)
-    verifyResult("failed")
+    verifyResult("not_configured")
+  }
+
+  @Test
+  fun `dispatch returns the rejection and leaves recording it to the caller`() {
+    server.enqueue(MockResponse().setResponseCode(400))
+
+    assertEquals(DirectJobDispatch.Rejected("rejected"), client().dispatch(msg))
+
+    verify(exactly = 0) { metricClient.count(any(), any(), *anyVararg()) }
+  }
+
+  @Test
+  fun `dispatch records an accepted handoff`() {
+    server.enqueue(MockResponse().setResponseCode(202))
+
+    assertEquals(DirectJobDispatch.Accepted, client().dispatch(msg))
+
+    verifyResult("accepted")
+  }
+
+  @Test
+  fun `the launcher's runner client opens a new connection per handoff, so the Service can pick another pod`() {
+    repeat(3) { server.enqueue(MockResponse().setResponseCode(202)) }
+    val client =
+      DirectJobRunnerClient(
+        ApplicationBeanFactory().directJobRunnerHttpClient(),
+        AirbyteWorkloadLauncherConfig(directJobRunner = AirbyteWorkloadLauncherDirectJobRunnerConfig(url = server.url("/").toString())),
+        metricClient,
+      )
+
+    repeat(3) { client.submit(msg) }
+
+    // sequenceNumber is the request's position on its connection: 0 for every request means none was reused.
+    assertEquals(listOf(0, 0, 0), List(3) { server.takeRequest().sequenceNumber })
   }
 }

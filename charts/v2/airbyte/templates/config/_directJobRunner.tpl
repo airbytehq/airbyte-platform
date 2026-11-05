@@ -24,6 +24,24 @@ Renders the directJobRunner.maxConcurrent environment variable
 {{- end }}
 
 {{/*
+Renders the directJobRunner.checkThreads value
+*/}}
+{{- define "airbyte.directJobRunner.checkThreads" }}
+    {{- .Values.directJobRunner.checkThreads | default 30 }}
+{{- end }}
+
+{{/*
+Renders the directJobRunner.checkThreads environment variable
+*/}}
+{{- define "airbyte.directJobRunner.checkThreads.env" }}
+- name: AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS
+{{- end }}
+
+{{/*
 Renders the directJobRunner.connect.blockInternalAddresses value
 */}}
 {{- define "airbyte.directJobRunner.connect.blockInternalAddresses" }}
@@ -68,6 +86,7 @@ Renders the set of all directJobRunner environment variables
 */}}
 {{- define "airbyte.directJobRunner.envs" }}
 {{- include "airbyte.directJobRunner.maxConcurrent.env" . }}
+{{- include "airbyte.directJobRunner.checkThreads.env" . }}
 {{- include "airbyte.directJobRunner.connect.blockInternalAddresses.env" . }}
 {{- include "airbyte.directJobRunner.connect.blockedCidrs.env" . }}
 {{- end }}
@@ -77,6 +96,7 @@ Renders the set of all directJobRunner config map variables
 */}}
 {{- define "airbyte.directJobRunner.configVars" }}
 AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT: {{ include "airbyte.directJobRunner.maxConcurrent" . | quote }}
+AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS: {{ include "airbyte.directJobRunner.checkThreads" . | quote }}
 AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES: {{ include "airbyte.directJobRunner.connect.blockInternalAddresses" . | quote }}
 AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS: {{ include "airbyte.directJobRunner.connect.blockedCidrs" . | quote }}
 {{- end }}

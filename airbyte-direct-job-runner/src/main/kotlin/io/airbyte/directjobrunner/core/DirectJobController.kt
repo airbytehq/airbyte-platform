@@ -39,6 +39,7 @@ class DirectJobController(
       DirectJobSubmission.Accepted -> HttpResponse.accepted()
       DirectJobSubmission.Duplicate, is DirectJobSubmission.NotEligible -> HttpResponse.status(HttpStatus.CONFLICT)
       is DirectJobSubmission.Unsupported -> HttpResponse.badRequest()
+      DirectJobSubmission.ShuttingDown -> HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
     }
   }
 }

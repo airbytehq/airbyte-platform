@@ -38,6 +38,7 @@ spec:
     spec:
       serviceAccountName: {{ include "airbyte.directJobRunner.serviceAccountName" . }}
       automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.directJobRunner.terminationGracePeriodSeconds }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
@@ -61,6 +62,7 @@ spec:
         {{- include "airbyte.java_opts.envs" (list .Values.directJobRunner $) | nindent 8 }}
         {{- include "airbyte.directJobRunner.configEnvs" . | nindent 8 }}
         {{- include "airbyte.directJobRunner.storageSecretEnvs" . | nindent 8 }}
+        {{- include "airbyte.directJobRunner.secretsManagerSecretEnvs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.dataPlane.clientId.env" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.dataPlane.clientSecret.env" . | nindent 8 }}
         {{- include "airbyte.datadog.envs" .Values.directJobRunner.datadog | nindent 8 }}

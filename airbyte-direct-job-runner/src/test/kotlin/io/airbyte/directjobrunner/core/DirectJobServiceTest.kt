@@ -19,6 +19,7 @@ import io.mockk.verify
 import io.mockk.verifyOrder
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -37,32 +38,37 @@ class DirectJobServiceTest {
     mockk<DirectJobHandler>(relaxed = true) {
       every { workloadType } returns WorkloadType.CONNECT
       every { runningDeadline } returns Duration.ofMinutes(2)
+      every { accepts(any()) } returns true
     }
   private val workloadId = "workload-1"
   private val payload = """{"host":"db.example.com"}"""
+  private val logPath = "/workspace/workload-1/logs.log"
   private val meterRegistry = SimpleMeterRegistry()
   private val metricClient = MetricClient(meterRegistry)
 
   private lateinit var executor: ThreadPoolExecutor
+  private lateinit var checkExecutor: ThreadPoolExecutor
   private lateinit var service: DirectJobService
 
   @BeforeEach
   fun setup() {
     // Mirrors a Micronaut `fixed` executor: a fixed number of threads with an unbounded queue.
     executor = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue())
-    service = DirectJobService(workloadApiClient, executor, listOf(handler), metricClient)
+    checkExecutor = ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue())
+    service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler), metricClient)
   }
 
   @AfterEach
   fun teardown() {
     executor.shutdownNow()
+    checkExecutor.shutdownNow()
   }
 
   private fun workload(
     status: WorkloadStatus?,
     id: String = workloadId,
     type: WorkloadType = WorkloadType.CONNECT,
-  ) = Workload(id = id, status = status, type = type, inputPayload = payload)
+  ) = Workload(id = id, status = status, type = type, inputPayload = payload, logPath = logPath)
 
   private fun submissions(
     result: String,
@@ -115,7 +121,7 @@ class DirectJobServiceTest {
 
       verifyOrder {
         workloadApiClient.workloadRunning(match<WorkloadRunningRequest> { it.workloadId == id && it.deadline != null })
-        handler.run(id, payload)
+        handler.run(id, payload, logPath)
         workloadApiClient.workloadSuccess(WorkloadSuccessRequest(id))
       }
     }
@@ -172,7 +178,7 @@ class DirectJobServiceTest {
     }
 
     verify(exactly = 0) { workloadApiClient.workloadRunning(any()) }
-    verify(exactly = 0) { handler.run(any(), any()) }
+    verify(exactly = 0) { handler.run(any(), any(), any()) }
     assertEquals(6.0, submissions("not_eligible"))
   }
 
@@ -183,7 +189,7 @@ class DirectJobServiceTest {
     assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId))
 
     verify(exactly = 0) { workloadApiClient.workloadRunning(any()) }
-    verify(exactly = 0) { handler.run(any(), any()) }
+    verify(exactly = 0) { handler.run(any(), any(), any()) }
     // The workload is released, so a later submission is evaluated again rather than reported as a duplicate.
     assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId))
     assertEquals(2.0, submissions("unsupported", workloadType = "sync"))
@@ -196,7 +202,7 @@ class DirectJobServiceTest {
         every { workloadType } returns WorkloadType.CONNECT
       }
 
-    assertThrows<IllegalArgumentException> { DirectJobService(workloadApiClient, executor, listOf(handler, other), metricClient) }
+    assertThrows<IllegalArgumentException> { DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler, other), metricClient) }
   }
 
   @Test
@@ -204,7 +210,7 @@ class DirectJobServiceTest {
     val release = CountDownLatch(1)
     val started = CountDownLatch(1)
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
-    every { handler.run(workloadId, payload) } answers {
+    every { handler.run(workloadId, payload, logPath) } answers {
       started.countDown()
       release.await(5, TimeUnit.SECONDS)
     }
@@ -218,7 +224,7 @@ class DirectJobServiceTest {
     release.countDown()
     awaitIdle()
 
-    verify(exactly = 1) { handler.run(any(), any()) }
+    verify(exactly = 1) { handler.run(any(), any(), any()) }
     assertEquals(0.0, inFlightGauge())
   }
 
@@ -238,7 +244,7 @@ class DirectJobServiceTest {
     val started = CountDownLatch(1)
     every { workloadApiClient.workloadGet("a") } returns workload(WorkloadStatus.CLAIMED, "a")
     every { workloadApiClient.workloadGet("b") } returns workload(WorkloadStatus.CLAIMED, "b")
-    every { handler.run("a", payload) } answers {
+    every { handler.run("a", payload, logPath) } answers {
       started.countDown()
       release.await(5, TimeUnit.SECONDS)
     }
@@ -257,7 +263,7 @@ class DirectJobServiceTest {
   fun `the workload is marked running before submit returns`() {
     val release = CountDownLatch(1)
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
-    every { handler.run(workloadId, payload) } answers { release.await(5, TimeUnit.SECONDS) }
+    every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
 
     assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
 
@@ -274,7 +280,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadRunning(any()) } throws RuntimeException("gone") andThen Unit
 
     assertThrows<RuntimeException> { service.submit(workloadId) }
-    verify(exactly = 0) { handler.run(any(), any()) }
+    verify(exactly = 0) { handler.run(any(), any(), any()) }
 
     assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
   }
@@ -282,7 +288,7 @@ class DirectJobServiceTest {
   @Test
   fun `a handler failure fails the workload as a platform error`() {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
-    every { handler.run(workloadId, payload) } throws IllegalStateException("boom")
+    every { handler.run(workloadId, payload, logPath) } throws IllegalStateException("boom")
 
     assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
     awaitIdle()
@@ -338,7 +344,7 @@ class DirectJobServiceTest {
   @Test
   fun `a failure while failing the workload does not leak the in-flight entry`() {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
-    every { handler.run(workloadId, payload) } throws IllegalStateException("boom")
+    every { handler.run(workloadId, payload, logPath) } throws IllegalStateException("boom")
     every { workloadApiClient.workloadFailure(any()) } throws RuntimeException("api down")
 
     assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
@@ -358,5 +364,133 @@ class DirectJobServiceTest {
     assertNull(meterRegistry.find("direct_job_submission").counter())
 
     assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+  }
+
+  @Test
+  fun `the handler gets the workload's log path`() {
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+
+    service.submit(workloadId)
+    awaitIdle()
+
+    verify(exactly = 1) { handler.run(workloadId, payload, "/workspace/workload-1/logs.log") }
+  }
+
+  @Test
+  fun `a workload the handler can't run is unsupported and is not marked running`() {
+    every { handler.accepts(any()) } returns false
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+
+    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.CONNECT), service.submit(workloadId))
+
+    verify(exactly = 0) {
+      workloadApiClient.workloadRunning(any())
+      handler.run(any(), any(), any())
+    }
+    // The workload is released, so a later submission is judged again rather than reported as a duplicate.
+    every { handler.accepts(any()) } returns true
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+  }
+
+  @Test
+  fun `drain stops new submissions and waits for running jobs`() {
+    val release = CountDownLatch(1)
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+    every { workloadApiClient.workloadGet("late") } returns workload(WorkloadStatus.CLAIMED, "late")
+    every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
+    service.submit(workloadId)
+
+    val drained = Thread { service.drain() }.apply { start() }
+    // drain sets the flag before it waits, so give it a moment to start.
+    Thread.sleep(100)
+    assertEquals(DirectJobSubmission.ShuttingDown, service.submit("late"))
+    assertTrue(drained.isAlive, "drain returned while a job was still running")
+
+    release.countDown()
+    drained.join(5_000)
+    assertFalse(drained.isAlive, "drain did not return after the job finished")
+    verify(exactly = 1) { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) }
+    verify(exactly = 0) { workloadApiClient.workloadGet("late") }
+  }
+
+  @Test
+  fun `drain gives up after the timeout`() {
+    val release = CountDownLatch(1)
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+    every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
+    service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler), metricClient, Duration.ofMillis(300))
+    service.submit(workloadId)
+
+    val start = System.nanoTime()
+    service.drain()
+
+    assertTrue(Duration.ofNanos(System.nanoTime() - start) < Duration.ofSeconds(2))
+    release.countDown()
+  }
+
+  @Test
+  fun `checks run on their own pool, so they never hold up other jobs`() {
+    val checkHandler =
+      mockk<DirectJobHandler>(relaxed = true) {
+        every { workloadType } returns WorkloadType.CHECK
+        every { runningDeadline } returns Duration.ofMinutes(2)
+        every { accepts(any()) } returns true
+      }
+    val release = CountDownLatch(1)
+    every { checkHandler.run("check", payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
+    every { workloadApiClient.workloadGet("check") } returns workload(WorkloadStatus.CLAIMED, "check", WorkloadType.CHECK)
+    every { workloadApiClient.workloadGet("connect") } returns workload(WorkloadStatus.CLAIMED, "connect")
+    service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler, checkHandler), metricClient)
+
+    // The check holds the only check thread; the connect job still runs on the other pool.
+    service.submit("check")
+    service.submit("connect")
+    awaitCompletedTasks(1)
+
+    assertEquals(0L, checkExecutor.completedTaskCount)
+    verify(exactly = 1) { handler.run("connect", payload, logPath) }
+    release.countDown()
+  }
+
+  @Test
+  fun `the deadline starts over when a queued job starts`() {
+    every { handler.runningDeadline } returns Duration.ofSeconds(90)
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+
+    service.submit(workloadId)
+    val startedAt = OffsetDateTime.now()
+    awaitIdle()
+
+    verifyOrder {
+      workloadApiClient.workloadRunning(any())
+      workloadApiClient.workloadHeartbeat(match { it.workloadId == workloadId && it.deadline!! >= startedAt.plusSeconds(89) })
+      handler.run(workloadId, payload, logPath)
+    }
+  }
+
+  @Test
+  fun `a job that expired or was cancelled while queued is not run`() {
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED) andThen workload(WorkloadStatus.FAILURE)
+    every { workloadApiClient.workloadHeartbeat(any()) } throws RuntimeException("not running")
+
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    awaitIdle()
+
+    verify(exactly = 0) {
+      handler.run(any(), any(), any())
+      workloadApiClient.workloadSuccess(any())
+      workloadApiClient.workloadFailure(any())
+    }
+  }
+
+  @Test
+  fun `a failed heartbeat on a job that is still running does not stop it`() {
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED) andThen workload(WorkloadStatus.RUNNING)
+    every { workloadApiClient.workloadHeartbeat(any()) } throws RuntimeException("api blip")
+
+    service.submit(workloadId)
+    awaitIdle()
+
+    verify(exactly = 1) { handler.run(workloadId, payload, logPath) }
   }
 }

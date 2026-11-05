@@ -37,7 +37,7 @@ class ConnectJobHandlerTest {
     val output = ConnectOutput(true, ConnectErrorCode.NONE, "ok", listOf("8.8.8.8"), 5)
     every { probe.probe(input) } returns output
 
-    handler.run(workloadId, Jsons.serialize(input))
+    handler.run(workloadId, Jsons.serialize(input), "")
 
     verifyOrder {
       probe.probe(input)
@@ -50,14 +50,14 @@ class ConnectJobHandlerTest {
     val output = ConnectOutput(false, ConnectErrorCode.CONNECTION_REFUSED, "refused", listOf("8.8.8.8"), 5)
     every { probe.probe(input) } returns output
 
-    handler.run(workloadId, Jsons.serialize(input))
+    handler.run(workloadId, Jsons.serialize(input), "")
 
     verify(exactly = 1) { outputWriter.writeConnectOutput(workloadId, output) }
   }
 
   @Test
   fun `an invalid payload throws without probing`() {
-    assertThrows<Exception> { handler.run(workloadId, "not json") }
+    assertThrows<Exception> { handler.run(workloadId, "not json", "") }
 
     verify(exactly = 0) { probe.probe(any()) }
     verify(exactly = 0) { outputWriter.writeConnectOutput(any(), any()) }
@@ -69,6 +69,6 @@ class ConnectJobHandlerTest {
     every { probe.probe(input) } returns output
     every { outputWriter.writeConnectOutput(workloadId, output) } throws RuntimeException("storage down")
 
-    assertThrows<RuntimeException> { handler.run(workloadId, Jsons.serialize(input)) }
+    assertThrows<RuntimeException> { handler.run(workloadId, Jsons.serialize(input), "") }
   }
 }

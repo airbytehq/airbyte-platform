@@ -13,11 +13,13 @@ import io.airbyte.workload.launcher.pipeline.dispatch.DIRECT_JOB_RUNNER_HTTP_CLI
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.internal.http2.StreamResetException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -27,6 +29,8 @@ import kotlin.time.toJavaDuration
 @Factory
 class ApplicationBeanFactory {
   // Separate from the fabric8 Kubernetes client: the runner is a plain in-cluster HTTP service with short timeouts.
+  // No idle connections are kept: the Service picks a runner pod per connection, so a reused connection would send
+  // every job to the same pod. A new connection per handoff (and per retry) spreads jobs across the runner pods.
   @Singleton
   @Named(DIRECT_JOB_RUNNER_HTTP_CLIENT)
   fun directJobRunnerHttpClient(): OkHttpClient =
@@ -34,6 +38,7 @@ class ApplicationBeanFactory {
       .Builder()
       .connectTimeout(Duration.ofSeconds(5))
       .readTimeout(Duration.ofSeconds(10))
+      .connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS))
       .build()
 
   @Singleton

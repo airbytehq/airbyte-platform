@@ -5,6 +5,7 @@
 package io.airbyte.directjobrunner.core
 
 import io.airbyte.config.WorkloadType
+import io.airbyte.workload.api.domain.Workload
 import java.time.Duration
 
 /**
@@ -20,7 +21,14 @@ interface DirectJobHandler {
   val runningDeadline: Duration
 
   /**
-   * Parses [inputPayload], runs the job, and writes its output for [workloadId].
+   * Whether this runner can run [workload]. A job it can't run is rejected before it is marked RUNNING, so the
+   * launcher can run it elsewhere.
+   */
+  fun accepts(workload: Workload): Boolean = true
+
+  /**
+   * Parses [inputPayload], runs the job, and writes its output for [workloadId]. Job logs go to [logPath], the
+   * workload's log file.
    *
    * A job whose outcome is a normal negative result (for example, an unreachable host) must write that result and
    * return. Throw only for platform errors; the workload is then failed with an `airbyte_platform` origin.
@@ -28,5 +36,6 @@ interface DirectJobHandler {
   fun run(
     workloadId: String,
     inputPayload: String,
+    logPath: String,
   )
 }

@@ -2792,8 +2792,15 @@ directJobRunner:
   datadog:
     serviceName: airbyte-direct-job-runner
 
-  # -- Size of the executor shared by every direct job type. Extra jobs queue briefly.
+  # -- Threads for direct jobs other than checks (CONNECT). Extra jobs queue briefly.
   maxConcurrent: 50
+
+  # -- Threads for checks, a separate pool. Each check is a connector JVM (heap capped at 512m, ~300MB RSS), so raise
+  # this only with resources.limits.memory. Extra checks queue.
+  checkThreads: 30
+
+  # -- On shutdown the runner waits up to 80s for running jobs to finish, so this must be longer.
+  terminationGracePeriodSeconds: 90
 
   connect:
     # -- Block loopback, private, link-local and other internal ranges. Only enable on data planes Airbyte runs:
@@ -2841,9 +2848,11 @@ directJobRunner:
     failureThreshold: 3
     successThreshold: 1
 
+  # One check's connector JVM uses 1-2 cores while it runs. A request below that makes CPU-based autoscaling add a
+  # runner pod for every check.
   resources:
     requests:
-      cpu: 250m
+      cpu: 1
       memory: 512Mi
     limits:
       memory: 1Gi

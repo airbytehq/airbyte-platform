@@ -504,6 +504,14 @@ enum class OssMetricsRegistry(
     metricName = "connect_probe_tcp_connect_duration",
     metricDescription = "Milliseconds of each TCP connection attempt a connect probe made, by result",
   ),
+  DIRECT_CHECK_CONNECTOR_DURATION(
+    metricName = "direct_check_connector_duration",
+    metricDescription = "Milliseconds a check's connector process ran on the direct job runner, by connector image and result",
+  ),
+  DIRECT_CHECK_ROUTE(
+    metricName = "direct_check_route",
+    metricDescription = "Number of checks the workload launcher sent to the direct job runner or to a pod, by destination and reason",
+  ),
   JOB_OUTPUT_WRITE(
     metricName = "job_output_write",
     metricDescription = "Write a job output in the output folder",
