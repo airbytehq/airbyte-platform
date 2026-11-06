@@ -83,6 +83,12 @@ interface OrganizationService {
     isAgentic: Boolean,
   ): Optional<Organization>
 
+  /** Returns false when no active organization has this ID. */
+  fun setOrganizationOnboardingStatus(
+    organizationId: UUID,
+    onboardingStatus: String,
+  ): Boolean
+
   /**
    * Check if a user is a member of an organization.
    *

@@ -18,6 +18,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -257,6 +258,17 @@ class OrganizationServiceDataImplTest {
 
     assertTrue(result.isEmpty)
     verify(exactly = 0) { organizationRepository.findById(any()) }
+  }
+
+  @Test
+  fun `setOrganizationOnboardingStatus reports whether an active organization was updated`() {
+    every { organizationRepository.updateOnboardingStatusById(ORGANIZATION_ID, "completed") } returns 1
+
+    assertTrue(organizationServiceDataImpl.setOrganizationOnboardingStatus(ORGANIZATION_ID, "completed"))
+
+    every { organizationRepository.updateOnboardingStatusById(ORGANIZATION_ID, "completed") } returns 0
+
+    assertFalse(organizationServiceDataImpl.setOrganizationOnboardingStatus(ORGANIZATION_ID, "completed"))
   }
 
   @Test

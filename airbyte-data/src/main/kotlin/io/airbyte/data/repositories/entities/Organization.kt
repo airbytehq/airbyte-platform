@@ -20,6 +20,7 @@ open class Organization(
   var email: String,
   var tombstone: Boolean = false,
   var isAgentic: Boolean = false,
+  var onboardingStatus: String? = null,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated

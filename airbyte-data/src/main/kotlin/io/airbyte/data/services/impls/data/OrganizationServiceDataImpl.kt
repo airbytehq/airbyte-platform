@@ -172,6 +172,11 @@ class OrganizationServiceDataImpl(
     return getOrganization(organizationId)
   }
 
+  override fun setOrganizationOnboardingStatus(
+    organizationId: UUID,
+    onboardingStatus: String,
+  ): Boolean = organizationRepository.updateOnboardingStatusById(organizationId, onboardingStatus) > 0
+
   override fun isMember(
     userId: UUID,
     organizationId: UUID,

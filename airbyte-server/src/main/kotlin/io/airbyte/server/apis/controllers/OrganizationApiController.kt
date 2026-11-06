@@ -15,6 +15,8 @@ import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRead
 import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationOnboardingStatusRead
+import io.airbyte.api.server.generated.models.OrganizationOnboardingStatusUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationReadList
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
@@ -36,6 +38,7 @@ import io.airbyte.server.auth.OrganizationInstanceAdminRule
 import io.airbyte.server.auth.OrganizationMemberUnsupportedRule
 import io.airbyte.server.auth.OrganizationUsageUnsupportedRule
 import io.airbyte.server.auth.OrganizationUserListRule
+import io.airbyte.server.auth.OssUnsupportedOperationRule
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -153,4 +156,13 @@ open class OrganizationApiController(
   override fun getOrganizationDataWorkerUsage(
     @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody?,
   ): OrganizationDataWorkerUsageRead = throw ApiNotImplementedInOssProblem()
+
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    rule = OssUnsupportedOperationRule::class,
+  )
+  override fun updateOrganizationOnboardingStatus(
+    @Body organizationOnboardingStatusUpdateRequestBody: OrganizationOnboardingStatusUpdateRequestBody,
+  ): OrganizationOnboardingStatusRead = throw ApiNotImplementedInOssProblem()
 }

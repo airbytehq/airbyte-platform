@@ -16,6 +16,7 @@ fun EntityOrganization.toConfigModel(): ModelOrganization =
     .withUserId(this.userId)
     .withEmail(this.email)
     .withIsAgentic(this.isAgentic)
+    .withOnboardingStatus(this.onboardingStatus)
 
 fun OrganizationWithSsoRealm.toConfigModel(): ModelOrganization =
   ModelOrganization()
@@ -33,4 +34,5 @@ fun ModelOrganization.toEntity(): EntityOrganization =
     userId = this.userId,
     email = this.email,
     isAgentic = this.isAgentic,
+    onboardingStatus = this.onboardingStatus,
   )

@@ -6722,6 +6722,35 @@ paths:
           description: Organization admin permission required.
         "404":
           description: The organization does not exist or has been deleted.
+  /v1/organizations/onboarding/update:
+    post:
+      summary: Update the onboarding status of an organization
+      description: Requires the organization editor role.
+      tags:
+        - organization
+        - cloud-only
+      operationId: updateOrganizationOnboardingStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOnboardingStatusUpdateRequestBody"
+      responses:
+        "200":
+          description: The updated onboarding status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationOnboardingStatusRead"
+        "400":
+          description: Required request fields are missing or null, organizationId is invalid, or status is not a known value.
+        "401":
+          description: Authentication required.
+        "403":
+          description: The caller does not have the organization editor role.
+        "404":
+          description: The organization does not exist or has been deleted.
   /v1/organizations/create:
     post:
       summary: Create an organization
@@ -18535,6 +18564,36 @@ components:
           format: uuid
         semanticSearchEnabled:
           type: boolean
+    OrganizationOnboardingStatus:
+      description: The step of the Cloud onboarding flow that the organization is on, or how the organization left the flow.
+      type: string
+      enum:
+        - survey
+        - choose_method
+        - create_source
+        - create_destination
+        - create_connection
+        - run_first_sync
+        - completed
+        - skipped
+    OrganizationOnboardingStatusRead:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/OrganizationOnboardingStatus"
+    OrganizationOnboardingStatusUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - status
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/OrganizationOnboardingStatus"
     OrganizationUpdateRequestBody:
       type: object
       required:
@@ -18596,7 +18655,10 @@ components:
           $ref: "#/components/schemas/OrganizationLimits"
     OrganizationInfoRead:
       type: object
-      description: Limited info about an organization that is safe to expose to organization members.
+      description: >-
+        Limited info about an organization that is safe to expose to organization members.
+        /v1/organizations/get_organization_info sets onboardingStatus, and /v1/workspaces/get_organization_info does not.
+        onboardingStatus is absent when the organization is not enrolled in the onboarding flow.
       required:
         - organizationId
         - organizationName
@@ -18643,6 +18705,8 @@ components:
               format: int64
         organizationPlanId:
           type: string
+        onboardingStatus:
+          $ref: "#/components/schemas/OrganizationOnboardingStatus"
     OrganizationLimits:
       type: object
       properties:

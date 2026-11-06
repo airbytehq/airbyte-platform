@@ -16,6 +16,7 @@ import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateReq
 import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationOnboardingStatus
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationReadList
 import io.airbyte.api.server.generated.models.OrganizationSummary
@@ -347,7 +348,18 @@ open class OrganizationsHandler(
       organizationName = organization.name,
       sso = organization.ssoRealm != null && organization.ssoRealm.isNotEmpty(),
       scim = scimEnabled,
+      onboardingStatus = toOnboardingStatus(organization),
     )
+
+  // The column has no database constraint. An unknown value must not fail this call, because most of the webapp loads it.
+  private fun toOnboardingStatus(organization: Organization): OrganizationOnboardingStatus? {
+    val stored = organization.onboardingStatus ?: return null
+    val status = OrganizationOnboardingStatus.entries.firstOrNull { it.value == stored }
+    if (status == null) {
+      logger.error { "Organization ${organization.organizationId} has an unknown onboarding status: $stored" }
+    }
+    return status
+  }
 
   @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {

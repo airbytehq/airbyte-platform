@@ -8,6 +8,7 @@ import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.SsoConfig
 import io.airbyte.data.repositories.entities.Workspace
+import io.airbyte.data.services.impls.data.OrganizationServiceDataImpl
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
@@ -19,6 +20,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -375,6 +377,63 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(0, updatedRows)
     assertTrue(updatedOrganization.isPresent)
     assertEquals(false, updatedOrganization.get().isAgentic)
+  }
+
+  @Test
+  fun `onboarding status starts empty and updates only the targeted active organization`() {
+    val organizationId = createOrganization("Onboarding").id!!
+    val otherId = createOrganization("Other onboarding").id!!
+    val oldTimestamp =
+      java.time.OffsetDateTime
+        .now()
+        .minusDays(1)
+    jooqDslContext
+      .update(Tables.ORGANIZATION)
+      .set(Tables.ORGANIZATION.UPDATED_AT, oldTimestamp)
+      .where(Tables.ORGANIZATION.ID.eq(organizationId))
+      .execute()
+
+    assertNull(organizationRepository.findById(organizationId).get().onboardingStatus)
+
+    for (status in listOf("survey", "create_source", "skipped")) {
+      assertEquals(1L, organizationRepository.updateOnboardingStatusById(organizationId, status))
+      assertEquals(status, organizationRepository.findById(organizationId).get().onboardingStatus)
+      assertNull(organizationRepository.findById(otherId).get().onboardingStatus)
+    }
+    val updatedAt = organizationRepository.findById(organizationId).get().updatedAt!!
+    assertTrue(updatedAt.isAfter(oldTimestamp), "$updatedAt")
+  }
+
+  @Test
+  fun `missing and tombstoned organizations have no mutable onboarding status`() {
+    val deletedId = createOrganization("Deleted onboarding").id!!
+    organizationRepository.updateOnboardingStatusById(deletedId, "survey")
+    organizationRepository.softDeleteById(deletedId)
+
+    for (id in listOf(deletedId, UUID.randomUUID())) {
+      assertEquals(0L, organizationRepository.updateOnboardingStatusById(id, "completed"))
+    }
+    assertEquals(
+      "survey",
+      jooqDslContext
+        .select(Tables.ORGANIZATION.ONBOARDING_STATUS)
+        .from(Tables.ORGANIZATION)
+        .where(Tables.ORGANIZATION.ID.eq(deletedId))
+        .fetchOne(Tables.ORGANIZATION.ONBOARDING_STATUS),
+    )
+  }
+
+  @Test
+  fun `renaming through writeOrganization keeps the onboarding status`() {
+    val organizationId = createOrganization("Onboarding original").id!!
+    organizationRepository.updateOnboardingStatusById(organizationId, "create_destination")
+    val service = OrganizationServiceDataImpl(organizationRepository, ssoConfigRepository, permissionRepository)
+
+    service.writeOrganization(service.getOrganization(organizationId).get().withName("Onboarding renamed"))
+
+    val stored = organizationRepository.findById(organizationId).get()
+    assertEquals("Onboarding renamed", stored.name)
+    assertEquals("create_destination", stored.onboardingStatus)
   }
 
   @Test

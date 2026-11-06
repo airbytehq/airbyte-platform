@@ -9,6 +9,7 @@ import io.airbyte.api.server.generated.models.ListOrganizationsByUserRequestBody
 import io.airbyte.api.server.generated.models.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.OrganizationOnboardingStatus
 import io.airbyte.api.server.generated.models.OrganizationRead
 import io.airbyte.api.server.generated.models.OrganizationReadList
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
@@ -36,6 +37,7 @@ import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -574,6 +576,27 @@ class OrganizationsHandlerTest {
     assertEquals(organizationName, result.organizationName)
     assertEquals(true, result.sso)
     assertEquals(true, result.scim)
+  }
+
+  @Test
+  fun `getOrganizationInfo returns the stored onboarding status`() {
+    every { organizationService.getActiveOrganization(organizationId1) } returns
+      Optional.of(Organization().withOrganizationId(organizationId1).withName(organizationName).withOnboardingStatus("create_source"))
+
+    val result = organizationsHandler.getOrganizationInfo(organizationId1)
+
+    assertEquals(OrganizationOnboardingStatus.CREATE_SOURCE, result.onboardingStatus)
+  }
+
+  @Test
+  fun `getOrganizationInfo leaves out an onboarding status outside the API enum`() {
+    every { organizationService.getActiveOrganization(organizationId1) } returns
+      Optional.of(Organization().withOrganizationId(organizationId1).withName(organizationName).withOnboardingStatus("not_a_step"))
+
+    val result = organizationsHandler.getOrganizationInfo(organizationId1)
+
+    assertEquals(organizationId1, result.organizationId)
+    assertNull(result.onboardingStatus)
   }
 
   @Test

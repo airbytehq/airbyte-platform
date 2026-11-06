@@ -150,6 +150,13 @@ class RouteAccessCoverageTest {
         for (path in listOf("run/connect", "output/connect")) {
           assertTrue(entries.any { it.path == "/api/v1/commands/$path" && it.hasSharedRule })
         }
+        val onboardingUpdatePath = "/api/v1/organizations/onboarding/update"
+        assertTrue(
+          entries.any {
+            it.path == onboardingUpdatePath && it.hasSharedRule && it.implementation.contains("OrganizationApiController#")
+          },
+          onboardingUpdatePath,
+        )
         for (path in listOf("save_stats", "save_stream_metadata")) {
           assertTrue(
             entries.any {
