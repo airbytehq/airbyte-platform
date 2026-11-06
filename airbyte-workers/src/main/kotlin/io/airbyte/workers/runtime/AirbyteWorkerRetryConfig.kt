@@ -7,12 +7,12 @@ package io.airbyte.workers.runtime
 import io.micronaut.context.annotation.ConfigurationProperties
 
 internal const val DEFAULT_WORKER_MAX_SUCCESSIVE_COMPLETE_FAILURES = 5
-internal const val DEFAULT_WORKER_MAX_TOTAL_COMPLETE_FAILURES = 10
+internal const val DEFAULT_WORKER_MAX_TOTAL_COMPLETE_FAILURES = 5
 internal const val DEFAULT_WORKER_COMPLETE_FAILURES_MIN_INTERVAL_SECONDS = 10
 internal const val DEFAULT_WORKER_COMPLETE_FAILURES_MAX_INTERVAL_SECONDS = 1800
 internal const val DEFAULT_WORKER_COMPLETE_FAILURES_BASE_INTERVAL_SECONDS = 3
 internal const val DEFAULT_WORKER_MAX_SUCCESSIVE_PARTIAL_FAILURES = 1000
-internal const val DEFAULT_WORKER_MAX_TOTAL_PARTIAL_FAILURES = 20
+internal const val DEFAULT_WORKER_MAX_TOTAL_PARTIAL_FAILURES = 10
 
 @ConfigurationProperties("airbyte.retries")
 data class AirbyteWorkerRetryConfig(
