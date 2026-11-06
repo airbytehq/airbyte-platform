@@ -3,10 +3,8 @@ import { useMemo } from "react";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListDataplaneGroups, useListDataplaneHealth, useListWorkspacesInOrganization } from "core/api";
 
-import { buildRegions, Region } from "./regionsPageData";
-
-// The workspaces query does not suspend, so the regions can render before their workspaces are known.
-export type WorkspacesStatus = "loading" | "error" | "ready";
+import { Region, WorkspacesStatus } from "../types";
+import { buildRegions } from "../utils/buildRegions";
 
 // The workload launcher checks in every 30 seconds, so polling faster only repeats the same answer.
 const HEALTH_REFETCH_INTERVAL_MS = 30_000;

@@ -9,9 +9,10 @@ import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
-import { RegionCard } from "./components/Regions/RegionCard";
-import { filterRegions, HealthFilter, RegionTypeFilter } from "./components/Regions/regionsPageData";
-import { useRegionsPageData } from "./components/Regions/useRegionsPageData";
+import { RegionCard } from "./components/RegionCard";
+import { useRegionsPageData } from "./hooks/useRegionsPageData";
+import { HealthFilter, RegionTypeFilter } from "./types";
+import { filterRegions } from "./utils/filterRegions";
 
 export const OrganizationRegionsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_REGIONS);

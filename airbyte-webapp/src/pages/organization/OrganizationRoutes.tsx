@@ -17,8 +17,8 @@ import { OrganizationAuditLogsPage } from "pages/SettingsPage/pages/Organization
 import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/OrganizationGroupsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 import { OrganizationRegionsPage } from "pages/SettingsPage/pages/Organization/OrganizationRegionsPage";
+import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/OrganizationRegionsPage/hooks/useCanViewRegionsPage";
 import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
-import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/useCanViewRegionsPage";
 
 import { ContextLayerRoutePaths, RoutePaths, SettingsRoutePaths } from "../routePaths";
 

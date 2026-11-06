@@ -1,0 +1,1 @@
+export { HealthHistoryBar } from "./HealthHistoryBar";

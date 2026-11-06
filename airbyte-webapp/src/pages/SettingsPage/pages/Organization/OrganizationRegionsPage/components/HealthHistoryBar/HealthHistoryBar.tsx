@@ -9,7 +9,7 @@ import { DataplaneHealthHistoryBucket } from "core/api/types/AirbyteClient";
 import { useCurrentTime } from "core/utils/time";
 
 import styles from "./HealthHistoryBar.module.scss";
-import { healthStatusMessageId } from "./healthStatus";
+import { healthStatusMessageId } from "../../healthStatus";
 
 export const HISTORY_PERIOD_MS = 15 * 60 * 1000;
 

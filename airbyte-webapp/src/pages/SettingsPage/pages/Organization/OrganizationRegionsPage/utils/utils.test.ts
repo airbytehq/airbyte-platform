@@ -1,6 +1,9 @@
 import { DataplaneGroupRead, DataplaneHealthRead, WorkspaceRead } from "core/api/types/AirbyteClient";
 
-import { buildRegions, filterRegions, isAirbyteManagedRegion, Region, RegionFilters } from "./regionsPageData";
+import { buildRegions } from "./buildRegions";
+import { filterRegions } from "./filterRegions";
+import { isAirbyteManagedRegion } from "./isAirbyteManagedRegion";
+import { Region, RegionFilters } from "../types";
 
 const ORGANIZATION_ID = "11111111-1111-1111-1111-111111111111";
 const DEFAULT_ORGANIZATION_ID = "00000000-0000-0000-0000-000000000000";

@@ -4,8 +4,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-
-import { OrganizationAccessManagementSection } from "../AccessManagementPage/OrganizationAccessManagementSection";
+import { OrganizationAccessManagementSection } from "pages/SettingsPage/pages/AccessManagementPage/OrganizationAccessManagementSection";
 
 export const OrganizationMembersPage = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATIONMEMBERS);

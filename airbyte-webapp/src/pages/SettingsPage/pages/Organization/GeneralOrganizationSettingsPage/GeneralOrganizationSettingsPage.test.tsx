@@ -48,7 +48,7 @@ jest.mock("pages/SettingsPage/components/RegionsTable", () => ({
   RegionsTable: () => <div data-testid="regions-table" />,
 }));
 
-jest.mock("../../UpdateOrganizationSettingsForm", () => ({
+jest.mock("pages/SettingsPage/UpdateOrganizationSettingsForm", () => ({
   UpdateOrganizationSettingsForm: () => <div data-testid="update-organization-settings-form" />,
 }));
 

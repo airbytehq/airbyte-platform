@@ -14,11 +14,10 @@ import { Text } from "components/ui/Text";
 import { links } from "core/utils/links";
 import { RoutePaths } from "pages/routePaths";
 
-import { DataplaneHealthCard } from "./DataplaneHealthCard";
-import { HEALTH_STATUSES, healthStatusIcon, healthStatusSummaryMessageId } from "./healthStatus";
 import styles from "./RegionCard.module.scss";
-import { Region } from "./regionsPageData";
-import { WorkspacesStatus } from "./useRegionsPageData";
+import { HEALTH_STATUSES, healthStatusIcon, healthStatusSummaryMessageId } from "../../healthStatus";
+import { WorkspacesStatus, Region } from "../../types";
+import { DataplaneHealthCard } from "../DataplaneHealthCard";
 
 interface RegionCardProps {
   region: Region;

@@ -20,7 +20,7 @@ import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/feature
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
-import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/useCanViewRegionsPage";
+import { useCanViewRegionsPage } from "pages/SettingsPage/pages/Organization/OrganizationRegionsPage/hooks/useCanViewRegionsPage";
 
 export const OrganizationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();

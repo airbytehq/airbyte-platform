@@ -15,8 +15,7 @@ import { useIntent } from "core/utils/rbac";
 import { DiagnosticsButton } from "pages/SettingsPage/components/DiagnosticButton";
 import { NestedRegionsView } from "pages/SettingsPage/components/NestedRegionsView";
 import { RegionsTable } from "pages/SettingsPage/components/RegionsTable";
-
-import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettingsForm";
+import { UpdateOrganizationSettingsForm } from "pages/SettingsPage/UpdateOrganizationSettingsForm";
 
 // With the flag on, self-managed regions move to the Regions page. Pro organizations keep the table here.
 const RegionsSection: React.FC = () => {

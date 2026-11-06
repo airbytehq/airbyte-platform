@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { render } from "test-utils";
 
 import { RegionCard } from "./RegionCard";
-import { Region } from "./regionsPageData";
+import { Region } from "../../types";
 
 const region: Region = {
   regionId: "region-1",

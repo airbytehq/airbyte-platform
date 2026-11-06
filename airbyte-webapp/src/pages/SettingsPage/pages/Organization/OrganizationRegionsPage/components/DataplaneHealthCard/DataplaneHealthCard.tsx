@@ -10,8 +10,13 @@ import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 import { useCurrentTime } from "core/utils/time";
 
 import styles from "./DataplaneHealthCard.module.scss";
-import { HealthHistoryBar } from "./HealthHistoryBar";
-import { healthStatusBadgeVariant, healthStatusIcon, HealthStatusIcon, healthStatusMessageId } from "./healthStatus";
+import {
+  healthStatusBadgeVariant,
+  healthStatusIcon,
+  HealthStatusIcon,
+  healthStatusMessageId,
+} from "../../healthStatus";
+import { HealthHistoryBar } from "../HealthHistoryBar";
 
 interface DataplaneHealthCardProps {
   dataplane: DataplaneHealthRead;
