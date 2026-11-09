@@ -1,0 +1,10 @@
+@use "scss/variables";
+
+.logo {
+  width: 34px;
+  height: 34px;
+}
+
+.panel {
+  padding: variables.$spacing-xl variables.$spacing-lg;
+}

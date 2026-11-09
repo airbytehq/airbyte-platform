@@ -1,0 +1,15 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.panel {
+  padding: variables.$spacing-xl variables.$spacing-lg;
+}
+
+.workspaceRow {
+  padding: variables.$spacing-lg;
+  border-top: variables.$border-thin solid colors.$grey-100;
+
+  &:first-child {
+    border-top: none;
+  }
+}

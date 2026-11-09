@@ -9,7 +9,7 @@ import { Text } from "components/ui/Text";
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 import { useCurrentTime } from "core/utils/time";
 
-import styles from "./DataplaneHealthCard.module.scss";
+import styles from "./DataplaneHealthStats.module.scss";
 import {
   healthStatusBadgeVariant,
   healthStatusIcon,
@@ -18,7 +18,7 @@ import {
 } from "../../healthStatus";
 import { HealthHistoryBar } from "../HealthHistoryBar";
 
-interface DataplaneHealthCardProps {
+interface DataplaneHealthStatsProps {
   dataplane: DataplaneHealthRead;
 }
 
@@ -113,7 +113,7 @@ const EnabledBadge: React.FC<{ enabled?: boolean }> = ({ enabled }) => {
   );
 };
 
-export const DataplaneHealthCard: React.FC<DataplaneHealthCardProps> = ({ dataplane }) => {
+export const DataplaneHealthStats: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) => {
   return (
     <FlexContainer direction="column" gap="md" className={styles.card} data-testid="dataplane-health-card">
       <FlexContainer alignItems="center" justifyContent="space-between">

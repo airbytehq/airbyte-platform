@@ -4,7 +4,7 @@ import { render } from "test-utils";
 
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
-import { DataplaneHealthCard, formatCheckInAge } from "./DataplaneHealthCard";
+import { DataplaneHealthStats, formatCheckInAge } from "./DataplaneHealthStats";
 
 const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
   dataplane_id: "dp-1",
@@ -41,10 +41,10 @@ describe("formatCheckInAge", () => {
   });
 });
 
-describe("DataplaneHealthCard", () => {
+describe("DataplaneHealthStats", () => {
   it("shows the status, enabled state, relative check-in and version", async () => {
     await render(
-      <DataplaneHealthCard
+      <DataplaneHealthStats
         dataplane={dataplane({ last_heartbeat_timestamp: Date.now() - 31_000, dataplane_version: "2.4.0" })}
       />
     );
@@ -57,13 +57,13 @@ describe("DataplaneHealthCard", () => {
   });
 
   it("uses the singular for a one second old check-in", async () => {
-    await render(<DataplaneHealthCard dataplane={dataplane({ last_heartbeat_timestamp: Date.now() - 1_000 })} />);
+    await render(<DataplaneHealthStats dataplane={dataplane({ last_heartbeat_timestamp: Date.now() - 1_000 })} />);
 
     expect(screen.getByText("1 second ago")).toBeInTheDocument();
   });
 
   it("shows never connected for a data plane without check-ins or version", async () => {
-    await render(<DataplaneHealthCard dataplane={dataplane({ status: "UNKNOWN", enabled: false })} />);
+    await render(<DataplaneHealthStats dataplane={dataplane({ status: "UNKNOWN", enabled: false })} />);
 
     expect(screen.getAllByText("Never connected")).toHaveLength(3);
     expect(screen.getByText("Disabled")).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe("DataplaneHealthCard", () => {
   });
 
   it("shows no enabled badge when the server omits the field", async () => {
-    await render(<DataplaneHealthCard dataplane={dataplane({ enabled: undefined })} />);
+    await render(<DataplaneHealthStats dataplane={dataplane({ enabled: undefined })} />);
 
     expect(screen.queryByText("Enabled")).not.toBeInTheDocument();
     expect(screen.queryByText("Disabled")).not.toBeInTheDocument();
@@ -79,7 +79,7 @@ describe("DataplaneHealthCard", () => {
 
   it("shows the version as unavailable when a connected data plane reported none", async () => {
     await render(
-      <DataplaneHealthCard
+      <DataplaneHealthStats
         dataplane={dataplane({ status: "UNHEALTHY", last_heartbeat_timestamp: 1, dataplane_version: "unknown" })}
       />
     );
@@ -90,7 +90,7 @@ describe("DataplaneHealthCard", () => {
   });
 
   it("shows the version as unavailable when the server omits it for a connected data plane", async () => {
-    await render(<DataplaneHealthCard dataplane={dataplane({ last_heartbeat_timestamp: Date.now() })} />);
+    await render(<DataplaneHealthStats dataplane={dataplane({ last_heartbeat_timestamp: Date.now() })} />);
 
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
   });
