@@ -30,7 +30,7 @@ class ConnectorSecretsHydrator(
   private val environmentSecretPersistence: SecretPersistence,
   private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
 ) {
-  private fun getPersistenceByStorageId(secretStorageId: UUID): SecretPersistence {
+  fun getPersistenceByStorageId(secretStorageId: UUID): SecretPersistence {
     val secretStorageRead = airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId))
     // TODO: Check if the secret storage on the environment actually corresponds to the secret storage we're requesting.
     // https://github.com/airbytehq/airbyte-internal-issues/issues/13689

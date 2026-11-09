@@ -5,10 +5,16 @@
 package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteKubernetesConfig
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.airbyte.workload.launcher.pipeline.dispatch.DIRECT_JOB_RUNNER_HTTP_CLIENT
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
@@ -127,4 +133,21 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("claimedProcessorBackoffMaxDelay")
   fun claimedProcessorBackoffMaxDelay() = 60.seconds.toJavaDuration()
+
+  // The secret store check builds store clients the same way the init container does.
+  @Singleton
+  fun connectorSecretsHydrator(
+    airbyteApiClient: AirbyteApiClient,
+    runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
+    secretsRepositoryReader: SecretsRepositoryReader,
+    airbyteSecretsManagerConfig: AirbyteSecretsManagerConfig,
+    defaultSecretPersistence: SecretPersistence,
+  ): ConnectorSecretsHydrator =
+    ConnectorSecretsHydrator(
+      secretsRepositoryReader = secretsRepositoryReader,
+      airbyteApiClient = airbyteApiClient,
+      useRuntimeSecretPersistence = airbyteSecretsManagerConfig.useRuntimeSecretPersistence,
+      environmentSecretPersistence = defaultSecretPersistence,
+      runtimeSecretPersistenceFactory = runtimeSecretPersistenceFactory,
+    )
 }

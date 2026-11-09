@@ -279,6 +279,7 @@ object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.exte
 /**
  * Gates the Regions page of the data plane health UI. The server returns the 12-hour check-in history
  * on the dataplane health read only when this is on; the webapp reads the same key to show the new page.
+ * The launcher's diagnostic probes also run only when this is on for the data plane's organization.
  * Remove once the Regions page is the only data plane view.
  */
 object DataplaneHealthUi : Temporary<Boolean>(key = "platform.dataplane-health-ui", default = false)

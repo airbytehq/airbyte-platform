@@ -31,6 +31,11 @@ micronaut:
       type: cached
       n-threads: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:10}
       core-pool-size: 0
+    secret-storage-probe:
+      type: scheduled
+      core-pool-size: 1
+    secret-storage-check:
+      type: cached
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   pod-sweeper:
@@ -111,6 +116,9 @@ airbyte:
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-launcher:
     heartbeat-rate: PT30S
+    secret-storage-probe:
+      rate: PT30M
+      check-timeout: PT30S
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
     parallelism:
       default-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
