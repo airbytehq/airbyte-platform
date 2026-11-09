@@ -167,8 +167,14 @@ open class ResourceBootstrapHandler(
         .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
         .withPermissionId(uuidSupplier.get()),
     )
+    onOrganizationCreated(organization)
     return organization
   }
+
+  /**
+   * Runs only when [findOrCreateOrganizationAndPermission] creates a new organization, after its permission exists.
+   */
+  protected open fun onOrganizationCreated(organization: Organization) = Unit
 
   /**
    * Tries to find an existing organization for the user. Permission checks will happen elsewhere.

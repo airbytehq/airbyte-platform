@@ -311,3 +311,9 @@ object WidenColumnTypes : Temporary<Boolean>(key = "platform.widen-column-types"
  * fails the discover with a different error. Evaluated with the organization, workspace, actor and actor definition.
  */
 object ManualDiscoverFileTimeoutMinutes : Permanent<Int>(key = "platform.manual-discover-file-timeout-minutes", default = 0)
+
+/**
+ * Starts organizations in the onboarding flow when the server creates them for a user who has no organization,
+ * such as at Cloud signup. Evaluated with the organization. Remove once the onboarding flow is the only flow.
+ */
+object OnboardingAgentFlow : Temporary<Boolean>(key = "onboarding.agent-flow", default = false)
