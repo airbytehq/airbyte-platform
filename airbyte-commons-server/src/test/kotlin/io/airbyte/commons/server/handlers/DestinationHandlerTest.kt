@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.api.server.generated.models.ActorListCursorPaginatedRequestBody
@@ -28,6 +29,7 @@ import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.emptyObject
+import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.errors.BadRequestException
@@ -47,6 +49,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.ExternalSecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
@@ -1466,8 +1469,10 @@ internal class DestinationHandlerTest {
 
   @Test
   fun testDeleteDestinationAndDeleteSecrets() {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
     val newConfiguration = destinationConnection.configuration
-    (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
+    (newConfiguration as ObjectNode).set<JsonNode>(API_KEY_FIELD, jsonNode(mapOf("_secret" to secretCoordinate.fullCoordinate)))
+    val maskedConfiguration = clone(newConfiguration).apply { (this as ObjectNode).put(API_KEY_FIELD, "**********") }
 
     val expectedSourceConnection = clone(destinationConnection).withTombstone(true)
 
@@ -1505,10 +1510,10 @@ internal class DestinationHandlerTest {
     every { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) } returns connectionReadList
     every {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.configuration,
+        newConfiguration,
         destinationDefinitionSpecificationRead.connectionSpecification!!,
       )
-    } returns destinationConnection.configuration
+    } returns maskedConfiguration
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
         standardDestinationDefinition,
@@ -1523,10 +1528,7 @@ internal class DestinationHandlerTest {
         any(),
       )
     } answers {
-      ConfigWithSecretReferences(
-        secondArg(),
-        mapOf(),
-      )
+      buildConfigWithSecretRefsJava(secondArg())
     }
 
     destinationHandler.deleteDestination(destinationIdRequestBody)
@@ -1534,6 +1536,12 @@ internal class DestinationHandlerTest {
     // We should not no longer get secrets or write secrets anymore (since we are deleting the
     // destination).
     verify(exactly = 0) { destinationService.writeDestinationConnectionNoSecrets(expectedSourceConnection) }
+    verify {
+      secretsRepositoryWriter.deleteFromConfig(
+        match { it.referencedSecrets["$.$API_KEY_FIELD"]?.secretCoordinate == secretCoordinate },
+        secretPersistence,
+      )
+    }
     verify {
       destinationService.tombstoneDestination(any(), any(), any())
     }

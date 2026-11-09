@@ -156,10 +156,11 @@ class DestinationHandler
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(destination.workspaceId))
       val secretStorageId =
         Optional.ofNullable(secretStorageService.getByWorkspaceId(WorkspaceId(destination.workspaceId))).map { obj -> obj.id.value }
+      val rawConfiguration = destinationService.getDestinationConnection(destination.destinationId).configuration
       val configWithSecretReferences =
         secretReferenceService.getConfigWithSecretReferences(
           ActorId(destination.destinationId),
-          destination.connectionConfiguration,
+          rawConfiguration,
           WorkspaceId(destination.workspaceId),
         )
 
