@@ -5,6 +5,7 @@
 package io.airbyte.server.auth
 
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.server.generated.models.DataplaneCreateRequestBody
 import io.airbyte.api.server.generated.models.DataplaneDeleteRequestBody
 import io.airbyte.api.server.generated.models.DataplaneGroupCreateRequestBody
@@ -20,8 +21,10 @@ import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
+import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.DataplaneAuthorizationDataService
+import io.airbyte.domain.services.auth.OrganizationAccessService
 import io.micronaut.security.authentication.Authentication
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -59,7 +62,6 @@ private fun dataplaneInput(args: Array<out Any?>): DataplaneOperationInput =
     is DataplaneGroupCreateRequestBody -> DataplaneOperationInput.Organization(body.organizationId)
     is DataplaneGroupUpdateRequestBody -> DataplaneOperationInput.Group(body.dataplaneGroupId)
     is DataplaneGroupDeleteRequestBody -> DataplaneOperationInput.Group(body.dataplaneGroupId)
-    is DataplaneGroupListRequestBody -> DataplaneOperationInput.Organization(body.organizationId)
     is DataplaneInitRequestBody -> DataplaneOperationInput.Client(body.clientId)
     is DataplaneHeartbeatRequestBody -> DataplaneOperationInput.Client(body.clientId)
     else -> throw BadRequestProblem()
@@ -125,16 +127,39 @@ class DataplaneGroupManageRule(
 @Singleton
 class DataplaneGroupListRule(
   private val data: AuthorizationDataService,
+  access: OrganizationAccessService,
   private val permissions: OperationPermissions,
-) : OperationRule {
-  override fun readInput(args: Array<out Any?>): OperationInput = dataplaneInput(args)
+  private val machineData: DataplaneAuthorizationDataService,
+) : OrganizationAccessibleOperationRule(data, access, permissions) {
+  override fun readInput(args: Array<out Any?>): OperationInput {
+    val request = args.firstOrNull() as? DataplaneGroupListRequestBody ?: throw BadRequestProblem()
+    return OrganizationOperationInput(request.organizationId)
+  }
 
   override fun authorize(
     caller: Authentication,
     input: OperationInput,
   ) {
-    permissions.requireAuthenticated(caller, dataplaneManagers)
-    data.organization((input as DataplaneOperationInput.Organization).organizationId)
+    val organization = (input as OrganizationOperationInput).organizationId
+    if (TokenType.fromClaims(caller.attributes) in setOf(TokenType.DATAPLANE_V1, TokenType.SERVICE_ACCOUNT)) {
+      val clientId =
+        try {
+          UUID.fromString(caller.name)
+        } catch (_: IllegalArgumentException) {
+          throw ForbiddenProblem()
+        }
+      permissions.requireDataplaneIdentity(caller, clientId)
+      if (machineData.clientOrganization(clientId.toString()) != organization) throw ForbiddenProblem()
+      data.organization(organization)
+      permissions.requireOrganizations(
+        caller,
+        listOf(organization),
+        setOf(AuthRoleConstants.DATAPLANE),
+        setOf(OperationCaller.DATAPLANE, OperationCaller.SERVICE_ACCOUNT),
+      )
+      return
+    }
+    super.authorize(caller, input)
   }
 }
 

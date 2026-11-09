@@ -59,6 +59,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
@@ -85,6 +86,11 @@ class WorkloadApiTest(
   @MockBean(WorkloadHandler::class)
   @Replaces(WorkloadHandler::class)
   fun workloadHandler(): WorkloadHandler = workloadHandler
+
+  @BeforeEach
+  fun defaultWorkloadOrganization() {
+    every { workloadHandler.getWorkloadOrganizationId(any()) } returns null
+  }
 
   private val airbyteApiClient: AirbyteApiClient = mockk()
 

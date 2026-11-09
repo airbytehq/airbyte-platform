@@ -35,7 +35,7 @@ class AuthorizedRequest(
   private val beans: BeanContext,
   @Value("\${micronaut.security.enabled:false}") private val securityEnabled: Boolean,
 ) {
-  internal fun execute(context: MethodInvocationContext<Any, Any>): Any? {
+  fun execute(context: MethodInvocationContext<Any, Any>): Any? {
     if (unsupportedExecution(context)) throw ForbiddenProblem()
     val request = currentRequest()
     if (!securityEnabled && request.userPrincipal.isEmpty) request.setUserPrincipal(Authentication.build(DEFAULT_USER_ID.toString()))

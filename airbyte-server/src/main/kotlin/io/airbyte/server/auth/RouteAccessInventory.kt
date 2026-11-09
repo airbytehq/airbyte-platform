@@ -117,7 +117,7 @@ class RouteAccessInventory(
 
     fun isManaged(route: UriRouteInfo<*, *>): Boolean {
       // The workload API has its own contract and authorization, even when present on this classpath.
-      if (route.declaringType == WorkloadApi::class.java) return false
+      if (WorkloadApi::class.java.isAssignableFrom(route.declaringType)) return false
       val path = route.uriMatchTemplate.toString()
       if (path == "/scim/v2" || path.startsWith("/scim/v2/")) return false
       if (managedBasePaths.any { path == it || path.startsWith("$it/") }) return true

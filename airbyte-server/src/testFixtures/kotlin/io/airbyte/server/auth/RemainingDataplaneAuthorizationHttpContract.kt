@@ -22,6 +22,7 @@ import io.airbyte.domain.models.ServiceAccount
 import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.DataplaneAuthorizationDataService
+import io.airbyte.domain.services.auth.OrganizationAccessService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -128,6 +129,22 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
   }
 
   @Test
+  fun `dataplane group list requires access to the requested organization`() {
+    val list = scenarios().single { it.path == "/api/v1/dataplane_group/list" }
+    exercise(list, 403, granted = false)
+    exercise(list, 200, granted = false, workspaceAccess = true)
+    exercise(list, 200, grantOverride = Permission.PermissionType.ORGANIZATION_READER)
+    exercise(list, 200, token = "service", grantOverride = Permission.PermissionType.DATAPLANE)
+    exercise(
+      list.copy(body = """{"organization_id":"$FOREIGN_ORGANIZATION"}"""),
+      403,
+      token = "service",
+      grantOverride = Permission.PermissionType.DATAPLANE,
+    )
+    exercise(list, 403, token = "service", grantOverride = Permission.PermissionType.ORGANIZATION_READER)
+  }
+
+  @Test
   fun `machine operations require matching supported token identity saved assignment and actual dataplane permission`() {
     for (scenario in scenarios().filter { it.machine }) {
       for (token in listOf("user", "application-owner", "embedded", "workload", "scoped:${UUID(0, 1)}")) exercise(scenario, 403, token = token)
@@ -218,6 +235,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
     expected: Int,
     token: String = if (scenario.machine) "service" else "user",
     granted: Boolean = true,
+    workspaceAccess: Boolean = false,
     grantOverride: Permission.PermissionType = scenario.grant,
     missing: Boolean = false,
     lookupError: Boolean = false,
@@ -231,7 +249,18 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
     RemainingOperationHttpSupport(cloud, controllers(), rules(), security).run(
       configure = { context, business ->
         configureBusiness(business)
-        configureAuthorization(context, granted, grantOverride, missing, lookupError, assignmentError, regionError, defaultError, security)
+        configureAuthorization(
+          context,
+          granted,
+          workspaceAccess,
+          grantOverride,
+          missing,
+          lookupError,
+          assignmentError,
+          regionError,
+          defaultError,
+          security,
+        )
       },
       check = { context, server, business ->
         if (checkDeclaration) RemainingOperationHttpSupport.requireRule(context, "POST", scenario.path, scenario.rule)
@@ -253,6 +282,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
   private fun configureAuthorization(
     context: io.micronaut.context.ApplicationContext,
     granted: Boolean,
+    workspaceAccess: Boolean = false,
     grant: Permission.PermissionType = Permission.PermissionType.INSTANCE_ADMIN,
     missing: Boolean = false,
     lookupError: Boolean = false,
@@ -263,11 +293,14 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
   ) {
     val data = mockk<AuthorizationDataService>()
     every { data.organization(ORGANIZATION) } returns ORGANIZATION
+    every { data.organization(FOREIGN_ORGANIZATION) } returns FOREIGN_ORGANIZATION
     every { data.dataplaneOrganization(DATAPLANE) } answers { data.organization(ORGANIZATION) }
     every { data.dataplaneGroupOrganization(GROUP) } answers { data.organization(ORGANIZATION) }
     if (missing) every { data.organization(ORGANIZATION) } throws AuthorizationResourceNotFoundException()
     if (lookupError) every { data.organization(ORGANIZATION) } throws java.io.IOException("organization unavailable")
     val assignments = mockk<DataplaneAuthorizationDataService>()
+    val access = mockk<OrganizationAccessService>()
+    every { access.hasAccessibleWorkspace("caller", ORGANIZATION) } returns workspaceAccess
     every { assignments.clientOrganization(SERVICE_ACCOUNT.toString()) } answers { data.organization(ORGANIZATION) }
     every { assignments.clientOrganization(OTHER_SERVICE_ACCOUNT.toString()) } answers { data.organization(ORGANIZATION) }
     if (assignmentError) every { assignments.clientOrganization(any()) } throws java.io.IOException("saved assignment unavailable")
@@ -291,6 +324,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
     every { permissions.getPermissionsByServiceAccountId(SERVICE_ACCOUNT) } returns if (granted) listOf(permission) else emptyList()
     context.registerSingleton(AuthorizationDataService::class.java, data)
     context.registerSingleton(DataplaneAuthorizationDataService::class.java, assignments)
+    context.registerSingleton(OrganizationAccessService::class.java, access)
     context.registerSingleton(
       OperationPermissions::class.java,
       OperationPermissions(
@@ -524,6 +558,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
 
   companion object {
     val ORGANIZATION: UUID = UUID(0, 2)
+    val FOREIGN_ORGANIZATION: UUID = UUID(0, 20)
     val GROUP: UUID = UUID(0, 3)
     val DATAPLANE: UUID = UUID(0, 4)
     val SERVICE_ACCOUNT: UUID = UUID(0, 9)

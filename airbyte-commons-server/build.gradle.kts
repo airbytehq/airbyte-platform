@@ -25,6 +25,7 @@ dependencies {
   implementation(libs.temporal.sdk)
   implementation(libs.swagger.annotations)
   implementation(libs.kotlin.logging)
+  implementation(libs.kotlin.coroutines)
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)

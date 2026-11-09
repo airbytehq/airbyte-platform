@@ -6,6 +6,7 @@ package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.OperationRule
+import io.airbyte.workload.api.WorkloadApi
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.io.service.SoftServiceLoader
 import io.micronaut.http.HttpMethod
@@ -110,10 +111,10 @@ class RouteAccessCoverageTest {
           emptySet<String>(),
           "Include routes even when a controller path differs from its contract",
         )
-        assertTrue(context.getBean(Router::class.java).uriRoutes().anyMatch { it.declaringType.name == "io.airbyte.workload.api.WorkloadApi" })
+        assertTrue(context.getBean(Router::class.java).uriRoutes().anyMatch { WorkloadApi::class.java.isAssignableFrom(it.declaringType) })
         assertFalse(
           inventory.routes().any {
-            it.declaringType.name == "io.airbyte.workload.api.WorkloadApi"
+            WorkloadApi::class.java.isAssignableFrom(it.declaringType)
           },
           "The separate workload API is not Config/public API",
         )

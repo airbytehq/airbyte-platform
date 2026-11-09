@@ -236,9 +236,10 @@ three layers.
   - Keep service-level checks when the service also has non-route callers.
     `RoleResolver` remains available to rules and services; it is not the
     default controller authorization pattern.
-  - **Workload API** (`airbyte-workload-api-server`) has a separate boundary.
-    Continue to use `WorkloadApi.authorize()` and
-    `RoleResolver.withCurrentAuthentication()` for its dataplane callers.
+  - **Workload API** (`airbyte-workload-api-server`) also declares a protected
+    operation rule on every route. Its startup check rejects missing rules.
+    Customer dataplane permissions are limited to their saved organization;
+    global queue operations require a global dataplane permission.
 
 ## Build & test commands
 
