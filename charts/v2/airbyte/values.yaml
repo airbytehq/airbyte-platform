@@ -2862,8 +2862,8 @@ directJobRunner:
 
   autoscaling:
     enabled: true
-    minReplicas: 4
-    maxReplicas: 10
+    minReplicas: 2
+    maxReplicas: 5
     targetCPUUtilizationPercentage: 70
 
   podDisruptionBudget:
@@ -2876,7 +2876,7 @@ directJobRunner:
   tolerations: []
 
   # -- At most one runner pod per node. Checks are CPU-bound connector JVMs, so pods sharing a node slow every check on
-  # it; with one per node, scaling up adds nodes. Keep autoscaling.maxReplicas within the node pool's max.
+  # it; with one per node, scaling up adds nodes. maxReplicas matches the direct-jobs node pools' max (5); pods past it stay Pending.
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:

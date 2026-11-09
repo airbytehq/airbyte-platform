@@ -182,8 +182,8 @@ func TestDirectJobRunnerAutoscaling(t *testing.T) {
 
 		hpa, ok := chartYaml.GetResourceByKindAndName("HorizontalPodAutoscaler", "airbyte-direct-job-runner").(*autoscalingv2.HorizontalPodAutoscaler)
 		require.True(t, ok, "the HPA was not rendered")
-		assert.Equal(t, int32(4), *hpa.Spec.MinReplicas)
-		assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
+		assert.Equal(t, int32(2), *hpa.Spec.MinReplicas)
+		assert.Equal(t, int32(5), hpa.Spec.MaxReplicas)
 
 		deployment := helmtests.GetDeployment(chartYaml.String(), "airbyte-direct-job-runner")
 		require.NotNil(t, deployment)
