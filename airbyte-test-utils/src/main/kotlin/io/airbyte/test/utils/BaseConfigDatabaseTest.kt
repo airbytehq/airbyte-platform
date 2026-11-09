@@ -139,6 +139,7 @@ open class BaseConfigDatabaseTest {
               actor_definition_version,
               actor_definition_workspace_grant,
               actor_oauth_parameter,
+              airbyte_release,
               auth_user,
               billing_notification_settings,
               commands,

@@ -147,6 +147,15 @@ create table "public"."airbyte_configs_migrations" (
   "success" boolean not null,
   constraint "airbyte_configs_migrations_pk" primary key ("installed_rank")
 );
+create table "public"."airbyte_release" (
+  "id" uuid not null,
+  "version" varchar(256) not null,
+  "source_commit" varchar(256) not null,
+  "published_at" timestamp(6) with time zone not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "airbyte_release_pkey" primary key ("id"),
+  constraint "airbyte_release_version_key" unique ("version")
+);
 create table "public"."application" (
   "id" uuid not null,
   "auth_user_id" text not null,
