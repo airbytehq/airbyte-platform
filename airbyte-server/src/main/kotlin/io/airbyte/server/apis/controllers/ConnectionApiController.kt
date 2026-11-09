@@ -47,7 +47,6 @@ import io.airbyte.api.server.generated.models.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
@@ -58,6 +57,7 @@ import io.airbyte.commons.server.handlers.StreamRefreshesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.ConnectionService
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.ConfigSearchRule
 import io.airbyte.server.auth.ConnectionAdminRule
 import io.airbyte.server.auth.ConnectionDeleteRule
 import io.airbyte.server.auth.ConnectionEventsMinimalRule
@@ -226,8 +226,8 @@ open class ConnectionApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
+    rule = ConfigSearchRule::class,
   )
-  @ConfigSearchAccessException
   override fun searchConnections(
     @Body connectionSearch: ConnectionSearch,
   ): ConnectionReadList = execute { matchSearchHandler.searchConnections(connectionSearch) }

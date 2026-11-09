@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 /**
  * Protected operations name the rule that runs before controller work.
  * Declare each implementation method, including overrides; controller defaults would hide new routes.
- * Public/login operations and the explicitly marked Config searches have no rule.
+ * Public/login operations have no rule.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)

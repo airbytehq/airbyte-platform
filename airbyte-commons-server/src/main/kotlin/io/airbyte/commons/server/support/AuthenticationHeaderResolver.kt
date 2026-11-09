@@ -47,8 +47,9 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 /**
- * Resolves the workspaces and organizations a request refers to from the headers that
- * [AuthorizationServerHandler] populated out of the request body.
+ * Resolves the workspaces and organizations named by reference properties from typed callers.
+ * Property keys use the historical X-Airbyte header names; callers must derive their values from
+ * parsed request input, never from client-supplied headers.
  *
  * Every identifier in the request must resolve to the same workspace and organization. A request that names
  * identifiers from different scopes, or an identifier that cannot be resolved, resolves to no scope at all and
@@ -73,7 +74,7 @@ class AuthenticationHeaderResolver(
   )
 
   /**
-   * Resolve corresponding organization ID based on headers that were set by the AuthorizationServerHandler
+   * Resolve the corresponding organization IDs from reference properties.
    */
   @Nullable
   fun resolveOrganization(properties: Map<String, String>): List<UUID>? {
@@ -82,7 +83,7 @@ class AuthenticationHeaderResolver(
   }
 
   /**
-   * Resolves workspaces from header.
+   * Resolves workspaces from reference properties.
    */
   @Nullable // This is an indication that the workspace ID as a group for auth needs refactoring
   fun resolveWorkspace(properties: Map<String, String>): List<UUID>? {

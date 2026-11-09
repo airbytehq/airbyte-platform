@@ -112,7 +112,7 @@ class AuditLoggingInterceptor(
       try {
         context.proceed()
       } catch (exception: Exception) {
-        val failureScope = auditScopeResolver.resolveScope(headers, requestBody, null)
+        val failureScope = auditScopeResolver.resolveScope(requestBody, null)
         logAuditInfo(
           actor = user,
           operationName = operationName,
@@ -128,7 +128,7 @@ class AuditLoggingInterceptor(
 
     val resultSummary = provider.get().generateSummaryFromResult(result)
 
-    val scope = auditScopeResolver.resolveScope(headers, requestBody, result)
+    val scope = auditScopeResolver.resolveScope(requestBody, result)
     logAuditInfo(
       actor = user,
       operationName = operationName,

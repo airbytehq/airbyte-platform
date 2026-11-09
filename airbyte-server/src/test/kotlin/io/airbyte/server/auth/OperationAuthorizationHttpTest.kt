@@ -100,7 +100,6 @@ internal fun operationContext(
   validateStartup: Boolean = checkerEnabled,
   invalidRoutes: Boolean = false,
   typed: Boolean = false,
-  scopeRule: Boolean = false,
   simple: Boolean = false,
   inventorySpy: Boolean = false,
 ): ApplicationContext {
@@ -112,7 +111,7 @@ internal fun operationContext(
       "io.airbyte.server.auth.RouteAccess",
       "io.airbyte.server.auth.SharedOperationRoutes",
       "io.airbyte.commons.server.errors.problems.AbstractThrowableProblemHandler",
-    ) + if (scopeRule) listOf("io.airbyte.server.auth.ScopedTokenSecurityRule") else emptyList()
+    )
   val isolated =
     object : BeanConfiguration by BeanConfiguration.disabled("io.airbyte") {
       override fun isWithin(beanDefinitionReference: BeanDefinitionReference<*>): Boolean =

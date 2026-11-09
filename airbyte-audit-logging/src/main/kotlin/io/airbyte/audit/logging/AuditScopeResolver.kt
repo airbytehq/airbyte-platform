@@ -6,12 +6,8 @@ package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.http.HttpHeaders
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -31,15 +27,15 @@ data class ResolvedAuditScope(
  * Resolves the organization/workspace scope used to attribute an audit log entry.
  *
  * Resolution order:
- * - workspaceId: `X-Airbyte-Workspace-Id` header -> `workspaceId` field in the request/response
- *   body -> resource lookup when the body only carries a `connectionId`/`sourceId`/`destinationId`
+ * - workspaceId: `workspaceId` field in the request/response body -> resource lookup when the body
+ *   only carries a `connectionId`/`sourceId`/`destinationId`
  *   (the resource's workspace is used) -> null.
  * - organizationId: canonical `organization_id` field in the request body ->
- *   `X-Airbyte-Organization-Id` header -> `organizationId` field in the request/response body ->
+ *   `organizationId` field in the request/response body ->
  *   the organization of the resolved workspaceId -> null (the entry is written under the
  *   `unknown` organization partition and is considered internal-only).
  *
- * Resolution never throws: any failure to read a header, parse a body field, or look up a resource
+ * Resolution never throws: any failure to parse a body field or look up a resource
  * falls through to the next source so that attribution problems never break the audited request.
  * Only the identifier fields above are read from the bodies and only the resolved ids are stamped
  * on the entry; no body content is persisted here, so provider-side redaction (e.g. the SSO secret
@@ -50,38 +46,32 @@ class AuditScopeResolver(
   private val workspaceHelper: WorkspaceHelper,
 ) {
   /**
-   * Resolves the attribution scope for the given request headers and request/response bodies.
+   * Resolves the attribution scope for the given request/response bodies.
    * The response body is null when the audited request failed.
    */
   fun resolveScope(
-    headers: HttpHeaders?,
     requestBody: Any?,
     responseBody: Any?,
   ): ResolvedAuditScope {
-    val workspaceId = resolveWorkspaceId(headers, requestBody, responseBody)
-    val organizationId = resolveOrganizationId(headers, requestBody, responseBody, workspaceId)
+    val workspaceId = resolveWorkspaceId(requestBody, responseBody)
+    val organizationId = resolveOrganizationId(requestBody, responseBody, workspaceId)
     return ResolvedAuditScope(organizationId = organizationId, workspaceId = workspaceId)
   }
 
   private fun resolveWorkspaceId(
-    headers: HttpHeaders?,
     requestBody: Any?,
     responseBody: Any?,
   ): UUID? =
-    uuidFromHeader(headers, WORKSPACE_ID_HEADER)
-      ?: uuidFromBodyField(WORKSPACE_ID_FIELD, requestBody, responseBody)
+    uuidFromBodyField(WORKSPACE_ID_FIELD, requestBody, responseBody)
       ?: resolveWorkspaceFromResourceIds(requestBody)
       ?: resolveWorkspaceFromResourceIds(responseBody)
 
   private fun resolveOrganizationId(
-    headers: HttpHeaders?,
     requestBody: Any?,
     responseBody: Any?,
     workspaceId: UUID?,
   ): UUID? =
     uuidFromBodyField(ORGANIZATION_ID_SNAKE_CASE_FIELD, requestBody)
-      ?: uuidFromHeader(headers, ORGANIZATION_ID_HEADER)
-      ?: uuidFromHeader(headers, ORGANIZATION_ID_SNAKE_CASE_HEADER)
       ?: uuidFromBodyField(ORGANIZATION_ID_FIELD, requestBody, responseBody)
       ?: workspaceId?.let { resolveOrganizationForWorkspace(it) }
 
@@ -114,11 +104,6 @@ class AuditScopeResolver(
       logger.debug(e) { "Unable to resolve workspace from audit-logged body resource id." }
       null
     }
-
-  private fun uuidFromHeader(
-    headers: HttpHeaders?,
-    headerName: String,
-  ): UUID? = headers?.get(headerName)?.let { parseUuid(it) }
 
   private fun uuidFromBodyField(
     field: String,

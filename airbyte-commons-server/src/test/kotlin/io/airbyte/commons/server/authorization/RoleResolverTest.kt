@@ -19,7 +19,6 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.metrics.MetricClient
-import io.micronaut.http.HttpRequest
 import io.micronaut.security.utils.SecurityService
 import io.mockk.every
 import io.mockk.mockk
@@ -130,14 +129,6 @@ class RoleResolverTest {
     assertEquals(setOf("AUTHENTICATED_USER"), req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
     verify(exactly = 1) { userPersistence.listAuthUserIdsForUser(uid) }
-  }
-
-  @Test
-  fun testWithHttpRequest() {
-    val httpReq = HttpRequest.GET<Any>("/")
-    httpReq.headers.add(AuthenticationId.CONNECTION_ID.httpHeader, "conn-id-1")
-    val roleReq = roleResolver.newRequest().withRefsFromHttpRequest(httpReq)
-    assertEquals(mapOf(AuthenticationId.CONNECTION_ID.httpHeader to "conn-id-1"), roleReq.props)
   }
 
   @Test

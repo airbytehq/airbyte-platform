@@ -120,20 +120,13 @@ class RouteAccessCoverageTest {
         val entries = routeAccessEntries(inventory)
         assertSharedAuthorizationAuthority(entries)
         assertPublicRouteHttpCoverage(entries, securityEnabled)
-        assertEquals(
-          emptyList<String>(),
-          entries.filter { it.path.startsWith("/api/public/") && it.searchException }.map { "${it.httpMethod} ${it.path}" },
-          "Every protected public API operation must execute a declared shared rule",
-        )
         assertRemainingProtectedConfigRoutes(inventory, "oss")
         val batch = entries.filter { it.path.startsWith("/api/v1/") && it.family in setOf("sources", "destinations", "connections") }
-        val excludedSearches = setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
         assertEquals(
           emptyList<String>(),
-          batch.filter { it.path !in excludedSearches && !it.hasSharedRule }.map { "${it.httpMethod} ${it.path}" },
+          batch.filter { !it.hasSharedRule }.map { "${it.httpMethod} ${it.path}" },
           "Every protected operation in the first PLAT-1512 batch must execute a shared rule",
         )
-        assertEquals(excludedSearches, batch.filter { it.searchException }.map { it.path }.toSet())
         assertTrue(
           entries.any {
             it.path == "/api/v1/connections/events/get" && it.hasSharedRule &&
@@ -192,7 +185,7 @@ class RouteAccessCoverageTest {
     Files.createDirectories(output)
     val summary =
       entries.filter { it.httpMethod != "HEAD" }.groupBy { it.family }.toSortedMap().map { (family, routes) ->
-        "| $family | ${routes.size} | ${routes.count { it.searchException }} |"
+        "| $family | ${routes.size} |"
       }
     val rows =
       entries.map { route ->
@@ -201,7 +194,6 @@ class RouteAccessCoverageTest {
           route.path,
           route.access,
           route.rule,
-          route.searchException,
           route.roles,
           route.implementation,
         ).joinToString(" | ", "| ", " |")
@@ -211,18 +203,15 @@ class RouteAccessCoverageTest {
         appendLine("# $edition served route inventory")
         appendLine()
         appendLine("Derived from the active Micronaut Router. HEAD routes are automatic GET companions.")
-        appendLine("Protected declarations execute typed rules before controller work; marked Config searches retain their existing checks.")
-        appendLine(
-          "The protected Config API is migrated except for the three root searches.",
-        )
+        appendLine("Protected declarations execute typed rules before controller work.")
         appendLine()
-        appendLine("| Family | Operations | Search exceptions |")
-        appendLine("| --- | --- | --- |")
+        appendLine("| Family | Operations |")
+        appendLine("| --- | --- |")
         appendLine(summary.joinToString("\n"))
         appendLine()
-        append("| Method | Path | Access | Rule | Search exception | Secured roles |")
+        append("| Method | Path | Access | Rule | Secured roles |")
         appendLine(" Implementation |")
-        appendLine("| --- | --- | --- | --- | --- | --- | --- |")
+        appendLine("| --- | --- | --- | --- | --- | --- |")
         appendLine(rows.joinToString("\n"))
       }
     Files.writeString(output.resolve("$edition.md"), report)

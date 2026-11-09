@@ -5,11 +5,7 @@
 package io.airbyte.audit.logging
 
 import io.airbyte.api.server.generated.models.DataWorkerAddCapacityRequestBody
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.ORGANIZATION_ID_SNAKE_CASE_HEADER
-import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
 import io.airbyte.data.helpers.WorkspaceHelper
-import io.micronaut.http.HttpHeaders
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -29,43 +25,24 @@ class AuditScopeResolverTest {
   }
 
   @Test
-  fun `resolves workspace and organization from headers`() {
+  fun `typed body organization wins over workspace-derived organization`() {
     val workspaceId = UUID.randomUUID()
-    val organizationId = UUID.randomUUID()
-    val headers = headersWith(WORKSPACE_ID_HEADER to workspaceId.toString(), ORGANIZATION_ID_HEADER to organizationId.toString())
+    val bodyOrganizationId = UUID.randomUUID()
+    val requestBody = mapOf("organizationId" to bodyOrganizationId.toString(), "workspaceId" to workspaceId.toString())
 
-    val scope = resolver.resolveScope(headers, null, null)
+    val scope = resolver.resolveScope(requestBody, null)
 
-    assertEquals(workspaceId, scope.workspaceId)
-    assertEquals(organizationId, scope.organizationId)
-  }
-
-  @Test
-  fun `organization header wins over body and workspace-derived organization`() {
-    val headerOrganizationId = UUID.randomUUID()
-    val workspaceId = UUID.randomUUID()
-    val headers = headersWith(ORGANIZATION_ID_HEADER to headerOrganizationId.toString())
-    val requestBody = mapOf("organizationId" to UUID.randomUUID().toString(), "workspaceId" to workspaceId.toString())
-
-    val scope = resolver.resolveScope(headers, requestBody, null)
-
-    assertEquals(headerOrganizationId, scope.organizationId)
+    assertEquals(bodyOrganizationId, scope.organizationId)
     assertEquals(workspaceId, scope.workspaceId)
   }
 
   @Test
-  fun `typed snake case organization target wins over conflicting camel case alias`() {
+  fun `typed snake case organization target is used`() {
     val targetOrganizationId = UUID.randomUUID()
-    val decoyOrganizationId = UUID.randomUUID()
-    val headers =
-      headersWith(
-        ORGANIZATION_ID_HEADER to decoyOrganizationId.toString(),
-        ORGANIZATION_ID_SNAKE_CASE_HEADER to targetOrganizationId.toString(),
-      )
     val requestBody =
       DataWorkerAddCapacityRequestBody(organizationId = targetOrganizationId, amount = 1.0)
 
-    val scope = resolver.resolveScope(headers, requestBody, null)
+    val scope = resolver.resolveScope(requestBody, null)
 
     assertEquals(targetOrganizationId, scope.organizationId)
   }
@@ -76,7 +53,7 @@ class AuditScopeResolverTest {
     val organizationId = UUID.randomUUID()
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
 
-    val scope = resolver.resolveScope(null, mapOf("workspaceId" to workspaceId.toString()), null)
+    val scope = resolver.resolveScope(mapOf("workspaceId" to workspaceId.toString()), null)
 
     assertEquals(workspaceId, scope.workspaceId)
     assertEquals(organizationId, scope.organizationId)
@@ -87,7 +64,7 @@ class AuditScopeResolverTest {
     val workspaceId = UUID.randomUUID()
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns UUID.randomUUID()
 
-    val scope = resolver.resolveScope(null, mapOf("name" to "no ids here"), mapOf("workspaceId" to workspaceId.toString()))
+    val scope = resolver.resolveScope(mapOf("name" to "no ids here"), mapOf("workspaceId" to workspaceId.toString()))
 
     assertEquals(workspaceId, scope.workspaceId)
   }
@@ -100,7 +77,6 @@ class AuditScopeResolverTest {
 
     val scope =
       resolver.resolveScope(
-        null,
         mapOf("workspaceId" to requestWorkspaceId.toString()),
         mapOf("workspaceId" to responseWorkspaceId.toString()),
       )
@@ -116,7 +92,7 @@ class AuditScopeResolverTest {
     every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
 
-    val scope = resolver.resolveScope(null, mapOf("connectionId" to connectionId.toString()), null)
+    val scope = resolver.resolveScope(mapOf("connectionId" to connectionId.toString()), null)
 
     assertEquals(workspaceId, scope.workspaceId)
     assertEquals(organizationId, scope.organizationId)
@@ -133,7 +109,6 @@ class AuditScopeResolverTest {
 
     val scope =
       resolver.resolveScope(
-        null,
         mapOf("connectionId" to connectionId.toString(), "sourceId" to sourceId.toString()),
         null,
       )
@@ -148,7 +123,7 @@ class AuditScopeResolverTest {
     every { workspaceHelper.getWorkspaceForDestinationId(destinationId) } returns workspaceId
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns UUID.randomUUID()
 
-    val scope = resolver.resolveScope(null, mapOf("destinationId" to destinationId.toString()), null)
+    val scope = resolver.resolveScope(mapOf("destinationId" to destinationId.toString()), null)
 
     assertEquals(workspaceId, scope.workspaceId)
   }
@@ -160,7 +135,7 @@ class AuditScopeResolverTest {
     every { workspaceHelper.getWorkspaceForConnectionId(connectionId) } returns workspaceId
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns UUID.randomUUID()
 
-    val scope = resolver.resolveScope(null, mapOf("name" to "nothing"), mapOf("connectionId" to connectionId.toString()))
+    val scope = resolver.resolveScope(mapOf("name" to "nothing"), mapOf("connectionId" to connectionId.toString()))
 
     assertEquals(workspaceId, scope.workspaceId)
   }
@@ -169,7 +144,7 @@ class AuditScopeResolverTest {
   fun `resolves organizationId from body field for org-level action with null workspace`() {
     val organizationId = UUID.randomUUID()
 
-    val scope = resolver.resolveScope(null, mapOf("organizationId" to organizationId.toString()), null)
+    val scope = resolver.resolveScope(mapOf("organizationId" to organizationId.toString()), null)
 
     assertEquals(organizationId, scope.organizationId)
     assertNull(scope.workspaceId)
@@ -177,29 +152,18 @@ class AuditScopeResolverTest {
 
   @Test
   fun `returns nulls when nothing resolves`() {
-    val scope = resolver.resolveScope(null, mapOf("name" to "unrelated"), null)
+    val scope = resolver.resolveScope(mapOf("name" to "unrelated"), null)
 
     assertNull(scope.workspaceId)
     assertNull(scope.organizationId)
   }
 
   @Test
-  fun `handles null headers and null bodies`() {
-    val scope = resolver.resolveScope(null, null, null)
+  fun `handles null bodies`() {
+    val scope = resolver.resolveScope(null, null)
 
     assertNull(scope.workspaceId)
     assertNull(scope.organizationId)
-  }
-
-  @Test
-  fun `ignores unparseable header value and falls through to body`() {
-    val workspaceId = UUID.randomUUID()
-    val headers = headersWith(WORKSPACE_ID_HEADER to "not-a-uuid")
-    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns UUID.randomUUID()
-
-    val scope = resolver.resolveScope(headers, mapOf("workspaceId" to workspaceId.toString()), null)
-
-    assertEquals(workspaceId, scope.workspaceId)
   }
 
   @Test
@@ -207,18 +171,9 @@ class AuditScopeResolverTest {
     val workspaceId = UUID.randomUUID()
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } throws RuntimeException("db down")
 
-    val scope = resolver.resolveScope(null, mapOf("workspaceId" to workspaceId.toString()), null)
+    val scope = resolver.resolveScope(mapOf("workspaceId" to workspaceId.toString()), null)
 
     assertEquals(workspaceId, scope.workspaceId)
     assertNull(scope.organizationId)
-  }
-
-  private fun headersWith(vararg entries: Pair<String, String>): HttpHeaders {
-    val headers = mockk<HttpHeaders>()
-    every { headers.get(WORKSPACE_ID_HEADER) } returns null
-    every { headers.get(ORGANIZATION_ID_HEADER) } returns null
-    every { headers.get(ORGANIZATION_ID_SNAKE_CASE_HEADER) } returns null
-    entries.forEach { (name, value) -> every { headers.get(name) } returns value }
-    return headers
   }
 }

@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.metrics
 
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
-import io.airbyte.commons.server.support.AuthenticationId
+import io.airbyte.commons.server.support.RequestReferences
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -13,7 +13,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.Timer
 import io.micronaut.core.async.publisher.Publishers
-import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.MutableHttpResponse
@@ -22,7 +21,6 @@ import io.micronaut.http.filter.HttpServerFilter
 import io.micronaut.http.filter.ServerFilterChain
 import io.micronaut.http.filter.ServerFilterPhase
 import org.reactivestreams.Publisher
-import kotlin.jvm.optionals.getOrNull
 
 private const val TRACE_ATTR = "io.airbyte.trace"
 
@@ -52,51 +50,6 @@ class TracingServerFilter(
     // Store the trace in the http request attributes, so that we can finalize
     // the trace in the response handler traceResponse() below.
     req.setAttribute(TRACE_ATTR, trace)
-
-    // This should never be allowed to fail, as it could cause all API traffic to fail,
-    // so be extra cautious here and surround everything with try/catch.
-    try {
-      for (entry in AuthenticationId.entries) {
-        // Skip snake_case fields
-        if (entry.fieldName.contains("_")) {
-          continue
-        }
-        // trace IDs found in the request: workspace, organization, etc.
-        // This relies on AuthenticationHeaderResolver.
-        if (req.headers.contains(entry.httpHeader)) {
-          trace.refs[entry.fieldName] = req.headers.getAll(entry.httpHeader).joinToString(",") { it.toString() }
-        }
-      }
-
-      val authProps = req.headers.asMap(String::class.java, String::class.java).toMutableMap()
-
-      // pull variables from the route
-      // e.g. pull workspaceId from a call to "/api/public/v1/workspaces/{workspaceId}"
-      val routeVars = getRouteVariables(req)
-      for (entry in routeVars.entries) {
-        trace.refs[entry.key] = entry.value.toString()
-
-        // The AuthorizationServerHandler doesn't currently support micronaut route variables,
-        // but we need them to resolve workspaceId and organizationId below (mainly for the public API).
-        // This adds route variables to the authProps that are used to resolve those IDs below.
-        AuthenticationId.entries
-          .firstOrNull { it.fieldName == entry.key }
-          ?.also { authProps[it.httpHeader] = entry.value.toString() }
-      }
-
-      // resolve workspace and organization IDs
-      if (trace.refs["workspaceId"] == null) {
-        trace.refs["workspaceId"] = authenticationHeaderResolver.resolveWorkspace(authProps)?.joinToString { it.toString() }
-      }
-      if (trace.refs["organizationId"] == null) {
-        trace.refs["organizationId"] = authenticationHeaderResolver.resolveOrganization(authProps)?.joinToString { it.toString() }
-      }
-
-      ApmTraceUtils.addTagsToTrace(trace.refs.toMap())
-    } catch (e: Exception) {
-      logger.error(e) { "failed to trace request" }
-      trace.traceError = e
-    }
   }
 
   fun traceResponse(
@@ -108,6 +61,20 @@ class TracingServerFilter(
     // so be extra cautious here and surround everything with try/catch.
     try {
       val trace = req.getAttribute(TRACE_ATTR, Trace::class.java).orElseThrow()
+      try {
+        val references = RequestReferences.from(req)
+        trace.refs.putAll(references.traceValues())
+        val properties = references.asScopeProperties()
+        if (trace.refs["workspaceId"] == null) {
+          trace.refs["workspaceId"] = authenticationHeaderResolver.resolveWorkspace(properties)?.joinToString { it.toString() }
+        }
+        if (trace.refs["organizationId"] == null) {
+          trace.refs["organizationId"] = authenticationHeaderResolver.resolveOrganization(properties)?.joinToString { it.toString() }
+        }
+      } catch (e: Exception) {
+        logger.error(e) { "failed to resolve trace references" }
+      }
+      ApmTraceUtils.addTagsToTrace(trace.refs.toMap())
 
       val metricAttrs = mutableListOf<MetricAttribute>()
 
@@ -149,9 +116,6 @@ private data class Trace(
   val refs: MutableMap<String, String?> = mutableMapOf(),
   var traceError: Throwable? = null,
 )
-
-private fun getRouteVariables(req: HttpRequest<*>): Map<String, Any> =
-  BasicHttpAttributes.getRouteMatchInfo(req).getOrNull()?.variableValues ?: emptyMap()
 
 private fun MutableList<MetricAttribute>.add(
   prefix: String,

@@ -5,11 +5,10 @@
 package io.airbyte.commons.server.support
 
 /**
- * Enumeration of the ID values that are used to perform authentication. These values are used to
- * fetch roles associated with an authenticated user.
+ * Identifier fields used to resolve a request's workspace and organization.
  *
- * Every body field has a header of its own. Two fields that shared a header would let one of them replace the
- * other, so the permission check would read one id while the endpoint reads the other.
+ * The header names are property keys for callers that already have parsed request values. They must
+ * never be read from client-supplied HTTP headers.
  */
 enum class AuthenticationId(
   @JvmField val fieldName: String,

@@ -22,8 +22,6 @@ import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.helpers.PermissionHelper
 import io.airbyte.data.auth.TokenType
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.security.utils.SecurityService
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
@@ -113,17 +111,6 @@ open class RoleResolver(
       // Figure out the subject type and ID.
       subject = Subject(sub, TokenType.fromClaims(claims))
     }
-
-    fun withRefsFromCurrentHttpRequest() =
-      apply {
-        ServerRequestContext.currentRequest<Any>().map { withRefsFromHttpRequest(it) }
-      }
-
-    fun withRefsFromHttpRequest(req: HttpRequest<*>) =
-      apply {
-        val headers = req.headers.asMap(String::class.java, String::class.java)
-        props.putAll(headers)
-      }
 
     fun withOrg(organizationId: UUID) =
       apply {

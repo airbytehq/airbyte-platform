@@ -25,7 +25,6 @@ import io.airbyte.api.server.generated.models.PartialDestinationUpdate
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.converters.toModel
@@ -36,6 +35,7 @@ import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.server.apis.execute
+import io.airbyte.server.auth.ConfigSearchRule
 import io.airbyte.server.auth.ConnectionDestinationCatalogReadRule
 import io.airbyte.server.auth.DestinationCatalogWriteRule
 import io.airbyte.server.auth.DestinationDeleteRule
@@ -186,8 +186,8 @@ open class DestinationApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuthorizeOperation(
     access = RouteAccessPolicy.PROTECTED,
+    rule = ConfigSearchRule::class,
   )
-  @ConfigSearchAccessException
   override fun searchDestinations(
     @Body destinationSearch: DestinationSearch,
   ): DestinationReadList = execute { destinationHandler.searchDestinations(destinationSearch) }

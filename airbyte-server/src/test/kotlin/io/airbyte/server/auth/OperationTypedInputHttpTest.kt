@@ -10,7 +10,6 @@ import io.airbyte.commons.auth.route.OperationInput
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.server.authorization.RoleResolver
-import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Permission
 import io.airbyte.config.StandardWorkspace
@@ -112,12 +111,7 @@ class OperationTypedInputHttpTest {
     earlierAllow: Boolean = false,
     expectedBody: String = "$FIRST,$SECOND:$ORGANIZATION:0",
   ) {
-    operationContext(checkerEnabled = true, typed = true, scopeRule = scoped, earlierAllow = earlierAllow).use { context ->
-      if (scoped) {
-        val headers = mockk<AuthenticationHeaderResolver>()
-        every { headers.resolveWorkspace(any()) } returns emptyList()
-        context.registerSingleton(AuthenticationHeaderResolver::class.java, headers)
-      }
+    operationContext(checkerEnabled = true, typed = true, earlierAllow = earlierAllow).use { context ->
       val workspaces = mockk<WorkspaceService>()
       for (workspace in listOf(FIRST, SECOND)) {
         every { workspaces.getStandardWorkspaceNoSecrets(workspace, false) } returns

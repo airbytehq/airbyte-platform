@@ -16,6 +16,7 @@ import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.JobConfig
 import io.airbyte.config.Organization
@@ -259,6 +260,19 @@ internal class AuthorizationScopeConsistencyHttpTest {
   fun `a request naming only the caller's own source succeeds`() {
     val status = post("/api/v1/sources/get", mapOf("sourceId" to attackerSource.toString()))
     assertEquals(HttpStatus.OK, status)
+  }
+
+  @Test
+  fun `client supplied organization header does not change the authorized scope`() {
+    val request =
+      HttpRequest
+        .POST("/api/v1/sources/get", mapOf("sourceId" to attackerSource.toString()))
+        .header(AuthenticationId.ORGANIZATION_ID.httpHeader, victimOrg.toString())
+        .bearerAuth(bearerToken())
+
+    val response = client.toBlocking().exchange(request, String::class.java)
+
+    assertEquals(HttpStatus.OK, response.status)
   }
 
   @Test

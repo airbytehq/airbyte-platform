@@ -5,7 +5,6 @@
 package io.airbyte.server.auth
 
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.micronaut.security.annotation.Secured
@@ -25,7 +24,6 @@ fun routeAccessEntries(inventory: RouteAccessInventory): List<RouteAccessEntry> 
         "${method.declaringClass.name}#${method.name}",
         metadata.enumValue(AuthorizeOperation::class.java, "access", RouteAccessPolicy::class.java).orElseThrow(),
         metadata.classValue(AuthorizeOperation::class.java, "rule").orElse(OperationRule::class.java).name,
-        metadata.hasAnnotation(ConfigSearchAccessException::class.java),
         metadata
           .getValue(Secured::class.java, Array<String>::class.java)
           .orElse(emptyArray())
@@ -92,27 +90,8 @@ fun assertRemainingProtectedConfigRoutes(
       operation,
     )
     org.junit.jupiter.api.Assertions
-      .assertFalse(declaration.hasAnnotation(ConfigSearchAccessException::class.java), operation)
-    org.junit.jupiter.api.Assertions
       .assertEquals(rule, declaration.classValue(AuthorizeOperation::class.java, "rule").orElseThrow().name, operation)
   }
-  val searches =
-    routeAccessEntries(inventory).filter {
-      it.httpMethod != "HEAD" && it.path.startsWith("/api/v1/") &&
-        it.access == RouteAccessPolicy.PROTECTED &&
-        it.searchException
-    }
-  org.junit.jupiter.api.Assertions.assertEquals(
-    setOf(
-      "/api/v1/sources/search",
-      "/api/v1/destinations/search",
-      "/api/v1/connections/search",
-    ),
-    searches
-      .map {
-        it.path
-      }.toSet(),
-  )
 }
 
 data class RouteAccessEntry(
@@ -121,10 +100,9 @@ data class RouteAccessEntry(
   val implementation: String,
   val access: RouteAccessPolicy,
   val rule: String,
-  val searchException: Boolean,
   val roles: List<String>,
 ) {
-  val hasSharedRule: Boolean get() = access == RouteAccessPolicy.PROTECTED && rule != OperationRule::class.java.name && !searchException
+  val hasSharedRule: Boolean get() = access == RouteAccessPolicy.PROTECTED && rule != OperationRule::class.java.name
 
   val family: String get() = path.removePrefix("/api/public/v1/").removePrefix("/api/v1/").substringBefore('/')
 }

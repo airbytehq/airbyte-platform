@@ -8,16 +8,17 @@ import io.airbyte.api.server.generated.models.ConnectionReadList
 import io.airbyte.api.server.generated.models.DestinationReadList
 import io.airbyte.api.server.generated.models.SourceReadList
 import io.airbyte.commons.auth.route.AuthorizeOperation
-import io.airbyte.commons.auth.route.ConfigSearchAccessException
 import io.airbyte.commons.auth.route.OperationRule
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
 import io.airbyte.commons.server.handlers.SourceHandler
+import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.server.apis.controllers.ConnectionApiController
 import io.airbyte.server.apis.controllers.DestinationApiController
 import io.airbyte.server.apis.controllers.SourceApiController
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -29,10 +30,10 @@ abstract class ConfigSearchAccessHttpContract {
   protected open val cloud = false
 
   @Test
-  fun `marked searches preserve authentication binding responses and handler errors`() = searches(security = true)
+  fun `searches preserve authentication binding responses and handler errors`() = searches(security = true)
 
   @Test
-  fun `marked searches preserve no auth behavior`() = searches(security = false)
+  fun `searches preserve no auth behavior`() = searches(security = false)
 
   private fun searches(security: Boolean) {
     val controllers =
@@ -43,8 +44,9 @@ abstract class ConfigSearchAccessHttpContract {
       } else {
         listOf(SourceApiController::class.java, DestinationApiController::class.java, ConnectionApiController::class.java)
       }
-    RemainingOperationHttpSupport(cloud, controllers, emptySet(), security, earlierAllow = false).run(
-      configure = { _, business ->
+    RemainingOperationHttpSupport(cloud, controllers, setOf(ConfigSearchRule::class.java.name), security, earlierAllow = false).run(
+      configure = { context, business ->
+        context.registerSingleton(AuthenticationHeaderResolver::class.java, mockk<AuthenticationHeaderResolver>())
         business.filterIsInstance<SourceHandler>().forEach { every { it.searchSources(any()) } returns SourceReadList(sources = emptyList()) }
         business.filterIsInstance<DestinationHandler>().forEach {
           every { it.searchDestinations(any()) } returns DestinationReadList(destinations = emptyList())
@@ -55,9 +57,12 @@ abstract class ConfigSearchAccessHttpContract {
         }
       },
       check = { context, server, business ->
-        val searches = routeAccessEntries(context.getBean(RouteAccessInventory::class.java)).filter { it.searchException }
+        val searches =
+          routeAccessEntries(context.getBean(RouteAccessInventory::class.java)).filter {
+            it.path in setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search")
+          }
         assertEquals(setOf("/api/v1/sources/search", "/api/v1/destinations/search", "/api/v1/connections/search"), searches.map { it.path }.toSet())
-        assertTrue(searches.all { it.httpMethod == "POST" && !it.hasSharedRule })
+        assertTrue(searches.all { it.httpMethod == "POST" && it.hasSharedRule && it.rule == ConfigSearchRule::class.java.name })
         for (family in listOf("sources", "destinations", "connections")) {
           val path = "/api/v1/$family/search"
           if (security) {
@@ -103,7 +108,7 @@ abstract class ConfigSearchAccessHttpContract {
         }
         controllers
           .flatMap { it.methods.toList() }
-          .filterNot { it.isAnnotationPresent(ConfigSearchAccessException::class.java) }
+          .filterNot { it.getAnnotation(AuthorizeOperation::class.java)?.rule == ConfigSearchRule::class }
           .mapNotNull { it.getAnnotation(AuthorizeOperation::class.java) }
           .map { it.rule.java }
           .filter { it != OperationRule::class.java }

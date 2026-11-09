@@ -164,7 +164,7 @@ class AuditLoggingInterceptorTest {
       )
 
     val resolvedOrganizationId = UUID.randomUUID()
-    every { auditScopeResolver.resolveScope(any(), any(), any()) } returns
+    every { auditScopeResolver.resolveScope(any(), any()) } returns
       ResolvedAuditScope(organizationId = resolvedOrganizationId, workspaceId = workspaceId)
     every { entitlementService.checkEntitlement(OrganizationId(resolvedOrganizationId), AuditLoggingEntitlement) } returns
       EntitlementResult(featureId = AuditLoggingEntitlement.featureId, isEntitled = true)

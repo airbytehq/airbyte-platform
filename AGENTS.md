@@ -230,11 +230,9 @@ three layers.
   - Put the annotation on the **implementation method**, including each
     Cloud `@Replaces` override. Startup validates the active routes, and the
     request filter blocks managed routes that were not validated.
-  - The only Config search exceptions are `POST /api/v1/sources/search`,
-    `/destinations/search` and `/connections/search`. They keep their
-    current behavior with `@ConfigSearchAccessException`, authentication
-    and `@AuthorizeOperation(access = RouteAccessPolicy.PROTECTED)` without
-    a rule. Do not use that marker for another route.
+  - The Config root searches (`sources/search`, `destinations/search`, and
+    `connections/search`) use `ConfigSearchRule`. It keeps their current
+    behavior while checking workspace scope for embedded tokens.
   - Keep service-level checks when the service also has non-route callers.
     `RoleResolver` remains available to rules and services; it is not the
     default controller authorization pattern.

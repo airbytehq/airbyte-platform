@@ -56,13 +56,15 @@ class AttributedApiCallTrackingFilterTest {
   }
 
   @Test
-  fun `tracks attributed call scoped to the workspace when a source header is present`() {
+  fun `tracks attributed call from the body rather than spoofed reference headers`() {
+    val spoofedWorkspaceId = UUID.randomUUID()
+    val spoofedOrganizationId = UUID.randomUUID()
     val request =
       HttpRequest
-        .POST("/api/v1/web_backend/connections/get", "{}")
+        .POST("/api/v1/web_backend/connections/get", mapOf("workspaceId" to workspaceId, "organizationId" to organizationId))
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, "pyairbyte-mcp-hosted")
-        .header(WORKSPACE_ID_HEADER, workspaceId.toString())
-        .header(ORGANIZATION_ID_HEADER, organizationId.toString())
+        .header(WORKSPACE_ID_HEADER, spoofedWorkspaceId.toString())
+        .header(ORGANIZATION_ID_HEADER, spoofedOrganizationId.toString())
     authenticate(request)
 
     val response = run(request)
@@ -118,9 +120,8 @@ class AttributedApiCallTrackingFilterTest {
   fun `falls back to the organization scope when no workspace is resolvable`() {
     val request =
       HttpRequest
-        .GET<Any>("/api/public/v1/organizations")
+        .POST("/api/v1/organizations/get", mapOf("organizationId" to organizationId))
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, "pyairbyte")
-        .header(ORGANIZATION_ID_HEADER, organizationId.toString())
 
     run(request)
 
@@ -153,9 +154,11 @@ class AttributedApiCallTrackingFilterTest {
     every { authenticationHeaderResolver.resolveWorkspace(any()) } throws IllegalStateException("db down")
     val request =
       HttpRequest
-        .GET<Any>("/api/public/v1/jobs")
+        .GET<Any>("/api/public/v1/organizations/$organizationId")
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, "pyairbyte")
-        .header(ORGANIZATION_ID_HEADER, organizationId.toString())
+    val routeMatch = mockk<UriRouteMatch<Any, Any>>()
+    every { routeMatch.variableValues } returns mapOf("organizationId" to organizationId.toString())
+    RouteAttributes.setRouteMatch(request, routeMatch)
     authenticate(request)
 
     val response = run(request)
@@ -167,7 +170,7 @@ class AttributedApiCallTrackingFilterTest {
         ScopeType.ORGANIZATION,
         AIRBYTE_ATTRIBUTED_API_CALL,
         mapOf(
-          "endpoint" to "/api/public/v1/jobs",
+          "endpoint" to "/api/public/v1/organizations/$organizationId",
           "operation" to "GET",
           "status_code" to 200,
           "organization" to organizationId.toString(),
@@ -194,9 +197,8 @@ class AttributedApiCallTrackingFilterTest {
   fun `does not track ignored or blank sources`(source: String) {
     val request =
       HttpRequest
-        .POST("/api/v1/workspaces/get", "{}")
+        .POST("/api/v1/workspaces/get", mapOf("workspaceId" to workspaceId))
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, source)
-        .header(WORKSPACE_ID_HEADER, workspaceId.toString())
 
     run(request)
 
@@ -207,8 +209,7 @@ class AttributedApiCallTrackingFilterTest {
   fun `does not track when the header is absent`() {
     val request =
       HttpRequest
-        .POST("/api/v1/workspaces/get", "{}")
-        .header(WORKSPACE_ID_HEADER, workspaceId.toString())
+        .POST("/api/v1/workspaces/get", mapOf("workspaceId" to workspaceId))
 
     run(request)
 
@@ -220,13 +221,13 @@ class AttributedApiCallTrackingFilterTest {
     every { trackingClient.track(any(), any(), any(), any()) } throws IllegalStateException("segment down")
     val request =
       HttpRequest
-        .POST("/api/v1/workspaces/get", "{}")
+        .POST("/api/v1/workspaces/get", mapOf("workspaceId" to workspaceId))
         .header(AIRBYTE_ANALYTIC_SOURCE_HEADER, "pyairbyte")
-        .header(WORKSPACE_ID_HEADER, workspaceId.toString())
 
     val response = run(request)
 
     assertEquals(200, response.status.code)
+    verify(exactly = 1) { trackingClient.track(workspaceId, ScopeType.WORKSPACE, AIRBYTE_ATTRIBUTED_API_CALL, any()) }
   }
 
   private fun authenticate(request: HttpRequest<*>) {

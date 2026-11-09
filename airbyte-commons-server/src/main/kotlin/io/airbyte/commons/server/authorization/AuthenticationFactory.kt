@@ -41,7 +41,6 @@ class AuthenticationFactory(
       roleResolver
         .newRequest()
         .withClaims(subject, claims)
-        .withRefsFromCurrentHttpRequest()
         .roles()
 
     ApmTraceUtils.addTagsToRootSpan(mapOf("authUserId" to subject))

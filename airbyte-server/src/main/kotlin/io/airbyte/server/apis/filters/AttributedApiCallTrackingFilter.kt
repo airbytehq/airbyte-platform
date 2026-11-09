@@ -8,6 +8,7 @@ import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.server.support.RequestReferences
 import io.airbyte.config.ScopeType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.async.publisher.Publishers
@@ -22,7 +23,6 @@ import io.micronaut.http.filter.ServerFilterChain
 import io.micronaut.http.filter.ServerFilterPhase
 import org.reactivestreams.Publisher
 import java.util.UUID
-import kotlin.jvm.optionals.getOrNull
 
 private val log = KotlinLogging.logger {}
 
@@ -127,18 +127,7 @@ class AttributedApiCallTrackingFilter(
     props[AuthenticationId.ORGANIZATION_ID.httpHeader]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
       ?: if (workspaceId == null) authenticationHeaderResolver.resolveOrganization(props)?.singleOrNull() else null
 
-  /**
-   * Authentication properties come from request headers (populated from the request body by the
-   * authorization filter) plus route variables (e.g. `{workspaceId}` on Public API paths).
-   */
-  private fun authProperties(request: HttpRequest<*>): Map<String, String> {
-    val props = request.headers.asMap(String::class.java, String::class.java).toMutableMap()
-    val routeVars = BasicHttpAttributes.getRouteMatchInfo(request).getOrNull()?.variableValues ?: emptyMap()
-    for ((name, value) in routeVars) {
-      AuthenticationId.entries.firstOrNull { it.fieldName == name }?.also { props[it.httpHeader] = value.toString() }
-    }
-    return props
-  }
+  private fun authProperties(request: HttpRequest<*>): Map<String, String> = RequestReferences.from(request).asScopeProperties()
 
   companion object {
     const val AIRBYTE_ATTRIBUTED_API_CALL = "Airbyte_Attributed_API_Call"
