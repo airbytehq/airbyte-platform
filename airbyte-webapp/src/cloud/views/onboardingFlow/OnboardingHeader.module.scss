@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-xl;
+  flex-shrink: 0;
+  padding-right: variables.$spacing-xl;
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+
+  &__organization {
+    flex-shrink: 0;
+    width: variables.$width-side-menu;
+    border-right: variables.$border-thin solid colors.$grey-100;
+  }
+
+  &__progress {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  &__userActions {
+    flex-shrink: 0;
+  }
+}

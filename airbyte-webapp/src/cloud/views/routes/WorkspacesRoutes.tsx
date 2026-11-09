@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { EnterpriseStubConnectorPage } from "area/connector/components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
+import { useRegisterWorkspaceContext } from "cloud/area/workspace/utils/useRegisterWorkspaceContext";
 import OrganizationBillingPage from "cloud/views/billing/OrganizationBillingPage";
 import OrganizationUsagePage from "cloud/views/billing/OrganizationUsagePage";
 import { CloudSettingsPage } from "cloud/views/settings/CloudSettingsPage";
@@ -13,8 +14,7 @@ import { WorkspaceSettingsView } from "cloud/views/workspaces/WorkspaceSettingsV
 import WorkspaceUsagePage from "cloud/views/workspaces/WorkspaceUsagePage";
 import { useCurrentWorkspace } from "core/api";
 import { usePrefetchWorkspaceData } from "core/api/cloud";
-import { useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
-import { useExperiment, useExperimentContext } from "core/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
@@ -58,17 +58,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
   const isCloudApp = useIsCloudApp();
 
-  useExperimentContext("workspace", workspace.workspaceId);
-
-  const analyticsContext = React.useMemo(
-    () => ({
-      workspace_id: workspace.workspaceId,
-      customer_id: workspace.customerId,
-      organization_id: workspace.organizationId,
-    }),
-    [workspace]
-  );
-  useAnalyticsRegisterValues(analyticsContext);
+  useRegisterWorkspaceContext(workspace);
 
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const supportsPrivateLinks = useFeature(FeatureItem.PrivateLinks);

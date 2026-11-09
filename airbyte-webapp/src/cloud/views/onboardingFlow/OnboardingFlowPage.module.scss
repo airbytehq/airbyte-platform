@@ -1,0 +1,21 @@
+@use "scss/variables";
+
+$content-width: 672px;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: variables.$spacing-2xl;
+  }
+
+  &__content {
+    max-width: $content-width;
+    margin: 0 auto;
+  }
+}

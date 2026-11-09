@@ -32,6 +32,7 @@ const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const AuthLayout = React.lazy(() => import("cloud/views/auth"));
 const DefaultView = React.lazy(() => import("pages/DefaultView"));
+const OnboardingFlowPage = React.lazy(() => import("./views/onboardingFlow/OnboardingFlowPage"));
 
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
@@ -46,6 +47,10 @@ const CloudMainViewRoutes = () => {
       <Routes>
         <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
 
+        <Route
+          path={`${RoutePaths.Workspaces}/:workspaceId/${CloudRoutes.OnboardingFlow}/*`}
+          element={<OnboardingFlowPage />}
+        />
         <Route element={<MainLayout />}>
           <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
