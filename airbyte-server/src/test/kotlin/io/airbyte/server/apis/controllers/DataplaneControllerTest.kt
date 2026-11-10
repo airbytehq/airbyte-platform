@@ -76,7 +76,10 @@ class DataplaneControllerTest {
       mockk<DataplaneHealthService>(relaxed = true).apply {
         every { getPublishedReleaseSupport(any(), any()) } returns emptyMap()
       }
-    private val secretStorageService = mockk<SecretStorageService>()
+    private val secretStorageService =
+      mockk<SecretStorageService>().apply {
+        every { getNamesForOrganization(any(), any()) } returns emptyMap()
+      }
 
     private val entitlementService = mockk<EntitlementService>(relaxed = true)
     private val airbyteConfig =
@@ -748,7 +751,7 @@ class DataplaneControllerTest {
   }
 
   @Test
-  fun `listDataplaneHealth returns each data plane's saved diagnostics`() {
+  fun `listDataplaneHealth returns each data plane's saved diagnostics with the store names it may see`() {
     val mockOrganizationId = UUID.randomUUID()
     val dataplaneWithResults = createDataplane(UUID.randomUUID(), enabled = true)
     val dataplaneWithoutResults = createDataplane(UUID.randomUUID(), enabled = true)
@@ -776,6 +779,12 @@ class DataplaneControllerTest {
         SavedDataplaneDiagnostic(dataplaneWithResults.id, passed, updatedAt),
         SavedDataplaneDiagnostic(dataplaneWithResults.id, failed, updatedAt),
       )
+    every {
+      secretStorageService.getNamesForOrganization(
+        OrganizationId(mockOrganizationId),
+        setOf(SecretStorageId(passed.targetId), SecretStorageId(failed.targetId)),
+      )
+    } returns mapOf(SecretStorageId(passed.targetId) to "Finance store")
 
     val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
 
@@ -786,6 +795,7 @@ class DataplaneControllerTest {
             DataplaneDiagnosticRead(
               kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE,
               targetId = passed.targetId,
+              targetName = "Finance store",
               status = DataplaneDiagnosticStatus.PASSED,
               checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
               updatedAt = updatedAt.toInstant().toEpochMilli(),

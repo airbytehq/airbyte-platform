@@ -49,6 +49,7 @@ import io.airbyte.domain.models.DataplaneId
 import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
+import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DataplaneHealthUi
@@ -414,7 +415,16 @@ open class DataplaneController(
 
     val healthUiEnabled = featureFlagClient.boolVariation(DataplaneHealthUi, Organization(request.organizationId))
     val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, healthUiEnabled)
-    val diagnosticsByDataplane = dataplaneHealthService.getDiagnostics(request.organizationId, dataplanes.map { it.id }).groupBy { it.dataplaneId }
+    val diagnostics = dataplaneHealthService.getDiagnostics(request.organizationId, dataplanes.map { it.id })
+    val diagnosticsByDataplane = diagnostics.groupBy { it.dataplaneId }
+    val secretStorageNames =
+      secretStorageService.getNamesForOrganization(
+        OrganizationId(request.organizationId),
+        diagnostics
+          .filter { it.diagnostic.kind == DataplaneDiagnosticKind.SECRET_STORAGE }
+          .map { SecretStorageId(it.diagnostic.targetId) }
+          .toSet(),
+      )
     val releaseSupportByVersion =
       if (healthUiEnabled) {
         dataplaneHealthService.getPublishedReleaseSupport(healthInfos.mapNotNull { it.dataplaneVersion }.toSet())
@@ -459,7 +469,7 @@ open class DataplaneController(
             } else {
               null
             },
-          diagnostics = savedDiagnostics.map { toDiagnosticRead(it) },
+          diagnostics = savedDiagnostics.map { toDiagnosticRead(it, secretStorageNames) },
           unsupportedDiagnosticKinds =
             dataplaneHealthService.unsupportedDiagnosticKinds(healthInfo.dataplaneVersion, savedDiagnostics).map { toApiKind(it) },
         )
@@ -484,7 +494,10 @@ open class DataplaneController(
       DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
     }
 
-  private fun toDiagnosticRead(saved: SavedDataplaneDiagnostic): DataplaneDiagnosticRead {
+  private fun toDiagnosticRead(
+    saved: SavedDataplaneDiagnostic,
+    secretStorageNames: Map<SecretStorageId, String>,
+  ): DataplaneDiagnosticRead {
     val diagnostic = saved.diagnostic
     val (status, errorCode, errorMessage) =
       when (val outcome = diagnostic.outcome) {
@@ -497,6 +510,10 @@ open class DataplaneController(
     return DataplaneDiagnosticRead(
       kind = toApiKind(diagnostic.kind),
       targetId = diagnostic.targetId,
+      targetName =
+        when (diagnostic.kind) {
+          DataplaneDiagnosticKind.SECRET_STORAGE -> secretStorageNames[SecretStorageId(diagnostic.targetId)]
+        },
       status = status,
       checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),
       updatedAt = saved.updatedAt.toInstant().toEpochMilli(),

@@ -548,7 +548,10 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
           every { instance.getPublishedReleaseSupport(emptySet(), any()) } returns emptyMap()
         }
         is FeatureFlagClient -> every { instance.boolVariation(any(), any()) } returns false
-        is SecretStorageService -> every { instance.listForDataplane(SERVICE_ACCOUNT) } returns emptyList()
+        is SecretStorageService -> {
+          every { instance.listForDataplane(SERVICE_ACCOUNT) } returns emptyList()
+          every { instance.getNamesForOrganization(OrganizationId(ORGANIZATION), emptySet()) } returns emptyMap()
+        }
       }
       configureDependency(instance)
     }

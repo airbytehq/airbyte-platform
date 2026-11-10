@@ -696,6 +696,85 @@ class SecretStorageServiceTest {
   }
 
   @Nested
+  inner class GetNamesForOrganization {
+    private val otherOrgId = UUID.randomUUID()
+    private val otherOrg =
+      mockk<Organization>().also {
+        every { it.organizationId } returns otherOrgId
+      }
+
+    @Test
+    fun `returns the names of the organization's stores`() {
+      val orgStorage = storage(SecretStorageScopeType.ORGANIZATION, orgId.value, "Org store")
+      val workspaceStorage = storage(SecretStorageScopeType.WORKSPACE, workspaceId.value, "Finance store")
+      every { organizationRepository.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
+
+      assertEquals(
+        mapOf(orgStorage.id to "Org store", workspaceStorage.id to "Finance store"),
+        service.getNamesForOrganization(orgId, setOf(orgStorage.id, workspaceStorage.id)),
+      )
+    }
+
+    @Test
+    fun `returns the name of the deployment default store`() {
+      val defaultStorage =
+        storage(SecretStorageScopeType.ORGANIZATION, UUID.randomUUID(), "Default Secret Storage", SecretStorage.DEFAULT_SECRET_STORAGE_ID)
+
+      assertEquals(
+        mapOf(defaultStorage.id to "Default Secret Storage"),
+        service.getNamesForOrganization(orgId, setOf(defaultStorage.id)),
+      )
+    }
+
+    @Test
+    fun `leaves out stores of another organization`() {
+      val otherOrgStorage = storage(SecretStorageScopeType.ORGANIZATION, otherOrgId, "Other org store")
+      val otherWorkspaceId = UUID.randomUUID()
+      val otherWorkspaceStorage = storage(SecretStorageScopeType.WORKSPACE, otherWorkspaceId, "Other workspace store")
+      every { organizationRepository.getOrganizationForWorkspaceId(otherWorkspaceId) } returns Optional.of(otherOrg)
+
+      assertEquals(
+        emptyMap<SecretStorageId, String>(),
+        service.getNamesForOrganization(orgId, setOf(otherOrgStorage.id, otherWorkspaceStorage.id)),
+      )
+    }
+
+    @Test
+    fun `leaves out deleted and unknown stores`() {
+      val deleted = storage(SecretStorageScopeType.ORGANIZATION, orgId.value, "Deleted store", tombstone = true)
+      val unknown = SecretStorageId(UUID.randomUUID())
+      every { secretStorageRepository.findById(unknown) } returns null
+
+      assertEquals(emptyMap<SecretStorageId, String>(), service.getNamesForOrganization(orgId, setOf(deleted.id, unknown)))
+    }
+
+    @Test
+    fun `returns nothing for no stores`() {
+      assertEquals(emptyMap<SecretStorageId, String>(), service.getNamesForOrganization(orgId, emptySet()))
+    }
+
+    private fun storage(
+      scopeType: SecretStorageScopeType,
+      scopeId: UUID,
+      descriptor: String,
+      id: SecretStorageId = SecretStorageId(UUID.randomUUID()),
+      tombstone: Boolean = false,
+    ) = SecretStorage(
+      id = id,
+      scopeType = scopeType,
+      scopeId = scopeId,
+      descriptor = descriptor,
+      storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+      configuredFromEnvironment = false,
+      tombstone = tombstone,
+      createdBy = userId.value,
+      updatedBy = userId.value,
+      createdAt = null,
+      updatedAt = null,
+    ).also { every { secretStorageRepository.findById(it.id) } returns it }
+  }
+
+  @Nested
   inner class HydrateStorageConfig {
     @Test
     fun `should throw UnsupportedOperationException if secret storage is configured from environment`() {

@@ -25750,6 +25750,9 @@ components:
         target_id:
           type: string
           format: uuid
+        target_name:
+          type: string
+          description: Name of the target when Airbyte knows it, such as a secret store's name.
         status:
           $ref: "#/components/schemas/DataplaneDiagnosticStatus"
         checked_at:

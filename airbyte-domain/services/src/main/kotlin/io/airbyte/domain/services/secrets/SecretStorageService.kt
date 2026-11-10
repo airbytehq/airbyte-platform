@@ -293,6 +293,32 @@ open class SecretStorageService(
     return listForDataplaneGroup(OrganizationId(dataplaneGroup.organizationId), dataplane.dataplaneGroupId)
   }
 
+  /**
+   * Returns the names of the given secret storages that belong to the organization or are the deployment default.
+   */
+  fun getNamesForOrganization(
+    organizationId: OrganizationId,
+    ids: Set<SecretStorageId>,
+  ): Map<SecretStorageId, String> =
+    ids
+      .mapNotNull { secretStorageRepository.findById(it) }
+      .filter { !it.tombstone && belongsTo(it, organizationId) }
+      .associate { it.id to it.descriptor }
+
+  private fun belongsTo(
+    secretStorage: SecretStorage,
+    organizationId: OrganizationId,
+  ): Boolean =
+    when {
+      secretStorage.isDefault() -> true
+      secretStorage.scopeType == SecretStorageScopeType.ORGANIZATION -> secretStorage.scopeId == organizationId.value
+      else ->
+        organizationRepository
+          .getOrganizationForWorkspaceId(secretStorage.scopeId)
+          .map { it.organizationId == organizationId.value }
+          .orElse(false)
+    }
+
   private fun listForDataplaneGroup(
     organizationId: OrganizationId,
     dataplaneGroupId: UUID,
