@@ -18,8 +18,12 @@ import {
   listOrganizationsByUser,
   listOrganizationSummaries,
   getOrganizationDataWorkerUsage,
+  updateOrganizationOnboardingStatus,
 } from "../generated/AirbyteClient";
-import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
+import {
+  OrganizationOnboardingStatusUpdateRequestBody,
+  OrganizationUpdateRequestBody,
+} from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -112,6 +116,34 @@ export const useUpdateOrganization = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries(organizationKeys.info(data.organizationId));
         queryClient.setQueryData(organizationKeys.detail(data.organizationId), data);
+      },
+    }
+  );
+};
+
+/**
+ * The organization info response (`getOrgInfo`) is cached under two query keys: `info` (`useCurrentOrganizationInfo`)
+ * and `orgInfo` (`useOrgInfo`). After a status update, both cached copies get the new `onboardingStatus`, so every
+ * component that reads the status sees the change at once, without a refetch. A `getOrgInfo` request that is still
+ * running is cancelled first. Otherwise its response, which has the old status, could arrive later and overwrite the
+ * new one.
+ */
+export const useUpdateOrganizationOnboarding = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    (request: OrganizationOnboardingStatusUpdateRequestBody) =>
+      updateOrganizationOnboardingStatus(request, requestOptions),
+    {
+      onSuccess: async ({ status }, { organizationId }) => {
+        await Promise.all([
+          queryClient.cancelQueries(organizationKeys.info(organizationId)),
+          queryClient.cancelQueries(organizationKeys.orgInfo(organizationId)),
+        ]);
+        const withStatus = (info?: OrganizationInfoRead) => info && { ...info, onboardingStatus: status };
+        queryClient.setQueryData(organizationKeys.info(organizationId), withStatus);
+        queryClient.setQueryData(organizationKeys.orgInfo(organizationId), withStatus);
       },
     }
   );

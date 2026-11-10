@@ -3017,6 +3017,7 @@
   "onboardingFlow.actions.skip": "Skip onboarding",
   "onboardingFlow.actions.back": "Back",
   "onboardingFlow.actions.continue": "Continue",
+  "onboardingFlow.actions.skipError": "We could not skip onboarding. Please try again.",
   "onboarding.title": "Welcome to Airbyte",
   "onboarding.description": "Let's get you started",
   "onboarding.survey.selectOption": "Select an option",

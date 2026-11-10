@@ -192,6 +192,13 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  UpdateOrganizationOnboardingStatus:
+    name: Update organization onboarding status
+    description: Move an organization through the Cloud onboarding flow
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ViewWorkspaceSettings:
     name: View workspace settings
     description: View settings for a workspace

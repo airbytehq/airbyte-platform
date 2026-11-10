@@ -25,6 +25,7 @@ import { FullStoryUserProperties } from "./services/thirdParty/fullstoryGuides/F
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
+import { OnboardingGuard } from "./views/onboardingFlow/OnboardingGuard";
 import { WorkspacesRoutes } from "./views/routes/WorkspacesRoutes";
 
 // Lazy loaded components
@@ -51,9 +52,11 @@ const CloudMainViewRoutes = () => {
           path={`${RoutePaths.Workspaces}/:workspaceId/${CloudRoutes.OnboardingFlow}/*`}
           element={<OnboardingFlowPage />}
         />
-        <Route element={<MainLayout />}>
-          <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
-          <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
+        <Route element={<OnboardingGuard />}>
+          <Route element={<MainLayout />}>
+            <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
+            <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
+          </Route>
         </Route>
         <Route path="*" element={<DefaultView />} />
       </Routes>

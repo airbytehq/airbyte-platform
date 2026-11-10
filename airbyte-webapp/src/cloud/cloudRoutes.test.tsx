@@ -1,15 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import React, { Suspense } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Outlet } from "react-router-dom";
 
 import { useAcceptUserInvitation, useCurrentOrganizationInfo } from "core/api";
 
 import { Routing } from "./cloudRoutes";
+import { OnboardingGuard } from "./views/onboardingFlow/OnboardingGuard";
 
 jest.mock("components/ui/LoadingPage", () => () => <div data-testid="loading-route" />);
 jest.mock("area/layout/MainLayout", () => {
   const { Outlet } = jest.requireActual<typeof import("react-router-dom")>("react-router-dom");
-  return () => <Outlet />;
+  return () => (
+    <div data-testid="main-layout">
+      <Outlet />
+    </div>
+  );
 });
 jest.mock("area/workspace/utils", () => ({ useCurrentWorkspaceId: jest.fn(() => undefined) }));
 jest.mock("core/api", () => ({
@@ -55,6 +60,7 @@ jest.mock("./services/thirdParty/launchdarkly", () => ({
 }));
 jest.mock("./views/auth/SSOBookmarkPage", () => ({ SSOBookmarkPage: () => <div /> }));
 jest.mock("./views/auth/SSOIdentifierPage", () => ({ SSOIdentifierPage: () => <div /> }));
+jest.mock("./views/onboardingFlow/OnboardingGuard", () => ({ OnboardingGuard: jest.fn() }));
 jest.mock("./views/routes/WorkspacesRoutes", () => ({
   WorkspacesRoutes: () => <div data-testid="workspace-route" />,
 }));
@@ -63,6 +69,11 @@ const mockUseAcceptUserInvitation = useAcceptUserInvitation as jest.MockedFuncti
 const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.MockedFunction<
   typeof useCurrentOrganizationInfo
 >;
+const mockOnboardingGuard = jest.mocked(OnboardingGuard);
+
+beforeEach(() => {
+  mockOnboardingGuard.mockImplementation(() => <Outlet />);
+});
 
 describe("Cloud invitation routing", () => {
   it("accepts an invitation when the FullStory hook has no current organization", async () => {
@@ -78,5 +89,20 @@ describe("Cloud invitation routing", () => {
     expect(mockUseAcceptUserInvitation).toHaveBeenCalledWith("invite-123");
     expect(await screen.findByTestId("workspace-route")).toBeInTheDocument();
     expect(screen.queryByTestId("loading-route")).not.toBeInTheDocument();
+  });
+});
+
+describe("Cloud main app routing", () => {
+  it("does not render the main layout while the onboarding guard holds the route", () => {
+    mockOnboardingGuard.mockImplementation(() => <div data-testid="onboarding-guard" />);
+
+    render(
+      <MemoryRouter initialEntries={["/workspaces/workspace-123/connections"]}>
+        <Routing />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId("onboarding-guard")).toBeInTheDocument();
+    expect(screen.queryByTestId("main-layout")).not.toBeInTheDocument();
   });
 });
