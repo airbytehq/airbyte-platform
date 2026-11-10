@@ -15,6 +15,7 @@ import io.airbyte.api.server.generated.models.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.server.generated.models.DataplaneHeartbeatRequestBody
 import io.airbyte.api.server.generated.models.DataplaneInitRequestBody
 import io.airbyte.api.server.generated.models.DataplaneListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneSecretStoragesRequestBody
 import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
@@ -64,6 +65,7 @@ private fun dataplaneInput(args: Array<out Any?>): DataplaneOperationInput =
     is DataplaneGroupDeleteRequestBody -> DataplaneOperationInput.Group(body.dataplaneGroupId)
     is DataplaneInitRequestBody -> DataplaneOperationInput.Client(body.clientId)
     is DataplaneHeartbeatRequestBody -> DataplaneOperationInput.Client(body.clientId)
+    is DataplaneSecretStoragesRequestBody -> DataplaneOperationInput.Client(body.clientId)
     else -> throw BadRequestProblem()
   }
 

@@ -22,6 +22,9 @@ import io.airbyte.api.server.generated.models.DataplaneInitResponse
 import io.airbyte.api.server.generated.models.DataplaneListRequestBody
 import io.airbyte.api.server.generated.models.DataplaneListResponse
 import io.airbyte.api.server.generated.models.DataplaneRead
+import io.airbyte.api.server.generated.models.DataplaneSecretStorage
+import io.airbyte.api.server.generated.models.DataplaneSecretStoragesRequestBody
+import io.airbyte.api.server.generated.models.DataplaneSecretStoragesResponse
 import io.airbyte.api.server.generated.models.DataplaneTokenRequestBody
 import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
 import io.airbyte.api.server.generated.models.HeartbeatRecord
@@ -46,6 +49,8 @@ import io.airbyte.domain.models.DataplaneId
 import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
+import io.airbyte.domain.models.SecretStorageScopeType
+import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
@@ -71,6 +76,7 @@ import java.util.stream.Collectors
 import io.airbyte.api.server.generated.models.DataplaneDiagnosticKind as ApiDataplaneDiagnosticKind
 import io.airbyte.api.server.generated.models.DataplaneDiagnosticStatus as ApiDataplaneDiagnosticStatus
 import io.airbyte.api.server.generated.models.DataplaneVersionSupport as ApiDataplaneVersionSupport
+import io.airbyte.api.server.generated.models.ScopeType as ApiScopeType
 
 private val logger = KotlinLogging.logger {}
 
@@ -88,6 +94,7 @@ open class DataplaneController(
   private val metricClient: MetricClient,
   private val airbyteConfig: AirbyteConfig,
   private val featureFlagClient: FeatureFlagClient,
+  private val secretStorageService: SecretStorageService,
 ) : DataplaneApi,
   DataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -272,6 +279,32 @@ open class DataplaneController(
       dataplaneGroupName = dataplaneGroup.name,
       dataplaneGroupId = dataplaneGroup.id,
       organizationId = dataplaneGroup.organizationId,
+    )
+  }
+
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    rule = io.airbyte.server.auth.DataplaneMachineRule::class,
+  )
+  override fun listDataplaneSecretStorages(
+    @Body req: DataplaneSecretStoragesRequestBody,
+  ): DataplaneSecretStoragesResponse {
+    val secretStorages = secretStorageService.listForDataplane(UUID.fromString(req.clientId))
+
+    return DataplaneSecretStoragesResponse(
+      secretStorages =
+        secretStorages.map {
+          DataplaneSecretStorage(
+            secretStorageId = it.id.value,
+            scopeType =
+              when (it.scopeType) {
+                SecretStorageScopeType.ORGANIZATION -> ApiScopeType.ORGANIZATION
+                SecretStorageScopeType.WORKSPACE -> ApiScopeType.WORKSPACE
+              },
+            scopeId = it.scopeId,
+          )
+        },
     )
   }
 

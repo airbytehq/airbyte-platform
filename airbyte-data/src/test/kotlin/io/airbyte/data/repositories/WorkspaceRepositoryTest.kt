@@ -129,4 +129,38 @@ class WorkspaceRepositoryTest : AbstractConfigRepositoryTest() {
     val result = workspaceRepository.findById(nonExistentId)
     assertTrue(result.isEmpty)
   }
+
+  @Test
+  fun `finds the live workspaces of one organization in one region`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val first = workspaceRepository.save(workspace(organizationId, dataplaneGroupId))
+    val second = workspaceRepository.save(workspace(organizationId, dataplaneGroupId))
+    workspaceRepository.save(workspace(organizationId, dataplaneGroupId, tombstone = true))
+    workspaceRepository.save(workspace(organizationId, UUID.randomUUID()))
+    workspaceRepository.save(workspace(UUID.randomUUID(), dataplaneGroupId))
+
+    val found = workspaceRepository.findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(organizationId, dataplaneGroupId)
+
+    assertEquals(listOf(first.id, second.id).sortedBy { it.toString() }, found.map { it.id }.sortedBy { it.toString() })
+  }
+
+  @Test
+  fun `finds no workspaces for a region with none`() {
+    val found = workspaceRepository.findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(UUID.randomUUID(), UUID.randomUUID())
+
+    assertEquals(emptyList<Workspace>(), found)
+  }
+
+  private fun workspace(
+    organizationId: UUID,
+    dataplaneGroupId: UUID,
+    tombstone: Boolean = false,
+  ) = Workspace(
+    name = "Test Workspace",
+    slug = "test-workspace",
+    tombstone = tombstone,
+    dataplaneGroupId = dataplaneGroupId,
+    organizationId = organizationId,
+  )
 }

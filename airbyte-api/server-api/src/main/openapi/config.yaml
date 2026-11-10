@@ -9123,6 +9123,28 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/secret_storages/list:
+    post:
+      summary: For a dataplane to get the secret storages its workloads use
+      tags:
+        - dataplane
+      operationId: listDataplaneSecretStorages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneSecretStoragesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The distinct secret storages used by the workspaces in the dataplane's region
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneSecretStoragesResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/health:
     post:
       summary: Get health status for dataplanes
@@ -25488,6 +25510,38 @@ components:
           type: string
         client_secret:
           type: string
+    DataplaneSecretStoragesRequestBody:
+      required:
+        - client_id
+      type: object
+      properties:
+        client_id:
+          type: string
+    DataplaneSecretStoragesResponse:
+      type: object
+      required:
+        - secret_storages
+      properties:
+        secret_storages:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneSecretStorage"
+    DataplaneSecretStorage:
+      type: object
+      description: A secret storage, and the workspace or organization it is configured for.
+      required:
+        - secret_storage_id
+        - scope_type
+        - scope_id
+      properties:
+        secret_storage_id:
+          type: string
+          format: uuid
+        scope_type:
+          $ref: "#/components/schemas/ScopeType"
+        scope_id:
+          type: string
+          format: uuid
     DataplaneHeartbeatRequestBody:
       required:
         - client_id

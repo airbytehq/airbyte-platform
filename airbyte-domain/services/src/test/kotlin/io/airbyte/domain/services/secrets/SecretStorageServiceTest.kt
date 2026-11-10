@@ -9,6 +9,12 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Organization
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.data.repositories.DataplaneGroupRepository
+import io.airbyte.data.repositories.DataplaneRepository
+import io.airbyte.data.repositories.WorkspaceRepository
+import io.airbyte.data.repositories.entities.Dataplane
+import io.airbyte.data.repositories.entities.DataplaneGroup
+import io.airbyte.data.repositories.entities.Workspace
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretConfig
@@ -59,6 +65,9 @@ class SecretStorageServiceTest {
   private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
   private val secretConfigService: SecretConfigService = mockk()
   private val featureFlagClient: TestClient = mockk()
+  private val workspaceRepository: WorkspaceRepository = mockk()
+  private val dataplaneRepository: DataplaneRepository = mockk()
+  private val dataplaneGroupRepository: DataplaneGroupRepository = mockk()
 
   private val service =
     SecretStorageService(
@@ -68,6 +77,9 @@ class SecretStorageServiceTest {
       secretsRepositoryReader,
       secretConfigService,
       featureFlagClient,
+      workspaceRepository,
+      dataplaneRepository,
+      dataplaneGroupRepository,
     )
 
   @Nested
@@ -574,6 +586,113 @@ class SecretStorageServiceTest {
 
       assertEquals(expected, service.getByWorkspaceId(workspaceId))
     }
+  }
+
+  @Nested
+  inner class ListForDataplane {
+    private val serviceAccountId = UUID.randomUUID()
+    private val dataplaneGroupId = UUID.randomUUID()
+    private val orgStorage = storage(SecretStorageScopeType.ORGANIZATION, orgId.value)
+
+    @BeforeEach
+    fun setup() {
+      every { dataplaneRepository.findByServiceAccountId(serviceAccountId) } returns
+        Dataplane(dataplaneGroupId = dataplaneGroupId, name = "dataplane", enabled = true, tombstone = false, serviceAccountId = serviceAccountId)
+      every { dataplaneGroupRepository.findById(dataplaneGroupId) } returns
+        Optional.of(DataplaneGroup(id = dataplaneGroupId, organizationId = orgId.value, name = "region", enabled = true, tombstone = false))
+      every { featureFlagClient.boolVariation(EnableDefaultSecretStorage, any()) } returns true
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value) } returns listOf(orgStorage)
+    }
+
+    @Test
+    fun `a region with no workspaces uses the organization's storage`() {
+      givenWorkspaces()
+
+      assertEquals(listOf(orgStorage), service.listForDataplane(serviceAccountId))
+    }
+
+    @Test
+    fun `returns each workspace's storage once`() {
+      val withOwnStorage = UUID.randomUUID()
+      val firstOnOrgStorage = UUID.randomUUID()
+      val secondOnOrgStorage = UUID.randomUUID()
+      val workspaceStorage = storage(SecretStorageScopeType.WORKSPACE, withOwnStorage)
+      givenWorkspaces(withOwnStorage, firstOnOrgStorage, secondOnOrgStorage)
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, withOwnStorage) } returns listOf(workspaceStorage)
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, firstOnOrgStorage) } returns emptyList()
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, secondOnOrgStorage) } returns emptyList()
+
+      assertEquals(listOf(workspaceStorage, orgStorage), service.listForDataplane(serviceAccountId))
+    }
+
+    @Test
+    fun `a workspace with no storage uses the deployment default when default storage is off`() {
+      val workspaceWithoutStorage = UUID.randomUUID()
+      val defaultStorage = storage(SecretStorageScopeType.ORGANIZATION, UUID.randomUUID()).copy(id = SecretStorage.DEFAULT_SECRET_STORAGE_ID)
+      givenWorkspaces(workspaceWithoutStorage)
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceWithoutStorage) } returns emptyList()
+      every { featureFlagClient.boolVariation(EnableDefaultSecretStorage, any()) } returns false
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+      every { secretStorageRepository.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID) } returns defaultStorage
+
+      assertEquals(listOf(defaultStorage), service.listForDataplane(serviceAccountId))
+    }
+
+    @Test
+    fun `leaves out a workspace on the legacy runtime persistence`() {
+      val legacyWorkspace = UUID.randomUUID()
+      givenWorkspaces(legacyWorkspace)
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, legacyWorkspace) } returns emptyList()
+      every { featureFlagClient.boolVariation(EnableDefaultSecretStorage, any()) } returns false
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns true
+
+      assertEquals(emptyList<SecretStorage>(), service.listForDataplane(serviceAccountId))
+    }
+
+    @Test
+    fun `an unknown service account is not found`() {
+      val unknown = UUID.randomUUID()
+      every { dataplaneRepository.findByServiceAccountId(unknown) } returns null
+
+      assertThrows<ResourceNotFoundProblem> { service.listForDataplane(unknown) }
+    }
+
+    @Test
+    fun `a data plane whose region is missing is not found`() {
+      every { dataplaneGroupRepository.findById(dataplaneGroupId) } returns Optional.empty()
+
+      assertThrows<ResourceNotFoundProblem> { service.listForDataplane(serviceAccountId) }
+    }
+
+    private fun givenWorkspaces(vararg workspaceIds: UUID) {
+      every { workspaceRepository.findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(orgId.value, dataplaneGroupId) } returns
+        workspaceIds.map {
+          Workspace(
+            id = it,
+            name = "workspace",
+            slug = "workspace",
+            dataplaneGroupId = dataplaneGroupId,
+            organizationId = orgId.value,
+          )
+        }
+      workspaceIds.forEach { every { organizationRepository.getOrganizationForWorkspaceId(it) } returns Optional.of(org) }
+    }
+
+    private fun storage(
+      scopeType: SecretStorageScopeType,
+      scopeId: UUID,
+    ) = SecretStorage(
+      id = SecretStorageId(UUID.randomUUID()),
+      scopeType = scopeType,
+      scopeId = scopeId,
+      descriptor = "store",
+      storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+      configuredFromEnvironment = false,
+      createdBy = userId.value,
+      updatedBy = userId.value,
+      createdAt = null,
+      updatedAt = null,
+    )
   }
 
   @Nested

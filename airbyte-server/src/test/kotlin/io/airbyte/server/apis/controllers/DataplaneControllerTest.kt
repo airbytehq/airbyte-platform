@@ -15,9 +15,13 @@ import io.airbyte.api.server.generated.models.DataplaneHeartbeatResponse
 import io.airbyte.api.server.generated.models.DataplaneInitRequestBody
 import io.airbyte.api.server.generated.models.DataplaneInitResponse
 import io.airbyte.api.server.generated.models.DataplaneListRequestBody
+import io.airbyte.api.server.generated.models.DataplaneSecretStorage
+import io.airbyte.api.server.generated.models.DataplaneSecretStoragesRequestBody
+import io.airbyte.api.server.generated.models.DataplaneSecretStoragesResponse
 import io.airbyte.api.server.generated.models.DataplaneTokenRequestBody
 import io.airbyte.api.server.generated.models.DataplaneUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
+import io.airbyte.api.server.generated.models.ScopeType
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.config.Dataplane
@@ -34,6 +38,11 @@ import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
+import io.airbyte.domain.models.SecretStorage
+import io.airbyte.domain.models.SecretStorageId
+import io.airbyte.domain.models.SecretStorageScopeType
+import io.airbyte.domain.models.SecretStorageType
+import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
@@ -67,6 +76,7 @@ class DataplaneControllerTest {
       mockk<DataplaneHealthService>(relaxed = true).apply {
         every { getPublishedReleaseSupport(any(), any()) } returns emptyMap()
       }
+    private val secretStorageService = mockk<SecretStorageService>()
 
     private val entitlementService = mockk<EntitlementService>(relaxed = true)
     private val airbyteConfig =
@@ -86,6 +96,7 @@ class DataplaneControllerTest {
         mockk(relaxed = true),
         airbyteConfig,
         featureFlagClient,
+        secretStorageService,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -366,6 +377,55 @@ class DataplaneControllerTest {
     val organizationId: UUID,
     val dataplaneId: UUID,
     val diagnostics: List<DataplaneDiagnostic>,
+  )
+
+  @Test
+  fun `listDataplaneSecretStorages returns the stores used in the data plane's region`() {
+    val serviceAccountId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val workspaceStorage = secretStorage(SecretStorageScopeType.WORKSPACE, workspaceId)
+    val orgStorage = secretStorage(SecretStorageScopeType.ORGANIZATION, organizationId)
+    every { secretStorageService.listForDataplane(serviceAccountId) } returns listOf(workspaceStorage, orgStorage)
+
+    val result = dataplaneController.listDataplaneSecretStorages(DataplaneSecretStoragesRequestBody(clientId = serviceAccountId.toString()))
+
+    Assertions.assertEquals(
+      DataplaneSecretStoragesResponse(
+        secretStorages =
+          listOf(
+            DataplaneSecretStorage(secretStorageId = workspaceStorage.id.value, scopeType = ScopeType.WORKSPACE, scopeId = workspaceId),
+            DataplaneSecretStorage(secretStorageId = orgStorage.id.value, scopeType = ScopeType.ORGANIZATION, scopeId = organizationId),
+          ),
+      ),
+      result,
+    )
+  }
+
+  @Test
+  fun `listDataplaneSecretStorages returns an empty list when the region uses no stores`() {
+    val serviceAccountId = UUID.randomUUID()
+    every { secretStorageService.listForDataplane(serviceAccountId) } returns emptyList()
+
+    val result = dataplaneController.listDataplaneSecretStorages(DataplaneSecretStoragesRequestBody(clientId = serviceAccountId.toString()))
+
+    Assertions.assertEquals(DataplaneSecretStoragesResponse(secretStorages = emptyList()), result)
+  }
+
+  private fun secretStorage(
+    scopeType: SecretStorageScopeType,
+    scopeId: UUID,
+  ) = SecretStorage(
+    id = SecretStorageId(UUID.randomUUID()),
+    scopeType = scopeType,
+    scopeId = scopeId,
+    descriptor = "store",
+    storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+    configuredFromEnvironment = false,
+    createdBy = UUID.randomUUID(),
+    updatedBy = UUID.randomUUID(),
+    createdAt = null,
+    updatedAt = null,
   )
 
   private fun heartbeatWithDiagnostics(diagnostics: List<DataplaneDiagnosticResult>?): RecordedDiagnostics {

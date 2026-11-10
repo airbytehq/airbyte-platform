@@ -15,6 +15,9 @@ import io.airbyte.config.secrets.persistence.AwsSecretsManagerRuntimeConfigurati
 import io.airbyte.config.secrets.persistence.GoogleSecretsManagerRuntimeConfig
 import io.airbyte.config.secrets.persistence.RuntimeConfigError
 import io.airbyte.config.secrets.persistence.VaultSecretsManagerRuntimeConfiguration
+import io.airbyte.data.repositories.DataplaneGroupRepository
+import io.airbyte.data.repositories.DataplaneRepository
+import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretReference
@@ -32,6 +35,7 @@ import io.airbyte.featureflag.EnableDefaultSecretStorage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -54,6 +58,9 @@ open class SecretStorageService(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val secretConfigService: SecretConfigService,
   private val featureFlagClient: FeatureFlagClient,
+  private val workspaceRepository: WorkspaceRepository,
+  private val dataplaneRepository: DataplaneRepository,
+  private val dataplaneGroupRepository: DataplaneGroupRepository,
 ) {
   /**
    * Get the secret storage for a given ID.
@@ -268,5 +275,44 @@ open class SecretStorageService(
           .resourceType(SecretStorage::class.simpleName)
           .resourceId(DEFAULT_SECRET_STORAGE_ID.toString()),
       )
+  }
+
+  /**
+   * Returns the secret storages used by the workspaces in the data plane's region, without duplicates.
+   * If the region has no workspaces, returns the organization's storage.
+   */
+  fun listForDataplane(serviceAccountId: UUID): List<SecretStorage> {
+    val dataplane =
+      dataplaneRepository.findByServiceAccountId(serviceAccountId)
+        ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType("Dataplane").resourceId(serviceAccountId.toString()))
+    val dataplaneGroup =
+      dataplaneGroupRepository.findById(dataplane.dataplaneGroupId).orElseThrow {
+        ResourceNotFoundProblem(ProblemResourceData().resourceType("DataplaneGroup").resourceId(dataplane.dataplaneGroupId.toString()))
+      }
+
+    return listForDataplaneGroup(OrganizationId(dataplaneGroup.organizationId), dataplane.dataplaneGroupId)
+  }
+
+  private fun listForDataplaneGroup(
+    organizationId: OrganizationId,
+    dataplaneGroupId: UUID,
+  ): List<SecretStorage> {
+    val workspaces = workspaceRepository.findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(organizationId.value, dataplaneGroupId)
+    if (workspaces.isEmpty()) {
+      return listOf(getByOrganizationId(organizationId))
+    }
+
+    // No storage means the deployment default, except on the legacy runtime persistence, which has no storage ID.
+    val fallback by lazy {
+      if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.value))) {
+        null
+      } else {
+        secretStorageRepository.findById(DEFAULT_SECRET_STORAGE_ID)
+      }
+    }
+
+    return workspaces
+      .mapNotNull { getByWorkspaceId(WorkspaceId(checkNotNull(it.id))) ?: fallback }
+      .distinctBy { it.id }
   }
 }

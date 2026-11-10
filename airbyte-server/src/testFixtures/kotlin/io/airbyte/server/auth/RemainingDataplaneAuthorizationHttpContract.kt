@@ -23,6 +23,7 @@ import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.DataplaneAuthorizationDataService
 import io.airbyte.domain.services.auth.OrganizationAccessService
+import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -85,6 +86,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
         arrayOf("/api/v1/dataplanes/create", """{"dataplane_group_id":"$GROUP","name":"fixture","enabled":true,"instanceScope":false}""", "workload"),
         arrayOf("/api/v1/dataplanes/initialize", """{"client_id":"$SERVICE_ACCOUNT"}""", "user"),
         arrayOf("/api/v1/dataplanes/heartbeat", """{"client_id":"$OTHER_SERVICE_ACCOUNT"}""", "service"),
+        arrayOf("/api/v1/dataplanes/secret_storages/list", """{"client_id":"$OTHER_SERVICE_ACCOUNT"}""", "service"),
         arrayOf(
           "/api/v1/data_worker_allocation/reallocate",
           """{"organization_id":"$ORGANIZATION","from_dataplane_group_id":"$SOURCE_GROUP","to_dataplane_group_id":"$DEFAULT_GROUP","amount":1}""",
@@ -395,6 +397,13 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
         machine = true,
       ),
       Scenario(
+        "/api/v1/dataplanes/secret_storages/list",
+        """{"client_id":"$SERVICE_ACCOUNT"}""",
+        "io.airbyte.server.auth.DataplaneMachineRule",
+        Permission.PermissionType.DATAPLANE,
+        machine = true,
+      ),
+      Scenario(
         "/api/v1/data_worker_allocation/list",
         """{"organization_id":"$ORGANIZATION"}""",
         if (cloud) {
@@ -539,6 +548,7 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
           every { instance.getPublishedReleaseSupport(emptySet(), any()) } returns emptyMap()
         }
         is FeatureFlagClient -> every { instance.boolVariation(any(), any()) } returns false
+        is SecretStorageService -> every { instance.listForDataplane(SERVICE_ACCOUNT) } returns emptyList()
       }
       configureDependency(instance)
     }

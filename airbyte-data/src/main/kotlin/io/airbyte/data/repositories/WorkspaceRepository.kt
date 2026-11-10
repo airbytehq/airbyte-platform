@@ -22,6 +22,11 @@ interface WorkspaceRepository : PageableRepository<Workspace, UUID> {
     organizationId: UUID,
   ): List<Workspace>
 
+  fun findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(
+    organizationId: UUID,
+    dataplaneGroupId: UUID,
+  ): List<Workspace>
+
   /**
    * Returns workspaces whose `email` column matches (case-insensitively) the given email.
    *
