@@ -94,7 +94,6 @@ class OperationOrganizationAndSelfTest {
   fun `admin alternative uses a saved instance grant without requiring self`() {
     grant(Permission.PermissionType.INSTANCE_ADMIN)
     assertDoesNotThrow { checker.requireSelfOrInstanceAdmin(caller, setOf("other"), humans) }
-    assertThrows(ForbiddenProblem::class.java) { checker.requireSelf(caller, "other") }
   }
 
   @Test

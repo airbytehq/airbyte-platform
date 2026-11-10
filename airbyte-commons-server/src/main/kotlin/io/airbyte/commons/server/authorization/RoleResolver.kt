@@ -12,7 +12,6 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.roles.OrganizationAuthRole
 import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationId
@@ -76,7 +75,6 @@ open class RoleResolver(
     var subject: Subject? = null
     val props: MutableMap<String, String> = mutableMapOf()
     val orgs: MutableSet<UUID> = mutableSetOf()
-    private val workspaceOrganizations: MutableMap<UUID, UUID> = mutableMapOf()
 
     fun withCurrentUser() =
       apply {
@@ -131,21 +129,6 @@ open class RoleResolver(
       withRef(key, value.toString())
     }
 
-    // Bind authorization to a trusted workspace snapshot instead of the cached organization mapping.
-    fun withWorkspace(
-      workspaceId: UUID,
-      organizationId: UUID,
-    ) = apply {
-      withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
-      workspaceOrganizations[workspaceId] = organizationId
-    }
-
-    fun withWorkspaces(ids: List<UUID>) =
-      apply {
-        withRef(AuthenticationId.WORKSPACE_IDS, Jsons.serialize(ids))
-      }
-
     /**
      * roles() resolves the request details into a set of available roles.
      */
@@ -198,15 +181,10 @@ open class RoleResolver(
     ): Set<String> {
       logger.debug { "Resolving permissions for $subject and $perms" }
 
-      val scope = authenticationHeaderResolver.resolveScope(props, workspaceOrganizations)
+      val scope = authenticationHeaderResolver.resolveScope(props)
       val workspaceIds = scope?.workspaceIds?.toSet() ?: emptySet()
       val resolvedOrgIds = scope?.organizationIds?.toSet() ?: emptySet()
-      val workspaceOrganizationIds =
-        if (scope != null && usePerTargetPermissionReduction) {
-          scope.workspaceOrganizations + workspaceOrganizations
-        } else {
-          emptyMap()
-        }
+      val workspaceOrganizationIds = if (scope != null && usePerTargetPermissionReduction) scope.workspaceOrganizations else emptyMap()
       val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props.toMap()) ?: emptySet()
       val allOrgIds = if (scope != null) orgs + resolvedOrgIds else emptySet()
 
@@ -229,19 +207,6 @@ open class RoleResolver(
       if (!roles().contains(role)) {
         throw ForbiddenProblem(
           ProblemMessageData().message("Caller does not have the required $role permissions to access the resource(s)."),
-        )
-      }
-    }
-
-    /**
-     * requireOneOfRoles checks whether the request has at least one of the given roles available,
-     * and if not it throws ForbiddenProblem.
-     */
-    fun requireOneOfRoles(requiredRoles: Set<String>) {
-      val userRoles = roles()
-      if (!requiredRoles.any { userRoles.contains(it) }) {
-        throw ForbiddenProblem(
-          ProblemMessageData().message("Caller does not have the required permissions to access the resource(s)."),
         )
       }
     }

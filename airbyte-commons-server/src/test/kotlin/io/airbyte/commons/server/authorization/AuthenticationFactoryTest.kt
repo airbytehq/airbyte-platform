@@ -34,6 +34,6 @@ class AuthenticationFactoryTest {
     ServerRequestContext.with(request) { authentication = factory.createAuthentication(token).orElseThrow() }
 
     assertEquals("caller", authentication.name)
-    verify { scopeResolver.resolveScope(emptyMap(), any(), any()) }
+    verify { scopeResolver.resolveScope(emptyMap(), any()) }
   }
 }

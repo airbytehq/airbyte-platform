@@ -42,7 +42,7 @@ class WorkloadRoleCheckTest {
     val foreign = UUID.randomUUID()
     val serviceAccount = UUID.randomUUID()
     val resolver = mockk<AuthenticationHeaderResolver>()
-    every { resolver.resolveScope(any(), any(), any()) } returns AuthenticationHeaderResolver.AuthScope(emptyList(), emptyList(), emptyMap())
+    every { resolver.resolveScope(any(), any()) } returns AuthenticationHeaderResolver.AuthScope(emptyList(), emptyList(), emptyMap())
     val permissions = mockk<PermissionHandler>()
     every { permissions.getPermissionsByServiceAccountId(serviceAccount) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE).withOrganizationId(customer))
@@ -59,7 +59,7 @@ class WorkloadRoleCheckTest {
   fun `global dataplane grant can access global data`() {
     val serviceAccount = UUID.randomUUID()
     val resolver = mockk<AuthenticationHeaderResolver>()
-    every { resolver.resolveScope(any(), any(), any()) } returns AuthenticationHeaderResolver.AuthScope(emptyList(), emptyList(), emptyMap())
+    every { resolver.resolveScope(any(), any()) } returns AuthenticationHeaderResolver.AuthScope(emptyList(), emptyList(), emptyMap())
     val permissions = mockk<PermissionHandler>()
     every { permissions.getPermissionsByServiceAccountId(serviceAccount) } returns
       listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE))

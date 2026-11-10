@@ -277,17 +277,6 @@ internal class AuthenticationHeaderResolverScopeTest {
   }
 
   @Test
-  fun `trusted workspace organization is used instead of the cache`() {
-    val freshOrg = UUID.randomUUID()
-    val props = mapOf(WORKSPACE_ID_HEADER to attackerWs.toString(), ORGANIZATION_ID_HEADER to freshOrg.toString())
-    val scope = resolver.resolveScope(props, mapOf(attackerWs to freshOrg))
-    assertEquals(listOf(attackerWs), scope?.workspaceIds)
-    assertEquals(listOf(freshOrg), scope?.organizationIds)
-    verify(exactly = 0) { workspaceHelper.getOrganizationForWorkspace(any()) }
-    assertNotDenied()
-  }
-
-  @Test
   fun `uuid id field is not a job id and does not suppress organization resolution`() {
     val props = mapOf(JOB_ID_HEADER to UUID.randomUUID().toString(), ORGANIZATION_ID_HEADER to victimOrg.toString())
     assertNull(resolver.resolveWorkspace(props))

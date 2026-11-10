@@ -24,11 +24,10 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 class RoleResolverTest {
@@ -68,26 +67,29 @@ class RoleResolverTest {
   }
 
   @Test
-  fun trustedWorkspaceOrganizationOverridesStaleCachedOrganization() {
+  fun trustedWorkspaceOrganizationRejectsForeignOrganizationGrant() {
     val workspaceId = UUID.randomUUID()
     val oldOrganizationId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
-    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns oldOrganizationId
-    val request =
-      roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER).withWorkspace(workspaceId, organizationId)
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
-      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(oldOrganizationId))
+    val workspaceOrganizations = mapOf(workspaceId to organizationId)
+    val staleGrant = listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(oldOrganizationId))
+    assertEquals(baseRoles, roleResolver.resolveRoles(staleGrant, "auth-user-1", setOf(workspaceId), workspaceOrganizations, emptySet(), emptySet()))
 
-    assertThrows<ForbiddenProblem> { request.requireRole(AuthRoleConstants.WORKSPACE_READER) }
+    val organizationGrant = listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(organizationId))
+    val organizationRoles =
+      roleResolver.resolveRoles(
+        organizationGrant,
+        "auth-user-1",
+        setOf(workspaceId),
+        workspaceOrganizations,
+        emptySet(),
+        emptySet(),
+      )
+    assertTrue(AuthRoleConstants.WORKSPACE_READER in organizationRoles, "$organizationRoles")
 
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
-      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(organizationId))
-    request.requireRole(AuthRoleConstants.WORKSPACE_READER)
-
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
-      listOf(Permission().withPermissionType(Permission.PermissionType.WORKSPACE_READER).withWorkspaceId(workspaceId))
-    request.requireRole(AuthRoleConstants.WORKSPACE_READER)
-    verify(exactly = 0) { workspaceHelper.getOrganizationForWorkspace(any()) }
+    val workspaceGrant = listOf(Permission().withPermissionType(Permission.PermissionType.WORKSPACE_READER).withWorkspaceId(workspaceId))
+    val workspaceRoles = roleResolver.resolveRoles(workspaceGrant, "auth-user-1", setOf(workspaceId), workspaceOrganizations, emptySet(), emptySet())
+    assertTrue(AuthRoleConstants.WORKSPACE_READER in workspaceRoles, "$workspaceRoles")
   }
 
   @Test
@@ -135,13 +137,6 @@ class RoleResolverTest {
   fun testWithRef() {
     val roleReq = roleResolver.newRequest().withRef(AuthenticationId.CONNECTION_ID, "conn-id-1")
     assertEquals(mapOf(AuthenticationId.CONNECTION_ID.httpHeader to "conn-id-1"), roleReq.props)
-  }
-
-  @Test
-  fun testWithWorkspaces() {
-    val workspaces = listOf(UUID.randomUUID(), UUID.randomUUID())
-    val req = roleResolver.newRequest().withWorkspaces(workspaces)
-    assertEquals(mapOf(AuthenticationId.WORKSPACE_IDS.httpHeader to """["${workspaces[0]}","${workspaces[1]}"]"""), req.props)
   }
 
   @Test
@@ -264,24 +259,15 @@ class RoleResolverTest {
     val workspace1 = UUID.randomUUID()
     val workspace2 = UUID.randomUUID()
 
-    // user is requesting access to multiple workspaces, but only has access to one.
-    val req =
-      roleResolver
-        .newRequest()
-        .withSubject("auth-user-1", TokenType.USER)
-        .withWorkspaces(listOf(workspace1, workspace2))
-
-    // user is workspace admin on workspace 1
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+    val grants =
       listOf(
         Permission()
           .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
           .withWorkspaceId(workspace1),
       )
 
-    // The user is not granted workspace access, because they need access to all requested workspaces
-    assertEquals(baseRoles, req.roles())
-    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+    val roles = roleResolver.resolveRoles(grants, "auth-user-1", setOf(workspace1, workspace2), emptyMap(), emptySet(), emptySet())
+    assertEquals(baseRoles, roles)
   }
 
   @Test
@@ -322,16 +308,7 @@ class RoleResolverTest {
     val workspace1 = UUID.randomUUID()
     val workspace2 = UUID.randomUUID()
 
-    // user is requesting access to multiple workspaces.
-    val req =
-      roleResolver
-        .newRequest()
-        .withSubject("auth-user-1", TokenType.USER)
-        .withWorkspaces(listOf(workspace1, workspace2))
-
-    // user is workspace admin on workspace 1,
-    // and workspace runner on workspace 2.
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+    val grants =
       listOf(
         Permission()
           .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
@@ -341,10 +318,10 @@ class RoleResolverTest {
           .withWorkspaceId(workspace2),
       )
 
-    // The user is granted the minimum common role across the workspaces, which is reader.
+    // The user is granted the minimum common role across the workspaces, which is runner.
     val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER".toRoleSet()
-    assertEquals(expect, req.roles())
-    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+    val roles = roleResolver.resolveRoles(grants, "auth-user-1", setOf(workspace1, workspace2), emptyMap(), emptySet(), emptySet())
+    assertEquals(expect, roles)
   }
 
   @Test
@@ -413,25 +390,6 @@ class RoleResolverTest {
     }
 
     req.requireRole("AUTHENTICATED_USER")
-  }
-
-  @Test
-  fun requireOneOfRolesThrowsWhenNoMatch() {
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns emptyList()
-
-    val req = roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER)
-    assertThrows<ForbiddenProblem> {
-      req.requireOneOfRoles(setOf("FOO", "BAR"))
-    }
-  }
-
-  @Test
-  fun requireOneOfRolesSucceedsWhenAtLeastOneMatches() {
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns emptyList()
-
-    val req = roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER)
-    // Should succeed because AUTHENTICATED_USER is always present
-    req.requireOneOfRoles(setOf("FOO", "AUTHENTICATED_USER", "BAR"))
   }
 
   @Test
@@ -684,13 +642,7 @@ class RoleResolverTest {
     val workspace1 = UUID.randomUUID()
     val workspace2 = UUID.randomUUID()
     val groupId = UUID.randomUUID()
-    val req =
-      roleResolver
-        .newRequest()
-        .withSubject("auth-user-1", TokenType.USER)
-        .withWorkspaces(listOf(workspace1, workspace2))
-
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+    val grants =
       listOf(
         Permission()
           .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
@@ -707,8 +659,8 @@ class RoleResolverTest {
     val expect =
       "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR"
         .toRoleSet()
-    assertEquals(expect, req.roles())
-    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+    val roles = roleResolver.resolveRoles(grants, "auth-user-1", setOf(workspace1, workspace2), emptyMap(), emptySet(), emptySet())
+    assertEquals(expect, roles)
   }
 
   @Test
@@ -719,15 +671,7 @@ class RoleResolverTest {
     val organization2 = UUID.randomUUID()
     val group1 = UUID.randomUUID()
     val group2 = UUID.randomUUID()
-    val req =
-      roleResolver
-        .newRequest()
-        .withSubject("auth-user-1", TokenType.USER)
-        .withWorkspaces(listOf(workspace1, workspace2))
-
-    every { workspaceHelper.getOrganizationForWorkspace(workspace1) } returns organization1
-    every { workspaceHelper.getOrganizationForWorkspace(workspace2) } returns organization2
-    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+    val grants =
       listOf(
         Permission()
           .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
@@ -746,8 +690,17 @@ class RoleResolverTest {
       )
 
     val expect = "AUTHENTICATED_USER ORGANIZATION_MEMBER WORKSPACE_READER".toRoleSet()
-    assertEquals(expect, req.roles())
-    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+    val workspaceOrganizations = mapOf(workspace1 to organization1, workspace2 to organization2)
+    val roles =
+      roleResolver.resolveRoles(
+        grants,
+        "auth-user-1",
+        setOf(workspace1, workspace2),
+        workspaceOrganizations,
+        setOf(organization1, organization2),
+        emptySet(),
+      )
+    assertEquals(expect, roles)
   }
 
   @Test
@@ -829,17 +782,13 @@ class RoleResolverTest {
     verify(exactly = 0) { permissionHandler.getPermissionsByAuthUserId(serviceAccountId.toString()) }
   }
 
-  @ParameterizedTest
-  @EnumSource(value = TokenType::class, names = ["SERVICE_ACCOUNT", "DATAPLANE_V1"])
-  fun nonUserPermissionResolutionPreservesLegacyCrossWorkspaceReduction(tokenType: TokenType) {
-    val serviceAccountId = UUID.randomUUID()
+  @Test
+  fun nonUserPermissionResolutionPreservesLegacyCrossWorkspaceReduction() {
     val workspace1 = UUID.randomUUID()
     val workspace2 = UUID.randomUUID()
     val organization1 = UUID.randomUUID()
     val organization2 = UUID.randomUUID()
-    every { workspaceHelper.getOrganizationForWorkspace(workspace1) } returns organization1
-    every { workspaceHelper.getOrganizationForWorkspace(workspace2) } returns organization2
-    every { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns
+    val grants =
       listOf(
         Permission()
           .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
@@ -855,17 +804,19 @@ class RoleResolverTest {
           .withOrganizationId(organization2),
       )
 
+    val workspaceOrganizations = mapOf(workspace1 to organization1, workspace2 to organization2)
     val roles =
-      roleResolver
-        .newRequest()
-        .withSubject(serviceAccountId.toString(), tokenType)
-        .withWorkspaces(listOf(workspace1, workspace2))
-        .roles()
-
+      roleResolver.resolveRoles(
+        grants,
+        "service-account",
+        setOf(workspace1, workspace2),
+        workspaceOrganizations,
+        setOf(organization1, organization2),
+        emptySet(),
+        false,
+      )
     val expect = "AUTHENTICATED_USER ORGANIZATION_READER ORGANIZATION_MEMBER WORKSPACE_READER".toRoleSet()
     assertEquals(expect, roles)
-    verify(exactly = 1) { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) }
-    verify(exactly = 0) { permissionHandler.getPermissionsByAuthUserId(serviceAccountId.toString()) }
   }
 }
 

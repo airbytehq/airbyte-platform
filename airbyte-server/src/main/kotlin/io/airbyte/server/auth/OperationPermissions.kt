@@ -69,16 +69,6 @@ class OperationPermissions(
     }
   }
 
-  fun requireSelf(
-    caller: Authentication,
-    subject: String,
-  ) {
-    if (!securityEnabled) return
-    requireCaller(caller, setOf(OperationCaller.USER))
-    if (getTokenScopeClaim(caller) != null) throw ForbiddenProblem()
-    if (caller.name != subject) throw ForbiddenProblem()
-  }
-
   /** A content-deduplicated catalog can have several valid saved workspace associations. */
   fun requireAnyWorkspace(
     caller: Authentication,

@@ -225,7 +225,7 @@ class OperationTypedRule(
     input: OperationInput,
   ) {
     input as OperationTypedInput
-    permissions.requireSelf(caller, input.subject)
+    permissions.requireSelfOrInstanceAdmin(caller, setOf(input.subject), setOf(OperationCaller.USER))
     authorizeWorkspaces(caller, input)
   }
 

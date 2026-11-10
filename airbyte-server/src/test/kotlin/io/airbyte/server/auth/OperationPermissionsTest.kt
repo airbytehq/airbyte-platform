@@ -139,39 +139,6 @@ class OperationPermissionsTest {
   }
 
   @Test
-  fun `SELF is explicit and must be combined with required resource permission`() {
-    grant(Permission.PermissionType.WORKSPACE_READER, workspaceId = workspace)
-    assertDoesNotThrow { checker.requireSelf(caller, "user") }
-    assertDoesNotThrow { checker.requireWorkspaces(caller, listOf(workspaceAndOrganization), readers, humans) }
-    assertThrows(ForbiddenProblem::class.java) { checker.requireSelf(caller, "other-user") }
-  }
-
-  @Test
-  fun `SELF rejects workspace scoped users even when the subject matches`() {
-    val scoped = Authentication.build("user", mapOf(TokenScopeClaim.CLAIM_ID to mapOf("workspaceId" to workspace.toString())))
-    assertThrows(ForbiddenProblem::class.java) { checker.requireSelf(scoped, "user") }
-  }
-
-  @Test
-  fun `SELF rejects worker and embedded identities even when the subject matches`() {
-    for (type in TokenType.entries.filter { it != TokenType.USER }) {
-      val machine = Authentication.build("worker", mapOf(type.toClaim()))
-      assertThrows(ForbiddenProblem::class.java) { checker.requireSelf(machine, "worker") }
-    }
-  }
-
-  @Test
-  fun `SELF rejects a blank user identity`() {
-    assertThrows(ForbiddenProblem::class.java) { checker.requireSelf(Authentication.build(""), "") }
-  }
-
-  @Test
-  fun `configured no auth preserves SELF behavior`() {
-    val machine = Authentication.build("worker", mapOf(TokenType.INTERNAL_CLIENT.toClaim()))
-    assertDoesNotThrow { OperationPermissions(permissions, resolver, false).requireSelf(machine, "other-user") }
-  }
-
-  @Test
   fun `GLOBAL needs explicit instance permission`() {
     grant(Permission.PermissionType.INSTANCE_ADMIN)
     assertDoesNotThrow { checker.requireGlobal(caller, setOf(AuthRoleConstants.ADMIN), humans) }

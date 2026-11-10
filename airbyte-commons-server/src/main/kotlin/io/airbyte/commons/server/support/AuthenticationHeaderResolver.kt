@@ -103,16 +103,12 @@ class AuthenticationHeaderResolver(
   /**
    * Resolves the workspaces and organizations the request refers to.
    *
-   * [trustedWorkspaceOrganizations] are workspace-to-organization pairs the caller loaded fresh; they take precedence
-   * over the cached mapping for those workspaces.
-   *
    * Returns null when the identifiers in the request disagree or one of them cannot be resolved. A denial is logged
    * and counted only when [report] is set; the wrappers above resolve silently because [RoleResolver] reports the
    * authoritative resolution for the request.
    */
   fun resolveScope(
     properties: Map<String, String>,
-    trustedWorkspaceOrganizations: Map<UUID, UUID> = emptyMap(),
     report: Boolean = true,
   ): AuthScope? {
     try {
@@ -227,7 +223,7 @@ class AuthenticationHeaderResolver(
       // A named organization must be the organization of every workspace named. Without one, the workspaces'
       // organizations are the scope.
       val workspaceOrganizations =
-        organizationsFor(workspaceIds.toSet(), trustedWorkspaceOrganizations, organizationClaims)
+        organizationsFor(workspaceIds.toSet(), organizationClaims)
           ?: return denied("unresolvable_workspace_organization", properties, report)
       val workspaceOrganizationIds = workspaceOrganizations.values.toSet()
       if (organizationClaims.isNotEmpty() && workspaceOrganizationIds.isNotEmpty() && organizationClaims != workspaceOrganizationIds) {
@@ -245,7 +241,7 @@ class AuthenticationHeaderResolver(
   }
 
   /**
-   * Maps each workspace to its organization. Trusted pairs win over the cache.
+   * Maps each workspace to its organization.
    *
    * When the request carries an organization claim, every workspace's organization must be known so the claim can
    * be verified, so an unknown workspace yields null. Without a claim the mapping only feeds organization-implied
@@ -253,16 +249,10 @@ class AuthenticationHeaderResolver(
    */
   private fun organizationsFor(
     workspaceIds: Set<UUID>,
-    trustedWorkspaceOrganizations: Map<UUID, UUID>,
     organizationClaims: Set<UUID>,
   ): Map<UUID, UUID>? {
     val organizations = mutableMapOf<UUID, UUID>()
     for (workspaceId in workspaceIds) {
-      val trusted = trustedWorkspaceOrganizations[workspaceId]
-      if (trusted != null) {
-        organizations[workspaceId] = trusted
-        continue
-      }
       try {
         organizations[workspaceId] = workspaceHelper.getOrganizationForWorkspace(workspaceId)
       } catch (e: RuntimeException) {
