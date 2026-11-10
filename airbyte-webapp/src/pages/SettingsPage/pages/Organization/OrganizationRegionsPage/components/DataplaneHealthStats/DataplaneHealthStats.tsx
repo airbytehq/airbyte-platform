@@ -2,20 +2,16 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 import { useCurrentTime } from "core/utils/time";
 
+import { StatusCard, StatusLevel } from "./components/StatusCard";
 import styles from "./DataplaneHealthStats.module.scss";
-import {
-  healthStatusBadgeVariant,
-  healthStatusIcon,
-  HealthStatusIcon,
-  healthStatusMessageId,
-} from "../../healthStatus";
+import { AgeMessage, CardData, formatAge, getSecretStorageCardData, NEVER_CONNECTED } from "./utils";
+import { healthStatusBadgeVariant, healthStatusMessageId } from "../../healthStatus";
 import { HealthHistoryBar } from "../HealthHistoryBar";
 
 interface DataplaneHealthStatsProps {
@@ -24,74 +20,93 @@ interface DataplaneHealthStatsProps {
 
 const UNKNOWN_VERSION = "unknown";
 
-export const formatCheckInAge = (ageMs: number): { id: string; values: Record<string, number> } => {
-  const totalSeconds = Math.max(0, Math.floor(ageMs / 1000));
-  const days = Math.floor(totalSeconds / 86_400);
-  const hours = Math.floor((totalSeconds % 86_400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (days > 0) {
-    return { id: "settings.organization.regions.dataplane.checkIn.days", values: { days, hours } };
-  }
-  if (hours > 0) {
-    return { id: "settings.organization.regions.dataplane.checkIn.hours", values: { hours, minutes, seconds } };
-  }
-  if (minutes > 0) {
-    return { id: "settings.organization.regions.dataplane.checkIn.minutes", values: { minutes, seconds } };
-  }
-  return { id: "settings.organization.regions.dataplane.checkIn.seconds", values: { seconds } };
+const LEVEL_BY_HEALTH_STATUS: Record<DataplaneHealthRead["status"], StatusLevel> = {
+  HEALTHY: "success",
+  DEGRADED: "warning",
+  UNHEALTHY: "error",
+  UNKNOWN: "neutral",
 };
 
-const TileValue: React.FC<React.PropsWithChildren<{ icon: HealthStatusIcon }>> = ({ icon, children }) => (
-  <FlexContainer alignItems="center" gap="xs">
-    <Icon type={icon.type} color={icon.color} size="sm" />
-    <Text size="sm" bold>
-      {children}
-    </Text>
-  </FlexContainer>
-);
-
-// A data plane without a check-in always has the UNKNOWN status.
-const NeverConnected: React.FC = () => (
-  <TileValue icon={healthStatusIcon.UNKNOWN}>
-    <FormattedMessage id="settings.organization.regions.neverConnected" />
-  </TileValue>
-);
-
-const LastCheckIn: React.FC<{ dataplane: DataplaneHealthRead }> = ({ dataplane }) => {
-  const now = useCurrentTime();
-
+const getLastCheckInCardData = (dataplane: DataplaneHealthRead, now: number): CardData => {
   if (dataplane.last_heartbeat_timestamp === undefined) {
-    return <NeverConnected />;
+    return NEVER_CONNECTED;
   }
 
-  const age = formatCheckInAge(now - dataplane.last_heartbeat_timestamp);
+  return {
+    level: LEVEL_BY_HEALTH_STATUS[dataplane.status],
+    value: formatAge(now - dataplane.last_heartbeat_timestamp),
+  };
+};
+
+const LastCheckInCard: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) => {
+  const now = useCurrentTime();
+
   return (
-    <TileValue icon={healthStatusIcon[dataplane.status]}>
-      <FormattedMessage id={age.id} values={age.values} />
-    </TileValue>
+    <StatusCard
+      label={<FormattedMessage id="settings.organization.regions.dataplane.lastCheckIn" />}
+      {...getLastCheckInCardData(dataplane, now)}
+    />
   );
 };
 
 // The server stores "unknown" when a check-in carries no version, so a connected data plane can lack one.
-const AirbyteVersion: React.FC<{ dataplane: DataplaneHealthRead }> = ({ dataplane }) => {
+const getVersionCardData = (dataplane: DataplaneHealthRead): CardData => {
   if (dataplane.last_heartbeat_timestamp === undefined) {
-    return <NeverConnected />;
+    return NEVER_CONNECTED;
   }
 
   const version = dataplane.dataplane_version;
   if (!version || version === UNKNOWN_VERSION) {
-    return (
-      <Text size="sm" bold color="grey">
-        <FormattedMessage id="settings.organization.regions.dataplane.version.unavailable" />
-      </Text>
-    );
+    return {
+      level: "neutral",
+      value: { messageId: "settings.organization.regions.dataplane.version.unavailable" },
+    };
   }
+
+  return { level: "success", value: { text: version } };
+};
+
+const AirbyteVersionCard: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) => (
+  <StatusCard
+    label={<FormattedMessage id="settings.organization.regions.dataplane.version" />}
+    {...getVersionCardData(dataplane)}
+  />
+);
+
+interface ObservedAgeProps {
+  age: AgeMessage;
+}
+
+const ObservedAge: React.FC<ObservedAgeProps> = ({ age }) => (
+  <FormattedMessage
+    id="settings.organization.regions.dataplane.diagnostics.observed"
+    values={{ age: <FormattedMessage id={age.messageId} values={age.values} /> }}
+  />
+);
+
+const SecretStorageCard: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) => {
+  const now = useCurrentTime();
+  const secretStorage = getSecretStorageCardData(dataplane, now);
+
+  if (!secretStorage) {
+    return null;
+  }
+
   return (
-    <Text size="sm" bold>
-      {version}
-    </Text>
+    <>
+      <Text size="sm" bold>
+        <FormattedMessage id="settings.organization.regions.dataplane.diagnostics" />
+      </Text>
+
+      <div className={styles.cards}>
+        <StatusCard
+          label={<FormattedMessage id="settings.organization.regions.dataplane.diagnostics.secretStorage.label" />}
+          level={secretStorage.level}
+          value={secretStorage.value}
+          caption={secretStorage.lastChecked && <ObservedAge age={secretStorage.lastChecked} />}
+        />
+      </div>
+    </>
   );
 };
 
@@ -128,20 +143,12 @@ export const DataplaneHealthStats: React.FC<DataplaneHealthStatsProps> = ({ data
         </FlexContainer>
       </FlexContainer>
 
-      <FlexContainer gap="md">
-        <FlexItem grow className={styles.tile}>
-          <Text size="sm" color="grey400">
-            <FormattedMessage id="settings.organization.regions.dataplane.lastCheckIn" />
-          </Text>
-          <LastCheckIn dataplane={dataplane} />
-        </FlexItem>
-        <FlexItem grow className={styles.tile}>
-          <Text size="sm" color="grey400">
-            <FormattedMessage id="settings.organization.regions.dataplane.version" />
-          </Text>
-          <AirbyteVersion dataplane={dataplane} />
-        </FlexItem>
-      </FlexContainer>
+      <div className={styles.cards}>
+        <LastCheckInCard dataplane={dataplane} />
+        <AirbyteVersionCard dataplane={dataplane} />
+      </div>
+
+      <SecretStorageCard dataplane={dataplane} />
 
       <FlexContainer direction="column" gap="sm">
         <Text size="sm" bold>
