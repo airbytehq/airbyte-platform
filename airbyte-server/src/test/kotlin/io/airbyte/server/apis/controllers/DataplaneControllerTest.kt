@@ -30,6 +30,7 @@ import io.airbyte.domain.models.DataplaneDiagnostic
 import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
@@ -51,6 +52,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 import io.airbyte.api.server.generated.models.DataplaneDiagnosticKind as ApiDataplaneDiagnosticKind
+import io.airbyte.api.server.generated.models.DataplaneVersionSupport as ApiDataplaneVersionSupport
 import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
 class DataplaneControllerTest {
@@ -61,7 +63,10 @@ class DataplaneControllerTest {
 
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
-    private val dataplaneHealthService = mockk<DataplaneHealthService>(relaxed = true)
+    private val dataplaneHealthService =
+      mockk<DataplaneHealthService>(relaxed = true).apply {
+        every { getPublishedReleaseSupport(any(), any()) } returns emptyMap()
+      }
 
     private val entitlementService = mockk<EntitlementService>(relaxed = true)
     private val airbyteConfig =
@@ -770,6 +775,99 @@ class DataplaneControllerTest {
         newDataplane.id to emptyList(),
       )
     Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to it.unsupportedDiagnosticKinds })
+  }
+
+  @Test
+  fun `listDataplaneHealth returns each data plane's version support next to its unchanged check-in status when the health UI flag is on`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val supportedDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val endedDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val customDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val silentDataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val dataplanes = listOf(supportedDataplane, endedDataplane, customDataplane, silentDataplane)
+    val supportedRelease =
+      DataplaneVersionSupport.Published(
+        publishedAt = OffsetDateTime.of(2026, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        supportedUntil = OffsetDateTime.of(2027, 11, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        supported = true,
+      )
+    val endedRelease =
+      DataplaneVersionSupport.Published(
+        publishedAt = OffsetDateTime.of(2025, 1, 15, 0, 0, 0, 0, ZoneOffset.UTC),
+        supportedUntil = OffsetDateTime.of(2026, 3, 15, 0, 0, 0, 0, ZoneOffset.UTC),
+        supported = false,
+      )
+
+    every { featureFlagClient.boolVariation(DataplaneHealthUi, Organization(mockOrganizationId)) } returns true
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns dataplanes
+    every { dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, true) } returns
+      listOf(
+        unknownHealthInfo(supportedDataplane.id).copy(status = DataplaneHealthInfo.HealthStatus.UNHEALTHY, dataplaneVersion = "2.6.0"),
+        unknownHealthInfo(endedDataplane.id).copy(status = DataplaneHealthInfo.HealthStatus.HEALTHY, dataplaneVersion = "2.0.0"),
+        unknownHealthInfo(customDataplane.id).copy(status = DataplaneHealthInfo.HealthStatus.HEALTHY, dataplaneVersion = "2.6.0-custom"),
+        unknownHealthInfo(silentDataplane.id),
+      )
+    every { dataplaneHealthService.getPublishedReleaseSupport(setOf("2.6.0", "2.0.0", "2.6.0-custom"), any()) } returns
+      mapOf("2.6.0" to supportedRelease, "2.0.0" to endedRelease)
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    val expected =
+      mapOf(
+        supportedDataplane.id to
+          Pair(
+            DataplaneHealthRead.Status.UNHEALTHY,
+            ApiDataplaneVersionSupport(
+              status = ApiDataplaneVersionSupport.Status.SUPPORTED,
+              publishedAt = supportedRelease.publishedAt.toInstant().toEpochMilli(),
+              supportedUntil = supportedRelease.supportedUntil.toInstant().toEpochMilli(),
+            ),
+          ),
+        endedDataplane.id to
+          Pair(
+            DataplaneHealthRead.Status.HEALTHY,
+            ApiDataplaneVersionSupport(
+              status = ApiDataplaneVersionSupport.Status.SUPPORT_ENDED,
+              publishedAt = endedRelease.publishedAt.toInstant().toEpochMilli(),
+              supportedUntil = endedRelease.supportedUntil.toInstant().toEpochMilli(),
+            ),
+          ),
+        customDataplane.id to
+          Pair(
+            DataplaneHealthRead.Status.HEALTHY,
+            ApiDataplaneVersionSupport(status = ApiDataplaneVersionSupport.Status.UNKNOWN),
+          ),
+        silentDataplane.id to
+          Pair(
+            DataplaneHealthRead.Status.UNKNOWN,
+            ApiDataplaneVersionSupport(status = ApiDataplaneVersionSupport.Status.UNKNOWN),
+          ),
+      )
+    Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to Pair(it.status, it.dataplaneVersionSupport) })
+  }
+
+  @Test
+  fun `listDataplaneHealth leaves out version support and skips the release catalog when the health UI flag is off`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplane.id), false) } returns
+      listOf(unknownHealthInfo(dataplane.id).copy(status = DataplaneHealthInfo.HealthStatus.HEALTHY, dataplaneVersion = "2.7.0-flag-off"))
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    Assertions.assertEquals(
+      mapOf(dataplane.id to Pair(DataplaneHealthRead.Status.HEALTHY, null)),
+      response.dataplanes.associate { it.dataplaneId to Pair(it.status, it.dataplaneVersionSupport) },
+    )
+    verify(exactly = 0) { dataplaneHealthService.getPublishedReleaseSupport(setOf("2.7.0-flag-off"), any()) }
   }
 
   private fun unknownHealthInfo(dataplaneId: UUID) =

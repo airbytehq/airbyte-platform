@@ -7,8 +7,10 @@ package io.airbyte.data.services
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.version.Version
+import io.airbyte.data.repositories.AirbyteReleaseRepository
 import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
+import io.airbyte.data.repositories.entities.AirbyteRelease
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
 import io.airbyte.data.services.DataplaneHealthService.Companion.HISTORY_BUCKET_COUNT
 import io.airbyte.data.services.DataplaneHealthService.Companion.HISTORY_BUCKET_DURATION
@@ -16,10 +18,12 @@ import io.airbyte.data.services.DataplaneHealthService.Companion.HISTORY_WINDOW_
 import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIOD_DURATION
 import io.airbyte.data.services.DataplaneHealthService.Companion.UNKNOWN_VERSION
 import io.airbyte.data.services.DataplaneHealthService.Companion.historyWindowStart
+import io.airbyte.data.services.DataplaneHealthService.Companion.releaseSupport
 import io.airbyte.domain.models.DataplaneDiagnostic
 import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo.HealthStatus
+import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.mockk.every
 import io.mockk.mockk
@@ -32,13 +36,15 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import io.airbyte.data.repositories.entities.DataplaneDiagnostic as DataplaneDiagnosticEntity
 
 internal class DataplaneHealthServiceTest {
   private val heartbeatLogRepository = mockk<DataplaneHeartbeatLogRepository>(relaxed = true)
   private val diagnosticRepository = mockk<DataplaneDiagnosticRepository>(relaxed = true)
-  private val dataplaneHealthService = DataplaneHealthService(heartbeatLogRepository, diagnosticRepository)
+  private val releaseRepository = mockk<AirbyteReleaseRepository>()
+  private val dataplaneHealthService = DataplaneHealthService(heartbeatLogRepository, diagnosticRepository, releaseRepository)
 
   @Test
   fun `recordDiagnostics saves each result with its status and error`() {
@@ -656,4 +662,90 @@ internal class DataplaneHealthServiceTest {
 
     assertEquals(deletedCount, result)
   }
+
+  @Test
+  fun `releaseSupport keeps a release supported until 14 calendar months after publication`() {
+    val publishedAt = OffsetDateTime.of(2025, 9, 15, 12, 0, 0, 0, ZoneOffset.UTC)
+    val supportedUntil = OffsetDateTime.of(2026, 11, 15, 12, 0, 0, 0, ZoneOffset.UTC)
+
+    assertEquals(
+      DataplaneVersionSupport.Published(publishedAt = publishedAt, supportedUntil = supportedUntil, supported = true),
+      releaseSupport(publishedAt, now = supportedUntil.minusNanos(1)),
+    )
+    assertEquals(
+      DataplaneVersionSupport.Published(publishedAt = publishedAt, supportedUntil = supportedUntil, supported = false),
+      releaseSupport(publishedAt, now = supportedUntil),
+    )
+  }
+
+  @Test
+  fun `releaseSupport ends on the last day of a shorter month`() {
+    val publishedAt = OffsetDateTime.of(2024, 12, 31, 8, 0, 0, 0, ZoneOffset.UTC)
+
+    assertEquals(OffsetDateTime.of(2026, 2, 28, 8, 0, 0, 0, ZoneOffset.UTC), releaseSupport(publishedAt, publishedAt).supportedUntil)
+  }
+
+  @Test
+  fun `releaseSupport counts months on the UTC calendar`() {
+    // 2025-01-31T23:00 at -05:00 is 2025-02-01T04:00 UTC, so the end is April 1st, not March 31st.
+    val publishedAt = OffsetDateTime.of(2025, 1, 31, 23, 0, 0, 0, ZoneOffset.ofHours(-5))
+
+    assertEquals(
+      DataplaneVersionSupport.Published(
+        publishedAt = OffsetDateTime.of(2025, 2, 1, 4, 0, 0, 0, ZoneOffset.UTC),
+        supportedUntil = OffsetDateTime.of(2026, 4, 1, 4, 0, 0, 0, ZoneOffset.UTC),
+        supported = true,
+      ),
+      releaseSupport(publishedAt, publishedAt),
+    )
+  }
+
+  @Test
+  fun `getPublishedReleaseSupport evaluates each published release and leaves out versions the catalog does not list`() {
+    val publishedAt = OffsetDateTime.of(2026, 1, 10, 0, 0, 0, 0, ZoneOffset.UTC)
+    val now = OffsetDateTime.of(2026, 11, 6, 0, 0, 0, 0, ZoneOffset.UTC)
+    val reportedVersions = setOf("2.4.0", UNKNOWN_VERSION, "2.4.0-custom", "dev-1a2b3c4d5e")
+    every { releaseRepository.findByVersionIn(reportedVersions) } returns listOf(release("2.4.0", publishedAt))
+
+    val result = dataplaneHealthService.getPublishedReleaseSupport(reportedVersions, now)
+
+    assertEquals(mapOf("2.4.0" to releaseSupport(publishedAt, now)), result)
+  }
+
+  @Test
+  fun `getPublishedReleaseSupport ages a release out between reads without a new check-in`() {
+    val publishedAt = OffsetDateTime.of(2025, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+    every { releaseRepository.findByVersionIn(setOf("2.4.0")) } returns listOf(release("2.4.0", publishedAt))
+
+    val beforeEnd = dataplaneHealthService.getPublishedReleaseSupport(setOf("2.4.0"), OffsetDateTime.of(2026, 10, 31, 23, 59, 0, 0, ZoneOffset.UTC))
+    val afterEnd = dataplaneHealthService.getPublishedReleaseSupport(setOf("2.4.0"), OffsetDateTime.of(2026, 11, 1, 0, 0, 0, 0, ZoneOffset.UTC))
+
+    assertEquals(listOf(true), beforeEnd.values.map { it.supported }, "$beforeEnd")
+    assertEquals(listOf(false), afterEnd.values.map { it.supported }, "$afterEnd")
+    verify(exactly = 0) { heartbeatLogRepository.save(any()) }
+  }
+
+  @Test
+  fun `getPublishedReleaseSupport returns nothing for an empty catalog`() {
+    every { releaseRepository.findByVersionIn(setOf("2.4.0")) } returns emptyList()
+
+    assertEquals(emptyMap<String, DataplaneVersionSupport.Published>(), dataplaneHealthService.getPublishedReleaseSupport(setOf("2.4.0")))
+  }
+
+  @Test
+  fun `getPublishedReleaseSupport does not query the catalog without reported versions`() {
+    assertEquals(emptyMap<String, DataplaneVersionSupport.Published>(), dataplaneHealthService.getPublishedReleaseSupport(emptySet()))
+
+    verify(exactly = 0) { releaseRepository.findByVersionIn(any()) }
+  }
+
+  private fun release(
+    version: String,
+    publishedAt: OffsetDateTime,
+  ) = AirbyteRelease(
+    id = UUID.randomUUID(),
+    version = version,
+    sourceCommit = "0123456789abcdef0123456789abcdef01234567",
+    publishedAt = publishedAt,
+  )
 }

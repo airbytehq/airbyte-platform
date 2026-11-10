@@ -43,6 +43,7 @@ import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
+import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.airbyte.featureflag.DataplaneHealthUi
@@ -69,6 +70,7 @@ import java.util.UUID
 import java.util.stream.Collectors
 import io.airbyte.api.server.generated.models.DataplaneDiagnosticKind as ApiDataplaneDiagnosticKind
 import io.airbyte.api.server.generated.models.DataplaneDiagnosticStatus as ApiDataplaneDiagnosticStatus
+import io.airbyte.api.server.generated.models.DataplaneVersionSupport as ApiDataplaneVersionSupport
 
 private val logger = KotlinLogging.logger {}
 
@@ -377,9 +379,15 @@ open class DataplaneController(
     val dataplanes = dataplaneService.listDataplanes(dataplaneGroups.map { it.id })
     val dataplaneMap = dataplanes.associateBy { it.id }
 
-    val includeHealthHistory = featureFlagClient.boolVariation(DataplaneHealthUi, Organization(request.organizationId))
-    val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, includeHealthHistory)
+    val healthUiEnabled = featureFlagClient.boolVariation(DataplaneHealthUi, Organization(request.organizationId))
+    val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id }, healthUiEnabled)
     val diagnosticsByDataplane = dataplaneHealthService.getDiagnostics(request.organizationId, dataplanes.map { it.id }).groupBy { it.dataplaneId }
+    val releaseSupportByVersion =
+      if (healthUiEnabled) {
+        dataplaneHealthService.getPublishedReleaseSupport(healthInfos.mapNotNull { it.dataplaneVersion }.toSet())
+      } else {
+        emptyMap()
+      }
 
     val dataplaneHealthReads =
       healthInfos.map { healthInfo ->
@@ -400,9 +408,15 @@ open class DataplaneController(
             },
           controlPlaneVersion = healthInfo.controlPlaneVersion,
           dataplaneVersion = healthInfo.dataplaneVersion,
+          dataplaneVersionSupport =
+            if (healthUiEnabled) {
+              toVersionSupportRead(healthInfo.dataplaneVersion?.let { releaseSupportByVersion[it] } ?: DataplaneVersionSupport.Unknown)
+            } else {
+              null
+            },
           enabled = dataplane.enabled && dataplaneGroup.enabled,
           healthHistory =
-            if (includeHealthHistory) {
+            if (healthUiEnabled) {
               healthInfo.healthHistory.map { bucket ->
                 DataplaneHealthHistoryBucket(
                   bucketStart = bucket.bucketStart.toInstant().toEpochMilli(),
@@ -420,6 +434,17 @@ open class DataplaneController(
 
     return DataplaneHealthListResponse(dataplanes = dataplaneHealthReads)
   }
+
+  private fun toVersionSupportRead(support: DataplaneVersionSupport): ApiDataplaneVersionSupport =
+    when (support) {
+      is DataplaneVersionSupport.Published ->
+        ApiDataplaneVersionSupport(
+          status = if (support.supported) ApiDataplaneVersionSupport.Status.SUPPORTED else ApiDataplaneVersionSupport.Status.SUPPORT_ENDED,
+          publishedAt = support.publishedAt.toInstant().toEpochMilli(),
+          supportedUntil = support.supportedUntil.toInstant().toEpochMilli(),
+        )
+      DataplaneVersionSupport.Unknown -> ApiDataplaneVersionSupport(status = ApiDataplaneVersionSupport.Status.UNKNOWN)
+    }
 
   private fun toApiKind(kind: DataplaneDiagnosticKind): ApiDataplaneDiagnosticKind =
     when (kind) {

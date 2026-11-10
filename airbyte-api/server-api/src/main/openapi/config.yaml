@@ -25571,6 +25571,8 @@ components:
           type: string
         dataplane_version:
           type: string
+        dataplane_version_support:
+          $ref: "#/components/schemas/DataplaneVersionSupport"
         enabled:
           type: boolean
           description: True when both the dataplane and its dataplane group are enabled.
@@ -25589,6 +25591,27 @@ components:
           description: Checks this data plane's version is too old to run. A check with a saved result is never listed.
           items:
             $ref: "#/components/schemas/DataplaneDiagnosticKind"
+    DataplaneVersionSupport:
+      type: object
+      description: Whether the release in dataplane_version is still inside its support period, evaluated on every request. This is the age of the release, not its compatibility. Present only when the data plane health UI is enabled for the organization.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: UNKNOWN when the data plane reported no version, or reported one that is not a published release, such as a custom build.
+          enum:
+            - SUPPORTED
+            - SUPPORT_ENDED
+            - UNKNOWN
+        published_at:
+          type: integer
+          format: int64
+          description: When the release was published, in epoch milliseconds. Absent when status is UNKNOWN.
+        supported_until:
+          type: integer
+          format: int64
+          description: First moment the release is no longer supported, in epoch milliseconds. Absent when status is UNKNOWN.
     HeartbeatRecord:
       type: object
       required:

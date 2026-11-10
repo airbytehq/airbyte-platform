@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.version.Version
+import io.airbyte.data.repositories.AirbyteReleaseRepository
 import io.airbyte.data.repositories.DataplaneDiagnosticRepository
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
@@ -13,6 +14,7 @@ import io.airbyte.domain.models.DataplaneDiagnostic
 import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.HeartbeatData
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
@@ -20,6 +22,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
+import java.time.Period
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -39,6 +42,7 @@ private const val STATUS_UNABLE_TO_COMPLETE = "UNABLE_TO_COMPLETE"
 class DataplaneHealthService(
   private val heartbeatLogRepository: DataplaneHeartbeatLogRepository,
   private val diagnosticRepository: DataplaneDiagnosticRepository,
+  private val releaseRepository: AirbyteReleaseRepository,
 ) {
   companion object {
     const val UNKNOWN_VERSION = "unknown"
@@ -57,6 +61,28 @@ class DataplaneHealthService(
      * The first Airbyte release that has each check.
      */
     val MINIMUM_DIAGNOSTIC_VERSIONS: Map<DataplaneDiagnosticKind, Version> = emptyMap()
+
+    /**
+     * How long a release is supported after it is published, from the Data Plane Version Publishing and Support Policy.
+     */
+    val RELEASE_SUPPORT_PERIOD: Period = Period.ofMonths(14)
+
+    /**
+     * Months are counted on the UTC calendar, so a release published on the 31st reaches its end on the last day of a shorter
+     * month. The release is supported up to, but not including, that moment.
+     */
+    fun releaseSupport(
+      publishedAt: OffsetDateTime,
+      now: OffsetDateTime,
+    ): DataplaneVersionSupport.Published {
+      val publishedAtUtc = publishedAt.withOffsetSameInstant(ZoneOffset.UTC)
+      val supportedUntil = publishedAtUtc.plus(RELEASE_SUPPORT_PERIOD)
+      return DataplaneVersionSupport.Published(
+        publishedAt = publishedAtUtc,
+        supportedUntil = supportedUntil,
+        supported = now.isBefore(supportedUntil),
+      )
+    }
 
     /**
      * Periods are aligned to the clock (:00, :15, :30, :45 UTC) so a silence stays in the same period from one poll to the next.
@@ -146,6 +172,21 @@ class DataplaneHealthService(
   ): List<DataplaneDiagnosticKind> {
     val reportedKinds = savedDiagnostics.map { it.diagnostic.kind }.toSet()
     return minimumVersions.filter { (kind, minimum) -> kind !in reportedKinds && isOlderThan(dataplaneVersion, minimum) }.keys.toList()
+  }
+
+  /**
+   * Evaluates each reported version that is a published release at [now], so a release ages out of support without a new
+   * check-in. A version the release catalog doesn't list, such as [UNKNOWN_VERSION] or a custom build, is left out.
+   */
+  fun getPublishedReleaseSupport(
+    dataplaneVersions: Set<String>,
+    now: OffsetDateTime = OffsetDateTime.now(),
+  ): Map<String, DataplaneVersionSupport.Published> {
+    if (dataplaneVersions.isEmpty()) {
+      return emptyMap()
+    }
+
+    return releaseRepository.findByVersionIn(dataplaneVersions).associate { release -> release.version to releaseSupport(release.publishedAt, now) }
   }
 
   /**
