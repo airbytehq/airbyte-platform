@@ -34,6 +34,7 @@ private val logger = KotlinLogging.logger {}
 private const val STATUS_PASSED = "PASSED"
 private const val STATUS_FAILED = "FAILED"
 private const val STATUS_UNABLE_TO_COMPLETE = "UNABLE_TO_COMPLETE"
+private const val STATUS_NOT_CONFIGURED = "NOT_CONFIGURED"
 
 /**
  * Service for managing dataplane health monitoring and heartbeat logging.
@@ -125,12 +126,13 @@ class DataplaneHealthService(
     diagnostics: List<DataplaneDiagnostic>,
   ) {
     diagnostics.forEach { diagnostic ->
-      // The table keeps the status as text, with error columns empty for a passed check.
+      // The table keeps the status as text, with error columns empty for a passed or not configured check.
       val (status, errorCode, errorMessage) =
         when (val outcome = diagnostic.outcome) {
           DataplaneDiagnosticOutcome.Passed -> Triple(STATUS_PASSED, null, null)
           is DataplaneDiagnosticOutcome.Failed -> Triple(STATUS_FAILED, outcome.errorCode, outcome.errorMessage)
           is DataplaneDiagnosticOutcome.UnableToComplete -> Triple(STATUS_UNABLE_TO_COMPLETE, outcome.errorCode, outcome.errorMessage)
+          DataplaneDiagnosticOutcome.NotConfigured -> Triple(STATUS_NOT_CONFIGURED, null, null)
         }
 
       diagnosticRepository.upsertLatest(
@@ -216,6 +218,7 @@ class DataplaneHealthService(
         STATUS_PASSED -> DataplaneDiagnosticOutcome.Passed
         STATUS_FAILED -> DataplaneDiagnosticOutcome.Failed(row.errorCode.orEmpty(), row.errorMessage.orEmpty())
         STATUS_UNABLE_TO_COMPLETE -> DataplaneDiagnosticOutcome.UnableToComplete(row.errorCode.orEmpty(), row.errorMessage.orEmpty())
+        STATUS_NOT_CONFIGURED -> DataplaneDiagnosticOutcome.NotConfigured
         else -> null
       }
     if (kind == null || outcome == null) {

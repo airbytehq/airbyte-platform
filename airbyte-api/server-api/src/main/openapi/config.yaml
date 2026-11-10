@@ -25697,13 +25697,15 @@ components:
       description: Which diagnostic check produced the result.
       enum:
         - SECRET_STORAGE
+        - STORAGE_REACHABILITY
     DataplaneDiagnosticStatus:
       type: string
-      description: Outcome of one check attempt. UNABLE_TO_COMPLETE means the check could not tell whether the operation works.
+      description: Outcome of one check. UNABLE_TO_COMPLETE means the result is unknown; NOT_CONFIGURED means there was nothing to check.
       enum:
         - PASSED
         - FAILED
         - UNABLE_TO_COMPLETE
+        - NOT_CONFIGURED
     DataplaneDiagnosticResult:
       type: object
       description: One completed check, as reported by the data plane.

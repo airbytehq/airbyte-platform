@@ -337,6 +337,32 @@ class DataplaneControllerTest {
   }
 
   @Test
+  fun `heartbeat records a not configured storage result`() {
+    val notConfigured =
+      DataplaneDiagnosticResult(
+        kind = ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY,
+        targetId = UUID.randomUUID(),
+        status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
+        checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+      )
+
+    val (_, _, recorded) = heartbeatWithDiagnostics(listOf(notConfigured))
+
+    Assertions.assertEquals(
+      listOf(
+        DataplaneDiagnostic(
+          DataplaneDiagnosticKind.STORAGE_REACHABILITY,
+          notConfigured.targetId,
+          DataplaneDiagnosticOutcome.NotConfigured,
+          CHECKED_AT,
+          emptyMap(),
+        ),
+      ),
+      recorded,
+    )
+  }
+
+  @Test
   fun `heartbeat skips invalid diagnostics and still records the check-in and valid ones`() {
     val valid = secretStorageResult(DataplaneDiagnosticStatus.PASSED)
     val failedWithoutMessage = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "ACCESS_DENIED")
@@ -748,6 +774,44 @@ class DataplaneControllerTest {
     Assertions.assertNull(health.lastHeartbeatTimestamp)
     Assertions.assertNull(health.controlPlaneVersion)
     Assertions.assertNull(health.dataplaneVersion)
+  }
+
+  @Test
+  fun `listDataplaneHealth returns a not configured storage result`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val updatedAt = CHECKED_AT.plusSeconds(30)
+    val notConfigured =
+      DataplaneDiagnostic(
+        DataplaneDiagnosticKind.STORAGE_REACHABILITY,
+        dataplane.id,
+        DataplaneDiagnosticOutcome.NotConfigured,
+        CHECKED_AT,
+        emptyMap(),
+      )
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplane.id), false) } returns listOf(unknownHealthInfo(dataplane.id))
+    every { dataplaneHealthService.getDiagnostics(mockOrganizationId, listOf(dataplane.id)) } returns
+      listOf(SavedDataplaneDiagnostic(dataplane.id, notConfigured, updatedAt))
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    Assertions.assertEquals(
+      listOf(
+        DataplaneDiagnosticRead(
+          kind = ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY,
+          targetId = dataplane.id,
+          status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
+          checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+          updatedAt = updatedAt.toInstant().toEpochMilli(),
+          observation = emptyMap(),
+        ),
+      ),
+      response.dataplanes.single().diagnostics,
+    )
   }
 
   @Test

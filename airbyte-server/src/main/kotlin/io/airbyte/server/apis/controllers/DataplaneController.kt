@@ -325,6 +325,7 @@ open class DataplaneController(
         ApiDataplaneDiagnosticStatus.FAILED -> if (hasError) DataplaneDiagnosticOutcome.Failed(errorCode, errorMessage) else null
         ApiDataplaneDiagnosticStatus.UNABLE_TO_COMPLETE ->
           if (hasError) DataplaneDiagnosticOutcome.UnableToComplete(errorCode, errorMessage) else null
+        ApiDataplaneDiagnosticStatus.NOT_CONFIGURED -> DataplaneDiagnosticOutcome.NotConfigured
       }
     if (outcome == null) {
       logger.warn {
@@ -342,6 +343,7 @@ open class DataplaneController(
     val kind =
       when (result.kind) {
         ApiDataplaneDiagnosticKind.SECRET_STORAGE -> DataplaneDiagnosticKind.SECRET_STORAGE
+        ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY -> DataplaneDiagnosticKind.STORAGE_REACHABILITY
       }
     val observation = result.observation.orEmpty()
     val missingKeys = requiredObservationKeys(kind).filter { it !in observation }
@@ -362,6 +364,7 @@ open class DataplaneController(
   private fun requiredObservationKeys(kind: DataplaneDiagnosticKind): List<String> =
     when (kind) {
       DataplaneDiagnosticKind.SECRET_STORAGE -> listOf("scope_type", "scope_id")
+      DataplaneDiagnosticKind.STORAGE_REACHABILITY -> emptyList()
     }
 
   private fun reportDataplaneMetric(
@@ -492,6 +495,7 @@ open class DataplaneController(
   private fun toApiKind(kind: DataplaneDiagnosticKind): ApiDataplaneDiagnosticKind =
     when (kind) {
       DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
+      DataplaneDiagnosticKind.STORAGE_REACHABILITY -> ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY
     }
 
   private fun toDiagnosticRead(
@@ -505,6 +509,7 @@ open class DataplaneController(
         is DataplaneDiagnosticOutcome.Failed -> Triple(ApiDataplaneDiagnosticStatus.FAILED, outcome.errorCode, outcome.errorMessage)
         is DataplaneDiagnosticOutcome.UnableToComplete ->
           Triple(ApiDataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, outcome.errorCode, outcome.errorMessage)
+        DataplaneDiagnosticOutcome.NotConfigured -> Triple(ApiDataplaneDiagnosticStatus.NOT_CONFIGURED, null, null)
       }
 
     return DataplaneDiagnosticRead(
@@ -513,6 +518,7 @@ open class DataplaneController(
       targetName =
         when (diagnostic.kind) {
           DataplaneDiagnosticKind.SECRET_STORAGE -> secretStorageNames[SecretStorageId(diagnostic.targetId)]
+          DataplaneDiagnosticKind.STORAGE_REACHABILITY -> null
         },
       status = status,
       checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),

@@ -35,6 +35,7 @@ data class SavedDataplaneDiagnostic(
 
 enum class DataplaneDiagnosticKind {
   SECRET_STORAGE,
+  STORAGE_REACHABILITY,
 }
 
 sealed interface DataplaneDiagnosticOutcome {
@@ -52,4 +53,9 @@ sealed interface DataplaneDiagnosticOutcome {
     val errorCode: String,
     val errorMessage: String,
   ) : DataplaneDiagnosticOutcome
+
+  /**
+   * There was nothing to check, such as no log storage set up.
+   */
+  data object NotConfigured : DataplaneDiagnosticOutcome
 }

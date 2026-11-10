@@ -96,6 +96,61 @@ internal class DataplaneHealthServiceTest {
   }
 
   @Test
+  fun `recordDiagnostics saves a not configured storage result without an error`() {
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val notConfigured =
+      DataplaneDiagnostic(DataplaneDiagnosticKind.STORAGE_REACHABILITY, dataplaneId, DataplaneDiagnosticOutcome.NotConfigured, checkedAt, emptyMap())
+
+    dataplaneHealthService.recordDiagnostics(dataplaneId, organizationId, listOf(notConfigured))
+
+    verify(exactly = 1) {
+      diagnosticRepository.upsertLatest(
+        dataplaneId,
+        organizationId,
+        "STORAGE_REACHABILITY",
+        dataplaneId,
+        "NOT_CONFIGURED",
+        checkedAt,
+        null,
+        null,
+        "{}",
+      )
+    }
+  }
+
+  @Test
+  fun `getDiagnostics reads back a not configured storage result`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneId = UUID.randomUUID()
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val updatedAt = checkedAt.plusSeconds(30)
+    val row = diagnosticRow(dataplaneId, "STORAGE_REACHABILITY", "NOT_CONFIGURED", checkedAt, updatedAt)
+    every { diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(organizationId, listOf(dataplaneId)) } returns listOf(row)
+
+    val result = dataplaneHealthService.getDiagnostics(organizationId, listOf(dataplaneId))
+
+    assertEquals(
+      listOf(
+        SavedDataplaneDiagnostic(
+          dataplaneId = dataplaneId,
+          diagnostic =
+            DataplaneDiagnostic(
+              DataplaneDiagnosticKind.STORAGE_REACHABILITY,
+              row.targetId,
+              DataplaneDiagnosticOutcome.NotConfigured,
+              checkedAt,
+              emptyMap(),
+            ),
+          updatedAt = updatedAt,
+        ),
+      ),
+      result,
+    )
+  }
+
+  @Test
   fun `recordDiagnostics saves nothing for an empty list`() {
     dataplaneHealthService.recordDiagnostics(UUID.randomUUID(), UUID.randomUUID(), emptyList())
 
