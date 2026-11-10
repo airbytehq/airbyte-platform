@@ -120,7 +120,10 @@ jest.mock("core/api", () => ({
 jest.mock("core/services/Notification", () => ({
   useNotificationService: () => ({ registerNotification: jest.fn() }),
 }));
-jest.mock("core/services/Experiment", () => ({ useExperiment: () => false }));
+const mockExperimentValues: Record<string, boolean> = {};
+jest.mock("core/services/Experiment", () => ({
+  useExperiment: (key: string) => mockExperimentValues[key] ?? false,
+}));
 jest.mock("core/utils/app", () => ({ useIsCloudApp: () => false }));
 jest.mock("core/utils/rbac", () => ({ Intent: {}, useGeneratedIntent: () => true }));
 jest.mock("./useAnalyticsTrackFunctions", () => ({
@@ -141,9 +144,11 @@ const mockUseTestConnectorCommand = useTestConnectorCommand as jest.MockedFuncti
 
 const renderDraftCard = async (
   testConnector: jest.Mock,
-  saveDraft: jest.Mock = jest.fn().mockResolvedValue({ ...mockSource, isDraft: true })
+  saveDraft: jest.Mock = jest.fn().mockResolvedValue({ ...mockSource, isDraft: true }),
+  sections?: unknown
 ) => {
   const onDraftPromoted = jest.fn().mockResolvedValue(undefined);
+  const onSubmit = jest.fn().mockResolvedValue(undefined);
   mockUseTestConnectorCommand.mockReturnValue({
     testConnector,
     isTestConnectionInProgress: false,
@@ -164,21 +169,74 @@ const renderDraftCard = async (
         selectedConnectorDefinitionSpecification={{
           ...mockSourceDefinitionSpecification,
           sourceDefinitionId: mockSource.sourceDefinitionId,
-          connectionSpecification: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
+          connectionSpecification: {
+            type: "object",
+            required: ["token"],
+            properties: { token: { type: "string" } },
+            ...(sections === undefined ? {} : { sections }),
+          },
         }}
-        onSubmit={jest.fn()}
+        onSubmit={onSubmit}
         onSaveDraft={saveDraft}
         onDraftPromoted={onDraftPromoted}
       />
     </IntlProvider>
   );
 
-  return { saveDraft, onDraftPromoted };
+  return { saveDraft, onDraftPromoted, onSubmit };
 };
 
 describe("ConnectorCard draft setup", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockExperimentValues["connector.sectionedSetupForm"] = true;
+  });
+
+  afterEach(() => {
+    delete mockExperimentValues["connector.sectionedSetupForm"];
+  });
+
+  it("creates the connector without a draft or a check when the last section opts out", async () => {
+    const testConnector = jest.fn().mockResolvedValue({ status: "succeeded" });
+    const { saveDraft, onDraftPromoted, onSubmit } = await renderDraftCard(testConnector, undefined, [
+      { id: "last", title: "Last", groups: [], check: false },
+    ]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining(formValues));
+    expect(testConnector).not.toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(onDraftPromoted).not.toHaveBeenCalled();
+  });
+
+  it("checks a saved draft before promotion even when the last section opts out", async () => {
+    const testConnector = jest.fn().mockResolvedValue({ status: "succeeded" });
+    const { saveDraft, onDraftPromoted, onSubmit } = await renderDraftCard(testConnector, undefined, [
+      { id: "last", title: "Last", groups: [], check: false },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+
+    expect(saveDraft).toHaveBeenLastCalledWith(
+      expect.objectContaining(formValues),
+      expect.objectContaining({ sourceId: mockSource.sourceId })
+    );
+    expect(testConnector).toHaveBeenCalledWith(undefined, expect.objectContaining({ sourceId: mockSource.sourceId }));
+    expect(testConnector.mock.invocationCallOrder[0]).toBeLessThan(onDraftPromoted.mock.invocationCallOrder[0]);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("still checks a draft before promotion when the last section does not opt out", async () => {
+    const testConnector = jest.fn().mockResolvedValue({ status: "succeeded" });
+    const { saveDraft, onDraftPromoted } = await renderDraftCard(testConnector, undefined, [
+      { id: "last", title: "Last", groups: [], check: true },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+    expect(testConnector).toHaveBeenCalledTimes(1);
+    expect(saveDraft.mock.invocationCallOrder[0]).toBeLessThan(testConnector.mock.invocationCallOrder[0]);
+    expect(testConnector.mock.invocationCallOrder[0]).toBeLessThan(onDraftPromoted.mock.invocationCallOrder[0]);
   });
 
   it("persists a draft before checking by actor ID and retains it after a failed check", async () => {
@@ -313,6 +371,70 @@ const renderCard = (props: React.ComponentProps<typeof ConnectorCard>, testConne
     ),
   });
 };
+
+describe("ConnectorCard section check opt-out", () => {
+  const lastSectionOptsOut = { type: "object", sections: [{ id: "last", title: "Last", groups: [], check: false }] };
+
+  beforeEach(() => {
+    mockExperimentValues["connector.sectionedSetupForm"] = true;
+  });
+
+  afterEach(() => {
+    delete mockExperimentValues["connector.sectionedSetupForm"];
+  });
+
+  it("still checks when the sectioned setup form is off, even if the last section opts out", async () => {
+    mockExperimentValues["connector.sectionedSetupForm"] = false;
+    const onSubmit = jest.fn();
+    const testConnector = jest.fn().mockResolvedValue({ status: "succeeded" });
+    renderCard(
+      {
+        ...newSourceCardProps,
+        onSubmit,
+        selectedConnectorDefinitionSpecification: {
+          ...mockSourceDefinitionSpecification,
+          connectionSpecification: lastSectionOptsOut,
+        },
+      },
+      testConnector
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+    expect(testConnector).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { sections: [{ id: "last", title: "Last", groups: [], check: false }], skips: true },
+    { sections: [{ id: "last", title: "Last", groups: [], check: true }], skips: false },
+    { sections: [{ id: "last", title: "Last", groups: [] }], skips: false },
+    { sections: undefined, skips: false },
+    { sections: [], skips: false },
+    {
+      sections: [
+        { id: "last", title: "Last", groups: [], order: 2, check: false },
+        { id: "first", title: "First", groups: [], order: 1, check: true },
+      ],
+      skips: true,
+    },
+  ])("submits with sections=$sections (skips=$skips)", async ({ sections, skips }) => {
+    const onSubmit = jest.fn();
+    const testConnector = jest.fn().mockResolvedValue({ status: "succeeded" });
+    renderCard(
+      {
+        ...newSourceCardProps,
+        onSubmit,
+        selectedConnectorDefinitionSpecification: {
+          ...mockSourceDefinitionSpecification,
+          connectionSpecification: { type: "object", ...(sections === undefined ? {} : { sections }) },
+        },
+      },
+      testConnector
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(testConnector).toHaveBeenCalledTimes(skips ? 0 : 1);
+  });
+});
 
 describe("ConnectorCard header", () => {
   beforeEach(() => {

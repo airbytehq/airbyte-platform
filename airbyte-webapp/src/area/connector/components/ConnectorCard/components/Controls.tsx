@@ -44,6 +44,7 @@ interface IProps {
   hasDefinition: boolean;
   isEditMode: boolean;
   isDraftMode?: boolean;
+  skipsConnectionCheck?: boolean;
   leftSlot?: React.ReactNode;
   onSubmitWithoutCheck?: () => Promise<void>;
   isSavingDraft?: boolean;
@@ -78,6 +79,7 @@ export const Controls: React.FC<IProps> = ({
   hasDefinition,
   isEditMode,
   isDraftMode = false,
+  skipsConnectionCheck = false,
   isValid,
   emptyRequiredFields,
   dirty,
@@ -112,7 +114,7 @@ export const Controls: React.FC<IProps> = ({
   const submitBlocked = isSubmitting || disabledSubmitMessage !== undefined;
 
   const submitButton =
-    onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
+    onSubmitWithoutCheck && shouldAllowSavingWithoutTesting && !skipsConnectionCheck ? (
       <DropdownButton
         type="submit"
         form={formElementId}
@@ -154,7 +156,7 @@ export const Controls: React.FC<IProps> = ({
         disabled={submitBlocked || (isEditMode && !isDraftMode && !dirty)}
         aria-describedby={disabledSubmitMessage && submitButtonDescribedBy}
       >
-        <FormattedMessage id="connectorForm.saveAndTest" />
+        <FormattedMessage id={skipsConnectionCheck ? "connectorForm.save" : "connectorForm.saveAndTest"} />
       </Button>
     );
 

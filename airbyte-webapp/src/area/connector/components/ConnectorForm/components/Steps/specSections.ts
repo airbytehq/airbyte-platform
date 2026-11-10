@@ -56,6 +56,21 @@ const compareSectionOrder = (a: SectionDetails, b: SectionDetails) => {
 };
 
 /**
+ * The sections the setup form renders. The stepped form exists in create mode only, behind the
+ * `connector.sectionedSetupForm` experiment; otherwise the form renders flat and this returns undefined.
+ */
+export function getRenderedSpecSections(
+  connectionSpecification: unknown,
+  isEditMode: boolean,
+  isSectionedSetupFormEnabled: boolean
+): SectionDetails[] | undefined {
+  if (isEditMode || !isSectionedSetupFormEnabled) {
+    return undefined;
+  }
+  return getSpecSections(connectionSpecification);
+}
+
+/**
  * Reads the `sections` of a connector spec and returns them in display order, or undefined when the spec has none.
  * Throws a `FormBuildError` when the sections are not valid.
  */

@@ -12,6 +12,7 @@ import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "area/connector/components/ConnectorForm";
+import { getRenderedSpecSections } from "area/connector/components/ConnectorForm/components/Steps/specSections";
 import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
 import { CommandErrorWithJobInfo, useTestConnectorCommand } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
@@ -22,6 +23,8 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
+import { isFormBuildError } from "core/form/FormBuildError";
+import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
@@ -152,6 +155,25 @@ export const ConnectorCard = <T extends ConnectorT>({
 
   const { selectedConnectorDefinitionSpecification, availableConnectorDefinitions, isEditMode } = props;
 
+  const isSectionedSetupFormEnabled = useExperiment("connector.sectionedSetupForm");
+  const lastSectionSkipsConnectionCheck = useMemo(() => {
+    try {
+      const sections = getRenderedSpecSections(
+        selectedConnectorDefinitionSpecification?.connectionSpecification,
+        Boolean(isEditMode),
+        isSectionedSetupFormEnabled
+      );
+      return sections?.[sections.length - 1]?.check === false;
+    } catch (error) {
+      if (isFormBuildError(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }, [isEditMode, isSectionedSetupFormEnabled, selectedConnectorDefinitionSpecification?.connectionSpecification]);
+  // Only a successful check promotes a draft, so once a draft is saved the submit has to check it
+  const skipsConnectionCheck = lastSectionSkipsConnectionCheck && !draftConnector;
+
   const selectedConnectorDefinitionSpecificationId =
     selectedConnectorDefinitionId ||
     (selectedConnectorDefinitionSpecification && ConnectorSpecification.id(selectedConnectorDefinitionSpecification));
@@ -225,7 +247,7 @@ export const ConnectorCard = <T extends ConnectorT>({
     };
 
     try {
-      if (onSaveDraft) {
+      if (onSaveDraft && !shouldSkipCheckConnection) {
         const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
         setDraftConnector(savedDraft);
         const checkResult = await testConnectorWithTracking(undefined, savedDraft);
@@ -314,7 +336,7 @@ export const ConnectorCard = <T extends ConnectorT>({
       isTestConnectionInProgress={isTestConnectionInProgress}
       isSavingDraft={isSavingDraft}
       connectionTestSuccess={connectionTestSuccess}
-      onSubmit={(values) => onHandleSubmit(values, skipCheckConnection)}
+      onSubmit={(values) => onHandleSubmit(values, skipCheckConnection || skipsConnectionCheck)}
       onCheckSection={checkSection}
       formValues={formValues}
       connectorId={connectorId}
@@ -346,6 +368,7 @@ export const ConnectorCard = <T extends ConnectorT>({
             <Controls
               isEditMode={Boolean(isEditMode)}
               isDraftMode={Boolean(onSaveDraft)}
+              skipsConnectionCheck={skipsConnectionCheck}
               isSavingDraft={isSavingDraft}
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}

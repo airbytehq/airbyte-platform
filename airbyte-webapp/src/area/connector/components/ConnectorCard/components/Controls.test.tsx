@@ -16,11 +16,20 @@ const FILL_REQUIRED_FIELDS = "Fill out required fields before saving";
 const COMPLETE_ALL_STEPS = "Complete all steps before saving";
 const FORM_ELEMENT_ID = "connector-form";
 
+it.each([false, true])("labels submit for skipsConnectionCheck=%s", async (skipsConnectionCheck) => {
+  mockExperiments({ "connector.allowSavingWithoutTesting": true });
+  await render(<ControlsWithForm skipsConnectionCheck={skipsConnectionCheck} onSubmitWithoutCheck={jest.fn()} />);
+
+  expect(screen.getByRole("button", { name: skipsConnectionCheck ? "Save" : "Save & Test" })).toBeEnabled();
+  expect(Boolean(screen.queryByTestId("create-source-button_dropdown-caret"))).toBe(!skipsConnectionCheck);
+});
+
 const ControlsWithForm = ({
   onSaveDraft,
   onSubmitWithoutCheck,
   isEditMode = false,
   isDraftMode = false,
+  skipsConnectionCheck = false,
   isSavingDraft = false,
   dirty = true,
   isValid = false,
@@ -31,6 +40,7 @@ const ControlsWithForm = ({
   onSubmitWithoutCheck?: () => Promise<void>;
   isEditMode?: boolean;
   isDraftMode?: boolean;
+  skipsConnectionCheck?: boolean;
   isSavingDraft?: boolean;
   dirty?: boolean;
   isValid?: boolean;
@@ -53,6 +63,7 @@ const ControlsWithForm = ({
         hasDefinition
         isEditMode={isEditMode}
         isDraftMode={isDraftMode}
+        skipsConnectionCheck={skipsConnectionCheck}
         isSavingDraft={isSavingDraft}
         onSaveDraft={onSaveDraft}
         onSubmitWithoutCheck={onSubmitWithoutCheck}

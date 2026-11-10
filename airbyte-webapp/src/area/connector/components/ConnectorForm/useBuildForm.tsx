@@ -15,7 +15,7 @@ import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails, SectionDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
-import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID, getSpecSections } from "./components/Steps/specSections";
+import { ADVANCED_GROUP_ID, DEFAULT_GROUP_ID, getRenderedSpecSections } from "./components/Steps/specSections";
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
 
@@ -258,9 +258,11 @@ export function useBuildForm(
 
     const sections = useMemo(
       () =>
-        isSectionedSetupFormEnabled && !isEditMode
-          ? getSpecSections(selectedConnectorDefinitionSpecification?.connectionSpecification)
-          : undefined,
+        getRenderedSpecSections(
+          selectedConnectorDefinitionSpecification?.connectionSpecification,
+          isEditMode,
+          isSectionedSetupFormEnabled
+        ),
       [isEditMode, isSectionedSetupFormEnabled, selectedConnectorDefinitionSpecification?.connectionSpecification]
     );
 
