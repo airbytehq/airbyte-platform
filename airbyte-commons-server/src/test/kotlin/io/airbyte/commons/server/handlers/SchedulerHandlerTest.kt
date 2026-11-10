@@ -74,6 +74,8 @@ import io.airbyte.commons.temporal.ManualOperationResult
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.Attempt
+import io.airbyte.config.AttemptStatus
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.FailureReason
@@ -352,6 +354,51 @@ internal class SchedulerHandlerTest {
 
     verify { jobFactory.createSync(CONNECTION_ID, isScheduled) }
     Assertions.assertThat(output.job.id).isEqualTo(JOB_ID)
+  }
+
+  @Test
+  fun `job creation returns the active job instead of failing it and creating another`() {
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns StandardSync()
+    val olderActiveJob = job.copy(id = JOB_ID - 1, status = JobStatus.PENDING)
+    val runningAttempt = Attempt(0, JOB_ID, Path.of("logs"), null, null, AttemptStatus.RUNNING, null, null, 0, 0, null)
+    val activeJob = job.copy(status = JobStatus.RUNNING, attempts = listOf(runningAttempt))
+    every {
+      jobPersistence.listJobsForConnectionWithStatuses(CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
+    } returns listOf(olderActiveJob, activeJob)
+    // Reusing a job must not depend on log storage.
+    every { logClientManager.getLogs(any()) } throws IllegalStateException("log storage unavailable")
+    every { logClientManager.getJobLogFile(any()) } throws IllegalStateException("log storage unavailable")
+
+    val output = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
+
+    assertEquals(
+      JobInfoRead(
+        job = JobConverter.getJobRead(activeJob),
+        attempts = listOf(JobConverter.getAttemptInfoWithoutLogsRead(runningAttempt)),
+      ),
+      output,
+    )
+    verify(exactly = 0) { jobPersistence.failJob(any()) }
+    verify(exactly = 0) { jobPersistence.failAttempt(any(), any()) }
+    verify(exactly = 0) { jobFactory.createSync(any(), any()) }
+    verify(exactly = 0) { jobFactory.createRefresh(any(), any()) }
+    verify { jobCreator wasNot Called }
+  }
+
+  @Test
+  fun `a retried job creation for the same connection returns the job from the first call`() {
+    stubSyncJobCreation()
+    val pendingJob = job.copy(status = JobStatus.PENDING)
+    every {
+      jobPersistence.listJobsForConnectionWithStatuses(CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
+    } returnsMany listOf(emptyList(), listOf(pendingJob))
+
+    val firstCall = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
+    val retriedCall = schedulerHandler.createJob(JobCreate(connectionId = CONNECTION_ID, isScheduled = true))
+
+    assertEquals(listOf(JOB_ID, JOB_ID), listOf(firstCall.job.id, retriedCall.job.id))
+    verify(exactly = 1) { jobFactory.createSync(CONNECTION_ID, true) }
+    verify(exactly = 0) { jobPersistence.failJob(any()) }
   }
 
   private fun stubSyncJobCreation() {

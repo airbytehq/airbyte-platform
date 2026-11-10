@@ -4862,8 +4862,8 @@ paths:
         - jobs
         - internal
       summary:
-        Creates a new job for a given connection. If a job is already running for the connection, it will be
-        stopped and a new job will be created.
+        Creates a new job for a given connection. If the connection already has a non-terminal job, that job is
+        returned and no new job is created.
       operationId: createJob
       requestBody:
         content:

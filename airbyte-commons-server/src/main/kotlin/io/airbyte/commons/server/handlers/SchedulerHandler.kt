@@ -554,8 +554,23 @@ open class SchedulerHandler
 
     fun createJob(jobCreate: JobCreate): JobInfoRead {
       ensureConnectionActorsReady(jobCreate.connectionId)
-      // Fail non-terminal jobs first to prevent failing to create a new job
-      jobCreationAndStatusUpdateHelper.failNonTerminalJobs(jobCreate.connectionId)
+
+      // A retried CreateNewJob activity can call this while an earlier call is still in flight. Return the
+      // active job instead of failing it, because the workflow may already track it. The workflow fails
+      // orphaned jobs in ensureCleanJobState before it asks for a job. A stream reset or refresh requested
+      // in between waits for the next job.
+      val activeJob =
+        jobPersistence
+          .listJobsForConnectionWithStatuses(jobCreate.connectionId, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
+          .maxByOrNull { it.id }
+      if (activeJob != null) {
+        log.info { "Returning active job ${activeJob.id} for connection ${jobCreate.connectionId} instead of creating a new job" }
+        // An active job can have attempts. Reading their logs would make this retry path depend on log storage.
+        return JobInfoRead(
+          job = JobConverter.getJobRead(activeJob),
+          attempts = activeJob.attempts.map { JobConverter.getAttemptInfoWithoutLogsRead(it) },
+        )
+      }
 
       val standardSync = connectionService.getStandardSync(jobCreate.connectionId)
       val streamsToReset = streamResetPersistence.getStreamResets(jobCreate.connectionId)
