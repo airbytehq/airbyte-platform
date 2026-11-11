@@ -35,6 +35,7 @@ import { ConnectorCardHeader } from "./components/ConnectorCardHeader";
 import { Controls } from "./components/Controls";
 import { ShareFormConfigJson } from "./components/CopyConfigButton";
 import SlowLoadingMessage from "./components/SlowLoadingMessage";
+import { FailedStep } from "./components/TestFailurePanel";
 import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { useCheckSection } from "./useCheckSection";
@@ -125,7 +126,7 @@ export const ConnectorCard = <T extends ConnectorT>({
   const canEditConnector = useGeneratedIntent(
     props.formType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
   );
-  const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const [submitFailure, setSubmitFailure] = useState<{ step: FailedStep; error: Error } | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [draftConnector, setDraftConnector] = useState<T | undefined>(
     props.isEditMode && props.connector.isDraft ? props.connector : undefined
@@ -139,7 +140,6 @@ export const ConnectorCard = <T extends ConnectorT>({
     testConnector,
     isTestConnectionInProgress,
     onStopTesting,
-    error,
     reset,
     isSuccess: connectionTestSuccess,
   } = useTestConnectorCommand(props);
@@ -150,7 +150,7 @@ export const ConnectorCard = <T extends ConnectorT>({
   useEffect(() => {
     // Whenever the selected connector changed, reset the check connection call and other errors
     reset();
-    setErrorStatusRequest(null);
+    setSubmitFailure(null);
   }, [props.selectedConnectorDefinitionSpecification, reset]);
 
   const { selectedConnectorDefinitionSpecification, availableConnectorDefinitions, isEditMode } = props;
@@ -205,6 +205,7 @@ export const ConnectorCard = <T extends ConnectorT>({
     setSelectedConnectorDefinition,
   ]);
 
+  /** Also stores a failed check, so the form footer shows it in the failure panel. */
   const testConnectorWithTracking = async (
     connectorCardValues?: ConnectorCardValues,
     connectorOverride?: ConnectorT
@@ -220,16 +221,23 @@ export const ConnectorCard = <T extends ConnectorT>({
       return response;
     } catch (e) {
       trackTestConnectorFailure(selectedConnectorDefinition, CommandErrorWithJobInfo.getJobInfo(e), e.message);
+      setSubmitFailure({ step: "test", error: e });
       throw e;
     }
   };
 
   const handleTestConnector = async (values?: ConnectorCardValues) => {
-    setErrorStatusRequest(null);
+    setSubmitFailure(null);
+    // testConnectorWithTracking already tracks the failure and shows it in the failure panel
+    await testConnectorWithTracking(values).catch(() => undefined);
+  };
+
+  /** Runs a save step of the submit. Its failure shows in the failure panel and still rejects, so the caller sees it. */
+  const runSave = async <Result,>(save: () => Result | Promise<Result>) => {
     try {
-      await testConnectorWithTracking(values);
+      return await save();
     } catch (e) {
-      setErrorStatusRequest(e);
+      setSubmitFailure({ step: "save", error: e });
       throw e;
     }
   };
@@ -238,7 +246,7 @@ export const ConnectorCard = <T extends ConnectorT>({
     if (!selectedConnectorDefinition) {
       return;
     }
-    setErrorStatusRequest(null);
+    setSubmitFailure(null);
 
     //  combine the "ConnectorFormValues" and serviceType to make "ConnectorFormValues"
     const connectorCardValues: ConnectorCardValues = {
@@ -246,40 +254,29 @@ export const ConnectorCard = <T extends ConnectorT>({
       serviceType: Connector.id(selectedConnectorDefinition),
     };
 
-    try {
-      if (onSaveDraft && !shouldSkipCheckConnection) {
-        const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
-        setDraftConnector(savedDraft);
-        const checkResult = await testConnectorWithTracking(undefined, savedDraft);
-        if (checkResult.status !== "succeeded") {
-          return;
-        }
-        await onDraftPromoted?.(savedDraft, connectorCardValues);
+    if (onSaveDraft && !shouldSkipCheckConnection) {
+      const savedDraft = await runSave(() => onSaveDraft(connectorCardValues, draftConnector));
+      setDraftConnector(savedDraft);
+      const checkResult = await testConnectorWithTracking(undefined, savedDraft);
+      if (checkResult.status !== "succeeded") {
         return;
       }
-      if (shouldSkipCheckConnection) {
-        await onSubmit(connectorCardValues);
+      await runSave(() => onDraftPromoted?.(savedDraft, connectorCardValues));
+      return;
+    }
+    if (shouldSkipCheckConnection) {
+      await runSave(() => onSubmit(connectorCardValues));
+    } else {
+      const response = await testConnectorWithTracking(connectorCardValues);
+      if (response.connectorConfigurationUpdated && reloadConfig) {
+        reloadConfig();
       } else {
-        const response = await testConnectorWithTracking(connectorCardValues);
-        if (response.connectorConfigurationUpdated && reloadConfig) {
-          reloadConfig();
-        } else {
-          await onSubmit(connectorCardValues);
-        }
+        await runSave(() => onSubmit(connectorCardValues));
       }
-    } catch (e) {
-      setErrorStatusRequest(e);
-      registerNotification({
-        id: "connector.submitFailed",
-        type: "error",
-        text: formatMessage({ id: "connectorForm.submitFailed" }, { name: values.name, error: String(e.message) }),
-      });
-      // keep throwing the exception to inform the component the submit did not go through
-      throw e;
     }
   };
 
-  const jobInfo = CommandErrorWithJobInfo.getJobInfo(errorStatusRequest);
+  const jobInfo = CommandErrorWithJobInfo.getJobInfo(submitFailure?.error ?? null);
 
   const connector = isEditMode ? props.connector : undefined;
   const connectorId = connector ? getConnectorId(connector) : undefined;
@@ -373,7 +370,9 @@ export const ConnectorCard = <T extends ConnectorT>({
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
-              errorMessage={error && generateMessageFromError(error, formatMessage)}
+              errorMessage={submitFailure && generateMessageFromError(submitFailure.error, formatMessage)}
+              failedStep={submitFailure?.step}
+              onDismissTestFailure={() => setSubmitFailure(null)}
               formType={props.formType}
               hasDefinition={Boolean(selectedConnectorDefinitionId)}
               onRetestClick={() => {

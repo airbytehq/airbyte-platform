@@ -11,6 +11,7 @@ import { FormFooterSlotContext } from "area/connector/components/ConnectorDocume
 import { SectionProgressProvider } from "area/connector/components/ConnectorForm/components/Steps/SectionProgress";
 
 import { Controls } from "./Controls";
+import { FailedStep } from "./TestFailurePanel";
 
 const FILL_REQUIRED_FIELDS = "Fill out required fields before saving";
 const COMPLETE_ALL_STEPS = "Complete all steps before saving";
@@ -35,6 +36,7 @@ const ControlsWithForm = ({
   isValid = false,
   emptyRequiredFields = [],
   errorMessage,
+  failedStep,
 }: {
   onSaveDraft?: () => Promise<void>;
   onSubmitWithoutCheck?: () => Promise<void>;
@@ -46,6 +48,7 @@ const ControlsWithForm = ({
   isValid?: boolean;
   emptyRequiredFields?: string[];
   errorMessage?: React.ReactNode;
+  failedStep?: FailedStep;
 }) => {
   const form = useForm();
   return (
@@ -59,6 +62,7 @@ const ControlsWithForm = ({
         onCancelClick={jest.fn()}
         onRetestClick={jest.fn()}
         onCancelTesting={jest.fn()}
+        onDismissTestFailure={jest.fn()}
         connectionTestSuccess={false}
         hasDefinition
         isEditMode={isEditMode}
@@ -68,6 +72,7 @@ const ControlsWithForm = ({
         onSaveDraft={onSaveDraft}
         onSubmitWithoutCheck={onSubmitWithoutCheck}
         errorMessage={errorMessage}
+        failedStep={failedStep}
         formElementId={FORM_ELEMENT_ID}
         canEdit
       />
@@ -90,12 +95,16 @@ const ControlsInForm = ({
   canEdit = true,
   isEditMode = false,
   onSubmitWithoutCheck,
+  errorMessage,
+  onDismissTestFailure = jest.fn(),
 }: {
   onSubmit: () => Promise<void>;
   withFooterSlot: boolean;
   canEdit?: boolean;
   isEditMode?: boolean;
   onSubmitWithoutCheck?: () => Promise<void>;
+  errorMessage?: React.ReactNode;
+  onDismissTestFailure?: () => void;
 }) => {
   const [footerSlot, setFooterSlot] = useState<HTMLDivElement | null>(null);
   return (
@@ -111,6 +120,8 @@ const ControlsInForm = ({
           onDeleteClick={jest.fn()}
           onRetestClick={jest.fn()}
           onCancelTesting={jest.fn()}
+          errorMessage={errorMessage}
+          onDismissTestFailure={onDismissTestFailure}
           connectionTestSuccess={false}
           hasDefinition
           isEditMode={isEditMode}
@@ -159,7 +170,7 @@ describe("Controls", () => {
     expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
   });
 
-  it("shows a draft check failure without offering Retest, and scrolls the check card into view", async () => {
+  it("shows a draft check failure in the failure panel without offering Retest, and scrolls the panel into view", async () => {
     const scrollIntoView = jest.mocked(Element.prototype.scrollIntoView);
     await render(
       <ControlsWithForm
@@ -172,10 +183,32 @@ describe("Controls", () => {
       />
     );
 
-    expect(screen.getByText("check failed")).toBeInTheDocument();
+    expect(within(screen.getByTestId("connector-test-failure")).getByText("check failed")).toBeInTheDocument();
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Retest saved source" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry test" })).toBeEnabled();
+  });
+
+  it("offers Retry test after a failed test of a changed edit form", async () => {
+    await render(<ControlsWithForm isEditMode dirty isValid errorMessage="check failed" />);
+
+    expect(screen.getByRole("button", { name: "Retry test" })).toBeEnabled();
+  });
+
+  it("shows a failed save without a test under its own heading, and does not offer Retry test", async () => {
+    await render(<ControlsWithForm isValid errorMessage="The source could not be created." failedStep="save" />);
+
+    const panel = screen.getByTestId("connector-test-failure");
+    expect(within(panel).getByRole("heading", { name: "Saving failed." })).toBeInTheDocument();
+    expect(within(panel).getByText("The source could not be created.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
+  });
+
+  it("keeps Save & Test disabled after a failed retest of an unchanged edit form, and offers Retest instead", async () => {
+    await render(<ControlsWithForm isEditMode dirty={false} isValid errorMessage="check failed" />);
+
+    expect(screen.getByRole("button", { name: "Save & Test" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Retest saved source" })).toBeEnabled();
   });
 
   it("disables Save & Test with a tooltip that lists the empty required fields until they are filled", async () => {
@@ -413,6 +446,51 @@ describe("Controls", () => {
 
       expect(screen.getByRole("button", { name: "Save & Test" })).toBeDisabled();
       expect(screen.getByTestId("create-source-button_dropdown-caret")).toBeDisabled();
+    });
+
+    it("shows a failed test above the buttons in the footer slot, and submits the form from Retry test", async () => {
+      const onSubmit = jest.fn().mockResolvedValue(undefined);
+      await render(<ControlsInForm onSubmit={onSubmit} withFooterSlot errorMessage="check failed" />);
+
+      const footerSlot = screen.getByTestId("footer-slot");
+      const failurePanel = within(footerSlot).getByTestId("connector-test-failure");
+      const retryButton = within(footerSlot).getByRole("button", { name: "Retry test" });
+      expect(failurePanel).toHaveTextContent("Testing failed.");
+      expect(failurePanel).toHaveTextContent("check failed");
+      expect(failurePanel.compareDocumentPosition(retryButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+      await userEvent.click(retryButton);
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    it("dismisses a failed test with the close button in the footer slot", async () => {
+      const onDismissTestFailure = jest.fn();
+      await render(
+        <ControlsInForm
+          onSubmit={jest.fn().mockResolvedValue(undefined)}
+          withFooterSlot
+          errorMessage="check failed"
+          onDismissTestFailure={onDismissTestFailure}
+        />
+      );
+
+      await userEvent.click(within(screen.getByTestId("footer-slot")).getByRole("button", { name: "Close" }));
+
+      expect(onDismissTestFailure).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows a failed test in the form when there is no footer slot", async () => {
+      await render(
+        <ControlsInForm
+          onSubmit={jest.fn().mockResolvedValue(undefined)}
+          withFooterSlot={false}
+          errorMessage="check failed"
+        />
+      );
+
+      expect(screen.getByTestId("form")).toContainElement(screen.getByTestId("connector-test-failure"));
+      expect(screen.getByRole("button", { name: "Retry test" })).toBeInTheDocument();
     });
 
     it("renders the buttons in the form and submits it when there is no footer slot", async () => {

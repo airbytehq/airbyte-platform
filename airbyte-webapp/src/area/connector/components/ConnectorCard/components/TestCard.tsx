@@ -7,9 +7,6 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ProgressBar } from "components/ui/ProgressBar";
 import { Text } from "components/ui/Text";
 
-import { JobFailure } from "area/connection/components/JobFailure";
-import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
-
 import TestingConnectionSuccess from "./TestingConnectionSuccess";
 
 interface IProps {
@@ -19,11 +16,6 @@ interface IProps {
   onCancelTesting: () => void;
   isTestConnectionInProgress?: boolean;
   successMessage?: React.ReactNode;
-  errorMessage?: React.ReactNode;
-  jobId?: string;
-  jobConfigType?: JobConfigType;
-  jobLogs?: LogEvents | LogRead;
-  jobFailureReason?: FailureReason;
   isEditMode?: boolean;
   dirty: boolean;
   connectionTestSuccess: boolean;
@@ -37,41 +29,17 @@ export const TestCard: React.FC<IProps> = ({
   formType,
   onRetestClick,
   connectionTestSuccess,
-  errorMessage,
   onCancelTesting,
-  jobId,
-  jobConfigType,
-  jobLogs,
-  jobFailureReason,
   isEditMode,
   dirty,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const hasError = Boolean(errorMessage);
 
   useEffect(() => {
-    if (isTestConnectionInProgress || hasError) {
+    if (isTestConnectionInProgress) {
       cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [isTestConnectionInProgress, hasError]);
-
-  const renderStatusMessage = () => {
-    if (errorMessage) {
-      return (
-        <JobFailure
-          fallbackMessage={errorMessage}
-          id={jobId}
-          configType={jobConfigType}
-          logs={jobLogs}
-          failureReason={jobFailureReason}
-        />
-      );
-    }
-    if (connectionTestSuccess) {
-      return <TestingConnectionSuccess />;
-    }
-    return null;
-  };
+  }, [isTestConnectionInProgress]);
 
   return (
     <Card ref={cardRef}>
@@ -110,7 +78,7 @@ export const TestCard: React.FC<IProps> = ({
             <ProgressBar runTime={PROGRESS_BAR_TIME} />
           </FlexContainer>
         ) : (
-          renderStatusMessage()
+          connectionTestSuccess && <TestingConnectionSuccess />
         )}
       </FlexContainer>
     </Card>

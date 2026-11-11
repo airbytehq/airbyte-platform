@@ -73,6 +73,32 @@ const JobLogsModalContent = ({ jobLogs }: { jobLogs: LogEvents | LogRead }) => {
   );
 };
 
+export const useOpenJobLogsModal = () => {
+  const { openModal } = useModalService();
+
+  return (configType: JobConfigType, logs?: LogEvents | LogRead) => {
+    openModal({
+      size: "full",
+      title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName: `${configType} job` }} />,
+      content: () => (
+        <DefaultErrorBoundary>
+          <Suspense fallback={<LoadingSpinner />}>{logs && <JobLogsModalContent jobLogs={logs} />}</Suspense>
+        </DefaultErrorBoundary>
+      ),
+    });
+  };
+};
+
+export const getJobLogLines = (logs: LogEvents | LogRead): string[] =>
+  areLogsFormatted(logs) ? logs.logLines : (areLogsStructured(logs) && logs.events.map(formatLogEvent)) || [];
+
+export const downloadJobLogLines = (id: string, configType: JobConfigType, logLines: string[]) => {
+  const file = new Blob([logLines.join("\n")], {
+    type: "text/plain;charset=utf-8",
+  });
+  downloadFile(file, `${configType}-failure-${id}.txt`);
+};
+
 function getTitlePhraseIdForJobConfigType(jobConfigType: JobConfigType) {
   switch (jobConfigType) {
     case "check_connection_source":
@@ -124,17 +150,10 @@ const DownloadButton = ({
 }) => {
   const { formatMessage } = useIntl();
 
-  const downloadFileWithLogs = () => {
-    const file = new Blob([logLines.join("\n")], {
-      type: "text/plain;charset=utf-8",
-    });
-    downloadFile(file, `${configType}-failure-${id}.txt`);
-  };
-
   return (
     <Button
       variant="secondary"
-      onClick={downloadFileWithLogs}
+      onClick={() => downloadJobLogLines(id, configType, logLines)}
       type="button"
       title={formatMessage({
         id: "sources.downloadLogs",
@@ -153,23 +172,13 @@ export const JobFailure: React.FC<JobFailureProps> = (props) => {
 
   const [isDetailsExpanded, toggleDetails] = useToggle(false);
   const [isStacktraceExpanded, toggleStacktrace] = useToggle(false);
-  const { openModal } = useModalService();
+  const openJobLogsModal = useOpenJobLogsModal();
 
   if (!configType || !jobId) {
     return <Message text={fallbackMessage || <FormattedMessage id="form.someError" />} type="error" />;
   }
 
-  const openLogsModal = () => {
-    openModal({
-      size: "full",
-      title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName: `${configType} job` }} />,
-      content: () => (
-        <DefaultErrorBoundary>
-          <Suspense fallback={<LoadingSpinner />}>{logs && <JobLogsModalContent jobLogs={logs} />}</Suspense>
-        </DefaultErrorBoundary>
-      ),
-    });
-  };
+  const openLogsModal = () => openJobLogsModal(configType, logs);
 
   const hasLogs = !!logs;
 
@@ -195,17 +204,7 @@ export const JobFailure: React.FC<JobFailureProps> = (props) => {
                     <FormattedMessage id="jobs.failure.viewLogs" />
                   </Tooltip>
                   <Tooltip
-                    control={
-                      <DownloadButton
-                        configType={configType}
-                        id={jobId}
-                        logLines={
-                          areLogsFormatted(logs)
-                            ? logs.logLines
-                            : (areLogsStructured(logs) && logs.events.map(formatLogEvent)) || []
-                        }
-                      />
-                    }
+                    control={<DownloadButton configType={configType} id={jobId} logLines={getJobLogLines(logs)} />}
                   >
                     <FormattedMessage id="sources.downloadLogs" />
                   </Tooltip>

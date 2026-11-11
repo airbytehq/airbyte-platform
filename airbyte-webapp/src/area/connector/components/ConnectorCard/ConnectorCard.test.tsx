@@ -75,12 +75,38 @@ jest.mock("area/connector/components/ConnectorForm", () => ({
 }));
 
 jest.mock("./components/Controls", () => ({
-  Controls: ({ onSaveDraft }: { onSaveDraft?: () => Promise<void> }) =>
-    onSaveDraft ? (
-      <button type="button" onClick={() => onSaveDraft().catch(() => undefined)}>
-        Save draft
+  Controls: ({
+    onSaveDraft,
+    onRetestClick,
+    errorMessage,
+    failedStep,
+    onDismissTestFailure,
+  }: {
+    onSaveDraft?: () => Promise<void>;
+    onRetestClick: () => void;
+    errorMessage?: React.ReactNode;
+    failedStep?: string;
+    onDismissTestFailure: () => void;
+  }) => (
+    <>
+      <button type="button" onClick={onRetestClick}>
+        Retest
       </button>
-    ) : null,
+      {onSaveDraft && (
+        <button type="button" onClick={() => onSaveDraft().catch(() => undefined)}>
+          Save draft
+        </button>
+      )}
+      {errorMessage && (
+        <div data-testid="test-failure" data-failed-step={failedStep}>
+          {errorMessage}
+          <button type="button" onClick={onDismissTestFailure}>
+            Dismiss test failure
+          </button>
+        </div>
+      )}
+    </>
+  ),
 }));
 
 jest.mock("area/connector/components/ConnectorIcon", () => ({ ConnectorIcon: () => null }));
@@ -433,6 +459,63 @@ describe("ConnectorCard section check opt-out", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(testConnector).toHaveBeenCalledTimes(skips ? 0 : 1);
+  });
+});
+
+describe("ConnectorCard failed Save & Test", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("passes the check failure to the footer until the user dismisses it", async () => {
+    renderCard(newSourceCardProps, jest.fn().mockRejectedValue(new Error("The host db.example.com is not reachable.")));
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+
+    expect(await screen.findByTestId("test-failure")).toHaveTextContent("The host db.example.com is not reachable.");
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss test failure" }));
+
+    expect(screen.queryByTestId("test-failure")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { path: "after a passing check", skipCheckConnection: false, checkCalls: 1 },
+    { path: "when the submit skips the check", skipCheckConnection: true, checkCalls: 0 },
+  ])("passes a failed save $path to the footer", async ({ skipCheckConnection, checkCalls }) => {
+    const testConnector = jest.fn().mockResolvedValue({ id: "command-id", status: "succeeded" });
+    renderCard(
+      {
+        ...newSourceCardProps,
+        skipCheckConnection,
+        onSubmit: jest.fn().mockRejectedValue(new Error("The source could not be created.")),
+      },
+      testConnector
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+
+    const failure = await screen.findByTestId("test-failure");
+    expect(failure).toHaveTextContent("The source could not be created.");
+    expect(failure).toHaveAttribute("data-failed-step", "save");
+    expect(testConnector).toHaveBeenCalledTimes(checkCalls);
+  });
+
+  it("passes a failed retest of the saved connector to the footer", async () => {
+    const testConnector = jest.fn().mockRejectedValue(new Error("The host db.example.com is not reachable."));
+    renderCard(
+      {
+        ...newSourceCardProps,
+        isEditMode: true,
+        connector: { ...mockSource, sourceDefinitionId: mockSourceDefinition.sourceDefinitionId },
+      },
+      testConnector
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Retest" }));
+
+    expect(testConnector).toHaveBeenCalledWith(undefined, undefined);
+    expect(await screen.findByTestId("test-failure")).toHaveTextContent("The host db.example.com is not reachable.");
   });
 });
 

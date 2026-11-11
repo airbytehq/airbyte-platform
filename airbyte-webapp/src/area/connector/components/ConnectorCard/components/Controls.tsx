@@ -19,6 +19,7 @@ import { useExperiment } from "core/services/Experiment";
 
 import styles from "./Controls.module.scss";
 import { TestCard } from "./TestCard";
+import { FailedStep, TestFailurePanel } from "./TestFailurePanel";
 
 interface IProps {
   formType: "source" | "destination";
@@ -35,7 +36,10 @@ interface IProps {
   onRetestClick: () => void;
   onCancelTesting: () => void;
   isTestConnectionInProgress?: boolean;
+  /** The message of the last failed submit or retest. While it is set, the footer shows the failure panel. */
   errorMessage?: React.ReactNode;
+  failedStep?: FailedStep;
+  onDismissTestFailure: () => void;
   jobId?: string;
   jobConfigType?: JobConfigType;
   jobLogs?: LogEvents | LogRead;
@@ -56,20 +60,29 @@ interface IProps {
 
 /**
  * Renders in the form footer slot of `ConnectorDocumentationLayout` when there is one, else in place.
- * In the slot, the buttons are outside the form's disabled fieldset, so they get their own.
+ * In the slot, the footer is outside the form's disabled fieldset, so it gets its own.
  */
-const FooterSlotButtonRow: React.FC<React.PropsWithChildren<{ canEdit: boolean }>> = ({ canEdit, children }) => {
+const ControlsFooter: React.FC<React.PropsWithChildren<{ canEdit: boolean; testFailurePanel: React.ReactNode }>> = ({
+  canEdit,
+  testFailurePanel,
+  children,
+}) => {
   const footerSlot = useFormFooterSlot();
-  const row = <FlexContainer>{children}</FlexContainer>;
+  const footer = (
+    <FlexContainer direction="column">
+      {testFailurePanel}
+      <FlexContainer>{children}</FlexContainer>
+    </FlexContainer>
+  );
 
   return footerSlot
     ? createPortal(
         <fieldset disabled={!canEdit} className={styles.footer}>
-          {row}
+          {footer}
         </fieldset>,
         footerSlot
       )
-    : row;
+    : footer;
 };
 
 export const Controls: React.FC<IProps> = ({
@@ -91,13 +104,24 @@ export const Controls: React.FC<IProps> = ({
   onSaveDraft,
   formElementId,
   canEdit,
+  errorMessage,
+  failedStep = "test",
+  jobId,
+  jobConfigType,
+  jobLogs,
+  jobFailureReason,
+  onDismissTestFailure,
   ...restProps
 }) => {
   const { formatMessage } = useIntl();
   const { trigger } = useFormContext();
-  const showTestCard =
-    hasDefinition &&
-    (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
+  const hasTestCardContent = isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess;
+  const showTestCard = hasDefinition && hasTestCardContent;
+  const hasFailure = Boolean(errorMessage);
+  const hasTestFailure = hasFailure && failedStep === "test";
+  // The edit-mode retest checks the saved connector, so an unchanged edit form has nothing new to submit
+  const isUnchangedEdit = isEditMode && !isDraftMode && !dirty;
+  const submitLabelId = hasTestFailure && !isUnchangedEdit ? "connectorForm.retryTest" : "connectorForm.saveAndTest";
   const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
   const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
   const fillRequiredFieldsMessage = useFillRequiredFieldsMessage(emptyRequiredFields);
@@ -145,7 +169,7 @@ export const Controls: React.FC<IProps> = ({
           },
         }}
       >
-        <FormattedMessage id="connectorForm.saveAndTest" />
+        <FormattedMessage id={submitLabelId} />
       </DropdownButton>
     ) : (
       <Button
@@ -153,12 +177,24 @@ export const Controls: React.FC<IProps> = ({
         form={formElementId}
         data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
         isLoading={isSubmitting}
-        disabled={submitBlocked || (isEditMode && !isDraftMode && !dirty)}
+        disabled={submitBlocked || isUnchangedEdit}
         aria-describedby={disabledSubmitMessage && submitButtonDescribedBy}
       >
-        <FormattedMessage id={skipsConnectionCheck ? "connectorForm.save" : "connectorForm.saveAndTest"} />
+        <FormattedMessage id={skipsConnectionCheck ? "connectorForm.save" : submitLabelId} />
       </Button>
     );
+
+  const testFailurePanel = hasFailure && (
+    <TestFailurePanel
+      failedStep={failedStep}
+      fallbackMessage={errorMessage}
+      jobId={jobId}
+      jobConfigType={jobConfigType}
+      jobLogs={jobLogs}
+      failureReason={jobFailureReason}
+      onClose={onDismissTestFailure}
+    />
+  );
 
   return (
     <>
@@ -173,7 +209,7 @@ export const Controls: React.FC<IProps> = ({
           isEditMode={isEditMode}
         />
       )}
-      <FooterSlotButtonRow canEdit={canEdit}>
+      <ControlsFooter canEdit={canEdit} testFailurePanel={testFailurePanel}>
         {leftSlot}
         {sectionProgress && <SectionProgress {...sectionProgress} />}
         <FlexItem grow>
@@ -208,7 +244,7 @@ export const Controls: React.FC<IProps> = ({
             {disabledSubmitMessage.description}
           </span>
         )}
-      </FooterSlotButtonRow>
+      </ControlsFooter>
     </>
   );
 };

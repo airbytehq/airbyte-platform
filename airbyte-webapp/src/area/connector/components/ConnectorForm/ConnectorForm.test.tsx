@@ -440,6 +440,7 @@ describe("Connector form", () => {
               onCancelClick={jest.fn()}
               onRetestClick={jest.fn()}
               onCancelTesting={jest.fn()}
+              onDismissTestFailure={jest.fn()}
               connectionTestSuccess={false}
               hasDefinition
               isEditMode={false}
@@ -2661,6 +2662,7 @@ describe("Connector form", () => {
           onCancelClick={jest.fn()}
           onRetestClick={jest.fn()}
           onCancelTesting={jest.fn()}
+          onDismissTestFailure={jest.fn()}
           connectionTestSuccess={false}
           hasDefinition
           isEditMode={Boolean(isEditMode)}

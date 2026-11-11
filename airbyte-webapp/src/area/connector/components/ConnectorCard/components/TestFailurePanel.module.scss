@@ -1,0 +1,27 @@
+@use "scss/variables";
+
+// Message sets the border color for its type, but draws no border by default
+.errorBox {
+  border-width: variables.$border-thin;
+  border-style: solid;
+}
+
+// Message sets its secondary text to this line height. A long error scrolls, so the form above stays visible.
+$message-line-height: 1.3em;
+$message-visible-lines: 6;
+
+.message {
+  display: block;
+  max-height: $message-visible-lines * $message-line-height;
+  overflow-y: auto;
+
+  // Keeps the line breaks of a multi-line error, such as a stack trace that a connector sends as its message
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: variables.$spacing-lg;
+  padding-top: variables.$spacing-md;
+}
