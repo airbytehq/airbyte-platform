@@ -10,8 +10,11 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.UUID
 
 @MicronautTest
 class AirbyteReleaseRepositoryTest : AbstractConfigRepositoryTest() {
@@ -20,6 +23,42 @@ class AirbyteReleaseRepositoryTest : AbstractConfigRepositoryTest() {
   @AfterEach
   fun cleanUp() {
     repository.deleteAll()
+  }
+
+  @Test
+  fun `insertIfAbsent stores a new version with a database creation time`() {
+    val inserted = repository.insertIfAbsent(UUID.randomUUID(), "2.1.0", COMMIT_A, PUBLISHED_AT)
+
+    val stored = repository.findByVersion("2.1.0")
+    assertNotNull(stored)
+    assertEquals(1L, inserted)
+    assertEquals(
+      listOf("2.1.0", COMMIT_A, PUBLISHED_AT.toInstant()),
+      listOf(stored.version, stored.sourceCommit, stored.publishedAt.toInstant()),
+    )
+    assertNotNull(stored.createdAt)
+  }
+
+  @Test
+  fun `insertIfAbsent keeps the original row when the version already exists`() {
+    repository.insertIfAbsent(UUID.randomUUID(), "2.1.0", COMMIT_A, PUBLISHED_AT)
+
+    val inserted = repository.insertIfAbsent(UUID.randomUUID(), "2.1.0", COMMIT_B, PUBLISHED_AT.plusHours(1))
+
+    val stored = repository.findByVersion("2.1.0")
+    assertNotNull(stored)
+    assertEquals(0L, inserted)
+    assertEquals(listOf(COMMIT_A, PUBLISHED_AT.toInstant()), listOf(stored.sourceCommit, stored.publishedAt.toInstant()))
+    assertEquals(1L, repository.count())
+  }
+
+  @Test
+  fun `findByVersion matches the exact version string only`() {
+    repository.insertIfAbsent(UUID.randomUUID(), "2.1.0", COMMIT_A, PUBLISHED_AT)
+
+    assertNull(repository.findByVersion("v2.1.0"))
+    assertNull(repository.findByVersion("2.1"))
+    assertNull(repository.findByVersion("2.1.0-rc1"))
   }
 
   @Test

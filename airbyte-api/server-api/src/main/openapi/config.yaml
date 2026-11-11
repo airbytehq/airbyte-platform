@@ -111,6 +111,8 @@ tags:
     description: Entitlement management endpoints
   - name: domain_verifications
     description: Organization domain verification endpoints.
+  - name: airbyte_releases
+    description: Catalog of published Airbyte releases.
 
 paths:
   /v1/sources/{sourceId}/search:
@@ -12629,6 +12631,39 @@ paths:
       tags:
         - domain_verifications
       operationId: resetDomainVerification
+  /v1/airbyte_releases/create:
+    post:
+      tags:
+        - airbyte_releases
+        - cloud-only
+      summary: Create a published Airbyte release
+      description: >-
+        Instance admin endpoint called after both Helm charts publish. Only Airbyte Cloud stores releases; other
+        editions return 501. Each version is created once and never changes. Creating the same version and source
+        commit again is safe to retry and returns the stored release with its original publication time; a
+        different source commit for a stored version is a conflict.
+      operationId: createAirbyteRelease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AirbyteReleaseCreateRequestBody"
+      responses:
+        "200":
+          description: The stored release.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AirbyteReleaseRead"
+        "400":
+          description: Invalid version or source commit
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "409":
+          description: The version is already recorded with a different source commit
+        "501":
+          description: Not implemented outside Airbyte Cloud
   /v1/private_link/create:
     post:
       tags:
@@ -14123,6 +14158,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DomainVerificationResponse"
+
+    AirbyteReleaseCreateRequestBody:
+      type: object
+      required:
+        - version
+        - sourceCommit
+        - publishedAt
+      properties:
+        version:
+          type: string
+          description: Published application version, such as 2.1.0.
+        sourceCommit:
+          type: string
+          description: Full commit SHA the release was built from.
+        publishedAt:
+          type: string
+          format: date-time
+          description: When chart publication completed.
+
+    AirbyteReleaseRead:
+      type: object
+      required:
+        - version
+        - sourceCommit
+        - publishedAt
+      properties:
+        version:
+          type: string
+          description: Published application version, such as 2.1.0.
+        sourceCommit:
+          type: string
+          description: Full commit SHA the release was built from.
+        publishedAt:
+          type: string
+          format: date-time
+          description: When chart publication completed.
 
     # WORKSPACE
     WorkspaceId:
