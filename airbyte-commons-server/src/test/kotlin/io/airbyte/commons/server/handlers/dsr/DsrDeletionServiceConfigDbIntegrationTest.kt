@@ -221,7 +221,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       }
     }
     configPersistence = DsrConfigPersistence(transactions, userPersistence)
-    workloadPurge = WorkloadPurge(transactions)
+    workloadPurge = WorkloadPurge(transactions, TestClient())
     service = TestDsrDeletionService()
   }
 

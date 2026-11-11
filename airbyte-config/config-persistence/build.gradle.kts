@@ -10,6 +10,8 @@ configurations.all {
 
 dependencies {
 
+  api(libs.failsafe)
+
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 

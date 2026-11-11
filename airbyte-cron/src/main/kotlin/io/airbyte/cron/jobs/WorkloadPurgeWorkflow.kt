@@ -8,26 +8,44 @@ import io.airbyte.config.persistence.WorkloadPurge
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.EnableWorkloadPurge
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WorkloadPurgeRunRequest
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Context
 import io.micronaut.scheduling.annotation.Scheduled
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 private val log = KotlinLogging.logger {}
 
-@Singleton
+@Context
 class WorkloadPurgeWorkflow(
   private val workloadPurge: WorkloadPurge,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {
-  @WithSpan
+  private var lastRunRequest = featureFlagClient.stringVariation(WorkloadPurgeRunRequest, Empty)
+
+  @Scheduled(fixedDelay = "1m", initialDelay = "1m")
+  @Synchronized
+  fun pollRunRequests() {
+    val request = featureFlagClient.stringVariation(WorkloadPurgeRunRequest, Empty)
+    if (request.isBlank() || request == lastRunRequest) {
+      return
+    }
+    if (!featureFlagClient.boolVariation(EnableWorkloadPurge, Empty)) {
+      return
+    }
+
+    lastRunRequest = request
+    log.info { "Starting workload purge requested by feature flag" }
+    runPurge()
+  }
+
   @Scheduled(cron = "0 0 20 * * *", zoneId = "America/Los_Angeles")
   @Synchronized
   fun pruneRecords() {
@@ -36,6 +54,11 @@ class WorkloadPurgeWorkflow(
       return
     }
 
+    runPurge()
+  }
+
+  @WithSpan
+  private fun runPurge() {
     val started = System.nanoTime()
     var success = false
     metricClient.count(

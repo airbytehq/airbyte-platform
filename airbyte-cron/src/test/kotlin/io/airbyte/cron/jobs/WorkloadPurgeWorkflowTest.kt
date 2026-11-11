@@ -8,6 +8,7 @@ import io.airbyte.config.persistence.WorkloadPurge
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.EnableWorkloadPurge
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WorkloadPurgeRunRequest
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -23,11 +24,13 @@ internal class WorkloadPurgeWorkflowTest {
   private val purge = mockk<WorkloadPurge>()
   private val metrics = mockk<MetricClient>(relaxed = true)
   private val featureFlags = mockk<FeatureFlagClient>()
-  private val workflow = WorkloadPurgeWorkflow(purge, metrics, featureFlags)
+  private lateinit var workflow: WorkloadPurgeWorkflow
 
   @BeforeEach
   fun setup() {
     every { featureFlags.boolVariation(EnableWorkloadPurge, Empty) } returns true
+    every { featureFlags.stringVariation(WorkloadPurgeRunRequest, Empty) } returns ""
+    workflow = WorkloadPurgeWorkflow(purge, metrics, featureFlags)
   }
 
   @Test

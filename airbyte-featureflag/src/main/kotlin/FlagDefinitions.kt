@@ -203,6 +203,10 @@ object DisableDbPrune : Temporary<Boolean>(key = "platform.disable-db-prune", de
 
 object EnableWorkloadPurge : Temporary<Boolean>(key = "platform.enable-workload-purge", default = false)
 
+object WorkloadPurgeBatchSize : Temporary<Int>(key = "platform.workload-purge-batch-size", default = 5000)
+
+object WorkloadPurgeRunRequest : Temporary<String>(key = "platform.workload-purge-run-request", default = "")
+
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
