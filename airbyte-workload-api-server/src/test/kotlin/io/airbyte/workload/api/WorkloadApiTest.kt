@@ -10,8 +10,11 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.config.Dataplane
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneService
+import io.airbyte.workload.api.domain.DataplaneLogUploadAuthorizationRequest
 import io.airbyte.workload.api.domain.GcsDownscopedOAuthLogUploadAuthorization
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.LogDeliveryMode
@@ -109,6 +112,12 @@ class WorkloadApiTest(
   @MockBean(DataplaneGroupService::class)
   @Replaces(DataplaneGroupService::class)
   fun dataplaneGroupService(): DataplaneGroupService = dataplaneGroupService
+
+  private val dataplaneService = mockk<DataplaneService>()
+
+  @MockBean(DataplaneService::class)
+  @Replaces(DataplaneService::class)
+  fun dataplaneService(): DataplaneService = dataplaneService
 
   private val logUploadAuthorizationService = mockk<LogUploadAuthorizationService>()
 
@@ -227,6 +236,50 @@ class WorkloadApiTest(
       HttpRequest.create(HttpMethod.POST, "/api/v1/workload/1/log-upload-authorization"),
       HttpStatus.NO_CONTENT,
     )
+  }
+
+  @Test
+  fun `POST data plane log upload authorization returns a fresh authorization`() {
+    val dataplaneId = UUID.randomUUID()
+    val authorization =
+      GcsDownscopedOAuthLogUploadAuthorization(
+        accessToken = "opaque-token",
+        expiresAt = OffsetDateTime.parse("2026-09-02T13:00:00Z"),
+        bucketName = "managed-log-bucket",
+        objectKeyPrefix = "job-logging/diagnostics/dataplanes/$dataplaneId/",
+      )
+    givenDataplane(dataplaneId)
+    every { logUploadAuthorizationService.authorizeDiagnostic(dataplaneId) } returns authorization
+
+    val response =
+      client
+        .get()
+        .toBlocking()
+        .exchange(
+          HttpRequest.POST("/api/v1/workload/dataplane/log-upload-authorization", DataplaneLogUploadAuthorizationRequest(dataplaneId.toString())),
+          GcsDownscopedOAuthLogUploadAuthorization::class.java,
+        )
+
+    assertEquals(HttpStatus.OK, response.status)
+    assertEquals(authorization, response.body())
+  }
+
+  @Test
+  fun `POST data plane log upload authorization returns no content when managed logging is off`() {
+    val dataplaneId = UUID.randomUUID()
+    givenDataplane(dataplaneId)
+    every { logUploadAuthorizationService.authorizeDiagnostic(dataplaneId) } returns null
+
+    testEndpointStatus(
+      HttpRequest.POST("/api/v1/workload/dataplane/log-upload-authorization", DataplaneLogUploadAuthorizationRequest(dataplaneId.toString())),
+      HttpStatus.NO_CONTENT,
+    )
+  }
+
+  private fun givenDataplane(dataplaneId: UUID) {
+    val dataplaneGroupId = UUID.randomUUID()
+    every { dataplaneService.getDataplane(dataplaneId) } returns Dataplane().withId(dataplaneId).withDataplaneGroupId(dataplaneGroupId)
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId) } returns UUID.randomUUID()
   }
 
   @Test

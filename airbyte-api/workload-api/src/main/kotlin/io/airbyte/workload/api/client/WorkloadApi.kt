@@ -5,6 +5,7 @@
 package io.airbyte.workload.api.client
 
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.DataplaneLogUploadAuthorizationRequest
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.LogUploadAuthorization
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
@@ -82,6 +83,11 @@ interface WorkloadApi {
   @POST("{workloadId}/log-upload-authorization")
   fun workloadLogUploadAuthorization(
     @Path("workloadId") workloadId: String,
+  ): Call<LogUploadAuthorization>
+
+  @POST("dataplane/log-upload-authorization")
+  fun dataplaneLogUploadAuthorization(
+    @Body dataplaneLogUploadAuthorizationRequest: DataplaneLogUploadAuthorizationRequest,
   ): Call<LogUploadAuthorization>
 
   @PUT("heartbeat")

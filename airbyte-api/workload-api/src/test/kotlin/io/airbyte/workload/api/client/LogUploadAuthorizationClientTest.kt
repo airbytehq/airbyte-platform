@@ -16,8 +16,10 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.SocketPolicy
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
@@ -119,6 +121,44 @@ class LogUploadAuthorizationClientTest {
   }
 
   @Test
+  fun `data plane HTTP 200 returns the authorization and sends the data plane ID`() {
+    server.enqueue(jsonResponse(200, GCS_AUTHORIZATION_JSON))
+
+    val authorization = client.dataplaneLogUploadAuthorization(DATAPLANE_ID)
+
+    assertEquals(
+      GcsDownscopedOAuthLogUploadAuthorization(
+        accessToken = "opaque-token",
+        expiresAt = OffsetDateTime.parse("2026-09-02T12:34:56Z"),
+        bucketName = "customer-logs",
+        objectKeyPrefix = "workspace/workload/",
+      ),
+      authorization,
+    )
+    val request = server.takeRequest()
+    assertEquals("POST", request.method)
+    assertEquals("/api/v1/workload/dataplane/log-upload-authorization", request.path)
+    assertEquals("""{"dataplaneId":"$DATAPLANE_ID"}""", request.body.readUtf8())
+  }
+
+  @Test
+  fun `data plane HTTP 204 returns no authorization`() {
+    server.enqueue(MockResponse().setResponseCode(204))
+
+    assertNull(client.dataplaneLogUploadAuthorization(DATAPLANE_ID))
+    assertEquals(1, server.requestCount)
+  }
+
+  @Test
+  fun `data plane HTTP 503 is retried`() {
+    server.enqueue(MockResponse().setResponseCode(503))
+    server.enqueue(MockResponse().setResponseCode(204))
+
+    assertNull(client.dataplaneLogUploadAuthorization(DATAPLANE_ID))
+    assertEquals(2, server.requestCount)
+  }
+
+  @Test
   fun `HTTP 400 is not retried and surfaces as ApiException`() {
     server.enqueue(MockResponse().setResponseCode(400))
 
@@ -178,6 +218,7 @@ class LogUploadAuthorizationClientTest {
 
   companion object {
     private val WORKLOAD_ID = UUID.fromString("2aa689c6-203c-4e9c-b3b9-2953b20f1a25").toString()
+    private val DATAPLANE_ID = UUID.fromString("8f0c6b1e-5d64-4b9a-9e1f-3c2a7d4e5f60").toString()
     private const val GCS_AUTHORIZATION_JSON =
       """{"type":"GCS_DOWNSCOPED_OAUTH","accessToken":"opaque-token","expiresAt":"2026-09-02T12:34:56Z","bucketName":"customer-logs","objectKeyPrefix":"workspace/workload/"}"""
   }

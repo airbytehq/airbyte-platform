@@ -13,6 +13,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.DataplaneLogUploadAuthorizationRequest
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.LogUploadAuthorization
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
@@ -51,7 +52,10 @@ class WorkloadApiClient internal constructor(
   private val retryConfig: RetryPolicyConfig,
 ) {
   private val retryPolicies = ConcurrentHashMap<KClass<*>, RetryPolicy<Response<Any>>>()
-  private val logUploadAuthorizationRetryPolicy: RetryPolicy<Response<LogUploadAuthorization>> by lazy {
+  private val logUploadAuthorizationRetryPolicy by lazy { logUploadAuthorizationRetryPolicy(LOG_UPLOAD_AUTHORIZATION_ROUTE) }
+  private val dataplaneLogUploadAuthorizationRetryPolicy by lazy { logUploadAuthorizationRetryPolicy(DATAPLANE_LOG_UPLOAD_AUTHORIZATION_ROUTE) }
+
+  private fun logUploadAuthorizationRetryPolicy(route: String): RetryPolicy<Response<LogUploadAuthorization>> =
     createRetryPolicy(
       exceptions = listOf(IOException::class.java),
       abortExceptions = listOf(JsonProcessingException::class.java),
@@ -59,10 +63,9 @@ class WorkloadApiClient internal constructor(
       requestAttributes =
         arrayOf(
           MetricAttribute("method", "POST"),
-          MetricAttribute("url", LOG_UPLOAD_AUTHORIZATION_ROUTE),
+          MetricAttribute("url", route),
         ),
     )
-  }
 
   fun workloadCreate(workloadCreateRequest: WorkloadCreateRequest) = api.workloadCreate(workloadCreateRequest).unit()
 
@@ -82,6 +85,11 @@ class WorkloadApiClient internal constructor(
 
   fun workloadLogUploadAuthorization(workloadId: String): LogUploadAuthorization? =
     api.workloadLogUploadAuthorization(workloadId).bodyOrNull(logUploadAuthorizationRetryPolicy, nullableSuccessCode = 204)
+
+  fun dataplaneLogUploadAuthorization(dataplaneId: String): LogUploadAuthorization? =
+    api
+      .dataplaneLogUploadAuthorization(DataplaneLogUploadAuthorizationRequest(dataplaneId))
+      .bodyOrNull(dataplaneLogUploadAuthorizationRetryPolicy, nullableSuccessCode = 204)
 
   fun workloadHeartbeat(workloadHeartbeatRequest: WorkloadHeartbeatRequest) = api.workloadHeartbeat(workloadHeartbeatRequest).unit()
 
@@ -273,6 +281,7 @@ class WorkloadApiClient internal constructor(
 }
 
 private const val LOG_UPLOAD_AUTHORIZATION_ROUTE = "/api/v1/workload/{workloadId}/log-upload-authorization"
+private const val DATAPLANE_LOG_UPLOAD_AUTHORIZATION_ROUTE = "/api/v1/workload/dataplane/log-upload-authorization"
 private val UUID_REGEX = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex()
 
 private fun getUrlTags(httpUrl: HttpUrl?): Array<MetricAttribute> =

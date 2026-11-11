@@ -12,6 +12,7 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.DataplaneLogUploadAuthorizationRequest
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.LogUploadAuthorization
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
@@ -313,6 +314,25 @@ open class WorkloadApi(
     @PathParam("workloadId") workloadId: String,
   ): HttpResponse<LogUploadAuthorization> {
     val authorization = logUploadAuthorizationService.authorize(workloadId)
+    return if (authorization == null) {
+      HttpResponse.noContent()
+    } else {
+      HttpResponse.ok(authorization)
+    }
+  }
+
+  /**
+   * Issues a short-lived authorization for a data plane to upload a diagnostic file to managed log storage.
+   */
+  @POST
+  @Path("/dataplane/log-upload-authorization")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @AuthorizeOperation(access = RouteAccessPolicy.PROTECTED, rule = WorkloadDataplaneListRule::class)
+  open fun dataplaneLogUploadAuthorization(
+    @Body request: DataplaneLogUploadAuthorizationRequest,
+  ): HttpResponse<LogUploadAuthorization> {
+    val authorization = logUploadAuthorizationService.authorizeDiagnostic(UUID.fromString(request.dataplaneId))
     return if (authorization == null) {
       HttpResponse.noContent()
     } else {

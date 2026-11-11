@@ -183,6 +183,22 @@ class WorkloadApiSecurityTest(
   }
 
   @Test
+  fun `POST data plane log upload authorization rejects an unauthenticated request`() {
+    val error =
+      assertThrows<HttpClientResponseException> {
+        client
+          .get()
+          .toBlocking()
+          .exchange(
+            HttpRequest.POST("/api/v1/workload/dataplane/log-upload-authorization", """{"dataplaneId":"${UUID.randomUUID()}"}"""),
+            String::class.java,
+          )
+      }
+
+    assertEquals(HttpStatus.UNAUTHORIZED, error.status)
+  }
+
+  @Test
   fun `POST log upload authorization rejects an unauthenticated request`() {
     val error =
       assertThrows<HttpClientResponseException> {

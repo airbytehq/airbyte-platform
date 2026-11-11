@@ -427,12 +427,90 @@ class LogUploadAuthorizationServiceTest {
       metricClient = metricClient,
     )
 
-  private fun assertMetric(outcome: String) {
+  @Test
+  fun `issues a diagnostic authorization for the data plane's own folder`() {
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } returns dataplaneGroup()
+    every { broker.issue(BUCKET, DIAGNOSTIC_PREFIX) } returns AUTHORIZATION
+
+    assertEquals(AUTHORIZATION, service.authorizeDiagnostic(DATAPLANE_ID))
+
+    verify(exactly = 1) { broker.issue(BUCKET, DIAGNOSTIC_PREFIX) }
+    assertMetric("issued", DIAGNOSTIC_ROUTE)
+  }
+
+  @Test
+  fun `returns no diagnostic authorization when managed logging is off`() {
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } returns dataplaneGroup()
+    every { featureFlagClient.boolVariation(FlexSyncLogging, Organization(ORGANIZATION_ID)) } returns false
+
+    assertNull(service.authorizeDiagnostic(DATAPLANE_ID))
+
+    verify(exactly = 0) { broker.issue(any(), any()) }
+    assertMetric("disabled", DIAGNOSTIC_ROUTE)
+  }
+
+  @Test
+  fun `returns no diagnostic authorization for an Airbyte-owned region`() {
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } returns dataplaneGroup(organizationId = DEFAULT_ORGANIZATION_ID)
+
+    assertNull(service.authorizeDiagnostic(DATAPLANE_ID))
+
+    verify(exactly = 0) { broker.issue(any(), any()) }
+    assertMetric("disabled", DIAGNOSTIC_ROUTE)
+  }
+
+  @Test
+  fun `rejects a diagnostic authorization for another data plane`() {
+    val error = assertThrows<NotFoundException> { service.authorizeDiagnostic(UUID.randomUUID()) }
+
+    assertSanitized(error.message)
+    verify(exactly = 0) { broker.issue(any(), any()) }
+    assertMetric("rejected", DIAGNOSTIC_ROUTE)
+  }
+
+  @Test
+  fun `rejects a diagnostic authorization for a caller that is not a data plane`() {
+    every { dataplaneService.getDataplaneByServiceAccountId(SERVICE_ACCOUNT_ID.toString()) } returns null
+
+    val error = assertThrows<NotFoundException> { service.authorizeDiagnostic(DATAPLANE_ID) }
+
+    assertSanitized(error.message)
+    assertMetric("rejected", DIAGNOSTIC_ROUTE)
+  }
+
+  @Test
+  fun `rejects a diagnostic authorization when the region is missing`() {
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } throws
+      ConfigNotFoundException("dataplane group", DATAPLANE_GROUP_ID.toString())
+
+    val error = assertThrows<NotFoundException> { service.authorizeDiagnostic(DATAPLANE_ID) }
+
+    assertSanitized(error.message)
+  }
+
+  @ParameterizedTest
+  @MethodSource("disabledTopologies")
+  fun `rejects a diagnostic authorization for a disabled or deleted data plane or region`(
+    dataplane: Dataplane,
+    dataplaneGroup: DataplaneGroup,
+  ) {
+    every { dataplaneService.getDataplaneByServiceAccountId(SERVICE_ACCOUNT_ID.toString()) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID) } returns dataplaneGroup
+
+    assertThrows<ForbiddenException> { service.authorizeDiagnostic(DATAPLANE_ID) }
+
+    verify(exactly = 0) { broker.issue(any(), any()) }
+  }
+
+  private fun assertMetric(
+    outcome: String,
+    route: String = ROUTE,
+  ) {
     assertEquals(
       1.0,
       meterRegistry
         .find(OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION.getMetricName())
-        .tags("route", ROUTE, "outcome", outcome)
+        .tags("route", route, "outcome", outcome)
         .counter()
         ?.count(),
     )
@@ -440,7 +518,7 @@ class LogUploadAuthorizationServiceTest {
       1L,
       meterRegistry
         .find(OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION_LATENCY_MS.getMetricName())
-        .tags("route", ROUTE, "outcome", outcome)
+        .tags("route", route, "outcome", outcome)
         .summary()
         ?.count(),
     )
@@ -459,6 +537,8 @@ class LogUploadAuthorizationServiceTest {
     private const val TOKEN = "secret-access-token"
     private const val OBJECT_PREFIX = "job-logging/job/7/attempt/2/"
     private const val ROUTE = "/api/v1/workload/{workloadId}/log-upload-authorization"
+    private const val DIAGNOSTIC_ROUTE = "/api/v1/workload/dataplane/log-upload-authorization"
+    private const val DIAGNOSTIC_PREFIX = "job-logging/diagnostics/dataplanes/22222222-2222-2222-2222-222222222222/"
     private val ORGANIZATION_ID = UUID.fromString("11111111-1111-1111-1111-111111111111")
     private val DATAPLANE_ID = UUID.fromString("22222222-2222-2222-2222-222222222222")
     private val DATAPLANE_GROUP_ID = UUID.fromString("33333333-3333-3333-3333-333333333333")

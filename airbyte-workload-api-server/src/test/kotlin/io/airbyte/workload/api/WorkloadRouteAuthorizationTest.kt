@@ -31,6 +31,7 @@ class WorkloadRouteAuthorizationTest {
         "workloadLaunched" to WorkloadIdRule::class,
         "workloadGet" to WorkloadIdRule::class,
         "workloadLogUploadAuthorization" to WorkloadIdRule::class,
+        "dataplaneLogUploadAuthorization" to WorkloadDataplaneListRule::class,
         "workloadHeartbeat" to WorkloadIdRule::class,
         "workloadList" to WorkloadDataplaneListRule::class,
         "workloadListWithExpiredDeadline" to WorkloadDataplaneListRule::class,
@@ -43,7 +44,7 @@ class WorkloadRouteAuthorizationTest {
         "workloadQueueClean" to WorkloadGlobalRule::class,
       )
 
-    assertEquals(19, routes.size)
+    assertEquals(20, routes.size, "${routes.map { it.name }}")
     assertEquals(expectedRules.keys, routes.map { it.name }.toSet())
     for (route in routes) {
       val authorization = route.getAnnotation(AuthorizeOperation::class.java)

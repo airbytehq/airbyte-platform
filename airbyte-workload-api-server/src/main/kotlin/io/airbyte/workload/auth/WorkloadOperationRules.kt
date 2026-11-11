@@ -18,6 +18,7 @@ import io.airbyte.data.auth.TokenType
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.workload.api.domain.DataplaneLogUploadAuthorizationRequest
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -220,6 +221,7 @@ class WorkloadDataplaneListRule(
         is ExpiredDeadlineWorkloadListRequest -> value.dataplane
         is WorkloadListActiveRequest -> value.dataplane
         is LongRunningWorkloadRequest -> value.dataplane
+        is DataplaneLogUploadAuthorizationRequest -> listOf(value.dataplaneId)
         else -> throw BadRequestProblem()
       }
     return DataplaneListInput(ids.orEmpty().toList())

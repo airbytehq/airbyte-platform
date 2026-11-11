@@ -7,6 +7,7 @@ package io.airbyte.workload.logging
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.storage.DocumentType
+import io.airbyte.config.Dataplane
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.auth.TokenType
@@ -45,12 +46,8 @@ open class LogUploadAuthorizationService(
   private val credentialBroker: LogUploadCredentialBroker,
   private val metricClient: MetricClient,
 ) {
-  open fun authorize(workloadId: String): LogUploadAuthorization? {
-    val startedAt = System.nanoTime()
-    var outcome = OUTCOME_REJECTED
-    var primaryFailure: Throwable? = null
-
-    try {
+  open fun authorize(workloadId: String): LogUploadAuthorization? =
+    measured(LOG_UPLOAD_AUTHORIZATION_ROUTE) { attempt ->
       val subject = currentServiceAccountSubject()
       val workload = loadWorkload(workloadId)
       val organizationId = workload.organizationId ?: rejectNotFound()
@@ -63,36 +60,87 @@ open class LogUploadAuthorizationService(
       )
       validateLifecycle(workload)
 
-      if (!featureFlagClient.boolVariation(FlexSyncLogging, Organization(organizationId))) {
-        outcome = OUTCOME_DISABLED
-        return null
-      }
+      issueIfEnabled(attempt, organizationId) { objectKeyPrefix(workload.logPath) }
+    }
 
-      if (storageConfig.type != StorageType.GCS || storageConfig.bucket.log.isBlank()) {
+  /**
+   * Issues a short-lived authorization for a data plane to upload a diagnostic file, with no workload running.
+   */
+  open fun authorizeDiagnostic(dataplaneId: UUID): LogUploadAuthorization? =
+    measured(DIAGNOSTIC_LOG_UPLOAD_AUTHORIZATION_ROUTE) { attempt ->
+      val dataplane = callerDataplane(currentServiceAccountSubject())
+      if (dataplane.id != dataplaneId) {
         rejectNotFound()
       }
-      val objectKeyPrefix = objectKeyPrefix(workload.logPath)
+      validateTopologyState(dataplane.enabled, dataplane.tombstone)
 
-      return try {
-        credentialBroker.issue(storageConfig.bucket.log, objectKeyPrefix).also {
-          outcome = OUTCOME_ISSUED
+      val group =
+        try {
+          dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+        } catch (_: ConfigNotFoundException) {
+          rejectNotFound()
         }
-      } catch (_: InterruptedException) {
-        Thread.currentThread().interrupt()
-        outcome = OUTCOME_BROKER_ERROR
-        throw LogUploadAuthorizationBrokerException()
-      } catch (_: Exception) {
-        outcome = OUTCOME_BROKER_ERROR
-        throw LogUploadAuthorizationBrokerException()
+      validateTopologyState(group.enabled, group.tombstone)
+      // Airbyte's own regions don't use Airbyte-managed Flex logging.
+      if (group.organizationId == DEFAULT_ORGANIZATION_ID) {
+        attempt.outcome = OUTCOME_DISABLED
+        return@measured null
       }
+
+      issueIfEnabled(attempt, group.organizationId) { "${DocumentType.LOGS.prefix}/diagnostics/dataplanes/$dataplaneId/" }
+    }
+
+  private fun issueIfEnabled(
+    attempt: Attempt,
+    organizationId: UUID,
+    objectKeyPrefix: () -> String,
+  ): LogUploadAuthorization? {
+    if (!featureFlagClient.boolVariation(FlexSyncLogging, Organization(organizationId))) {
+      attempt.outcome = OUTCOME_DISABLED
+      return null
+    }
+
+    if (storageConfig.type != StorageType.GCS || storageConfig.bucket.log.isBlank()) {
+      rejectNotFound()
+    }
+    val prefix = objectKeyPrefix()
+
+    return try {
+      credentialBroker.issue(storageConfig.bucket.log, prefix).also {
+        attempt.outcome = OUTCOME_ISSUED
+      }
+    } catch (_: InterruptedException) {
+      Thread.currentThread().interrupt()
+      attempt.outcome = OUTCOME_BROKER_ERROR
+      throw LogUploadAuthorizationBrokerException()
+    } catch (_: Exception) {
+      attempt.outcome = OUTCOME_BROKER_ERROR
+      throw LogUploadAuthorizationBrokerException()
+    }
+  }
+
+  private class Attempt {
+    var outcome = OUTCOME_REJECTED
+  }
+
+  private fun measured(
+    route: String,
+    authorize: (Attempt) -> LogUploadAuthorization?,
+  ): LogUploadAuthorization? {
+    val startedAt = System.nanoTime()
+    val attempt = Attempt()
+    var primaryFailure: Throwable? = null
+
+    try {
+      return authorize(attempt)
     } catch (failure: Throwable) {
       primaryFailure = failure
       throw failure
     } finally {
       val attributes =
         arrayOf(
-          MetricAttribute(MetricTags.ROUTE, LOG_UPLOAD_AUTHORIZATION_ROUTE),
-          MetricAttribute(MetricTags.OUTCOME, outcome),
+          MetricAttribute(MetricTags.ROUTE, route),
+          MetricAttribute(MetricTags.OUTCOME, attempt.outcome),
         )
       reportMetric(primaryFailure) {
         metricClient.count(
@@ -155,12 +203,7 @@ open class LogUploadAuthorizationService(
       workload.dataplaneId?.toUuidOrNotFound()
         ?: if (allowUnassignedDataplane) null else rejectNotFound()
     val workloadDataplaneGroupId = workload.dataplaneGroup?.toUuidOrNotFound() ?: rejectNotFound()
-    val dataplane =
-      try {
-        dataplaneService.getDataplaneByServiceAccountId(subject.id)
-      } catch (_: IllegalArgumentException) {
-        rejectNotFound()
-      } ?: rejectNotFound()
+    val dataplane = callerDataplane(subject)
 
     if (
       (workloadDataplaneId != null && dataplane.id != workloadDataplaneId) ||
@@ -183,6 +226,13 @@ open class LogUploadAuthorizationService(
       rejectConflict()
     }
   }
+
+  private fun callerDataplane(subject: RoleResolver.Subject): Dataplane =
+    try {
+      dataplaneService.getDataplaneByServiceAccountId(subject.id)
+    } catch (_: IllegalArgumentException) {
+      rejectNotFound()
+    } ?: rejectNotFound()
 
   private fun getAssignedDataplaneGroup(
     dataplaneGroupId: UUID,
@@ -246,6 +296,7 @@ open class LogUploadAuthorizationService(
   private companion object {
     const val UNAVAILABLE_MESSAGE = "Log upload authorization is unavailable."
     const val LOG_UPLOAD_AUTHORIZATION_ROUTE = "/api/v1/workload/{workloadId}/log-upload-authorization"
+    const val DIAGNOSTIC_LOG_UPLOAD_AUTHORIZATION_ROUTE = "/api/v1/workload/dataplane/log-upload-authorization"
     const val OUTCOME_ISSUED = "issued"
     const val OUTCOME_DISABLED = "disabled"
     const val OUTCOME_REJECTED = "rejected"
