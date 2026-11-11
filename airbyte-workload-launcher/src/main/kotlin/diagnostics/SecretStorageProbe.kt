@@ -10,11 +10,9 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_CHECK_TIMEOUT
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_RATE
-import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
-import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -40,20 +38,7 @@ class SecretStorageProbe(
   private val featureFlagClient: FeatureFlagClient,
   @Named("secret-storage-check") private val checkExecutor: ExecutorService,
   @Value("\${$WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_CHECK_TIMEOUT}") private val checkTimeout: Duration,
-) : DiagnosticProbe,
-  ApplicationEventListener<DataplaneConfig> {
-  @Volatile
-  private var dataplane: DataplaneConfig? = null
-
-  @Volatile
-  private var latestResults: List<DataplaneDiagnosticResult> = emptyList()
-
-  override fun onApplicationEvent(event: DataplaneConfig) {
-    dataplane = event
-  }
-
-  override fun latestCompletedResults(): List<DataplaneDiagnosticResult> = latestResults
-
+) : ScheduledDiagnosticProbe() {
   @Scheduled(fixedRate = "\${$WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_RATE}", initialDelay = INITIAL_DELAY, scheduler = "secret-storage-probe")
   fun probe() {
     val dataplane = dataplane ?: return
@@ -65,8 +50,9 @@ class SecretStorageProbe(
     val checks = targets.current(dataplane).map { it to checkExecutor.submit<DataplaneDiagnosticResult> { checker.check(it, organizationId) } }
     val deadline = System.nanoTime() + checkTimeout.toNanos()
 
-    latestResults = checks.map { (target, check) -> awaitResult(target, check, deadline) }
-    logger.info { "Checked ${latestResults.size} secret stores" }
+    val results = checks.map { (target, check) -> awaitResult(target, check, deadline) }
+    publish(results)
+    logger.info { "Checked ${results.size} secret stores" }
   }
 
   private fun awaitResult(
