@@ -5,13 +5,9 @@
 package io.airbyte.workload.launcher.diagnostics
 
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
-import io.airbyte.featureflag.DataplaneHealthUi
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Organization
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_CHECK_TIMEOUT
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_RATE
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Named
@@ -31,11 +27,9 @@ private const val INITIAL_DELAY = "1m"
  * Checks on a schedule that this data plane can read from each secret store its workloads use.
  */
 @Singleton
-@Requires(beans = [SecretStorageProbeTargets::class])
 class SecretStorageProbe(
   private val targets: SecretStorageProbeTargets,
   private val checker: SecretStorageChecker,
-  private val featureFlagClient: FeatureFlagClient,
   @Named("secret-storage-check") private val checkExecutor: ExecutorService,
   @Value("\${$WORKLOAD_LAUNCHER_SECRET_STORAGE_PROBE_CHECK_TIMEOUT}") private val checkTimeout: Duration,
 ) : ScheduledDiagnosticProbe() {
@@ -44,10 +38,16 @@ class SecretStorageProbe(
     val dataplane = dataplane ?: return
     // The test secret is named after the organization; older control planes don't send it.
     val organizationId = dataplane.organizationId ?: return
-    if (!featureFlagClient.boolVariation(DataplaneHealthUi, Organization(organizationId))) return
+
+    val stores = targets.current()
+    if (stores.isEmpty()) {
+      publish(listOf(checker.notConfigured(dataplane.dataplaneId, organizationId)))
+      logger.info { "No secret stores to check" }
+      return
+    }
 
     // Every store is checked at the same time, so one that stalls can't hold back the others.
-    val checks = targets.current(dataplane).map { it to checkExecutor.submit<DataplaneDiagnosticResult> { checker.check(it, organizationId) } }
+    val checks = stores.map { it to checkExecutor.submit<DataplaneDiagnosticResult> { checker.check(it, organizationId) } }
     val deadline = System.nanoTime() + checkTimeout.toNanos()
 
     val results = checks.map { (target, check) -> awaitResult(target, check, deadline) }

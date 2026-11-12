@@ -11,11 +11,13 @@ import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
+import io.micronaut.context.exceptions.NoSuchBeanException
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import jakarta.inject.Provider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,7 +43,7 @@ internal class SecretStorageCheckerTest {
     persistence = mockk()
     every { hydrator.getPersistenceByStorageId(target.secretStorageId) } returns persistence
     every { persistence.write(testSecret, testSecretValue) } just runs
-    checker = SecretStorageChecker(hydrator, Clock.fixed(now, ZoneOffset.UTC))
+    checker = SecretStorageChecker(Provider { hydrator }, Clock.fixed(now, ZoneOffset.UTC))
   }
 
   @Test
@@ -116,6 +118,21 @@ internal class SecretStorageCheckerTest {
   }
 
   @Test
+  fun `a data plane whose secrets client can't be built fails`() {
+    val brokenChecker =
+      SecretStorageChecker(Provider { throw NoSuchBeanException(SecretPersistence::class.java) }, Clock.fixed(now, ZoneOffset.UTC))
+
+    assertEquals(
+      expected(
+        DataplaneDiagnosticStatus.FAILED,
+        SecretStorageChecker.DATAPLANE_SECRETS_NOT_CONFIGURED,
+        "The data plane's secrets settings are missing or invalid, so it can't read secrets. Check the secrets manager in its Helm values.",
+      ),
+      brokenChecker.check(target, organizationId),
+    )
+  }
+
+  @Test
   fun `a store whose settings can't be loaded is unable to complete`() {
     every { hydrator.getPersistenceByStorageId(target.secretStorageId) } throws RuntimeException("403 Forbidden")
 
@@ -126,6 +143,22 @@ internal class SecretStorageCheckerTest {
         "Airbyte could not load this secret store's settings.",
       ),
       checker.check(target, organizationId),
+    )
+  }
+
+  @Test
+  fun `no stores is not configured for the organization`() {
+    val dataplaneId = UUID.randomUUID()
+
+    assertEquals(
+      DataplaneDiagnosticResult(
+        kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+        targetId = dataplaneId,
+        status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
+        checkedAt = now.toEpochMilli(),
+        observation = mapOf("scope_type" to "organization", "scope_id" to organizationId.toString()),
+      ),
+      checker.notConfigured(dataplaneId, organizationId),
     )
   }
 

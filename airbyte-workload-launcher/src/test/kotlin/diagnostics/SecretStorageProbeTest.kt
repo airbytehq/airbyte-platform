@@ -8,8 +8,6 @@ import io.airbyte.api.client.model.generated.DataplaneDiagnosticKind
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticStatus
 import io.airbyte.api.client.model.generated.ScopeType
-import io.airbyte.featureflag.DataplaneHealthUi
-import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.mockk.every
 import io.mockk.mockk
@@ -47,7 +45,7 @@ internal class SecretStorageProbeTest {
     targets = mockk()
     checker = mockk()
     executor = Executors.newCachedThreadPool()
-    every { targets.current(any()) } returns listOf(storeA, storeB)
+    every { targets.current() } returns listOf(storeA, storeB)
     every { checker.check(any(), organizationId) } answers { result(firstArg(), DataplaneDiagnosticStatus.PASSED) }
     every { checker.timedOut(any()) } answers { result(firstArg(), DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE) }
   }
@@ -59,7 +57,7 @@ internal class SecretStorageProbeTest {
 
   @Test
   fun `checks every store and keeps the results for the heartbeat`() {
-    val probe = probe(flagOn = true)
+    val probe = probe()
     probe.onApplicationEvent(dataplane)
 
     probe.probe()
@@ -77,7 +75,7 @@ internal class SecretStorageProbeTest {
       release.await()
       result(storeA, DataplaneDiagnosticStatus.PASSED)
     }
-    val probe = probe(flagOn = true, checkTimeout = Duration.ofMillis(200))
+    val probe = probe(checkTimeout = Duration.ofMillis(200))
     probe.onApplicationEvent(dataplane)
 
     try {
@@ -94,63 +92,57 @@ internal class SecretStorageProbeTest {
 
   @Test
   fun `a later run replaces the earlier results`() {
-    val probe = probe(flagOn = true)
+    val probe = probe()
     probe.onApplicationEvent(dataplane)
     probe.probe()
 
-    every { targets.current(any()) } returns listOf(storeB)
+    every { targets.current() } returns listOf(storeB)
     probe.probe()
 
     assertEquals(listOf(result(storeB, DataplaneDiagnosticStatus.PASSED)), probe.latestCompletedResults())
   }
 
   @Test
-  fun `no stores means no results`() {
-    every { targets.current(any()) } returns emptyList()
-    val probe = probe(flagOn = true)
+  fun `no stores reports not configured`() {
+    val notConfigured =
+      DataplaneDiagnosticResult(
+        kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+        targetId = dataplane.dataplaneId,
+        status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
+        checkedAt = 1_793_750_400_000L,
+      )
+    every { targets.current() } returns emptyList()
+    every { checker.notConfigured(dataplane.dataplaneId, organizationId) } returns notConfigured
+    val probe = probe()
     probe.onApplicationEvent(dataplane)
 
     probe.probe()
 
-    assertEquals(emptyList<DataplaneDiagnosticResult>(), probe.latestCompletedResults())
+    assertEquals(listOf(notConfigured), probe.latestCompletedResults())
   }
 
   @Test
   fun `does nothing before the data plane is known`() {
-    val probe = probe(flagOn = true)
+    val probe = probe()
 
     probe.probe()
 
     assertEquals(emptyList<DataplaneDiagnosticResult>(), probe.latestCompletedResults())
-    verify(exactly = 0) { targets.current(any()) }
+    verify(exactly = 0) { targets.current() }
   }
 
   @Test
   fun `does nothing without an organization`() {
-    val probe = probe(flagOn = true)
+    val probe = probe()
     probe.onApplicationEvent(dataplane.copy(organizationId = null))
 
     probe.probe()
 
     assertEquals(emptyList<DataplaneDiagnosticResult>(), probe.latestCompletedResults())
-    verify(exactly = 0) { targets.current(any()) }
+    verify(exactly = 0) { targets.current() }
   }
 
-  @Test
-  fun `does nothing when the flag is off`() {
-    val probe = probe(flagOn = false)
-    probe.onApplicationEvent(dataplane)
-
-    probe.probe()
-
-    assertEquals(emptyList<DataplaneDiagnosticResult>(), probe.latestCompletedResults())
-    verify(exactly = 0) { targets.current(any()) }
-  }
-
-  private fun probe(
-    flagOn: Boolean,
-    checkTimeout: Duration = Duration.ofSeconds(5),
-  ) = SecretStorageProbe(targets, checker, TestClient(mapOf(DataplaneHealthUi.key to flagOn)), executor, checkTimeout)
+  private fun probe(checkTimeout: Duration = Duration.ofSeconds(5)) = SecretStorageProbe(targets, checker, executor, checkTimeout)
 
   private fun result(
     target: SecretStorageProbeTarget,

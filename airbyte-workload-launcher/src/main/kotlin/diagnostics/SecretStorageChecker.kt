@@ -7,9 +7,12 @@ package io.airbyte.workload.launcher.diagnostics
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticKind
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticStatus
+import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.exceptions.BeanContextException
+import jakarta.inject.Provider
 import jakarta.inject.Singleton
 import java.time.Clock
 import java.util.UUID
@@ -21,7 +24,8 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class SecretStorageChecker(
-  private val connectorSecretsHydrator: ConnectorSecretsHydrator,
+  // Built on first use, so a data plane with broken secrets settings still starts and reports it here.
+  private val connectorSecretsHydrator: Provider<ConnectorSecretsHydrator>,
   private val clock: Clock,
 ) {
   // Every failure is reported as that store's result instead of thrown, so one bad store doesn't hide the others.
@@ -29,9 +33,22 @@ class SecretStorageChecker(
     target: SecretStorageProbeTarget,
     organizationId: UUID,
   ): DataplaneDiagnosticResult {
+    val hydrator =
+      try {
+        connectorSecretsHydrator.get()
+      } catch (e: BeanContextException) {
+        logger.warn(e) { "Could not build the data plane's secrets client" }
+        return result(
+          target,
+          DataplaneDiagnosticStatus.FAILED,
+          DATAPLANE_SECRETS_NOT_CONFIGURED,
+          "The data plane's secrets settings are missing or invalid, so it can't read secrets. Check the secrets manager in its Helm values.",
+        )
+      }
+
     val persistence =
       try {
-        connectorSecretsHydrator.getPersistenceByStorageId(target.secretStorageId)
+        hydrator.getPersistenceByStorageId(target.secretStorageId)
       } catch (e: Exception) {
         logger.warn(e) { "Could not load secret store ${target.secretStorageId}" }
         return result(target, DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, STORE_UNAVAILABLE, "Airbyte could not load this secret store's settings.")
@@ -78,6 +95,19 @@ class SecretStorageChecker(
     return result(target, DataplaneDiagnosticStatus.PASSED)
   }
 
+  // There's no store to point at, so the result targets the data plane and is scoped to the organization without a store.
+  fun notConfigured(
+    dataplaneId: UUID,
+    organizationId: UUID,
+  ): DataplaneDiagnosticResult =
+    DataplaneDiagnosticResult(
+      kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+      targetId = dataplaneId,
+      status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
+      checkedAt = clock.millis(),
+      observation = mapOf("scope_type" to ScopeType.ORGANIZATION.value, "scope_id" to organizationId.toString()),
+    )
+
   fun timedOut(target: SecretStorageProbeTarget): DataplaneDiagnosticResult =
     result(target, DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, TIMED_OUT, "The secret store did not respond in time.")
 
@@ -106,6 +136,7 @@ class SecretStorageChecker(
 
   companion object {
     const val STORE_UNAVAILABLE = "STORE_UNAVAILABLE"
+    const val DATAPLANE_SECRETS_NOT_CONFIGURED = "DATAPLANE_SECRETS_NOT_CONFIGURED"
     const val READ_FAILED = "READ_FAILED"
     const val TEST_SECRET_UNVERIFIED = "TEST_SECRET_UNVERIFIED"
     const val TEST_SECRET_CREATE_FAILED = "TEST_SECRET_CREATE_FAILED"

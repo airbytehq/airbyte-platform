@@ -6,6 +6,7 @@ package io.airbyte.domain.services.secrets
 
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Organization
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -593,6 +594,11 @@ class SecretStorageServiceTest {
     private val serviceAccountId = UUID.randomUUID()
     private val dataplaneGroupId = UUID.randomUUID()
     private val orgStorage = storage(SecretStorageScopeType.ORGANIZATION, orgId.value)
+    private val defaultStorage =
+      storage(
+        SecretStorageScopeType.ORGANIZATION,
+        DEFAULT_ORGANIZATION_ID,
+      ).copy(id = SecretStorage.DEFAULT_SECRET_STORAGE_ID)
 
     @BeforeEach
     fun setup() {
@@ -626,13 +632,26 @@ class SecretStorageServiceTest {
     }
 
     @Test
-    fun `a workspace with no storage uses the deployment default when default storage is off`() {
+    fun `a customer's region leaves out the deployment default`() {
       val workspaceWithoutStorage = UUID.randomUUID()
-      val defaultStorage = storage(SecretStorageScopeType.ORGANIZATION, UUID.randomUUID()).copy(id = SecretStorage.DEFAULT_SECRET_STORAGE_ID)
       givenWorkspaces(workspaceWithoutStorage)
       every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceWithoutStorage) } returns emptyList()
       every { featureFlagClient.boolVariation(EnableDefaultSecretStorage, any()) } returns false
       every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+      every { secretStorageRepository.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID) } returns defaultStorage
+
+      assertEquals(emptyList<SecretStorage>(), service.listForDataplane(serviceAccountId))
+    }
+
+    @Test
+    fun `an Airbyte-managed region keeps the deployment default`() {
+      every { dataplaneGroupRepository.findById(dataplaneGroupId) } returns
+        Optional.of(
+          DataplaneGroup(id = dataplaneGroupId, organizationId = DEFAULT_ORGANIZATION_ID, name = "region", enabled = true, tombstone = false),
+        )
+      every { workspaceRepository.findByOrganizationIdAndDataplaneGroupIdAndTombstoneFalse(DEFAULT_ORGANIZATION_ID, dataplaneGroupId) } returns
+        emptyList()
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, DEFAULT_ORGANIZATION_ID) } returns emptyList()
       every { secretStorageRepository.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID) } returns defaultStorage
 
       assertEquals(listOf(defaultStorage), service.listForDataplane(serviceAccountId))

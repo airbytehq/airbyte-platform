@@ -4,8 +4,11 @@
 
 package io.airbyte.workload.launcher.diagnostics
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.DataplaneSecretStoragesRequestBody
 import io.airbyte.api.client.model.generated.ScopeType
-import io.airbyte.workload.launcher.model.DataplaneConfig
+import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
+import jakarta.inject.Singleton
 import java.util.UUID
 
 /**
@@ -18,8 +21,16 @@ data class SecretStorageProbeTarget(
 )
 
 /**
- * Supplies the distinct secret stores this data plane's workloads use.
+ * Asks Airbyte which distinct secret stores this data plane's workloads use.
  */
-interface SecretStorageProbeTargets {
-  fun current(dataplane: DataplaneConfig): List<SecretStorageProbeTarget>
+@Singleton
+class SecretStorageProbeTargets(
+  private val airbyteApiClient: AirbyteApiClient,
+  private val airbyteInternalApiClientConfig: AirbyteInternalApiClientConfig,
+) {
+  fun current(): List<SecretStorageProbeTarget> =
+    airbyteApiClient.dataplaneApi
+      .listDataplaneSecretStorages(DataplaneSecretStoragesRequestBody(clientId = airbyteInternalApiClientConfig.auth.clientId))
+      .secretStorages
+      .map { SecretStorageProbeTarget(it.secretStorageId, it.scopeType, it.scopeId) }
 }

@@ -9,6 +9,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.AwsSecretsManagerRuntimeConfiguration
@@ -280,6 +281,7 @@ open class SecretStorageService(
   /**
    * Returns the secret storages used by the workspaces in the data plane's region, without duplicates.
    * If the region has no workspaces, returns the organization's storage.
+   * Leaves out the deployment default unless the region is Airbyte-managed.
    */
   fun listForDataplane(serviceAccountId: UUID): List<SecretStorage> {
     val dataplane =
@@ -290,7 +292,13 @@ open class SecretStorageService(
         ResourceNotFoundProblem(ProblemResourceData().resourceType("DataplaneGroup").resourceId(dataplane.dataplaneGroupId.toString()))
       }
 
-    return listForDataplaneGroup(OrganizationId(dataplaneGroup.organizationId), dataplane.dataplaneGroupId)
+    val secretStorages = listForDataplaneGroup(OrganizationId(dataplaneGroup.organizationId), dataplane.dataplaneGroupId)
+
+    // A customer's own data plane has only the customer's credentials, so it can't open the deployment default.
+    if (dataplaneGroup.organizationId == DEFAULT_ORGANIZATION_ID) {
+      return secretStorages
+    }
+    return secretStorages.filterNot { it.id == DEFAULT_SECRET_STORAGE_ID }
   }
 
   /**
