@@ -102,6 +102,45 @@ class DataplaneDiagnosticRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `deleteUnreportedTargets deletes an older result for a target that is no longer reported`() {
+    val reported = passedResult()
+    upsert(reported)
+    upsert(passedResult().copy(targetId = UUID.randomUUID()))
+
+    val deleted = deleteUnreported(listOf(reported.targetId), CHECKED_AT.plusMinutes(5))
+
+    assertEquals(1, deleted)
+    assertEquals(listOf(reported), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `deleteUnreportedTargets keeps an unreported result that is not older than the reported ones`() {
+    val unreported = passedResult().copy(targetId = UUID.randomUUID(), checkedAt = CHECKED_AT.plusMinutes(5))
+    upsert(unreported)
+
+    val deleted = deleteUnreported(listOf(targetId), CHECKED_AT.plusMinutes(5))
+
+    assertEquals(0, deleted)
+    assertEquals(listOf(unreported), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `deleteUnreportedTargets leaves other kinds and other dataplanes alone`() {
+    val otherKind = passedResult().copy(diagnosticKind = "STORAGE_REACHABILITY", targetId = UUID.randomUUID())
+    val otherDataplane = passedResult().copy(dataplaneId = UUID.randomUUID(), targetId = UUID.randomUUID())
+    upsert(otherKind)
+    upsert(otherDataplane)
+
+    val deleted = deleteUnreported(listOf(targetId), CHECKED_AT.plusMinutes(5))
+
+    assertEquals(0, deleted)
+    assertEquals(
+      listOf(otherKind, otherDataplane).sortedBy { it.targetId },
+      findSaved(listOf(dataplaneId, otherDataplane.dataplaneId)).sortedBy { it.targetId },
+    )
+  }
+
+  @Test
   fun `upsertLatest fails for an error code longer than 256 characters`() {
     val longestAllowed = passedResult().copy(status = "FAILED", errorCode = "E".repeat(256), errorMessage = "Access denied")
     upsert(longestAllowed)
@@ -135,6 +174,11 @@ class DataplaneDiagnosticRepositoryTest : AbstractConfigRepositoryTest() {
       errorMessage = diagnostic.errorMessage,
       observation = diagnostic.observation?.let { Jsons.serialize(it) },
     )
+
+  private fun deleteUnreported(
+    reportedTargetIds: List<UUID>,
+    checkedBefore: OffsetDateTime,
+  ) = dataplaneDiagnosticRepository.deleteUnreportedTargets(dataplaneId, "SECRET_STORAGE", reportedTargetIds, checkedBefore)
 
   // Clears the fields the database sets so results compare as whole values.
   private fun findSaved(dataplaneIds: List<UUID>) =

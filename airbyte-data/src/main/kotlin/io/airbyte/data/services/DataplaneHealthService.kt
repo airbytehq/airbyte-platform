@@ -63,6 +63,8 @@ class DataplaneHealthService(
      */
     val MINIMUM_DIAGNOSTIC_VERSIONS: Map<DataplaneDiagnosticKind, Version> =
       mapOf(
+        // Provisional: update to the first release that contains the launcher's secret store check once it is published.
+        DataplaneDiagnosticKind.SECRET_STORAGE to Version("2.4.0"),
         // Provisional: update to the first release that contains the launcher's workload scheduling probe once it is published.
         DataplaneDiagnosticKind.WORKLOAD_SCHEDULING to Version("2.4.0"),
       )
@@ -123,6 +125,7 @@ class DataplaneHealthService(
 
   /**
    * Saves the latest result of each check. A result older than the saved one for the same check and target is ignored.
+   * Deletes the saved results of each reported kind for targets this heartbeat no longer reports.
    */
   fun recordDiagnostics(
     dataplaneId: UUID,
@@ -149,6 +152,16 @@ class DataplaneHealthService(
         errorCode = errorCode,
         errorMessage = errorMessage,
         observation = Jsons.serialize(diagnostic.observation),
+      )
+    }
+
+    // Each heartbeat carries every target a check covers, so a saved target missing from it is no longer checked.
+    diagnostics.groupBy { it.kind }.forEach { (kind, results) ->
+      diagnosticRepository.deleteUnreportedTargets(
+        dataplaneId = dataplaneId,
+        diagnosticKind = kind.name,
+        reportedTargetIds = results.map { it.targetId },
+        checkedBefore = results.minOf { it.checkedAt },
       )
     }
   }

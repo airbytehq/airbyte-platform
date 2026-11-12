@@ -121,6 +121,32 @@ internal class DataplaneHealthServiceTest {
   }
 
   @Test
+  fun `recordDiagnostics deletes the targets each reported kind no longer reports`() {
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val earlier = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val later = earlier.plusSeconds(5)
+    val firstStore = diagnostic(DataplaneDiagnosticOutcome.Passed, later, emptyMap())
+    val secondStore = diagnostic(DataplaneDiagnosticOutcome.Passed, earlier, emptyMap())
+    val storage =
+      DataplaneDiagnostic(DataplaneDiagnosticKind.STORAGE_REACHABILITY, dataplaneId, DataplaneDiagnosticOutcome.NotConfigured, later, emptyMap())
+
+    dataplaneHealthService.recordDiagnostics(dataplaneId, organizationId, listOf(firstStore, secondStore, storage))
+
+    verify(exactly = 1) {
+      diagnosticRepository.deleteUnreportedTargets(dataplaneId, "SECRET_STORAGE", listOf(firstStore.targetId, secondStore.targetId), earlier)
+      diagnosticRepository.deleteUnreportedTargets(dataplaneId, "STORAGE_REACHABILITY", listOf(dataplaneId), later)
+    }
+  }
+
+  @Test
+  fun `recordDiagnostics deletes nothing for a heartbeat without results`() {
+    dataplaneHealthService.recordDiagnostics(UUID.randomUUID(), UUID.randomUUID(), emptyList())
+
+    verify(exactly = 0) { diagnosticRepository.deleteUnreportedTargets(any(), any(), any(), any()) }
+  }
+
+  @Test
   fun `getDiagnostics reads back a not configured storage result`() {
     val organizationId = UUID.randomUUID()
     val dataplaneId = UUID.randomUUID()
@@ -250,13 +276,16 @@ internal class DataplaneHealthServiceTest {
   }
 
   @Test
-  fun `unsupportedDiagnosticKinds lists workload scheduling for a data plane older than 2_4_0`() {
-    assertEquals(listOf(DataplaneDiagnosticKind.WORKLOAD_SCHEDULING), dataplaneHealthService.unsupportedDiagnosticKinds("2.3.9", emptyList()))
+  fun `unsupportedDiagnosticKinds lists the secret store and workload scheduling checks for a data plane older than 2_4_0`() {
+    assertEquals(
+      listOf(DataplaneDiagnosticKind.SECRET_STORAGE, DataplaneDiagnosticKind.WORKLOAD_SCHEDULING),
+      dataplaneHealthService.unsupportedDiagnosticKinds("2.3.9", emptyList()),
+    )
   }
 
   @ParameterizedTest
   @ValueSource(strings = ["2.4.0", "2.4.1", "3.0.0"])
-  fun `unsupportedDiagnosticKinds leaves out workload scheduling from 2_4_0 on`(version: String) {
+  fun `unsupportedDiagnosticKinds leaves out every check from 2_4_0 on`(version: String) {
     assertEquals(emptyList<DataplaneDiagnosticKind>(), dataplaneHealthService.unsupportedDiagnosticKinds(version, emptyList()))
   }
 

@@ -51,6 +51,26 @@ interface DataplaneDiagnosticRepository : PageableRepository<DataplaneDiagnostic
     observation: String?,
   )
 
+  /**
+   * Deletes the data plane's results of one kind for targets it no longer reports. Only results checked
+   * before [checkedBefore] are deleted, so a late heartbeat can't delete newer results.
+   */
+  @Query(
+    """
+    DELETE FROM dataplane_diagnostic
+    WHERE dataplane_id = :dataplaneId
+      AND diagnostic_kind = :diagnosticKind
+      AND target_id NOT IN (:reportedTargetIds)
+      AND checked_at < :checkedBefore
+    """,
+  )
+  fun deleteUnreportedTargets(
+    dataplaneId: UUID,
+    diagnosticKind: String,
+    reportedTargetIds: Collection<UUID>,
+    checkedBefore: OffsetDateTime,
+  ): Int
+
   fun findByOrganizationIdAndDataplaneIdIn(
     organizationId: UUID,
     dataplaneIds: List<UUID>,
