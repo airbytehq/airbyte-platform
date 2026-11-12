@@ -1,4 +1,4 @@
-import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
+import { DataplaneHealthRead, DataplaneVersionSupportStatus } from "core/api/types/AirbyteClient";
 
 import { StatusLevel } from "./components/StatusCard";
 import { CardData, AgeMessage } from "./types";
@@ -65,3 +65,22 @@ export const getVersionCardData = (dataplane: DataplaneHealthRead): CardData => 
 
   return { level: "success", value: { text: version } };
 };
+
+const COMPATIBILITY_BY_SUPPORT_STATUS: Record<DataplaneVersionSupportStatus, CardData> = {
+  SUPPORTED: {
+    level: "success",
+    value: { messageId: "settings.organization.regions.dataplane.compatibility.supported" },
+  },
+  SUPPORT_ENDED: {
+    level: "error",
+    value: { messageId: "settings.organization.regions.dataplane.compatibility.notSupported" },
+  },
+  UNKNOWN: {
+    level: "neutral",
+    value: { messageId: "settings.organization.regions.dataplane.compatibility.unknown" },
+  },
+};
+
+// The server leaves the support out unless the data plane health UI is enabled, so there is no card without it.
+export const getCompatibilityCardData = (dataplane: DataplaneHealthRead): CardData | undefined =>
+  dataplane.dataplane_version_support && COMPATIBILITY_BY_SUPPORT_STATUS[dataplane.dataplane_version_support.status];

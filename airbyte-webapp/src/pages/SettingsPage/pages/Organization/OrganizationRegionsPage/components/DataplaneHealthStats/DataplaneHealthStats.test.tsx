@@ -115,4 +115,27 @@ describe("DataplaneHealthStats", () => {
       expect(screen.getByText("Unavailable")).toBeInTheDocument();
     });
   });
+
+  describe("with the version support", () => {
+    it.each([
+      ["SUPPORTED", "Supported"],
+      ["SUPPORT_ENDED", "Not supported"],
+      ["UNKNOWN", "Unknown"],
+    ] as const)("shows %s as %s", async (status, text) => {
+      await renderStats({ last_heartbeat_timestamp: Date.now(), dataplane_version_support: { status } });
+
+      expect(screen.getByText("Compatibility")).toBeInTheDocument();
+      expect(screen.getByText(text)).toBeInTheDocument();
+    });
+  });
+
+  describe("without the version support", () => {
+    beforeEach(async () => {
+      await renderStats({ last_heartbeat_timestamp: Date.now(), dataplane_version_support: undefined });
+    });
+
+    it("shows no compatibility card", () => {
+      expect(screen.queryByText("Compatibility")).not.toBeInTheDocument();
+    });
+  });
 });

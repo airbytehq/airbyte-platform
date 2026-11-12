@@ -1,6 +1,12 @@
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
-import { formatAge, getLastCheckInCardData, getVersionCardData, NEVER_CONNECTED } from "./utils";
+import {
+  formatAge,
+  getCompatibilityCardData,
+  getLastCheckInCardData,
+  getVersionCardData,
+  NEVER_CONNECTED,
+} from "./utils";
 
 const NOW = 100_000;
 
@@ -96,6 +102,23 @@ describe("getVersionCardData", () => {
     expect(getVersionCardData(dataplane({ dataplane_version: version }))).toEqual({
       level: "neutral",
       value: { messageId: "settings.organization.regions.dataplane.version.unavailable" },
+    });
+  });
+});
+
+describe("getCompatibilityCardData", () => {
+  it("has no card when the server omits the support", () => {
+    expect(getCompatibilityCardData(dataplane({ dataplane_version_support: undefined }))).toBeUndefined();
+  });
+
+  it.each([
+    ["SUPPORTED", "success", "supported"],
+    ["SUPPORT_ENDED", "error", "notSupported"],
+    ["UNKNOWN", "neutral", "unknown"],
+  ] as const)("maps %s to the %s level", (status, level, messageKey) => {
+    expect(getCompatibilityCardData(dataplane({ dataplane_version_support: { status } }))).toEqual({
+      level,
+      value: { messageId: `settings.organization.regions.dataplane.compatibility.${messageKey}` },
     });
   });
 });

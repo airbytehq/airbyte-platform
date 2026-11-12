@@ -11,7 +11,7 @@ import { useCurrentTime } from "core/utils/time";
 import { Diagnostics } from "./components/Diagnostics";
 import { StatusCard, StatusCardGrid } from "./components/StatusCard";
 import styles from "./DataplaneHealthStats.module.scss";
-import { getLastCheckInCardData, getVersionCardData } from "./utils";
+import { getCompatibilityCardData, getLastCheckInCardData, getVersionCardData } from "./utils";
 import { healthStatusBadgeVariant, healthStatusMessageId } from "../../healthStatus";
 import { HealthHistoryBar } from "../HealthHistoryBar";
 
@@ -36,6 +36,18 @@ const AirbyteVersionCard: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) 
     {...getVersionCardData(dataplane)}
   />
 );
+
+const CompatibilityCard: React.FC<DataplaneHealthStatsProps> = ({ dataplane }) => {
+  const cardData = getCompatibilityCardData(dataplane);
+
+  if (!cardData) {
+    return null;
+  }
+
+  return (
+    <StatusCard label={<FormattedMessage id="settings.organization.regions.dataplane.compatibility" />} {...cardData} />
+  );
+};
 
 const EnabledBadge: React.FC<{ enabled?: boolean }> = ({ enabled }) => {
   if (enabled === undefined) {
@@ -73,6 +85,7 @@ export const DataplaneHealthStats: React.FC<DataplaneHealthStatsProps> = ({ data
       <StatusCardGrid>
         <LastCheckInCard dataplane={dataplane} />
         <AirbyteVersionCard dataplane={dataplane} />
+        <CompatibilityCard dataplane={dataplane} />
       </StatusCardGrid>
 
       <Diagnostics dataplane={dataplane} />
