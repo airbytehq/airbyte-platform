@@ -250,8 +250,58 @@ internal class DataplaneHealthServiceTest {
   }
 
   @Test
-  fun `unsupportedDiagnosticKinds lists nothing while no check has a minimum version`() {
-    assertEquals(emptyList<DataplaneDiagnosticKind>(), dataplaneHealthService.unsupportedDiagnosticKinds("0.0.1", emptyList()))
+  fun `unsupportedDiagnosticKinds lists workload scheduling for a data plane older than 2_4_0`() {
+    assertEquals(listOf(DataplaneDiagnosticKind.WORKLOAD_SCHEDULING), dataplaneHealthService.unsupportedDiagnosticKinds("2.3.9", emptyList()))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["2.4.0", "2.4.1", "3.0.0"])
+  fun `unsupportedDiagnosticKinds leaves out workload scheduling from 2_4_0 on`(version: String) {
+    assertEquals(emptyList<DataplaneDiagnosticKind>(), dataplaneHealthService.unsupportedDiagnosticKinds(version, emptyList()))
+  }
+
+  @Test
+  fun `a saved workload scheduling observation reads back with its event times unchanged`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneId = UUID.randomUUID()
+    val checkedAt = OffsetDateTime.parse("2026-11-03T10:00:00Z")
+    val observation =
+      mapOf(
+        "blocked_count" to 1,
+        "longest_blocked_since" to 1_793_750_000_000L,
+        "last_scheduled" to mapOf("scheduled_at" to 1_793_749_000_000L, "workload_type" to "CHECK"),
+        "last_problem" to mapOf("observed_at" to 1_793_750_300_000L, "reason" to "Unschedulable", "message" to "0/3 nodes are available."),
+      )
+    val diagnostic =
+      DataplaneDiagnostic(
+        DataplaneDiagnosticKind.WORKLOAD_SCHEDULING,
+        dataplaneId,
+        DataplaneDiagnosticOutcome.Failed("UNSCHEDULABLE", "1 workload pod has waited more than 2 minutes for a node."),
+        checkedAt,
+        observation,
+      )
+    val savedObservation = slot<String>()
+
+    dataplaneHealthService.recordDiagnostics(dataplaneId, organizationId, listOf(diagnostic))
+
+    verify { diagnosticRepository.upsertLatest(any(), any(), any(), any(), any(), any(), any(), any(), capture(savedObservation)) }
+    val row =
+      diagnosticRow(
+        dataplaneId,
+        "WORKLOAD_SCHEDULING",
+        "FAILED",
+        checkedAt,
+        checkedAt.plusSeconds(30),
+        errorCode = "UNSCHEDULABLE",
+        errorMessage = "1 workload pod has waited more than 2 minutes for a node.",
+        observation = Jsons.deserialize(savedObservation.captured),
+      ).copy(targetId = dataplaneId)
+    every { diagnosticRepository.findByOrganizationIdAndDataplaneIdIn(organizationId, listOf(dataplaneId)) } returns listOf(row)
+
+    assertEquals(
+      listOf(SavedDataplaneDiagnostic(dataplaneId, diagnostic, checkedAt.plusSeconds(30))),
+      dataplaneHealthService.getDiagnostics(organizationId, listOf(dataplaneId)),
+    )
   }
 
   private fun unsupportedKinds(

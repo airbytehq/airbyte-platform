@@ -36,6 +36,9 @@ micronaut:
       core-pool-size: 1
     secret-storage-check:
       type: cached
+    workload-scheduling-probe:
+      type: scheduled
+      core-pool-size: 1
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   pod-sweeper:
@@ -119,6 +122,8 @@ airbyte:
     secret-storage-probe:
       rate: PT30M
       check-timeout: PT30S
+    workload-scheduling-probe:
+      rate: PT1M
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
     parallelism:
       default-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}

@@ -175,7 +175,7 @@ internal class SecretStorageCheckerTest {
     errorCode: String? = null,
     errorMessage: String? = null,
   ) = DataplaneDiagnosticResult(
-    kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+    kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
     targetId = target.secretStorageId,
     status = status,
     checkedAt = now.toEpochMilli(),

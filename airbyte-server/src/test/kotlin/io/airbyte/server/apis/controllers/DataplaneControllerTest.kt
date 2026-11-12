@@ -69,6 +69,9 @@ class DataplaneControllerTest {
     private const val TEST_DATAPLANE_VERSION = "test-123"
     private const val TEST_CONTROL_PLANE_VERSION = "1.0.0"
     private val CHECKED_AT = OffsetDateTime.of(2026, 11, 3, 10, 0, 0, 0, ZoneOffset.UTC)
+    private val BLOCKED_SINCE = CHECKED_AT.minusMinutes(5).toInstant().toEpochMilli()
+    private val SCHEDULED_AT = CHECKED_AT.minusMinutes(10).toInstant().toEpochMilli()
+    private val PROBLEM_OBSERVED_AT = CHECKED_AT.minusMinutes(2).toInstant().toEpochMilli()
 
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
@@ -340,7 +343,7 @@ class DataplaneControllerTest {
   fun `heartbeat records a not configured storage result`() {
     val notConfigured =
       DataplaneDiagnosticResult(
-        kind = ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY,
+        kind = ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY.value,
         targetId = UUID.randomUUID(),
         status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
         checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
@@ -372,6 +375,7 @@ class DataplaneControllerTest {
     val missingObservation = secretStorageResult(DataplaneDiagnosticStatus.PASSED).copy(observation = null)
     val errorCodeTooLong = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "E".repeat(257), errorMessage = "Access denied")
     val errorCodeAtLimit = secretStorageResult(DataplaneDiagnosticStatus.FAILED, errorCode = "E".repeat(256), errorMessage = "Access denied")
+    val unknownKind = secretStorageResult(DataplaneDiagnosticStatus.PASSED).copy(kind = "KIND_FROM_A_NEWER_DATA_PLANE")
 
     val (_, dataplaneId, recorded) =
       heartbeatWithDiagnostics(
@@ -384,6 +388,7 @@ class DataplaneControllerTest {
           missingScopeId,
           missingObservation,
           errorCodeTooLong,
+          unknownKind,
         ),
       )
 
@@ -401,6 +406,185 @@ class DataplaneControllerTest {
       )
     }
   }
+
+  @Test
+  fun `heartbeat records workload scheduling results for the data plane`() {
+    val dataplaneId = UUID.randomUUID()
+    val retainedProblem = mapOf("observed_at" to PROBLEM_OBSERVED_AT, "reason" to "Unschedulable", "message" to "0/3 nodes are available.")
+    val passedWithRetainedProblem =
+      schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0, "last_problem" to retainedProblem))
+    val emptyNamespace = schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0))
+    val failed =
+      schedulingResult(
+        dataplaneId,
+        DataplaneDiagnosticStatus.FAILED,
+        blockedObservation(),
+        errorCode = "UNSCHEDULABLE",
+        errorMessage = "1 workload pod has waited more than 2 minutes for a node.",
+      )
+    val unableToComplete =
+      schedulingResult(
+        dataplaneId,
+        DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+        blockedObservation() - "blocked_count" - "longest_blocked_since" - "longest_blocked_workload_type",
+        errorCode = "POD_LIST_FAILED",
+        errorMessage = "The launcher could not list pods in its jobs namespace.",
+      )
+    val firstScanForbidden =
+      schedulingResult(
+        dataplaneId,
+        DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+        emptyMap(),
+        errorCode = "ACCESS_DENIED",
+        errorMessage = "The launcher is not allowed to list pods in its jobs namespace.",
+      )
+
+    val (_, _, recorded) =
+      heartbeatWithDiagnostics(listOf(passedWithRetainedProblem, emptyNamespace, failed, unableToComplete, firstScanForbidden), dataplaneId)
+
+    val expected =
+      listOf(
+        expectedSchedulingDiagnostic(passedWithRetainedProblem, DataplaneDiagnosticOutcome.Passed),
+        expectedSchedulingDiagnostic(emptyNamespace, DataplaneDiagnosticOutcome.Passed),
+        expectedSchedulingDiagnostic(
+          failed,
+          DataplaneDiagnosticOutcome.Failed("UNSCHEDULABLE", "1 workload pod has waited more than 2 minutes for a node."),
+        ),
+        expectedSchedulingDiagnostic(
+          unableToComplete,
+          DataplaneDiagnosticOutcome.UnableToComplete("POD_LIST_FAILED", "The launcher could not list pods in its jobs namespace."),
+        ),
+        expectedSchedulingDiagnostic(
+          firstScanForbidden,
+          DataplaneDiagnosticOutcome.UnableToComplete("ACCESS_DENIED", "The launcher is not allowed to list pods in its jobs namespace."),
+        ),
+      )
+    Assertions.assertEquals(expected, recorded)
+  }
+
+  @Test
+  fun `heartbeat skips a workload scheduling result with an invalid target or observation`() {
+    val dataplaneId = UUID.randomUUID()
+    val valid = schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0))
+    val invalid =
+      listOf(
+        // Another target than the data plane.
+        schedulingResult(UUID.randomUUID(), DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0)),
+        // No, negative or non-integer blocked_count.
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, emptyMap()),
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to -1)),
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to "0")),
+        // Status and count disagree, or longest_blocked_since disagrees with the count.
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, blockedObservation()),
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0, "longest_blocked_since" to BLOCKED_SINCE)),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.FAILED,
+          mapOf("blocked_count" to 0),
+          errorCode = "UNSCHEDULABLE",
+          errorMessage = "Blocked",
+        ),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.FAILED,
+          mapOf("blocked_count" to 1),
+          errorCode = "UNSCHEDULABLE",
+          errorMessage = "Blocked",
+        ),
+        // An incomplete scan repeating counts as if it had measured them.
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+          mapOf("blocked_count" to 0),
+          errorCode = "POD_LIST_FAILED",
+          errorMessage = "Could not list",
+        ),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+          mapOf("longest_blocked_since" to BLOCKED_SINCE),
+          errorCode = "POD_LIST_FAILED",
+          errorMessage = "Could not list",
+        ),
+        // The longest wait's workload type missing, not a string, or present with nothing blocked or nothing measured.
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.FAILED,
+          blockedObservation() - "longest_blocked_workload_type",
+          errorCode = "UNSCHEDULABLE",
+          errorMessage = "Blocked",
+        ),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.FAILED,
+          blockedObservation() + ("longest_blocked_workload_type" to 1),
+          errorCode = "UNSCHEDULABLE",
+          errorMessage = "Blocked",
+        ),
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0, "longest_blocked_workload_type" to "SYNC")),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+          mapOf("longest_blocked_workload_type" to "SYNC"),
+          errorCode = "POD_LIST_FAILED",
+          errorMessage = "Could not list",
+        ),
+        // ISO strings instead of epoch milliseconds.
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.FAILED,
+          blockedObservation() + ("longest_blocked_since" to "2026-11-03T09:55:00Z"),
+          errorCode = "UNSCHEDULABLE",
+          errorMessage = "Blocked",
+        ),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.PASSED,
+          mapOf("blocked_count" to 0, "last_scheduled" to mapOf("scheduled_at" to "2026-11-03T09:50:00Z", "workload_type" to "SYNC")),
+        ),
+        // Malformed events.
+        schedulingResult(dataplaneId, DataplaneDiagnosticStatus.PASSED, mapOf("blocked_count" to 0, "last_scheduled" to "SYNC")),
+        schedulingResult(
+          dataplaneId,
+          DataplaneDiagnosticStatus.PASSED,
+          mapOf("blocked_count" to 0, "last_problem" to mapOf("observed_at" to PROBLEM_OBSERVED_AT, "reason" to "Unschedulable")),
+        ),
+      )
+
+    val (_, _, recorded) = heartbeatWithDiagnostics(listOf(valid) + invalid, dataplaneId)
+
+    Assertions.assertEquals(listOf(expectedSchedulingDiagnostic(valid, DataplaneDiagnosticOutcome.Passed)), recorded)
+  }
+
+  private fun blockedObservation() =
+    mapOf(
+      "blocked_count" to 1,
+      "longest_blocked_since" to BLOCKED_SINCE,
+      "longest_blocked_workload_type" to "SYNC",
+      "last_scheduled" to mapOf("scheduled_at" to SCHEDULED_AT, "workload_type" to "CHECK"),
+      "last_problem" to mapOf("observed_at" to PROBLEM_OBSERVED_AT, "reason" to "Unschedulable", "message" to "0/3 nodes are available."),
+    )
+
+  private fun schedulingResult(
+    targetId: UUID,
+    status: DataplaneDiagnosticStatus,
+    observation: Map<String, Any>,
+    errorCode: String? = null,
+    errorMessage: String? = null,
+  ) = DataplaneDiagnosticResult(
+    kind = ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING.value,
+    targetId = targetId,
+    status = status,
+    checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+    errorCode = errorCode,
+    errorMessage = errorMessage,
+    observation = observation,
+  )
+
+  private fun expectedSchedulingDiagnostic(
+    result: DataplaneDiagnosticResult,
+    outcome: DataplaneDiagnosticOutcome,
+  ) = expectedDiagnostic(result, outcome).copy(kind = DataplaneDiagnosticKind.WORKLOAD_SCHEDULING)
 
   private data class RecordedDiagnostics(
     val organizationId: UUID,
@@ -457,9 +641,11 @@ class DataplaneControllerTest {
     updatedAt = null,
   )
 
-  private fun heartbeatWithDiagnostics(diagnostics: List<DataplaneDiagnosticResult>?): RecordedDiagnostics {
+  private fun heartbeatWithDiagnostics(
+    diagnostics: List<DataplaneDiagnosticResult>?,
+    dataplaneId: UUID = UUID.randomUUID(),
+  ): RecordedDiagnostics {
     val clientId = "test-client-id"
-    val dataplaneId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val dataplane = createDataplane(dataplaneId)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, organizationId = organizationId)
@@ -478,7 +664,7 @@ class DataplaneControllerTest {
     errorCode: String? = null,
     errorMessage: String? = null,
   ) = DataplaneDiagnosticResult(
-    kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE,
+    kind = ApiDataplaneDiagnosticKind.SECRET_STORAGE.value,
     targetId = UUID.randomUUID(),
     status = status,
     checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
@@ -879,6 +1065,43 @@ class DataplaneControllerTest {
         dataplaneWithoutResults.id to emptyList(),
       )
     Assertions.assertEquals(expected, response.dataplanes.associate { it.dataplaneId to it.diagnostics })
+  }
+
+  @Test
+  fun `listDataplaneHealth returns a passed workload scheduling result with its retained problem and no error`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val updatedAt = CHECKED_AT.plusSeconds(30)
+    val observation =
+      mapOf(
+        "blocked_count" to 0,
+        "last_problem" to mapOf("observed_at" to PROBLEM_OBSERVED_AT, "reason" to "Unschedulable", "message" to "0/3 nodes are available."),
+      )
+    val saved =
+      DataplaneDiagnostic(DataplaneDiagnosticKind.WORKLOAD_SCHEDULING, dataplane.id, DataplaneDiagnosticOutcome.Passed, CHECKED_AT, observation)
+
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplane.id), false) } returns listOf(unknownHealthInfo(dataplane.id))
+    every { dataplaneHealthService.getDiagnostics(mockOrganizationId, listOf(dataplane.id)) } returns
+      listOf(SavedDataplaneDiagnostic(dataplane.id, saved, updatedAt))
+
+    val response = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId))
+
+    val expected =
+      listOf(
+        DataplaneDiagnosticRead(
+          kind = ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING,
+          targetId = dataplane.id,
+          status = DataplaneDiagnosticStatus.PASSED,
+          checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+          updatedAt = updatedAt.toInstant().toEpochMilli(),
+          observation = observation,
+        ),
+      )
+    Assertions.assertEquals(expected, response.dataplanes.single().diagnostics)
   }
 
   @Test

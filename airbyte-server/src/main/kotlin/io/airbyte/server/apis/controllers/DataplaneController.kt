@@ -316,6 +316,18 @@ open class DataplaneController(
     result: DataplaneDiagnosticResult,
     dataplaneId: UUID,
   ): DataplaneDiagnostic? {
+    val apiKind = ApiDataplaneDiagnosticKind.entries.find { it.value == result.kind }
+    if (apiKind == null) {
+      logger.warn { "Skipping ${result.kind} diagnostic for dataplane $dataplaneId, target ${result.targetId}: unknown kind" }
+      return null
+    }
+    val kind =
+      when (apiKind) {
+        ApiDataplaneDiagnosticKind.SECRET_STORAGE -> DataplaneDiagnosticKind.SECRET_STORAGE
+        ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY -> DataplaneDiagnosticKind.STORAGE_REACHABILITY
+        ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> DataplaneDiagnosticKind.WORKLOAD_SCHEDULING
+      }
+
     val errorCode = result.errorCode
     val errorMessage = result.errorMessage
     val hasError = !errorCode.isNullOrBlank() && !errorMessage.isNullOrBlank()
@@ -340,15 +352,10 @@ open class DataplaneController(
       return null
     }
 
-    val kind =
-      when (result.kind) {
-        ApiDataplaneDiagnosticKind.SECRET_STORAGE -> DataplaneDiagnosticKind.SECRET_STORAGE
-        ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY -> DataplaneDiagnosticKind.STORAGE_REACHABILITY
-      }
     val observation = result.observation.orEmpty()
-    val missingKeys = requiredObservationKeys(kind).filter { it !in observation }
-    if (missingKeys.isNotEmpty()) {
-      logger.warn { "Skipping $kind diagnostic for dataplane $dataplaneId, target ${result.targetId}: observation is missing $missingKeys" }
+    val observationProblems = diagnosticObservationProblems(kind, outcome, result.targetId, dataplaneId, observation)
+    if (observationProblems.isNotEmpty()) {
+      logger.warn { "Skipping $kind diagnostic for dataplane $dataplaneId, target ${result.targetId}: $observationProblems" }
       return null
     }
 
@@ -360,12 +367,6 @@ open class DataplaneController(
       observation = observation,
     )
   }
-
-  private fun requiredObservationKeys(kind: DataplaneDiagnosticKind): List<String> =
-    when (kind) {
-      DataplaneDiagnosticKind.SECRET_STORAGE -> listOf("scope_type", "scope_id")
-      DataplaneDiagnosticKind.STORAGE_REACHABILITY -> emptyList()
-    }
 
   private fun reportDataplaneMetric(
     metric: OssMetricsRegistry,
@@ -496,6 +497,7 @@ open class DataplaneController(
     when (kind) {
       DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
       DataplaneDiagnosticKind.STORAGE_REACHABILITY -> ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY
+      DataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING
     }
 
   private fun toDiagnosticRead(
@@ -519,6 +521,7 @@ open class DataplaneController(
         when (diagnostic.kind) {
           DataplaneDiagnosticKind.SECRET_STORAGE -> secretStorageNames[SecretStorageId(diagnostic.targetId)]
           DataplaneDiagnosticKind.STORAGE_REACHABILITY -> null
+          DataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> null
         },
       status = status,
       checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),

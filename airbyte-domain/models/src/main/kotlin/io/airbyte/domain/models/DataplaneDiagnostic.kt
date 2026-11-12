@@ -36,6 +36,11 @@ data class SavedDataplaneDiagnostic(
 enum class DataplaneDiagnosticKind {
   SECRET_STORAGE,
   STORAGE_REACHABILITY,
+
+  /**
+   * Whether workload pods are waiting for a node. The target is the data plane itself.
+   */
+  WORKLOAD_SCHEDULING,
 }
 
 sealed interface DataplaneDiagnosticOutcome {

@@ -63,7 +63,7 @@ internal class ScheduledDiagnosticProbeTest {
       targetId: UUID,
       run: Int,
     ) = DataplaneDiagnosticResult(
-      kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+      kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
       targetId = targetId,
       status = DataplaneDiagnosticStatus.PASSED,
       checkedAt = run.toLong(),

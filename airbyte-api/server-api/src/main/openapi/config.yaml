@@ -25769,6 +25769,7 @@ components:
       enum:
         - SECRET_STORAGE
         - STORAGE_REACHABILITY
+        - WORKLOAD_SCHEDULING
     DataplaneDiagnosticStatus:
       type: string
       description: Outcome of one check. UNABLE_TO_COMPLETE means the result is unknown; NOT_CONFIGURED means there was nothing to check.
@@ -25787,7 +25788,10 @@ components:
         - checked_at
       properties:
         kind:
-          $ref: "#/components/schemas/DataplaneDiagnosticKind"
+          type: string
+          description: >-
+            A DataplaneDiagnosticKind value. It is a plain string so that a server that does not know a newer kind
+            skips that result and still records the rest of the heartbeat.
         target_id:
           type: string
           format: uuid
@@ -25806,7 +25810,15 @@ components:
           description: Failure explanation that is safe to show the customer. Required unless status is PASSED.
         observation:
           type: object
-          description: Details specific to the kind of check.
+          description: >-
+            Details specific to the kind of check. SECRET_STORAGE sends scope_type and scope_id. WORKLOAD_SCHEDULING sends
+            blocked_count, longest_blocked_since, longest_blocked_workload_type, last_scheduled {scheduled_at,
+            workload_type} and last_problem {observed_at, reason, message}, with the data plane ID as target_id. Its
+            times are epoch milliseconds, and its workload types are SYNC, CHECK or DISCOVER. A field left out reads as
+            null: longest_blocked_since and longest_blocked_workload_type, which describe the pod that has waited
+            longest, are left out when nothing is blocked, and last_scheduled and last_problem until observed. An
+            UNABLE_TO_COMPLETE result leaves out blocked_count, longest_blocked_since and longest_blocked_workload_type,
+            because the scan measured nothing; its last_scheduled and last_problem come from earlier scans.
           additionalProperties: true
     DataplaneDiagnosticRead:
       type: object

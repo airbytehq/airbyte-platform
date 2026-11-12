@@ -259,7 +259,7 @@ internal class DataplaneIdentityServiceTest {
 
   private fun diagnosticResult() =
     DataplaneDiagnosticResult(
-      kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+      kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
       targetId = UUID.randomUUID(),
       status = DataplaneDiagnosticStatus.PASSED,
       checkedAt = 1_793_750_400_000L,

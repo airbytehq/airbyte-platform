@@ -148,7 +148,7 @@ internal class SecretStorageProbeTest {
     target: SecretStorageProbeTarget,
     status: DataplaneDiagnosticStatus,
   ) = DataplaneDiagnosticResult(
-    kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+    kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
     targetId = target.secretStorageId,
     status = status,
     checkedAt = 1_793_750_400_000L,

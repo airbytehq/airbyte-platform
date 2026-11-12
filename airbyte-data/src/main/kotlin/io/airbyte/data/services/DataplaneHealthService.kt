@@ -61,7 +61,11 @@ class DataplaneHealthService(
     /**
      * The first Airbyte release that has each check.
      */
-    val MINIMUM_DIAGNOSTIC_VERSIONS: Map<DataplaneDiagnosticKind, Version> = emptyMap()
+    val MINIMUM_DIAGNOSTIC_VERSIONS: Map<DataplaneDiagnosticKind, Version> =
+      mapOf(
+        // Provisional: update to the first release that contains the launcher's workload scheduling probe once it is published.
+        DataplaneDiagnosticKind.WORKLOAD_SCHEDULING to Version("2.4.0"),
+      )
 
     /**
      * How long a release is supported after it is published, from the Data Plane Version Publishing and Support Policy.
