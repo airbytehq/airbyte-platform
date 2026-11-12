@@ -58,6 +58,7 @@ export const sourcesKeys = {
         pageSize,
       },
     ] as const,
+  drafts: () => [...sourcesKeys.all, "drafts"] as const,
   detail: (sourceId: string) => [...sourcesKeys.all, "details", sourceId] as const,
   discoverSchema: (sourceId: string) => [...sourcesKeys.all, "discoverSchema", sourceId] as const,
   runDiscoverCommand: (commandId: string) => [...sourcesKeys.all, "runDiscover", commandId] as const,
@@ -99,6 +100,29 @@ export const useSourceList = ({
   });
 };
 
+/** The list endpoint has no draft filter, so the drafts come from one large page. */
+const DRAFT_LIST_PAGE_SIZE = 100;
+
+/**
+ * Lists the draft sources of the current workspace. Its key is outside `sourcesKeys.lists()`, so the create and delete
+ * hooks do not reset it. A caller that creates or deletes drafts refreshes it once with `useInvalidateDraftSourceList`.
+ */
+export const useDraftSourceList = (): SourceRead[] => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useSuspenseQuery(sourcesKeys.drafts(), async () => {
+    const { sources } = await listSourcesForWorkspace({ workspaceId, pageSize: DRAFT_LIST_PAGE_SIZE }, requestOptions);
+    return sources.filter((source) => source.isDraft);
+  });
+};
+
+export const useInvalidateDraftSourceList = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => queryClient.invalidateQueries(sourcesKeys.drafts()), [queryClient]);
+};
+
 export const useGetSource = <T extends string | undefined | null>(
   sourceId: T
 ): T extends string ? SourceRead : SourceRead | undefined => {
@@ -121,7 +145,8 @@ export const useInvalidateSource = <T extends string | undefined | null>(sourceI
   }, [queryClient, sourceId]);
 };
 
-export const useCreateSource = () => {
+/** `trackAnalytics: false` turns off the Segment event, for a caller whose source is not a resource milestone. */
+export const useCreateSource = ({ trackAnalytics = true }: { trackAnalytics?: boolean } = {}) => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
@@ -152,13 +177,15 @@ export const useCreateSource = () => {
     },
     {
       onSuccess: (_data, ctx) => {
-        analyticsService.track(Namespace.SOURCE, Action.CREATE, {
-          actionDescription: "Source created",
-          connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
-          connector_source: ctx.sourceConnector.name,
-          source_name: ctx.values.name,
-          setup_flow: ctx.values.setupFlow ?? "form",
-        });
+        if (trackAnalytics) {
+          analyticsService.track(Namespace.SOURCE, Action.CREATE, {
+            actionDescription: "Source created",
+            connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
+            connector_source: ctx.sourceConnector.name,
+            source_name: ctx.values.name,
+            setup_flow: ctx.values.setupFlow ?? "form",
+          });
+        }
         queryClient.resetQueries(sourcesKeys.lists());
       },
       onError,
@@ -166,7 +193,8 @@ export const useCreateSource = () => {
   );
 };
 
-export const useDeleteSource = () => {
+/** `trackAnalytics: false` turns off the Segment event, for a caller whose source is not a resource milestone. */
+export const useDeleteSource = ({ trackAnalytics = true }: { trackAnalytics?: boolean } = {}) => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
@@ -177,11 +205,13 @@ export const useDeleteSource = () => {
     (payload: { source: SourceRead }) => deleteSource({ sourceId: payload.source.sourceId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
-        analyticsService.track(Namespace.SOURCE, Action.DELETE, {
-          actionDescription: "Source deleted",
-          connector_source: ctx.source.sourceName,
-          connector_source_definition_id: ctx.source.sourceDefinitionId,
-        });
+        if (trackAnalytics) {
+          analyticsService.track(Namespace.SOURCE, Action.DELETE, {
+            actionDescription: "Source deleted",
+            connector_source: ctx.source.sourceName,
+            connector_source_definition_id: ctx.source.sourceDefinitionId,
+          });
+        }
 
         queryClient.removeQueries(sourcesKeys.detail(ctx.source.sourceId));
         queryClient.setQueriesData(sourcesKeys.lists(), (oldData: InfiniteData<SourceReadList> | undefined) => {

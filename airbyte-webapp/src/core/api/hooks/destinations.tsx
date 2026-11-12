@@ -50,6 +50,7 @@ export const destinationsKeys = {
         pageSize,
       },
     ] as const,
+  drafts: () => [...destinationsKeys.all, "drafts"] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
   discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
   catalogByConnectionId: (connectionId: string) =>
@@ -87,6 +88,33 @@ export const useDestinationList = ({
     getNextPageParam: (lastPage) =>
       lastPage.destinations.length < pageSize ? undefined : lastPage.destinations.at(-1)?.destinationId,
   });
+};
+
+/** The list endpoint has no draft filter, so the drafts come from one large page. */
+const DRAFT_LIST_PAGE_SIZE = 100;
+
+/**
+ * Lists the draft destinations of the current workspace. Its key is outside `destinationsKeys.lists()`, so the create
+ * and delete hooks do not reset it. A caller that creates or deletes drafts refreshes it once with
+ * `useInvalidateDraftDestinationList`.
+ */
+export const useDraftDestinationList = (): DestinationRead[] => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useSuspenseQuery(destinationsKeys.drafts(), async () => {
+    const { destinations } = await listDestinationsForWorkspace(
+      { workspaceId, pageSize: DRAFT_LIST_PAGE_SIZE },
+      requestOptions
+    );
+    return destinations.filter((destination) => destination.isDraft);
+  });
+};
+
+export const useInvalidateDraftDestinationList = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => queryClient.invalidateQueries(destinationsKeys.drafts()), [queryClient]);
 };
 
 export const useGetDestination = <T extends string | undefined | null>(
@@ -146,7 +174,8 @@ export const useCreateDestination = () => {
   );
 };
 
-export const useDeleteDestination = () => {
+/** `trackAnalytics: false` turns off the Segment event, for a caller whose destination is not a resource milestone. */
+export const useDeleteDestination = ({ trackAnalytics = true }: { trackAnalytics?: boolean } = {}) => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
@@ -158,11 +187,13 @@ export const useDeleteDestination = () => {
       deleteDestination({ destinationId: payload.destination.destinationId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
-        analyticsService.track(Namespace.DESTINATION, Action.DELETE, {
-          actionDescription: "Destination deleted",
-          connector_destination: ctx.destination.destinationName,
-          connector_destination_definition_id: ctx.destination.destinationDefinitionId,
-        });
+        if (trackAnalytics) {
+          analyticsService.track(Namespace.DESTINATION, Action.DELETE, {
+            actionDescription: "Destination deleted",
+            connector_destination: ctx.destination.destinationName,
+            connector_destination_definition_id: ctx.destination.destinationDefinitionId,
+          });
+        }
 
         queryClient.removeQueries(destinationsKeys.detail(ctx.destination.destinationId));
         queryClient.setQueriesData(

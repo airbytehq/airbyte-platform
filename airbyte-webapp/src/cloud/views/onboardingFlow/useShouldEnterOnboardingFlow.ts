@@ -13,7 +13,7 @@ interface OnboardingFlowAccess {
   isAdpOrganization: boolean;
 }
 
-const isInProgress = (status?: OrganizationOnboardingStatus) =>
+export const isInProgress = (status?: OrganizationOnboardingStatus) =>
   status !== undefined && !FINISHED_STATUSES.includes(status);
 
 /** ADP organizations never enter the flow. */

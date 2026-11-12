@@ -76,6 +76,21 @@ export const useCurrentOrganizationInfo = (): OrganizationInfoRead | undefined =
   });
 };
 
+/** Reads the organization info from the server, for a decision that must not use a cached onboarding status. */
+export const useFetchOrganizationInfo = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return (organizationId: string) =>
+    queryClient.fetchQuery(
+      organizationKeys.info(organizationId),
+      () => getOrgInfo({ organizationId }, requestOptions),
+      {
+        staleTime: 0,
+      }
+    );
+};
+
 export const useOrganization = (organizationId: string) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(organizationKeys.detail(organizationId), () =>

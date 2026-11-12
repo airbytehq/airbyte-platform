@@ -15,6 +15,8 @@ export interface RadioButtonTileOption<T> {
   label: React.ReactNode;
   description: React.ReactNode;
   extra?: React.ReactNode;
+  /** Shown at the right end of the tile, for example a connector logo. */
+  endIcon?: React.ReactNode;
   disabled?: boolean;
   tooltipContent?: React.ReactNode;
   "data-testid"?: string;
@@ -27,7 +29,7 @@ interface RadioButtonTileProps<T> {
 }
 
 export const RadioButtonTile = <T extends string>({ option, name, light }: RadioButtonTileProps<T>) => {
-  const { value, label, description, extra, disabled, "data-testid": testId, tooltipContent } = option;
+  const { value, label, description, extra, endIcon, disabled, "data-testid": testId, tooltipContent } = option;
 
   return (
     <Radio
@@ -58,6 +60,11 @@ export const RadioButtonTile = <T extends string>({ option, name, light }: Radio
               </Text>
               {extra && <Box mt="sm">{extra}</Box>}
             </div>
+            {endIcon && (
+              <FlexItem noShrink alignSelf="center" className={styles.radioButtonTiles__endIcon}>
+                {endIcon}
+              </FlexItem>
+            )}
           </FlexContainer>
         );
 

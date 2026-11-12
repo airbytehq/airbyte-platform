@@ -68,6 +68,7 @@ import GithubIcon from "./icons/github.svg?react";
 import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
+import GrowthIcon from "./icons/growthIcon.svg?react";
 import HelpIcon from "./icons/helpIcon.svg?react";
 import HourglassIcon from "./icons/hourglassIcon.svg?react";
 import HouseIcon from "./icons/houseIcon.svg?react";
@@ -143,6 +144,7 @@ import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
 import StatusWarningIcon from "./icons/statusWarningIcon.svg?react";
 import StopFilledIcon from "./icons/stopFilledIcon.svg?react";
 import StopOutlineIcon from "./icons/stopOutlineIcon.svg?react";
+import StoreIcon from "./icons/storeIcon.svg?react";
 import SuccessFilledIcon from "./icons/successFilledIcon.svg?react";
 import SuccessOutlineIcon from "./icons/successOutlineIcon.svg?react";
 import SuitcaseIcon from "./icons/suitcaseIcon.svg?react";
@@ -244,6 +246,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   globe: GlobeIcon,
   google: GoogleIcon,
   grid: GridIcon,
+  growth: GrowthIcon,
   help: HelpIcon,
   hourglass: HourglassIcon,
   house: HouseIcon,
@@ -319,6 +322,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusWarning: StatusWarningIcon,
   stopFilled: StopFilledIcon,
   stopOutline: StopOutlineIcon,
+  store: StoreIcon,
   successFilled: SuccessFilledIcon,
   successOutline: SuccessOutlineIcon,
   suitcase: SuitcaseIcon,

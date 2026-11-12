@@ -1,9 +1,11 @@
 import { Page } from "@playwright/test";
 
+import { dismissCookieBanner } from "./dismissCookieBanner";
 import { testEmail, testPassword } from "./testIdentity";
 
 export const registerUser = async (page: Page) => {
   await page.goto("./");
+  await dismissCookieBanner(page);
   // click on "Sign up" button
   await page.locator("text=Sign up").click({ noWaitAfter: true });
   // click "sign up using email" button

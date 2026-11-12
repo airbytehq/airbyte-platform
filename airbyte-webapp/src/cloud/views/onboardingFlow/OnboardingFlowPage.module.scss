@@ -18,4 +18,11 @@ $content-width: 672px;
     max-width: $content-width;
     margin: 0 auto;
   }
+
+  &__screens {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
 }

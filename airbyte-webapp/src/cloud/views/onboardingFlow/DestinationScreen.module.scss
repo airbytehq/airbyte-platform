@@ -1,0 +1,13 @@
+@use "scss/variables";
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-xl;
+
+  &__destinations {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: variables.$spacing-md;
+  }
+}

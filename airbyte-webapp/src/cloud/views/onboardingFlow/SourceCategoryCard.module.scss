@@ -1,0 +1,34 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  background-color: colors.$foreground;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-sm;
+
+  &:has(.category__heading[data-open]) {
+    border-color: colors.$grey-300;
+  }
+
+  &__heading {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: variables.$border-thick solid colors.$blue;
+    }
+  }
+
+  &__connectors {
+    display: flex;
+    flex-direction: column;
+    gap: variables.$spacing-md;
+  }
+}

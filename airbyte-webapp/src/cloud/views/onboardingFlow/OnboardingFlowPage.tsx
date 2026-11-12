@@ -16,9 +16,10 @@ import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useNotificationService } from "core/services/Notification";
 import { RoutePaths } from "pages/routePaths";
 
-import { OnboardingActionBar } from "./OnboardingActionBar";
 import styles from "./OnboardingFlowPage.module.scss";
 import { OnboardingHeader } from "./OnboardingHeader";
+import { OnboardingScreens, useOnboardingScreenState } from "./OnboardingScreens";
+import { PROGRESS_STEP_BY_SCREEN } from "./onboardingScreenSteps";
 import { useCanOpenOnboardingFlow } from "./useShouldEnterOnboardingFlow";
 
 const useSkipOnboarding = () => {
@@ -50,17 +51,20 @@ const OnboardingFlow: React.FC = () => {
   const workspace = useCurrentWorkspace();
   useRegisterWorkspaceContext(workspace);
   const { skip, isSkipping } = useSkipOnboarding();
+  const screenState = useOnboardingScreenState();
 
   return (
     <div className={styles.page}>
       <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
         <AdminWorkspaceWarning />
       </IfFeatureEnabled>
-      <OnboardingHeader currentStep="goal" />
+      <OnboardingHeader currentStep={PROGRESS_STEP_BY_SCREEN[screenState.screen]} />
       <main className={styles.page__body}>
         <AdpOrganizationAccessGuard>
           <div className={styles.page__content}>
-            <OnboardingActionBar onSkip={isSkipping ? undefined : skip} />
+            <fieldset disabled={isSkipping} className={styles.page__screens}>
+              <OnboardingScreens state={screenState} onSkip={skip} />
+            </fieldset>
           </div>
         </AdpOrganizationAccessGuard>
       </main>

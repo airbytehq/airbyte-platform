@@ -13,6 +13,8 @@ interface RadioButtonTilesProps<T> {
   direction?: ComponentProps<typeof FlexContainer>["direction"];
   /** When true, applies light styling variant with no border and reduced padding */
   light?: boolean;
+  /** Names the group for screen readers when no visible label is inside it. */
+  "aria-label"?: string;
 }
 
 export const RadioButtonTiles = <T extends string>({
@@ -22,9 +24,10 @@ export const RadioButtonTiles = <T extends string>({
   name,
   direction,
   light,
+  "aria-label": ariaLabel,
 }: RadioButtonTilesProps<T>) => {
   return (
-    <RadioGroup value={selectedValue} onChange={onSelectRadioButton}>
+    <RadioGroup value={selectedValue} onChange={onSelectRadioButton} aria-label={ariaLabel}>
       <FlexContainer direction={direction}>
         {options.map((option) => (
           <RadioButtonTile key={option.value} option={option} name={name} light={light} />
