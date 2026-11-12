@@ -9,4 +9,13 @@
   border: variables.$border-thin solid colors.$grey-100;
   border-radius: variables.$border-radius-md;
   background-color: colors.$grey-30;
+
+  // The link variant of the button has no color of its own, so it would fall back to a pale grey.
+  .detailsToggle {
+    color: colors.$dark-blue;
+
+    &:hover {
+      color: colors.$dark-blue-600;
+    }
+  }
 }

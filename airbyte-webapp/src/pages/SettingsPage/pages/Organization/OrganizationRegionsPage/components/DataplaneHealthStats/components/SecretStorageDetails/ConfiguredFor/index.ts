@@ -1,0 +1,1 @@
+export { ConfiguredFor } from "./ConfiguredFor";

@@ -1,25 +1,8 @@
-import {
-  DataplaneDiagnosticKind,
-  DataplaneDiagnosticRead,
-  DataplaneDiagnosticStatus,
-  DataplaneHealthRead,
-} from "core/api/types/AirbyteClient";
+import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
-import { formatAge, getSecretStorageCardData } from "./utils";
+import { formatAge, getLastCheckInCardData, getVersionCardData, NEVER_CONNECTED } from "./utils";
 
-const diagnostic = (
-  status: DataplaneDiagnosticStatus,
-  overrides: Partial<DataplaneDiagnosticRead> = {}
-): DataplaneDiagnosticRead => ({
-  kind: DataplaneDiagnosticKind.SECRET_STORAGE,
-  target_id: "store-1",
-  status,
-  checked_at: 1_000,
-  updated_at: 1_000,
-  ...overrides,
-});
-
-const NOW = 1_000 + 30_000;
+const NOW = 100_000;
 
 const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
   dataplane_id: "dp-1",
@@ -27,75 +10,92 @@ const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead
   dataplane_group_id: "group-1",
   organization_id: "org-1",
   status: "HEALTHY",
-  last_heartbeat_timestamp: NOW,
+  last_heartbeat_timestamp: NOW - 30_000,
   ...overrides,
 });
-const PREFIX = "settings.organization.regions.dataplane.diagnostics.secretStorage";
 
-describe("getSecretStorageCardData", () => {
-  it("returns nothing when there are no diagnostics", () => {
-    expect(getSecretStorageCardData(dataplane({ diagnostics: [] }), NOW)).toBeUndefined();
+describe("formatAge", () => {
+  it("uses seconds for an age under a minute", () => {
+    expect(formatAge(31_000)).toEqual({
+      messageId: "settings.organization.regions.dataplane.checkIn.seconds",
+      values: { seconds: 31 },
+    });
   });
 
-  it("returns nothing when the diagnostics are missing", () => {
-    expect(getSecretStorageCardData(dataplane({ diagnostics: undefined }), NOW)).toBeUndefined();
+  it("uses minutes for an age under an hour", () => {
+    expect(formatAge(72_000)).toEqual({
+      messageId: "settings.organization.regions.dataplane.checkIn.minutes",
+      values: { minutes: 1, seconds: 12 },
+    });
   });
 
-  it("returns nothing when no diagnostic is a secret store result", () => {
-    const otherKind = diagnostic(DataplaneDiagnosticStatus.FAILED, { kind: "OTHER" as DataplaneDiagnosticKind });
-    expect(getSecretStorageCardData(dataplane({ diagnostics: [otherKind] }), NOW)).toBeUndefined();
+  it("uses hours for an age under a day", () => {
+    expect(formatAge((60 * 60 + 13 * 60 + 12) * 1000)).toEqual({
+      messageId: "settings.organization.regions.dataplane.checkIn.hours",
+      values: { hours: 1, minutes: 13, seconds: 12 },
+    });
   });
 
-  it("is a success when every store passed", () => {
-    const stores = [
-      diagnostic(DataplaneDiagnosticStatus.PASSED),
-      diagnostic(DataplaneDiagnosticStatus.PASSED, { target_id: "store-2" }),
-    ];
-    expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)).toEqual({
+  it("uses days for an age of a day or more", () => {
+    expect(formatAge((26 * 60 * 60 + 5) * 1000)).toEqual({
+      messageId: "settings.organization.regions.dataplane.checkIn.days",
+      values: { days: 1, hours: 2 },
+    });
+  });
+
+  it("never reports a negative age", () => {
+    expect(formatAge(-5000).values).toEqual({ seconds: 0 });
+  });
+});
+
+describe("getLastCheckInCardData", () => {
+  it("is never connected for a data plane without a check-in", () => {
+    expect(getLastCheckInCardData(dataplane({ last_heartbeat_timestamp: undefined }), NOW)).toEqual(NEVER_CONNECTED);
+  });
+
+  it("is a success for a healthy data plane", () => {
+    expect(getLastCheckInCardData(dataplane({ status: "HEALTHY" }), NOW).level).toBe("success");
+  });
+
+  it("is a warning for a degraded data plane", () => {
+    expect(getLastCheckInCardData(dataplane({ status: "DEGRADED" }), NOW).level).toBe("warning");
+  });
+
+  it("is an error for an unhealthy data plane", () => {
+    expect(getLastCheckInCardData(dataplane({ status: "UNHEALTHY" }), NOW).level).toBe("error");
+  });
+
+  it("is neutral for a connected data plane whose status is unknown", () => {
+    expect(getLastCheckInCardData(dataplane({ status: "UNKNOWN" }), NOW).level).toBe("neutral");
+  });
+
+  it("shows the age of the last check-in", () => {
+    expect(getLastCheckInCardData(dataplane({}), NOW).value).toEqual(formatAge(30_000));
+  });
+});
+
+describe("getVersionCardData", () => {
+  it("is never connected for a data plane without a check-in", () => {
+    expect(getVersionCardData(dataplane({ last_heartbeat_timestamp: undefined, dataplane_version: "2.4.0" }))).toEqual(
+      NEVER_CONNECTED
+    );
+  });
+
+  it("is a success that shows the version", () => {
+    expect(getVersionCardData(dataplane({ dataplane_version: "2.4.0" }))).toEqual({
       level: "success",
-      value: { messageId: `${PREFIX}.yes` },
-      lastChecked: formatAge(30_000),
+      value: { text: "2.4.0" },
     });
   });
 
-  it("is an error when any store failed, even if another could not complete", () => {
-    const stores = [
-      diagnostic(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE),
-      diagnostic(DataplaneDiagnosticStatus.FAILED, { target_id: "store-2" }),
-      diagnostic(DataplaneDiagnosticStatus.PASSED, { target_id: "store-3" }),
-    ];
-    expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)).toEqual({
-      level: "error",
-      value: { messageId: `${PREFIX}.no` },
-      lastChecked: formatAge(30_000),
-    });
-  });
-
-  it("is neutral when none failed but one could not complete", () => {
-    const stores = [
-      diagnostic(DataplaneDiagnosticStatus.PASSED),
-      diagnostic(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, { target_id: "store-2" }),
-    ];
-    expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)).toEqual({
-      level: "warning",
-      value: { messageId: `${PREFIX}.incomplete` },
-      lastChecked: formatAge(30_000),
-    });
-  });
-
-  it("reports the age of the oldest result", () => {
-    const stores = [
-      diagnostic(DataplaneDiagnosticStatus.PASSED, { checked_at: 20_000 }),
-      diagnostic(DataplaneDiagnosticStatus.PASSED, { target_id: "store-2", checked_at: 1_000 }),
-    ];
-    expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)?.lastChecked).toEqual(formatAge(30_000));
-  });
-
-  it("is neutral and never connected for a data plane without a check-in", () => {
-    const neverConnected = dataplane({ last_heartbeat_timestamp: undefined });
-    expect(getSecretStorageCardData(neverConnected, NOW)).toEqual({
+  it.each([
+    ["the server stored unknown", "unknown"],
+    ["the version is missing", undefined],
+    ["the version is empty", ""],
+  ])("is neutral and unavailable when %s", (_description, version) => {
+    expect(getVersionCardData(dataplane({ dataplane_version: version }))).toEqual({
       level: "neutral",
-      value: { messageId: "settings.organization.regions.neverConnected" },
+      value: { messageId: "settings.organization.regions.dataplane.version.unavailable" },
     });
   });
 });

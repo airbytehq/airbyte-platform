@@ -1,25 +1,14 @@
-import {
-  DataplaneDiagnosticKind,
-  DataplaneDiagnosticRead,
-  DataplaneDiagnosticStatus,
-  DataplaneHealthRead,
-} from "core/api/types/AirbyteClient";
+import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
-import { StatusCardProps, StatusLevel } from "./components/StatusCard";
+import { StatusLevel } from "./components/StatusCard";
+import { CardData, AgeMessage } from "./types";
 import { healthStatusMessageId } from "../../healthStatus";
-
-export type CardData = Pick<StatusCardProps, "level" | "value">;
 
 // A data plane without a check-in always has the UNKNOWN status.
 export const NEVER_CONNECTED: CardData = {
   level: "neutral",
   value: { messageId: healthStatusMessageId.UNKNOWN },
 };
-
-export interface AgeMessage {
-  messageId: string;
-  values: Record<string, number>;
-}
 
 export const formatAge = (ageMs: number): AgeMessage => {
   const totalSeconds = Math.max(0, Math.floor(ageMs / 1000));
@@ -40,57 +29,39 @@ export const formatAge = (ageMs: number): AgeMessage => {
   return { messageId: "settings.organization.regions.dataplane.checkIn.seconds", values: { seconds } };
 };
 
-interface SecretStorageCardData extends CardData {
-  // Absent when there is no check to date, such as for a data plane that never connected.
-  lastChecked?: AgeMessage;
-}
+const UNKNOWN_VERSION = "unknown";
 
-type SecretStorageSummary = "yes" | "no" | "incomplete";
-
-const SECRET_STORAGE_MESSAGE_ID = "settings.organization.regions.dataplane.diagnostics.secretStorage";
-
-const SECRET_STORAGE_SUMMARY: Record<SecretStorageSummary, { level: StatusLevel; messageId: string }> = {
-  yes: { level: "success", messageId: `${SECRET_STORAGE_MESSAGE_ID}.yes` },
-  no: { level: "error", messageId: `${SECRET_STORAGE_MESSAGE_ID}.no` },
-  incomplete: { level: "warning", messageId: `${SECRET_STORAGE_MESSAGE_ID}.incomplete` },
+const LEVEL_BY_HEALTH_STATUS: Record<DataplaneHealthRead["status"], StatusLevel> = {
+  HEALTHY: "success",
+  DEGRADED: "warning",
+  UNHEALTHY: "error",
+  UNKNOWN: "neutral",
 };
 
-// Any failure wins, then a check that could not complete.
-const summarizeSecretStorage = (results: DataplaneDiagnosticRead[]): SecretStorageSummary => {
-  if (results.some((result) => result.status === DataplaneDiagnosticStatus.FAILED)) {
-    return "no";
-  }
-  if (results.some((result) => result.status === DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE)) {
-    return "incomplete";
-  }
-  return "yes";
-};
-
-// lastChecked is the age of the oldest result, since the summary is only as fresh as its stalest store.
-// A data plane that never connected has no results to summarize, so it is shown as never connected.
-// Returns undefined when a connected data plane has reported no secret store result, so no card is shown.
-export const getSecretStorageCardData = (
-  dataplane: DataplaneHealthRead,
-  now: number
-): SecretStorageCardData | undefined => {
+export const getLastCheckInCardData = (dataplane: DataplaneHealthRead, now: number): CardData => {
   if (dataplane.last_heartbeat_timestamp === undefined) {
     return NEVER_CONNECTED;
   }
 
-  const secretStorageList = (dataplane.diagnostics ?? []).filter(
-    (diagnostic) => diagnostic.kind === DataplaneDiagnosticKind.SECRET_STORAGE
-  );
+  return {
+    level: LEVEL_BY_HEALTH_STATUS[dataplane.status],
+    value: formatAge(now - dataplane.last_heartbeat_timestamp),
+  };
+};
 
-  if (secretStorageList.length === 0) {
-    return undefined;
+// The server stores "unknown" when a check-in carries no version, so a connected data plane can lack one.
+export const getVersionCardData = (dataplane: DataplaneHealthRead): CardData => {
+  if (dataplane.last_heartbeat_timestamp === undefined) {
+    return NEVER_CONNECTED;
   }
 
-  const oldestCheckedAt = Math.min(...secretStorageList.map((result) => result.checked_at));
-  const { level, messageId } = SECRET_STORAGE_SUMMARY[summarizeSecretStorage(secretStorageList)];
+  const version = dataplane.dataplane_version;
+  if (!version || version === UNKNOWN_VERSION) {
+    return {
+      level: "neutral",
+      value: { messageId: "settings.organization.regions.dataplane.version.unavailable" },
+    };
+  }
 
-  return {
-    level,
-    value: { messageId },
-    lastChecked: formatAge(now - oldestCheckedAt),
-  };
+  return { level: "success", value: { text: version } };
 };

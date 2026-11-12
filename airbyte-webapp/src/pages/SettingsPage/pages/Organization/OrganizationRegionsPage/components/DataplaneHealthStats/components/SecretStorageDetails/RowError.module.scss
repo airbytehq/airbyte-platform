@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.error {
+  padding: 0 variables.$spacing-lg variables.$spacing-md;
+}
