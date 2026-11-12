@@ -106,7 +106,7 @@ internal class SecretStorageProbeTest {
   fun `no stores reports not configured`() {
     val notConfigured =
       DataplaneDiagnosticResult(
-        kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+        kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
         targetId = dataplane.dataplaneId,
         status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
         checkedAt = 1_793_750_400_000L,

@@ -101,7 +101,7 @@ class SecretStorageChecker(
     organizationId: UUID,
   ): DataplaneDiagnosticResult =
     DataplaneDiagnosticResult(
-      kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+      kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
       targetId = dataplaneId,
       status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
       checkedAt = clock.millis(),

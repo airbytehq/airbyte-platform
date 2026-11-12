@@ -152,7 +152,7 @@ internal class SecretStorageCheckerTest {
 
     assertEquals(
       DataplaneDiagnosticResult(
-        kind = DataplaneDiagnosticKind.SECRET_STORAGE,
+        kind = DataplaneDiagnosticKind.SECRET_STORAGE.value,
         targetId = dataplaneId,
         status = DataplaneDiagnosticStatus.NOT_CONFIGURED,
         checkedAt = now.toEpochMilli(),
