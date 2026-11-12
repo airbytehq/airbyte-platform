@@ -542,4 +542,36 @@ class GoogleSecretManagerPersistenceTest {
       mockGoogleClient.deleteSecret(any<SecretName>())
     }
   }
+
+  @Test
+  fun `closing a persistence with a runtime client closes the Google client`() {
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.close() } just Runs
+    val gsmClient = RuntimeGoogleSecretManagerClient(mockGoogleClient, GoogleSecretsManagerRuntimeConfig("test-project", "{}", ""))
+
+    GoogleSecretManagerPersistence(gsmClient, mockk()).close()
+
+    verify(exactly = 1) { mockGoogleClient.close() }
+  }
+
+  @Test
+  fun `closing a persistence with the system client leaves the Google client open`() {
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    mockkObject(GoogleSecretManagerClient.Companion)
+    every { GoogleSecretManagerClient.clientForCredentials(any<String>(), any<String>()) } returns mockGoogleClient
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "",
+        ),
+      )
+    // Builds the shared client, so there is one to leave open.
+    gsmClient.getClient()
+
+    GoogleSecretManagerPersistence(gsmClient, mockk()).close()
+
+    verify(exactly = 0) { mockGoogleClient.close() }
+  }
 }

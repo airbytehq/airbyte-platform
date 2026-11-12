@@ -42,6 +42,7 @@ internal class SecretStorageCheckerTest {
     hydrator = mockk()
     persistence = mockk()
     every { hydrator.getPersistenceByStorageId(target.secretStorageId) } returns persistence
+    every { hydrator.release(persistence) } just runs
     every { persistence.write(testSecret, testSecretValue) } just runs
     checker = SecretStorageChecker(Provider { hydrator }, Clock.fixed(now, ZoneOffset.UTC))
   }
@@ -115,6 +116,24 @@ internal class SecretStorageCheckerTest {
       expected(DataplaneDiagnosticStatus.FAILED, SecretStorageChecker.READ_FAILED, "The data plane could not read from this secret store."),
       checker.check(target, organizationId),
     )
+  }
+
+  @Test
+  fun `the store is released after a check that passes`() {
+    every { persistence.read(testSecret) } returns testSecretValue
+
+    checker.check(target, organizationId)
+
+    verify(exactly = 1) { hydrator.release(persistence) }
+  }
+
+  @Test
+  fun `the store is released after a check that fails`() {
+    every { persistence.read(testSecret) } throws RuntimeException("connection reset")
+
+    checker.check(target, organizationId)
+
+    verify(exactly = 1) { hydrator.release(persistence) }
   }
 
   @Test

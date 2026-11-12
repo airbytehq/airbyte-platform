@@ -54,7 +54,8 @@ private val logger = KotlinLogging.logger {}
 class GoogleSecretManagerPersistence(
   private val gsmClient: GoogleSecretManagerClient,
   private val metricClient: MetricClient,
-) : SecretPersistence {
+) : SecretPersistence,
+  AutoCloseable {
   override fun read(coordinate: SecretCoordinate): String = gsmClient.getSecret(coordinate)
 
   override fun write(
@@ -91,6 +92,11 @@ class GoogleSecretManagerPersistence(
   override fun delete(coordinate: AirbyteManagedSecretCoordinate) = gsmClient.deleteSecret(coordinate)
 
   override fun disable(coordinate: AirbyteManagedSecretCoordinate) = gsmClient.disableAllSecretVersions(coordinate)
+
+  // Only a runtime client can be closed. The shared environment client stays open.
+  override fun close() {
+    (gsmClient as? AutoCloseable)?.close()
+  }
 }
 
 data class GoogleSecretsManagerRuntimeConfig(
@@ -282,12 +288,15 @@ interface GoogleSecretManagerClient {
 class RuntimeGoogleSecretManagerClient(
   private val delegateClient: SecretManagerServiceClient,
   private val config: GoogleSecretsManagerRuntimeConfig,
-) : GoogleSecretManagerClient {
+) : GoogleSecretManagerClient,
+  AutoCloseable {
   override fun getClient(): SecretManagerServiceClient = delegateClient
 
   override fun getProjectId(): String = config.projectId
 
   override fun getRegion(): String? = config.region
+
+  override fun close() = delegateClient.close()
 }
 
 @Singleton

@@ -21,10 +21,13 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.workers.helper.toConfigModel
+import io.mockk.Called
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.runs
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -269,4 +272,35 @@ class ConnectorSecretsHydratorTest {
 
     Assertions.assertEquals(hydratedConfig, result)
   }
+
+  @Test
+  fun `release closes a persistence built for one store`() {
+    val storePersistence = mockk<SecretPersistence>(moreInterfaces = arrayOf(AutoCloseable::class))
+    every { (storePersistence as AutoCloseable).close() } just runs
+
+    hydratorForRelease(environmentSecretPersistence).release(storePersistence)
+
+    verify(exactly = 1) { (storePersistence as AutoCloseable).close() }
+  }
+
+  @Test
+  fun `release leaves the environment persistence open`() {
+    val closeableEnvironmentPersistence = mockk<SecretPersistence>(moreInterfaces = arrayOf(AutoCloseable::class))
+
+    hydratorForRelease(closeableEnvironmentPersistence).release(closeableEnvironmentPersistence)
+
+    verify(exactly = 0) { (closeableEnvironmentPersistence as AutoCloseable).close() }
+  }
+
+  @Test
+  fun `release ignores a persistence that can't be closed`() {
+    val storePersistence = mockk<SecretPersistence>()
+
+    hydratorForRelease(environmentSecretPersistence).release(storePersistence)
+
+    verify { storePersistence wasNot Called }
+  }
+
+  private fun hydratorForRelease(environment: SecretPersistence) =
+    ConnectorSecretsHydrator(mockk(), mockk(), true, environment, runtimeSecretPersistenceFactory)
 }

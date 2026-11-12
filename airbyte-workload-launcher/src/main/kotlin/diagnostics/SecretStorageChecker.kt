@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.DataplaneDiagnosticResult
 import io.airbyte.api.client.model.generated.DataplaneDiagnosticStatus
 import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.exceptions.BeanContextException
@@ -54,6 +55,19 @@ class SecretStorageChecker(
         return result(target, DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, STORE_UNAVAILABLE, "Airbyte could not load this secret store's settings.")
       }
 
+    // Runs however the check ends, including when the probe's timeout cancels it.
+    return try {
+      checkTestSecret(target, persistence, organizationId)
+    } finally {
+      hydrator.release(persistence)
+    }
+  }
+
+  private fun checkTestSecret(
+    target: SecretStorageProbeTarget,
+    persistence: SecretPersistence,
+    organizationId: UUID,
+  ): DataplaneDiagnosticResult {
     val testSecret = testSecret(organizationId)
     val value =
       try {

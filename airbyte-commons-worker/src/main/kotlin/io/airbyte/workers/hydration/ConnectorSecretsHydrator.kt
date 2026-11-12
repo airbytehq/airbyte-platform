@@ -41,6 +41,13 @@ class ConnectorSecretsHydrator(
     }
   }
 
+  // Closes a persistence that getPersistenceByStorageId built for one store. The environment one is shared, so it stays open.
+  fun release(persistence: SecretPersistence) {
+    if (persistence !== environmentSecretPersistence) {
+      (persistence as? AutoCloseable)?.close()
+    }
+  }
+
   private fun getLegacyPersistenceByOrgId(organizationId: UUID): SecretPersistence {
     val secretPersistenceConfig: SecretPersistenceConfig
     try {
