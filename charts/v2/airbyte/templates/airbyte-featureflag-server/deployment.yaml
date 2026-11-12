@@ -130,7 +130,7 @@ spec:
           mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
           readOnly: true
         {{- end }}
-        {{- if .Values.featureflagServer.extraVolumeMount }}
+        {{- if .Values.featureflagServer.extraVolumeMounts }}
 {{- toYaml .Values.featureflagServer.extraVolumeMounts | nindent 8 }}
         {{- end }}
         {{- if .Values.global.extraVolumeMounts }}
