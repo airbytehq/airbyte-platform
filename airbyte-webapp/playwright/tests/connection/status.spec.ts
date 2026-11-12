@@ -1,59 +1,87 @@
-import { pendingConnectionScenario, manualSyncScenario } from "./status.scenarios";
+/**
+ * Connection Status tests. They run against the mock backend in playwright/mock.
+ *
+ * Each test is one user journey. Its `test.step` blocks continue on the same page, in order. Checks that only read
+ * the page use `expect.soft`, so one failed check does not hide the checks after it.
+ */
+import type { Page } from "@playwright/test";
+
 import { connectionUI } from "../../helpers/connection";
-import { test, expect } from "../../helpers/frontendTest";
+import { catalogs, connection, defs, destination, expect, scenario, source, test } from "../../mock";
 
-test.describe("Connection Status - mocked API", () => {
-  test.describe("Pending connection", () => {
-    test.use({ airbyteScenario: pendingConnectionScenario });
+/** A PokeAPI → E2E Testing connection that has never synced. Its pokemon stream is selected. */
+const pokeConnection = connection({
+  source: source({ def: defs.pokeApiSource }),
+  destination: destination({ def: defs.e2eTestingDestination }),
+  catalog: catalogs.pokeApi({ selected: true }),
+});
 
-    test("renders pending status returned by the API", async ({ page, airbyte }) => {
-      const connection = airbyte.connections[0];
-      await connectionUI.visit(page, connection, "status");
-      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "pending");
-      expect(airbyte.requests).toContainEqual({
-        key: "POST /api/v1/connections/status",
-        body: { connectionIds: [connection.connectionId] },
-      });
+/** The status indicator at the top of the Status tab. Its `data-status` attribute is the status of the connection. */
+const statusIndicator = (page: Page) => page.getByTestId("connection-status-indicator");
+const syncButton = (page: Page) => page.getByTestId("manual-sync-button");
+const cancelButton = (page: Page) => page.getByTestId("cancel-sync-button");
+
+test.describe(() => {
+  test.use({ airbyteScenario: scenario({ connections: [pokeConnection] }) });
+
+  test("start and cancel a sync on the Status tab", async ({ page, airbyte }) => {
+    const { connectionId } = airbyte.store.connections.get(pokeConnection);
+    // By default, the mock ends a sync the first time the page asks for its status. hold() keeps the sync running, so
+    // the page shows the running sync and the user can cancel it.
+    airbyte.jobs.hold();
+
+    await test.step("open the Status tab", async () => {
+      await page.goto(airbyte.paths.connection(pokeConnection, "status"));
     });
-  });
 
-  test.describe("Manual sync", () => {
-    test.use({ airbyteScenario: manualSyncScenario });
+    await test.step("the connection is pending, because it has never synced", async () => {
+      await expect.soft(statusIndicator(page)).toHaveAttribute("data-status", "pending");
+      await expect.soft(syncButton(page)).toBeEnabled();
+    });
 
-    test("starts and cancels a manual sync, preserving cancellation after reload", async ({ page, airbyte }) => {
-      const connection = airbyte.connections[0];
-      await connectionUI.visit(page, connection, "status");
-      await expect(page.getByTestId("manual-sync-button")).toBeEnabled();
+    await test.step("the webapp asks the server for the status of the connection", async () => {
+      expect.soft(airbyte.calls("getConnectionStatuses")).toContainEqual({ connectionIds: [connectionId] });
+    });
 
+    await test.step("start a sync", async () => {
       await connectionUI.startManualSync(page);
-      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "running");
-      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-loading", "true");
-      await expect(page.getByTestId("streams-list-subtitle")).toContainText("Sync starting");
-      await expect(page.getByTestId("manual-sync-button")).toBeHidden();
-      await expect(page.getByTestId("cancel-sync-button")).toBeEnabled();
-      expect(airbyte.requests).toContainEqual({
-        key: "POST /api/v1/connections/sync",
-        body: { connectionId: connection.connectionId },
-      });
-      expect(airbyte.jobs.list()).toHaveLength(1);
-      const job = airbyte.jobs.latestForConnection(connection.connectionId)!;
-      expect(job).toMatchObject({ configId: connection.connectionId, configType: "sync", status: "running" });
 
+      await expect(statusIndicator(page)).toHaveAttribute("data-status", "running");
+    });
+
+    await test.step("the sync is starting, and only the cancel button shows", async () => {
+      await expect.soft(statusIndicator(page)).toHaveAttribute("data-loading", "true");
+      await expect.soft(page.getByTestId("streams-list-subtitle")).toContainText("Sync starting");
+      await expect.soft(syncButton(page)).toBeHidden();
+      await expect.soft(cancelButton(page)).toBeEnabled();
+    });
+
+    await test.step("the webapp asks the server to sync the connection once", async () => {
+      expect.soft(airbyte.calls("syncConnection")).toEqual([{ connectionId }]);
+    });
+
+    await test.step("cancel the sync", async () => {
       await connectionUI.cancelSync(page);
-      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "incomplete");
-      await expect(page.getByTestId("manual-sync-button")).toBeEnabled();
-      expect(airbyte.requests).toContainEqual({ key: "POST /api/v1/jobs/cancel", body: { id: job.id } });
-      expect(airbyte.jobs.latestForConnection(connection.connectionId)).toMatchObject({
-        id: job.id,
-        status: "cancelled",
-      });
-      expect(airbyte.connections[0].isSyncing).toBe(false);
-      expect(job.status).toBe("running");
 
+      await expect(statusIndicator(page)).toHaveAttribute("data-status", "incomplete");
+    });
+
+    await test.step("the sync button shows again", async () => {
+      await expect.soft(syncButton(page)).toBeEnabled();
+    });
+
+    await test.step("the webapp asks the server to cancel the sync job", async () => {
+      expect.soft(airbyte.calls("cancelJob")).toEqual([{ id: airbyte.jobs.latest().job.id }]);
+    });
+
+    await test.step("reload the page", async () => {
       await page.reload();
-      await expect(page.getByTestId("connection-status-indicator")).toHaveAttribute("data-status", "incomplete");
-      await expect(page.getByTestId("manual-sync-button")).toBeEnabled();
-      await expect(page.getByTestId("cancel-sync-button")).toBeHidden();
+    });
+
+    await test.step("the connection stays incomplete, and the sync button shows", async () => {
+      await expect.soft(statusIndicator(page)).toHaveAttribute("data-status", "incomplete");
+      await expect.soft(syncButton(page)).toBeEnabled();
+      await expect.soft(cancelButton(page)).toBeHidden();
     });
   });
 });

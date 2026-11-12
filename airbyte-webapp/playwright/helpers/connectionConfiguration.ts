@@ -10,23 +10,6 @@ import { connectionUI } from "./connection";
  * For generic connection helpers, see connection.ts
  */
 
-type ConnectionTab = "" | "status" | "settings" | "replication" | "timeline";
-
-// High-level connection settings test helpers
-export const connectionSettings = {
-  // Verify element is disabled on deleted connection pages
-  verifyElementDisabled: async (page: Page, testId: string): Promise<void> => {
-    const element = page.locator(`[data-testid="${testId}"]`);
-    return expect(element).toBeDisabled({ timeout: 10000 });
-  },
-
-  // Verify element is not visible
-  verifyElementNotVisible: async (page: Page, selector: string): Promise<void> => {
-    const element = page.locator(selector);
-    return expect(element).not.toBeVisible({ timeout: 10000 });
-  },
-};
-
 // Connection deletion helpers
 export const connectionDeletion = {
   // Complete connection deletion flow
@@ -51,27 +34,5 @@ export const connectionDeletion = {
     await confirmDeleteButton.click();
 
     return expect(page).toHaveURL(new RegExp(`/workspaces/${workspaceId}/connections`), { timeout: 15000 });
-  },
-
-  // Navigate to a deleted connection page
-  navigateToDeleted: async (
-    page: Page,
-    workspaceId: string,
-    connectionId: string,
-    tab: ConnectionTab
-  ): Promise<void> => {
-    const url = tab
-      ? `/workspaces/${workspaceId}/connections/${connectionId}/${tab}`
-      : `/workspaces/${workspaceId}/connections/${connectionId}`;
-    await page.goto(url, { timeout: 20000 });
-  },
-
-  // Verify deleted connection warning message
-  verifyDeletedMessage: async (page: Page): Promise<void> => {
-    const deletedMessage = page
-      .locator("div")
-      .filter({ hasText: /^This connection has been deleted/ })
-      .first();
-    return expect(deletedMessage).toBeVisible({ timeout: 10000 });
   },
 };

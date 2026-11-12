@@ -1,5 +1,5 @@
 import { Page, expect, Locator } from "@playwright/test";
-import { SourceRead, DestinationRead, SyncMode, DestinationSyncMode } from "@src/core/api/types/AirbyteClient";
+import { SyncMode, DestinationSyncMode } from "@src/core/api/types/AirbyteClient";
 
 // This file contains helper methods for connection creation UI interactions
 
@@ -16,40 +16,6 @@ export interface SyncModeValue {
  * Sync mode display strings that match the UI format
  */
 export type SyncModeDisplayString = string;
-
-/**
- * Navigate to connection configuration page and wait for streams table to load
- */
-export const navigateToConnectionConfig = async (
-  page: Page,
-  workspaceId: string,
-  source: SourceRead,
-  destination: DestinationRead,
-  options: {
-    setupDiscoverSchemaIntercept?: boolean;
-    timeout?: number;
-  } = {}
-): Promise<void> => {
-  const { setupDiscoverSchemaIntercept = true, timeout = 20000 } = options;
-
-  if (setupDiscoverSchemaIntercept) {
-    // Set up API interceptor for discover schema request
-    await page.route("**/sources/discover_schema", async (route) => {
-      await route.continue();
-    });
-  }
-
-  // Navigate directly to the configuration page with source and destination
-  const configUrl = `/workspaces/${workspaceId}/connections/new-connection/configure?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`;
-  await page.goto(configUrl, { timeout });
-
-  // Wait for the streams table to load
-  const streamsTable = page.locator('table[data-testid="sync-catalog-table"]');
-  await streamsTable.waitFor({ state: "visible", timeout: 90000 });
-  await streamsTable.scrollIntoViewIfNeeded();
-  // Also wait for actual stream content to ensure the table is fully populated
-  await page.waitForSelector('[data-testid^="row-depth-1-stream"]', { timeout: 15000 });
-};
 
 /**
  * Converts SyncModeValue to display string format

@@ -17,9 +17,9 @@ function promoteDraft(store: Store, actorId: string) {
 }
 
 /**
- * Connection checks. The webapp starts a check, polls its status every 2 seconds until it is done, then reads the
- * output. mock/commands.ts keeps the checks and ends a check that the test does not hold. mock/lifecycle.ts lets a
- * test hold a check and end it.
+ * Connection checks and schema discoveries. The webapp starts a command, polls its status every 2 seconds until it is
+ * done, then reads the output. mock/commands.ts keeps the commands and ends a command that the test does not hold.
+ * mock/lifecycle.ts lets a test hold a check and end it.
  */
 export const commandHandlers: HandlerMap = {
   runCheckCommand: ({ body, store }) => ({ id: store.commands.startCheck(body).id }),
@@ -30,7 +30,7 @@ export const commandHandlers: HandlerMap = {
   },
 
   getCheckCommandOutput: ({ body, store }) => {
-    const command = store.commands.find(body.id);
+    const command = store.commands.findCheck(body.id);
     if (!command) {
       return notFound();
     }
@@ -39,6 +39,18 @@ export const commandHandlers: HandlerMap = {
     }
     if (command.output.status === "succeeded" && command.request.actor_id) {
       promoteDraft(store, command.request.actor_id);
+    }
+    return { id: command.id, ...command.output };
+  },
+
+  /** The source must exist. The catalog that the discovery finds comes from the scenario (`outcomes.discover`). */
+  runDiscoverCommand: ({ body, store }) =>
+    store.sources.find(body.actor_id) ? { id: store.commands.startDiscovery(body).id } : notFound(),
+
+  getDiscoverCommandOutput: ({ body, store }) => {
+    const command = store.commands.findDiscovery(body.id);
+    if (!command) {
+      return notFound();
     }
     return { id: command.id, ...command.output };
   },

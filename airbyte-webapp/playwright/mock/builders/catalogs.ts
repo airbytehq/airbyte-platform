@@ -96,7 +96,7 @@ function configure(
 
 /**
  * Catalogs as source discovery returns them. Each call returns a new object.
- * The catalog data comes from helpers/mocks.ts, which the older mocked tests also use.
+ * The catalog data comes from helpers/mocks.ts.
  */
 export const catalogs = {
   /** public.cars, public.cities, public.users. Every stream starts as full_refresh | overwrite. */

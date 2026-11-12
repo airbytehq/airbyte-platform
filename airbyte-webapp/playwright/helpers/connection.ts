@@ -168,16 +168,4 @@ export const connectionForm = {
   verifySuccessNotification: async (page: Page): Promise<void> => {
     return expect(page.locator("text=Your changes were saved!")).toBeVisible({ timeout: 10000 });
   },
-
-  // Verify a preview element contains expected text
-  verifyPreview: async (page: Page, testId: string, expectedText: string): Promise<void> => {
-    const preview = page.locator(`[data-testid="${testId}"]`);
-    return expect(preview).toContainText(expectedText, { timeout: 5000 });
-  },
-
-  // Verify a preview element is not visible
-  verifyPreviewNotVisible: async (page: Page, testId: string): Promise<void> => {
-    const preview = page.locator(`[data-testid="${testId}"]`);
-    return expect(preview).not.toBeVisible({ timeout: 10000 });
-  },
 };

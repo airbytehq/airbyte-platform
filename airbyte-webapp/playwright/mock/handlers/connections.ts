@@ -9,6 +9,7 @@ import type {
 
 import { notFound } from "./handler";
 import { isOtherWorkspace } from "./identity";
+import { connectionDefaults } from "../store";
 
 /** A read of a deleted connection still answers, because the pages of a deleted connection need it. Lists hide it. */
 function listedConnections(store: Store) {
@@ -162,6 +163,28 @@ export const connectionHandlers: HandlerMap = {
     isOtherWorkspace(store, body.workspaceId) ? notFound() : { events: [] },
   getStreamStatusesByRunState: ({ body, store }) =>
     store.connections.find(body.connectionId) ? { streamStatuses: [] } : notFound(),
+
+  /**
+   * Saves the connection that the create page sends. The catalog ID of the new connection is the `sourceCatalogId` of
+   * the request, which is the ID of the catalog that the schema discovery found. Not saved: `destinationCatalogId`,
+   * and `operations`, because the server adds IDs to operations when it saves them.
+   */
+  webBackendCreateConnection: ({ body, store }) => {
+    const source = store.sources.find(body.sourceId);
+    const destination = store.destinations.find(body.destinationId);
+    if (!source || !destination) {
+      return notFound();
+    }
+    const { sourceCatalogId, destinationCatalogId, operations, ...fields } = body;
+    const connectionId = store.connections.nextId();
+    return store.connections.add(connectionId, {
+      ...connectionDefaults(`${source.name} → ${destination.name}`),
+      ...fields,
+      connectionId,
+      catalogId: sourceCatalogId,
+      syncCatalog: body.syncCatalog ?? { streams: [] },
+    });
+  },
 
   /**
    * Saves every field the webapp sent, so the next read shows the saved values. A null field means "no change", as

@@ -1,7 +1,7 @@
 import { AirbyteCatalog, SyncMode } from "@src/core/api/types/AirbyteClient";
 
 // Catalogs as source discovery returns them. The mock backend uses them in catalogs.postgres() and catalogs.pokeApi()
-// (mock/builders/catalogs.ts). The older mocked tests use them directly (example: createConnection.spec.ts).
+// (mock/builders/catalogs.ts).
 
 /** Creates mock catalog for Postgres test database (users, cars, cities tables) */
 export const createMockPostgresCatalog = (): AirbyteCatalog => ({

@@ -213,6 +213,22 @@ export function actorDefinitionVersion(definition: { dockerRepository: string; d
   } satisfies ActorDefinitionVersionRead;
 }
 
+/** The values of the connection fields that a scenario or a create request does not set. */
+export function connectionDefaults(name: string) {
+  return {
+    name,
+    scheduleType: "manual",
+    status: "active",
+    isSyncing: false,
+    schemaChange: "no_change",
+    notifySchemaChanges: true,
+    notifySchemaChangesByEmail: false,
+    nonBreakingChangesPreference: "ignore",
+    tags: [],
+    onDemandEnabled: false,
+  } satisfies Partial<StoredConnection>;
+}
+
 function createIdentity(scenario: Scenario): Identity {
   const organizationId = ids.organization(1);
   const user: UserRead = {
@@ -382,16 +398,7 @@ export function createStore(
 
     const connectionId = connections.nextId();
     connections.addFromHandle(handle, connectionId, {
-      name: `${sourceName} → ${destinationName}`,
-      scheduleType: "manual",
-      status: "active",
-      isSyncing: false,
-      schemaChange: "no_change",
-      notifySchemaChanges: true,
-      notifySchemaChangesByEmail: false,
-      nonBreakingChangesPreference: "ignore",
-      tags: [],
-      onDemandEnabled: false,
+      ...connectionDefaults(`${sourceName} → ${destinationName}`),
       ...structuredClone(fields),
       connectionId,
       catalogId: ids.catalog(index + 1),
@@ -440,7 +447,12 @@ export function createStore(
         return answer && snapshot(answer);
       },
     },
-    commands: createCommands(scenario.input.outcomes?.check),
+    commands: createCommands({
+      checkResult: scenario.input.outcomes?.check,
+      discoveredCatalog: scenario.input.outcomes?.discover,
+      // The catalogs of the scenario connections have the first catalog IDs.
+      discoveredCatalogId: ids.catalog((scenario.input.connections?.length ?? 0) + 1),
+    }),
     jobs: createJobs({
       nowSeconds,
       user: () => ({

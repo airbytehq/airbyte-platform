@@ -31,6 +31,12 @@ export const jobHandlers: HandlerMap = {
     };
   },
 
+  /**
+   * The server reads the last job of each stream from the stream stats of the jobs. Jobs in the mock have no stream
+   * stats, so no stream has a last job.
+   */
+  getConnectionLastJobPerStream: ({ body, store }) => (store.connections.find(body.connectionId) ? [] : notFound()),
+
   /** The mock returns all events in one page, so it answers a request for a later page with an empty list. */
   listConnectionEvents: ({ body, store }) => {
     if (!store.connections.find(body.connectionId)) {

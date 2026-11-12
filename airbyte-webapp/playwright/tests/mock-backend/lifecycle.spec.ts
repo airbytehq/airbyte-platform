@@ -173,6 +173,43 @@ test.describe("Mock backend lifecycles", () => {
     expect(() => airbyte.checks.latest()).toThrow("The webapp started no check in this test");
   });
 
+  test("finishes a discovery when it starts, with the catalog the scenario declares, and ignores a later cancel", async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    const discovering = connectionScenario.with({ outcomes: { discover: catalogs.pokeApi() } });
+    const backend = await installBackend(context, page, baseURL, discovering);
+
+    await post(page, "commands/run/discover", { id: "discover-1", actor_id: sourceId });
+    await post(page, "commands/cancel", { id: "discover-1" });
+
+    expect((await post(page, "commands/status", { id: "discover-1" })).body).toEqual({
+      id: "discover-1",
+      status: "completed",
+    });
+    // The scenario connection has the first catalog ID, so the discovered catalog has the second.
+    expect((await post(page, "commands/output/discover", { id: "discover-1" })).body).toEqual({
+      id: "discover-1",
+      status: "succeeded",
+      catalog: catalogs.pokeApi(),
+      catalogId: ids.catalog(2),
+    });
+    expect(backend.problems()).toEqual([]);
+  });
+
+  test("fails the test on a discovery when the scenario declares no catalog", async ({ context, page, baseURL }) => {
+    const backend = await installBackend(context, page, baseURL, connectionScenario);
+
+    const run = await post(page, "commands/run/discover", { id: "discover-1", actor_id: sourceId });
+
+    expect(run.status).toBe(500);
+    expect(backend.problems()).toEqual([
+      "Handler error: POST /api/v1/commands/run/discover (runDiscoverCommand): " +
+        `The webapp discovered the schema of source ${sourceId}, but the scenario declares no outcomes.discover catalog`,
+    ]);
+  });
+
   test("ends a sync on its first status read, with the result the scenario declares and a matching event", async ({
     context,
     page,

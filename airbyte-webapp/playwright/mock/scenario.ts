@@ -8,7 +8,7 @@ import type {
 import type { CheckOutput } from "./commands";
 import type { SecurityCheckAnswer } from "./external";
 import type { SyncOutcome } from "./jobs";
-import type { UserRead, ConnectorBuilderProjectStreamRead } from "@src/core/api/types/AirbyteClient";
+import type { AirbyteCatalog, UserRead, ConnectorBuilderProjectStreamRead } from "@src/core/api/types/AirbyteClient";
 import type { Experiments } from "@src/core/services/Experiment/experiments";
 import type { FeatureSet } from "@src/core/services/features/types";
 
@@ -46,6 +46,8 @@ export interface ScenarioInput {
     check?: CheckOutput;
     /** Default: the sync succeeds. */
     sync?: SyncOutcome;
+    /** The catalog that every schema discovery of a source finds. No default: a discovery without it fails the test. */
+    discover?: AirbyteCatalog;
     /** The result of every Connector Builder test read. No default: a test read without it fails the test. */
     streamRead?: ConnectorBuilderProjectStreamRead;
   };
