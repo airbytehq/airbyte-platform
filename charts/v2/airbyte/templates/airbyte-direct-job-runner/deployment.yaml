@@ -113,13 +113,20 @@ spec:
           containerPort: 5005
           protocol: TCP
         {{- end }}
-        {{- if .Values.directJobRunner.resources }}
-        resources: {{- toYaml .Values.directJobRunner.resources | nindent 10 }}
+        {{- /* Reserve node disk for the jar cache: the ephemeral-storage request defaults to jarCache.sizeLimit. */}}
+        {{- $resources := deepCopy (.Values.directJobRunner.resources | default dict) }}
+        {{- $requests := $resources.requests | default dict }}
+        {{- if not (hasKey $requests "ephemeral-storage") }}
+        {{- $_ := set $requests "ephemeral-storage" .Values.directJobRunner.jarCache.sizeLimit }}
         {{- end }}
+        {{- $_ := set $resources "requests" $requests }}
+        resources: {{- toYaml $resources | nindent 10 }}
         {{- if .Values.directJobRunner.containerSecurityContext }}
         securityContext: {{- toYaml .Values.directJobRunner.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
+        - name: jar-cache
+          mountPath: {{ include "airbyte.directJobRunner.jarCache.mountPath" . }}
         {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
           mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
@@ -135,6 +142,9 @@ spec:
         {{- end }}
       securityContext: {{- toYaml .Values.directJobRunner.podSecurityContext | nindent 8 }}
       volumes:
+      - name: jar-cache
+        emptyDir:
+          sizeLimit: {{ .Values.directJobRunner.jarCache.sizeLimit }}
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:

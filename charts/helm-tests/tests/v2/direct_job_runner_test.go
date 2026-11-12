@@ -257,8 +257,9 @@ func TestDirectJobRunnerDataPlaneGcsVolumes(t *testing.T) {
 		require.NotNil(t, deployment)
 		volumes := map[string]string{}
 		for _, v := range deployment.Spec.Template.Spec.Volumes {
-			require.NotNil(t, v.Secret, v.Name)
-			volumes[v.Name] = v.Secret.SecretName
+			if v.Secret != nil {
+				volumes[v.Name] = v.Secret.SecretName
+			}
 		}
 		mounts := map[string]string{}
 		for _, m := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
@@ -352,5 +353,67 @@ func TestDirectJobRunnerCheckThreads(t *testing.T) {
 
 		assert.Equal(t, "6", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS"].Value)
 		assert.Equal(t, "50", env["AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT"].Value)
+	})
+}
+
+func TestDirectJobRunnerJarCache(t *testing.T) {
+	jarCacheVolume := func(t *testing.T, values map[string]string) (corev1.Volume, corev1.VolumeMount, corev1.ResourceRequirements) {
+		deployment := helmtests.GetDeployment(renderDirectJobRunner(t, values).String(), "airbyte-direct-job-runner")
+		require.NotNil(t, deployment)
+		spec := deployment.Spec.Template.Spec
+
+		var volume corev1.Volume
+		for _, v := range spec.Volumes {
+			if v.Name == "jar-cache" {
+				volume = v
+			}
+		}
+		var mount corev1.VolumeMount
+		for _, m := range spec.Containers[0].VolumeMounts {
+			if m.Name == "jar-cache" {
+				mount = m
+			}
+		}
+		require.NotNil(t, volume.EmptyDir, "%v", spec.Volumes)
+		require.NotNil(t, volume.EmptyDir.SizeLimit)
+		return volume, mount, spec.Containers[0].Resources
+	}
+
+	t.Run("defaults to a 5Gi emptyDir at the runner's cache dir, with the disk requested", func(t *testing.T) {
+		volume, mount, resources := jarCacheVolume(t, directJobRunnerOpts())
+
+		assert.Equal(t, "5Gi", volume.EmptyDir.SizeLimit.String())
+		assert.Equal(t, "/tmp/airbyte-connector-jars", mount.MountPath)
+		assert.Equal(t, "5Gi", resources.Requests.StorageEphemeral().String())
+		assert.Equal(t, "/tmp/airbyte-connector-jars", directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR"].Value)
+	})
+
+	t.Run("a larger size also raises the disk request", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.jarCache.sizeLimit"] = "8Gi"
+		volume, _, resources := jarCacheVolume(t, values)
+
+		assert.Equal(t, "8Gi", volume.EmptyDir.SizeLimit.String())
+		assert.Equal(t, "8Gi", resources.Requests.StorageEphemeral().String())
+	})
+
+	t.Run("an explicit disk request is kept", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.resources.requests.ephemeral-storage"] = "6Gi"
+		volume, _, resources := jarCacheVolume(t, values)
+
+		assert.Equal(t, "5Gi", volume.EmptyDir.SizeLimit.String())
+		assert.Equal(t, "6Gi", resources.Requests.StorageEphemeral().String())
+		assert.Equal(t, "2", resources.Requests.Cpu().String())
+	})
+
+	t.Run("the runner keeps jars in the mounted dir", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["directJobRunner.jarCache.mountPath"] = "/jars"
+		_, mount, _ := jarCacheVolume(t, values)
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "/jars", mount.MountPath)
+		assert.Equal(t, "/jars", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR"].Value)
 	})
 }

@@ -460,6 +460,11 @@ directJobRunner:
       key: connect.blockedCidrs
       valueExp: join "," .Values.directJobRunner.connect.blockedCidrs
 
+    # Where the runner keeps connector jars: the jar-cache emptyDir's mountPath, so the jars use its reserved disk.
+    - env: AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR
+      key: jarCache.mountPath
+      defaultValue: /tmp/airbyte-connector-jars
+
 featureFlags:
   keyBasePath: global.featureFlags
   discriminatorField: client

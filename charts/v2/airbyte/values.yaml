@@ -2853,12 +2853,20 @@ directJobRunner:
   # 2 cores also spreads runner pods over more nodes as they scale, and still fits a 4-vCPU EKS node.
   # Memory covers the runner (~450Mi) plus up to checkThreads connector JVMs (~250-300MB each). Going over the limit
   # OOM-kills the pod and every check running on it, so raise it together with checkThreads.
+  # The ephemeral-storage request defaults to jarCache.sizeLimit, reserving node disk for the connector jar cache.
   resources:
     requests:
       cpu: 2
       memory: 2Gi
     limits:
       memory: 3Gi
+
+  # -- Connector fat jars the runner downloads to run checks, kept in an emptyDir at mountPath (passed to the runner as
+  # its cache dir). A jar is ~100MB, so 5Gi holds a 20-jar cache plus jars still downloading or waiting to be deleted
+  # after eviction. Over the limit the kubelet evicts the pod. sizeLimit is also the pod's ephemeral-storage request.
+  jarCache:
+    mountPath: /tmp/airbyte-connector-jars
+    sizeLimit: 5Gi
 
   autoscaling:
     enabled: true

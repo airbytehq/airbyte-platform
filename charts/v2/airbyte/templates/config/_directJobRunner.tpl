@@ -82,6 +82,24 @@ Renders the directJobRunner.connect.blockedCidrs environment variable
 {{- end }}
 
 {{/*
+Renders the directJobRunner.jarCache.mountPath value
+*/}}
+{{- define "airbyte.directJobRunner.jarCache.mountPath" }}
+    {{- .Values.directJobRunner.jarCache.mountPath | default "/tmp/airbyte-connector-jars" }}
+{{- end }}
+
+{{/*
+Renders the directJobRunner.jarCache.mountPath environment variable
+*/}}
+{{- define "airbyte.directJobRunner.jarCache.mountPath.env" }}
+- name: AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR
+{{- end }}
+
+{{/*
 Renders the set of all directJobRunner environment variables
 */}}
 {{- define "airbyte.directJobRunner.envs" }}
@@ -89,6 +107,7 @@ Renders the set of all directJobRunner environment variables
 {{- include "airbyte.directJobRunner.checkThreads.env" . }}
 {{- include "airbyte.directJobRunner.connect.blockInternalAddresses.env" . }}
 {{- include "airbyte.directJobRunner.connect.blockedCidrs.env" . }}
+{{- include "airbyte.directJobRunner.jarCache.mountPath.env" . }}
 {{- end }}
 
 {{/*
@@ -99,4 +118,5 @@ AIRBYTE_DIRECT_JOB_RUNNER_MAX_CONCURRENT: {{ include "airbyte.directJobRunner.ma
 AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS: {{ include "airbyte.directJobRunner.checkThreads" . | quote }}
 AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES: {{ include "airbyte.directJobRunner.connect.blockInternalAddresses" . | quote }}
 AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS: {{ include "airbyte.directJobRunner.connect.blockedCidrs" . | quote }}
+AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR: {{ include "airbyte.directJobRunner.jarCache.mountPath" . | quote }}
 {{- end }}
