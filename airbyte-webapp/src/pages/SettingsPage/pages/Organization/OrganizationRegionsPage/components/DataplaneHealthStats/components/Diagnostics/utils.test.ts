@@ -47,6 +47,26 @@ describe("getSecretStorageCardData", () => {
     expect(getSecretStorageCardData(dataplane({ diagnostics: [otherKind] }), NOW)).toBeUndefined();
   });
 
+  it("returns nothing when the only result is that no secret store is configured", () => {
+    const notConfigured = diagnostic(DataplaneDiagnosticStatus.NOT_CONFIGURED, {
+      target_id: "dp-1",
+      observation: { scope_type: "organization", scope_id: "org-1" },
+    });
+    expect(getSecretStorageCardData(dataplane({ diagnostics: [notConfigured] }), NOW)).toBeUndefined();
+  });
+
+  it("ignores a not configured result next to a store that passed", () => {
+    const stores = [
+      diagnostic(DataplaneDiagnosticStatus.NOT_CONFIGURED, { target_id: "dp-1", checked_at: -100_000 }),
+      diagnostic(DataplaneDiagnosticStatus.PASSED),
+    ];
+    expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)).toEqual({
+      level: "success",
+      value: { messageId: `${PREFIX}.yes` },
+      lastChecked: formatAge(30_000),
+    });
+  });
+
   it("is a success when every store passed", () => {
     const stores = [
       diagnostic(DataplaneDiagnosticStatus.PASSED),
@@ -174,6 +194,19 @@ describe("getSecretStorageRows", () => {
   it("ignores a diagnostic that is not a secret store result", () => {
     const otherKind = diagnostic(DataplaneDiagnosticStatus.PASSED, { kind: "OTHER" as DataplaneDiagnosticKind });
     expect(getSecretStorageRows(dataplane({ diagnostics: [otherKind] }), NOW)).toEqual([]);
+  });
+
+  it("has no row for a result that no secret store is configured", () => {
+    const notConfigured = diagnostic(DataplaneDiagnosticStatus.NOT_CONFIGURED, { target_id: "dp-1" });
+    expect(getSecretStorageRows(dataplane({ diagnostics: [notConfigured] }), NOW)).toEqual([]);
+  });
+
+  it("still has a row for a store next to a not configured result", () => {
+    const stores = [
+      diagnostic(DataplaneDiagnosticStatus.NOT_CONFIGURED, { target_id: "dp-1" }),
+      diagnostic(DataplaneDiagnosticStatus.PASSED, { target_id: "store-1" }),
+    ];
+    expect(getSecretStorageRows(dataplane({ diagnostics: stores }), NOW).map((row) => row.id)).toEqual(["store-1"]);
   });
 
   it("has one row for each store, in the order they were reported", () => {

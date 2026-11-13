@@ -261,4 +261,57 @@ describe("Diagnostics", () => {
       expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
     });
   });
+
+  describe("for a connected data plane with no secret store configured", () => {
+    beforeEach(async () => {
+      await render(
+        <Diagnostics
+          dataplane={dataplane({
+            diagnostics: [
+              secretStorage(DataplaneDiagnosticStatus.NOT_CONFIGURED, {
+                target_id: "dp-1",
+                observation: { scope_type: "organization", scope_id: "org-1" },
+              }),
+            ],
+          })}
+        />
+      );
+    });
+
+    it("shows nothing", () => {
+      expect(screen.queryByText("Diagnostics")).not.toBeInTheDocument();
+    });
+
+    it("does not say the secrets manager is reachable", () => {
+      expect(screen.queryByText("Secrets manager reachable")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("after the details are opened for a store next to a result that no store is configured", () => {
+    beforeEach(async () => {
+      await render(
+        <Diagnostics
+          dataplane={dataplane({
+            diagnostics: [
+              secretStorage(DataplaneDiagnosticStatus.NOT_CONFIGURED, { target_id: "dp-1" }),
+              secretStorage(DataplaneDiagnosticStatus.PASSED, { target_name: "Acme vault" }),
+            ],
+          })}
+        />
+      );
+      await userEvent.click(screen.getByRole("button", VIEW_DETAILS));
+    });
+
+    it("lists the store", () => {
+      expect(screen.getByText("Acme vault")).toBeInTheDocument();
+    });
+
+    it("does not list the result that no store is configured", () => {
+      expect(screen.queryByText("dp-1")).not.toBeInTheDocument();
+    });
+
+    it("has a row for the store only, besides the header", () => {
+      expect(screen.getAllByRole("row")).toHaveLength(2);
+    });
+  });
 });

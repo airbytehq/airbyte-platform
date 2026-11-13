@@ -21,8 +21,13 @@ const SECRET_STORAGE_SUMMARY: Record<SecretStorageSummary, { level: StatusLevel;
   },
 };
 
+// A data plane with no secret store reports one NOT_CONFIGURED result in place of a store, so it is not a store to show.
 const getSecretStorageResults = (dataplane: DataplaneHealthRead): DataplaneDiagnosticRead[] =>
-  (dataplane.diagnostics ?? []).filter((diagnostic) => diagnostic.kind === DataplaneDiagnosticKind.SECRET_STORAGE);
+  (dataplane.diagnostics ?? []).filter(
+    (diagnostic) =>
+      diagnostic.kind === DataplaneDiagnosticKind.SECRET_STORAGE &&
+      diagnostic.status !== DataplaneDiagnosticStatus.NOT_CONFIGURED
+  );
 
 // Any failure wins, then a check that could not complete.
 const summarizeSecretStorage = (results: DataplaneDiagnosticRead[]): SecretStorageSummary => {
