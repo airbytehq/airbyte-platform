@@ -4,6 +4,10 @@
 
 package io.airbyte.directjobrunner.connector
 
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -13,6 +17,7 @@ import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.function.ToDoubleFunction
 
 private val logger = KotlinLogging.logger {}
 
@@ -37,12 +42,13 @@ sealed interface CachedJar {
 @Singleton
 class ConnectorJarCache internal constructor(
   private val resolver: ConnectorJarResolver,
+  private val metricClient: MetricClient,
   // Tests set these; the runner always uses the constants, through the @Inject constructor.
   private val maxJars: Int,
   private val evictedJarRetention: Duration,
 ) {
   @Inject
-  constructor(resolver: ConnectorJarResolver) : this(resolver, MAX_JARS, EVICTED_JAR_RETENTION)
+  constructor(resolver: ConnectorJarResolver, metricClient: MetricClient) : this(resolver, metricClient, MAX_JARS, EVICTED_JAR_RETENTION)
 
   companion object {
     /** How many jars the cache keeps. Caching one more evicts the least frequently used. */
@@ -69,6 +75,10 @@ class ConnectorJarCache internal constructor(
   private val deletions =
     Executors.newSingleThreadScheduledExecutor { Thread(it, "evicted-jar-deletion").apply { isDaemon = true } }
 
+  init {
+    metricClient.gauge(OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_SIZE, this, ToDoubleFunction { it.size().toDouble() })
+  }
+
   /**
    * Downloads the jar for [coordinates] into the cache unless it is already cached. Returns whether it is cached
    * afterwards: false when it couldn't be downloaded (logged here).
@@ -90,9 +100,11 @@ class ConnectorJarCache internal constructor(
           resolver.resolve(coordinates)
         } catch (e: ArtifactResolutionException) {
           logger.warn(e) { "Couldn't download $coordinates" }
+          recordDownload(coordinates, downloadFailureResult(e), start)
           return false
         }
       logger.info { "Downloaded $coordinates to $jar in ${System.currentTimeMillis() - start}ms" }
+      recordDownload(coordinates, RESULT_SUCCESS, start)
 
       synchronized(this) {
         evictForNewJar()
@@ -114,12 +126,30 @@ class ConnectorJarCache internal constructor(
   @Synchronized
   fun isCached(coordinates: String): Boolean = coordinates in entries
 
+  @Synchronized
+  fun size(): Int = entries.size
+
   /** Whether a check for [coordinates] can get its jar: it is cached, or the jar repository has it. */
   fun isAvailable(coordinates: String): Boolean = isCached(coordinates) || resolver.isPublished(coordinates)
 
   /** The cached coordinates, for tests and diagnostics. */
   @Synchronized
   fun cached(): Set<String> = entries.keys.toSet()
+
+  private fun recordDownload(
+    coordinates: String,
+    result: String,
+    start: Long,
+  ) {
+    val tags =
+      arrayOf(
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, connectorImageTag(coordinates)),
+        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, PURPOSE_PREFETCH),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags)
+    metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD_DURATION, (System.currentTimeMillis() - start).toDouble(), *tags)
+  }
 
   // Called holding this cache's monitor.
   private fun evictForNewJar() {

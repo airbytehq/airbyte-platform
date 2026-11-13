@@ -79,19 +79,29 @@ class CheckJobHandler(
     }
 
     if (workload.logDeliveryMode == LogDeliveryMode.FLEX) {
-      return false
+      return turnDown("flex_logs")
+    }
+    // The allowlist is per data plane group, so it is empty for a launcher that sent none.
+    if (dataplaneGroup == LauncherDataplaneGroup.Unknown) {
+      return turnDown("no_dataplane_group")
     }
 
     val image = payloadDeserializer.toCheckConnectionInput(workload.inputPayload).launcherConfig.dockerImage
     if (!allowlist.allows(image, dataplaneGroup)) {
-      return false
+      return turnDown("not_allowlisted")
     }
 
     if (!directCheckRunner.canRun(image)) {
       logger.info { "Turning down check ${workload.id}: no jar for $image in the jar repository; it runs in a pod" }
-      return false
+      return turnDown("jar_unavailable")
     }
     return true
+  }
+
+  // Always false: a turned-down check runs in a pod.
+  private fun turnDown(reason: String): Boolean {
+    metricClient.count(OssMetricsRegistry.DIRECT_CHECK_TURNED_DOWN, 1, MetricAttribute(MetricTags.ROUTE_REASON_TAG, reason))
+    return false
   }
 
   override fun run(
@@ -126,6 +136,7 @@ class CheckJobHandler(
       run.processMs.toDouble(),
       MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
       MetricAttribute(MetricTags.RESULT_TAG, result.javaClass.simpleName),
+      MetricAttribute(MetricTags.JAR_SOURCE_TAG, run.jarSource.name.lowercase()),
     )
     logger.info {
       "Check $workloadId image=$image result=${result::class.simpleName} status=${output.checkConnection?.status} " +

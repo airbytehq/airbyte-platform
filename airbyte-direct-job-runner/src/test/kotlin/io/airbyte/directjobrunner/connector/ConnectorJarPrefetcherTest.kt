@@ -8,6 +8,10 @@ import io.airbyte.directjobrunner.config.CheckConnectorConfig
 import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.DirectCheckImages
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -30,7 +34,8 @@ class ConnectorJarPrefetcherTest {
       every { releasedVersions("source-mysql") } returns listOf("3.50.0")
       every { resolve(any()) } answers { Path.of("/cache/${firstArg<String>()}.jar") }
     }
-  private val cache = ConnectorJarCache(resolver)
+  private val metricClient = mockk<MetricClient>(relaxed = true)
+  private val cache = ConnectorJarCache(resolver, metricClient)
 
   private val dataplaneGroupId = UUID.randomUUID()
 
@@ -39,7 +44,7 @@ class ConnectorJarPrefetcherTest {
       mockk<FeatureFlagClient> {
         every { stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)) } returns connectors.joinToString(",")
       }
-    return ConnectorJarPrefetcher(DirectCheckAllowlist(featureFlagClient), config, resolver, cache)
+    return ConnectorJarPrefetcher(DirectCheckAllowlist(featureFlagClient), config, resolver, cache, metricClient)
   }
 
   // The prefetches run on background threads; wait until the expected jars are cached.
@@ -114,6 +119,44 @@ class ConnectorJarPrefetcherTest {
     prefetcher.prefetch("source-mssql")
 
     assertEquals(setOf("io.airbyte.connectors:source-mssql:4.1.0"), cache.cached())
+  }
+
+  private fun verifyPrefetch(
+    connector: String,
+    result: String,
+  ) = verify(exactly = 1) {
+    metricClient.count(
+      OssMetricsRegistry.DIRECT_CHECK_JAR_PREFETCH,
+      1,
+      MetricAttribute(MetricTags.CONNECTOR_NAME, connector),
+      MetricAttribute(MetricTags.RESULT_TAG, result),
+    )
+  }
+
+  @Test
+  fun `each connector's prefetch result is recorded`() {
+    every { resolver.releasedVersions("source-mssql") } returns emptyList()
+    every { resolver.releasedVersions("source-oracle") } throws VersionRangeResolutionException(VersionRangeResult(VersionRangeRequest()))
+    every { resolver.releasedVersions("source-db2") } returns listOf("1.0.0")
+    every { resolver.resolve("io.airbyte.connectors:source-db2:1.0.0") } throws ArtifactResolutionException(emptyList(), "not found")
+    val prefetcher = prefetcher()
+
+    listOf("source-postgres", "source-mssql", "source-oracle", "source-db2").forEach { prefetcher.prefetch(it) }
+
+    verifyPrefetch("source-postgres", "cached")
+    verifyPrefetch("source-mssql", "no_release")
+    verifyPrefetch("source-oracle", "version_list_failed")
+    verifyPrefetch("source-db2", "download_failed")
+  }
+
+  @Test
+  fun `connectors past the cache size are recorded as over the cache limit`() {
+    val connectors = (1..ConnectorJarCache.MAX_JARS + 2).map { "source-c$it" }
+
+    prefetcher(*connectors.toTypedArray()).connectorsToPrefetch(dataplaneGroupId)
+
+    connectors.drop(ConnectorJarCache.MAX_JARS).forEach { verifyPrefetch(it, "over_cache_limit") }
+    verify(exactly = 2) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_PREFETCH, 1, *anyVararg()) }
   }
 
   @Test

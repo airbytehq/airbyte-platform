@@ -5,6 +5,10 @@
 package io.airbyte.directjobrunner.connector
 
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.eclipse.aether.ConfigurationProperties
@@ -35,6 +39,9 @@ private val REQUEST_TIMEOUT = Duration.ofSeconds(60)
 private val PUBLISHED_CHECK_TIMEOUT = Duration.ofSeconds(3)
 private const val HTTP_OK = 200
 private const val HTTP_NOT_FOUND = 404
+private const val PUBLISHED = "published"
+private const val NOT_PUBLISHED = "not_published"
+private const val PUBLISHED_CHECK_ERROR = "error"
 
 /**
  * Downloads a connector's fat jar from the jar repository into the local Maven repository at
@@ -45,6 +52,7 @@ private const val HTTP_NOT_FOUND = 404
 @Singleton
 class ConnectorJarResolver(
   private val config: CheckConnectorConfig,
+  private val metricClient: MetricClient,
 ) {
   private val httpClient: HttpClient = HttpClient.newBuilder().connectTimeout(PUBLISHED_CHECK_TIMEOUT).build()
 
@@ -53,6 +61,25 @@ class ConnectorJarResolver(
    * answer but 200, including a timeout or an unreachable repository, counts as not published.
    */
   fun isPublished(coordinates: String): Boolean {
+    val start = System.currentTimeMillis()
+    val result = publishedCheckResult(coordinates)
+    val resultTag = MetricAttribute(MetricTags.RESULT_TAG, result)
+    metricClient.count(
+      OssMetricsRegistry.DIRECT_CHECK_JAR_PUBLISHED_CHECK,
+      1,
+      MetricAttribute(MetricTags.CONNECTOR_IMAGE, connectorImageTag(coordinates)),
+      resultTag,
+    )
+    metricClient.distribution(
+      OssMetricsRegistry.DIRECT_CHECK_JAR_PUBLISHED_CHECK_DURATION,
+      (System.currentTimeMillis() - start).toDouble(),
+      resultTag,
+    )
+    return result == PUBLISHED
+  }
+
+  // published (200), not_published (404), or error (any other answer, a timeout or an unreachable repository).
+  private fun publishedCheckResult(coordinates: String): String {
     val url = jarUrl(coordinates)
     val request =
       HttpRequest
@@ -65,12 +92,16 @@ class ConnectorJarResolver(
         httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
       } catch (e: IOException) {
         logger.warn(e) { "Couldn't ask the jar repository for $url" }
-        return false
+        return PUBLISHED_CHECK_ERROR
       }
-    if (status != HTTP_OK && status != HTTP_NOT_FOUND) {
-      logger.warn { "The jar repository answered $status for $url" }
+    return when (status) {
+      HTTP_OK -> PUBLISHED
+      HTTP_NOT_FOUND -> NOT_PUBLISHED
+      else -> {
+        logger.warn { "The jar repository answered $status for $url" }
+        PUBLISHED_CHECK_ERROR
+      }
     }
-    return status == HTTP_OK
   }
 
   /**

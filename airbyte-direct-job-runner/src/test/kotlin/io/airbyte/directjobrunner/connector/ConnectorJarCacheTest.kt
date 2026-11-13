@@ -4,8 +4,13 @@
 
 package io.airbyte.directjobrunner.connector
 
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.eclipse.aether.resolution.ArtifactResolutionException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,12 +24,15 @@ import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.function.ToDoubleFunction
 
 class ConnectorJarCacheTest {
   @TempDir
   lateinit var repoDir: Path
 
   // Each coordinate resolves to a real file in its own version directory, like the local Maven repository.
+  private val metricClient = mockk<MetricClient>(relaxed = true)
+
   private val resolver =
     mockk<ConnectorJarResolver> {
       every { resolve(any()) } answers { jarFor(firstArg()) }
@@ -43,7 +51,7 @@ class ConnectorJarCacheTest {
   private fun cache(
     maxJars: Int = 50,
     evictedJarRetention: Duration = Duration.ZERO,
-  ) = ConnectorJarCache(resolver, maxJars, evictedJarRetention)
+  ) = ConnectorJarCache(resolver, metricClient, maxJars, evictedJarRetention)
 
   // Puts the jar and gets it [times] times, as that many checks would.
   private fun ConnectorJarCache.use(
@@ -73,6 +81,44 @@ class ConnectorJarCacheTest {
     verify(exactly = 1) { resolver.resolve("g:source-postgres:3.8.10") }
   }
 
+  private fun verifyPrefetchDownload(
+    image: String,
+    result: String,
+  ) {
+    val tags =
+      arrayOf(
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
+        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, "prefetch"),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags) }
+    verify(exactly = 1) { metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD_DURATION, any(), *tags) }
+  }
+
+  @Test
+  fun `a put's download is recorded with its result, and a put of a cached jar records nothing`() {
+    every { resolver.resolve("io.airbyte.connectors:source-mysql:3.50.0") } throws ArtifactResolutionException(emptyList(), "repository down")
+    val cache = cache()
+
+    cache.put("io.airbyte.connectors:source-postgres:3.8.11")
+    cache.put("io.airbyte.connectors:source-postgres:3.8.11")
+    cache.put("io.airbyte.connectors:source-mysql:3.50.0")
+
+    verifyPrefetchDownload("airbyte/source-postgres:3.8.11", "success")
+    verifyPrefetchDownload("airbyte/source-mysql:3.50.0", "error")
+  }
+
+  @Test
+  fun `the cache size gauge reports how many jars are cached`() {
+    val gauge = slot<ToDoubleFunction<ConnectorJarCache>>()
+    every { metricClient.gauge(OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_SIZE, any<ConnectorJarCache>(), capture(gauge)) } answers { secondArg() }
+    val cache = cache()
+    cache.use("g:a:1")
+    cache.use("g:b:1")
+
+    assertEquals(2.0, gauge.captured.applyAsDouble(cache))
+  }
+
   @Test
   fun `getting a jar that isn't cached is a miss`() {
     assertEquals(CachedJar.Miss, cache().get("g:source-postgres:3.8.10"))
@@ -80,7 +126,7 @@ class ConnectorJarCacheTest {
 
   @Test
   fun `the cap is 20 jars`() {
-    val cache = ConnectorJarCache(resolver)
+    val cache = ConnectorJarCache(resolver, metricClient)
     (1..21).forEach { cache.use("g:c$it:1") }
 
     assertEquals(20, cache.cached().size, "${cache.cached()}")

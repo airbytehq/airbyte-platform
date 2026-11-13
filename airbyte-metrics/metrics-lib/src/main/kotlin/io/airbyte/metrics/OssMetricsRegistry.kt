@@ -506,7 +506,46 @@ enum class OssMetricsRegistry(
   ),
   DIRECT_CHECK_CONNECTOR_DURATION(
     metricName = "direct_check_connector_duration",
-    metricDescription = "Milliseconds a check's connector process ran on the direct job runner, by connector image and result",
+    metricDescription =
+      "Milliseconds a check's connector process ran on the direct job runner, by connector image, result and jar source (cached or downloaded)",
+  ),
+  DIRECT_CHECK_JAR_PREFETCH(
+    metricName = "direct_check_jar_prefetch",
+    metricDescription = "Number of connectors the direct job runner tried to prefetch a jar for, by connector and result",
+  ),
+  DIRECT_CHECK_JAR_CACHE_LOOKUP(
+    metricName = "direct_check_jar_cache_lookup",
+    metricDescription = "Number of checks that looked their connector jar up in the direct job runner's cache, by connector image and hit or miss",
+  ),
+  DIRECT_CHECK_JAR_DOWNLOAD(
+    metricName = "direct_check_jar_download",
+    metricDescription = "Number of connector jar downloads by the direct job runner, by connector image, purpose (prefetch or check) and result",
+  ),
+  DIRECT_CHECK_JAR_DOWNLOAD_DURATION(
+    metricName = "direct_check_jar_download_duration",
+    metricDescription = "Milliseconds a connector jar download by the direct job runner took, by connector image, purpose and result",
+  ),
+  DIRECT_CHECK_JAR_PUBLISHED_CHECK(
+    metricName = "direct_check_jar_published_check",
+    metricDescription =
+      "Number of times the direct job runner asked the jar repository whether a connector jar is published, by connector image and result",
+  ),
+  DIRECT_CHECK_JAR_PUBLISHED_CHECK_DURATION(
+    metricName = "direct_check_jar_published_check_duration",
+    metricDescription = "Milliseconds the direct job runner's jar repository existence check took, by result",
+  ),
+  DIRECT_CHECK_JAR_CACHE_SIZE(
+    metricName = "direct_check_jar_cache_size",
+    metricDescription = "Number of connector jars in a direct job runner pod's cache",
+  ),
+  DIRECT_CHECK_JAR_CACHE_DISK_BYTES(
+    metricName = "direct_check_jar_cache_disk_bytes",
+    metricDescription =
+      "Bytes of connector jars on a direct job runner pod's jar cache volume: cached jars, evicted jars not yet deleted, and checks' own downloads",
+  ),
+  DIRECT_CHECK_TURNED_DOWN(
+    metricName = "direct_check_turned_down",
+    metricDescription = "Number of checks the direct job runner turned down so they run in a pod, by reason",
   ),
   DIRECT_CHECK_ROUTE(
     metricName = "direct_check_route",

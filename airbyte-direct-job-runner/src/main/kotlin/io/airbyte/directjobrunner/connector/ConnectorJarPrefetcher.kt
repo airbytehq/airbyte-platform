@@ -6,6 +6,10 @@ package io.airbyte.directjobrunner.connector
 
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
 import io.airbyte.directjobrunner.core.LauncherDataplaneGroup
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.eclipse.aether.resolution.VersionRangeResolutionException
@@ -31,6 +35,7 @@ class ConnectorJarPrefetcher(
   private val config: CheckConnectorConfig,
   private val resolver: ConnectorJarResolver,
   private val jarCache: ConnectorJarCache,
+  private val metricClient: MetricClient,
 ) {
   private val prefetchedGroups = ConcurrentHashMap.newKeySet<UUID>()
 
@@ -57,6 +62,7 @@ class ConnectorJarPrefetcher(
         "platform.direct-check-images lists ${connectors.size} connectors for data plane group $dataplaneGroupId, more than the " +
           "${ConnectorJarCache.MAX_JARS} the jar cache holds. Not prefetching: ${notPrefetched.joinToString()}"
       }
+      notPrefetched.forEach { recordPrefetch(it, "over_cache_limit") }
     }
     return connectors.take(ConnectorJarCache.MAX_JARS)
   }
@@ -69,18 +75,33 @@ class ConnectorJarPrefetcher(
         resolver.releasedVersions(connector)
       } catch (e: VersionRangeResolutionException) {
         logger.warn(e) { "Couldn't read $connector's versions to prefetch; checks download the jar for their version themselves" }
+        recordPrefetch(connector, "version_list_failed")
         return
       }
     if (versions.isEmpty()) {
       logger.warn { "No released jar of $connector in the jar repository to prefetch" }
+      recordPrefetch(connector, "no_release")
       return
     }
 
     val coordinates = config.jarCoordinates(connector, versions.last())
     if (jarCache.put(coordinates)) {
       logger.info { "Prefetched $coordinates in ${System.currentTimeMillis() - start}ms" }
+      recordPrefetch(connector, "cached")
     } else {
       logger.warn { "Couldn't prefetch $coordinates; checks download the jar for their version themselves" }
+      recordPrefetch(connector, "download_failed")
     }
   }
+
+  // Why a download failed (not found, checksum mismatch) is on direct_check_jar_download.
+  private fun recordPrefetch(
+    connector: String,
+    result: String,
+  ) = metricClient.count(
+    OssMetricsRegistry.DIRECT_CHECK_JAR_PREFETCH,
+    1,
+    MetricAttribute(MetricTags.CONNECTOR_NAME, connector),
+    MetricAttribute(MetricTags.RESULT_TAG, result),
+  )
 }

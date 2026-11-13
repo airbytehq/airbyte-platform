@@ -7,9 +7,14 @@ package io.airbyte.directjobrunner.connector
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.AirbyteConnectionStatus
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.eclipse.aether.resolution.ArtifactResolutionException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -23,6 +28,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
 import java.time.Duration
+import java.util.function.ToDoubleFunction
 
 private const val SUCCEEDED = """{"type":"CONNECTION_STATUS","connectionStatus":{"status":"SUCCEEDED"}}"""
 
@@ -54,7 +60,8 @@ class DirectCheckRunnerTest {
         dir.resolve("source-postgres-3.8.10.jar").also { Files.writeString(it, "jar") }
       }
     }
-  private val jarCache = ConnectorJarCache(resolver)
+  private val metricClient = mockk<MetricClient>(relaxed = true)
+  private val jarCache = ConnectorJarCache(resolver, metricClient)
 
   private fun runner(
     javaBody: String,
@@ -73,7 +80,7 @@ class DirectCheckRunnerTest {
         checkTimeout = checkTimeout,
         jarDownloadAllowance = jarDownloadAllowance,
       )
-    return DirectCheckRunner(config, edition, jarCache, resolver)
+    return DirectCheckRunner(config, edition, jarCache, resolver, metricClient)
   }
 
   private fun check(
@@ -268,6 +275,70 @@ class DirectCheckRunnerTest {
 
     assertFalse(Files.exists(cacheDir.resolve("check-downloads")), "a leftover check download survived the restart")
     assertTrue(Files.exists(cachedJar), "the startup cleanup touched the cache")
+  }
+
+  private fun verifyCheckDownload(result: String) {
+    val tags =
+      arrayOf(
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, IMAGE),
+        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, "check"),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags) }
+    verify(exactly = 1) { metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD_DURATION, any(), *tags) }
+  }
+
+  private fun verifyLookup(result: String) =
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_LOOKUP,
+        1,
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, IMAGE),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    }
+
+  @Test
+  fun `a cache hit and a miss are recorded, and only the miss downloads`() {
+    runner("echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-1")
+    verifyLookup("miss")
+    verifyCheckDownload("success")
+
+    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
+    runner("echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-2")
+    verifyLookup("hit")
+  }
+
+  @Test
+  fun `a check's failed and timed-out downloads are recorded with their result`() {
+    every { resolver.resolveInto(any(), any()) } throws ArtifactResolutionException(emptyList(), "repository down")
+    assertThrows<IllegalStateException> { check("echo '$SUCCEEDED'") }
+    verifyCheckDownload("error")
+
+    every { resolver.resolveInto(any(), any()) } answers {
+      Thread.sleep(5_000)
+      JAR
+    }
+    assertThrows<IllegalStateException> {
+      runner("echo '$SUCCEEDED'", jarDownloadAllowance = Duration.ofMillis(200)).check(IMAGE, connectionConfiguration, "workload-1")
+    }
+    verifyCheckDownload("timeout")
+  }
+
+  @Test
+  fun `the disk gauge reports the bytes of everything under the jar cache directory`() {
+    val gauge = slot<ToDoubleFunction<DirectCheckRunner>>()
+    every { metricClient.gauge(OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_DISK_BYTES, any<DirectCheckRunner>(), capture(gauge)) } answers
+      { secondArg() }
+    val runner = runner("exit 0")
+    val cachedJar = cacheDir.resolve("io/airbyte/connectors/source-postgres/3.8.11/source-postgres-3.8.11.jar")
+    Files.createDirectories(cachedJar.parent)
+    Files.write(cachedJar, ByteArray(1_000))
+    val checkDownload = cacheDir.resolve("check-downloads/check-1/source-postgres-3.8.10.jar")
+    Files.createDirectories(checkDownload.parent)
+    Files.write(checkDownload, ByteArray(500))
+
+    assertEquals(1_500.0, gauge.captured.applyAsDouble(runner))
   }
 
   @Test

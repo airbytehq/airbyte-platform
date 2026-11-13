@@ -192,7 +192,7 @@ class CheckJobHandlerTest {
   }
 
   @Test
-  fun `the connector's run time is recorded by image and result`() {
+  fun `the connector's run time is recorded by image, result and jar source`() {
     runAndCaptureOutput(SourceCheckResult.TimedOut)
 
     verify(exactly = 1) {
@@ -201,8 +201,30 @@ class CheckJobHandlerTest {
         2_000.0,
         MetricAttribute("connector_image", BAKED_IMAGE),
         MetricAttribute("result", "TimedOut"),
+        MetricAttribute("jar_source", "downloaded"),
       )
     }
+  }
+
+  private fun verifyTurnedDown(reason: String) =
+    verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_TURNED_DOWN, 1, MetricAttribute("reason", reason)) }
+
+  @Test
+  fun `each reason a check is turned down is recorded`() {
+    handler.accepts(Workload(inputPayload = payload(), logDeliveryMode = LogDeliveryMode.FLEX), DISPATCHED_FROM)
+    handler.accepts(Workload(inputPayload = payload(BAKED_IMAGE)), LauncherDataplaneGroup.Unknown)
+    handler.accepts(Workload(inputPayload = payload("airbyte/source-mysql:3.8.10")), DISPATCHED_FROM)
+    every { directCheckRunner.canRun(BAKED_IMAGE) } returns false
+    handler.accepts(Workload(inputPayload = payload(BAKED_IMAGE)), DISPATCHED_FROM)
+
+    listOf("flex_logs", "no_dataplane_group", "not_allowlisted", "jar_unavailable").forEach { verifyTurnedDown(it) }
+  }
+
+  @Test
+  fun `an accepted check records no turn-down`() {
+    assertTrue(handler.accepts(Workload(inputPayload = payload(BAKED_IMAGE)), DISPATCHED_FROM))
+
+    verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_TURNED_DOWN, any(), *anyVararg()) }
   }
 
   @Test

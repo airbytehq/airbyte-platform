@@ -5,6 +5,12 @@
 package io.airbyte.directjobrunner.connector
 
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
+import io.mockk.mockk
+import io.mockk.verify
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -54,6 +60,7 @@ class ConnectorJarResolverTest {
   lateinit var cacheDir: Path
 
   private val server = MockWebServer()
+  private val metricClient = mockk<MetricClient>(relaxed = true)
   private val jarBytes = "not really a jar".toByteArray()
 
   @AfterEach
@@ -87,7 +94,25 @@ class ConnectorJarResolverTest {
   private fun resolver(repositoryUrl: String = server.url("/").toString()) =
     ConnectorJarResolver(
       CheckConnectorConfig(jarRepositoryUrl = repositoryUrl, jarCacheDir = cacheDir.toString()),
+      metricClient,
     )
+
+  private fun verifyPublishedCheck(
+    image: String,
+    result: String,
+  ) {
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.DIRECT_CHECK_JAR_PUBLISHED_CHECK,
+        1,
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_PUBLISHED_CHECK_DURATION, any(), MetricAttribute(MetricTags.RESULT_TAG, result))
+    }
+  }
 
   @Test
   fun `the jar for the image's version is downloaded into the cache`() {
@@ -122,6 +147,7 @@ class ConnectorJarResolverTest {
     serve()
 
     assertTrue(resolver().isPublished(COORDINATES))
+    verifyPublishedCheck("airbyte/source-postgres:3.8.10", "published")
     val request = server.takeRequest()
     assertEquals("HEAD $JAR_PATH", "${request.method} ${request.path}")
     assertEquals(1, server.requestCount)
@@ -132,6 +158,7 @@ class ConnectorJarResolverTest {
   fun `a jar that isn't published, an error and an unreachable repository all count as not published`() {
     serve()
     assertFalse(resolver().isPublished("io.airbyte.connectors:source-postgres:9.9.9"))
+    verifyPublishedCheck("airbyte/source-postgres:9.9.9", "not_published")
 
     server.dispatcher =
       object : Dispatcher() {
@@ -142,6 +169,33 @@ class ConnectorJarResolverTest {
     val repositoryUrl = server.url("/").toString()
     server.shutdown()
     assertFalse(resolver(repositoryUrl).isPublished(COORDINATES))
+    // The 500 and the unreachable repository.
+    verify(exactly = 2) {
+      metricClient.count(
+        OssMetricsRegistry.DIRECT_CHECK_JAR_PUBLISHED_CHECK,
+        1,
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, "airbyte/source-postgres:3.8.10"),
+        MetricAttribute(MetricTags.RESULT_TAG, "error"),
+      )
+    }
+  }
+
+  @Test
+  fun `a failed download is classified as not found, a checksum mismatch, or another error`() {
+    serve(sha1 = "0".repeat(40))
+    val resolver = resolver()
+
+    val notFound = assertThrows<ArtifactResolutionException> { resolver.resolve("io.airbyte.connectors:source-postgres:9.9.9") }
+    val checksum = assertThrows<ArtifactResolutionException> { resolver.resolve(COORDINATES) }
+    val repositoryUrl = server.url("/").toString()
+    server.shutdown()
+    val unreachable =
+      assertThrows<ArtifactResolutionException> { resolver(repositoryUrl).resolveInto(COORDINATES, cacheDir.resolve("other")) }
+
+    assertEquals(
+      listOf("not_found", "checksum_mismatch", "error"),
+      listOf(notFound, checksum, unreachable).map { downloadFailureResult(it) },
+    )
   }
 
   @Test

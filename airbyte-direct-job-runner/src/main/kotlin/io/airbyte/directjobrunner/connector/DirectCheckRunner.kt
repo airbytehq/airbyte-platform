@@ -11,6 +11,10 @@ import io.airbyte.config.Configs
 import io.airbyte.config.WorkloadType
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
 import io.airbyte.directjobrunner.config.connectorName
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.AirbyteConnectionStatus
 import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -22,6 +26,7 @@ import org.eclipse.aether.resolution.ArtifactResolutionException
 import org.slf4j.MDC
 import java.io.IOException
 import java.io.InputStream
+import java.io.UncheckedIOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
@@ -30,6 +35,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.function.ToDoubleFunction
 import kotlin.concurrent.thread
 
 private val logger = KotlinLogging.logger {}
@@ -101,6 +107,7 @@ class DirectCheckRunner(
   private val airbyteEdition: Configs.AirbyteEdition,
   private val jarCache: ConnectorJarCache,
   private val resolver: ConnectorJarResolver,
+  private val metricClient: MetricClient,
 ) {
   // Per-check downloads run here so a check can stop waiting on one after jarDownloadAllowance.
   private val downloads = Executors.newCachedThreadPool { Thread(it, "check-jar-download").apply { isDaemon = true } }
@@ -112,6 +119,7 @@ class DirectCheckRunner(
   init {
     // The volume outlives a container restart, so remove downloads left by checks that died with the last runner.
     checkDownloadsDir.toFile().deleteRecursively()
+    metricClient.gauge(OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_DISK_BYTES, this, ToDoubleFunction { it.jarDiskBytes() })
   }
 
   /** How long the connector may run before its process is killed. */
@@ -139,7 +147,15 @@ class DirectCheckRunner(
     val start = System.currentTimeMillis()
     val coordinates = config.jarCoordinates(image)
 
-    return when (val cached = jarCache.get(coordinates)) {
+    val cached = jarCache.get(coordinates)
+    metricClient.count(
+      OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_LOOKUP,
+      1,
+      MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
+      MetricAttribute(MetricTags.RESULT_TAG, if (cached is CachedJar.Hit) "hit" else "miss"),
+    )
+
+    return when (cached) {
       is CachedJar.Hit -> run(image, cached.jar, JarSource.CACHED, start, connectionConfiguration, workloadId)
       CachedJar.Miss -> runDownloaded(image, coordinates, start, connectionConfiguration, workloadId)
     }
@@ -168,20 +184,62 @@ class DirectCheckRunner(
     coordinates: String,
     downloadDir: Path,
   ): Path {
+    val start = System.currentTimeMillis()
     val download = downloads.submit<Path> { resolver.resolveInto(coordinates, downloadDir) }
     try {
-      return download.get(config.jarDownloadAllowance.toMillis(), TimeUnit.MILLISECONDS)
+      return download.get(config.jarDownloadAllowance.toMillis(), TimeUnit.MILLISECONDS).also {
+        recordDownload(coordinates, RESULT_SUCCESS, start)
+      }
     } catch (e: TimeoutException) {
       // The resolver's transfer may not notice the interrupt; it ends at its own timeout or when the caller deletes
-      // the directory it writes to.
+      // the directory it writes to. Only this timeout is recorded for it.
       download.cancel(true)
+      recordDownload(coordinates, RESULT_TIMEOUT, start)
       throw IllegalStateException("Downloading $coordinates for the check took longer than ${config.jarDownloadAllowance}", e)
     } catch (e: ExecutionException) {
       val cause = e.cause
       if (cause is ArtifactResolutionException) {
+        recordDownload(coordinates, downloadFailureResult(cause), start)
         throw IllegalStateException("Couldn't download $coordinates for the check", cause)
       }
       throw e
+    }
+  }
+
+  private fun recordDownload(
+    coordinates: String,
+    result: String,
+    start: Long,
+  ) {
+    val tags =
+      arrayOf(
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, connectorImageTag(coordinates)),
+        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, PURPOSE_CHECK),
+        MetricAttribute(MetricTags.RESULT_TAG, result),
+      )
+    metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags)
+    metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD_DURATION, (System.currentTimeMillis() - start).toDouble(), *tags)
+  }
+
+  // Everything under the jar cache directory: cached jars, evicted jars not yet deleted, and checks' own downloads. A
+  // file deleted during the walk (an eviction, a check finishing) skips this sample rather than reporting a wrong total.
+  private fun jarDiskBytes(): Double {
+    val root = Path.of(config.jarCacheDir)
+    if (!Files.exists(root)) {
+      return 0.0
+    }
+    return try {
+      Files.walk(root).use { paths ->
+        paths
+          .filter { Files.isRegularFile(it) }
+          .mapToLong { Files.size(it) }
+          .sum()
+          .toDouble()
+      }
+    } catch (e: IOException) {
+      Double.NaN
+    } catch (e: UncheckedIOException) {
+      Double.NaN
     }
   }
 
