@@ -15,6 +15,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.workers.exception.WorkloadLauncherException
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -51,15 +52,17 @@ sealed interface DirectJobDispatch {
 }
 
 /**
- * Hands a claimed workload to the direct job runner instead of launching a pod. Only the workload ID is sent: the
- * runner reads the workload itself and picks the handler for its type, so this client is the same for every direct
- * job type.
+ * Hands a claimed workload to the direct job runner instead of launching a pod. The workload ID is sent, with this
+ * launcher's data plane group once it has registered: the runner reads the workload itself and picks the handler for
+ * its type, so this client is the same for every direct job type, and reads per-data-plane-group feature flags with the
+ * group, the way the launcher does.
  */
 @Singleton
 class DirectJobRunnerClient(
   @Named(DIRECT_JOB_RUNNER_HTTP_CLIENT) private val httpClient: OkHttpClient,
   launcherConfig: AirbyteWorkloadLauncherConfig,
   private val metricClient: MetricClient,
+  private val identityService: DataplaneIdentityService,
 ) {
   private val runnerUrl: String = launcherConfig.directJobRunner.url.trimEnd('/')
 
@@ -82,6 +85,12 @@ class DirectJobRunnerClient(
     }
   }
 
+  // The data plane identity the launcher registered with at startup; until then it is unknown and the field is left out.
+  private fun requestBody(msg: LauncherInput): Map<String, String> {
+    val dataplaneGroupId = identityService.authNDrivenDataplaneConfig?.dataplaneGroupId ?: return mapOf("workloadId" to msg.workloadId)
+    return mapOf("workloadId" to msg.workloadId, "dataplaneGroupId" to dataplaneGroupId.toString())
+  }
+
   /**
    * Offers the workload to the runner and records the handoffs it took. A rejection is left to the caller to record,
    * because what happens next (a failure or a pod) is the caller's choice.
@@ -96,7 +105,7 @@ class DirectJobRunnerClient(
       Request
         .Builder()
         .url("$runnerUrl/v1/jobs")
-        .post(Jsons.serialize(mapOf("workloadId" to msg.workloadId)).toRequestBody(JSON_MEDIA_TYPE))
+        .post(Jsons.serialize(requestBody(msg)).toRequestBody(JSON_MEDIA_TYPE))
         .build()
 
     val status =

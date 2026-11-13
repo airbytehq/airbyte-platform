@@ -12,7 +12,10 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherDirectJobRunnerConfig
 import io.airbyte.workers.exception.WorkloadLauncherException
+import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.airbyte.workload.launcher.config.ApplicationBeanFactory
+import io.airbyte.workload.launcher.model.DataplaneConfig
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import okhttp3.OkHttpClient
@@ -24,11 +27,25 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.net.ServerSocket
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class DirectJobRunnerClientTest {
   private val workloadId = "workload-1"
   private val msg = RecordFixtures.launcherInput(workloadId, workloadType = WorkloadType.CONNECT)
+  private val dataplaneGroupId = UUID.randomUUID()
+  private val identityService =
+    mockk<DataplaneIdentityService> {
+      every { authNDrivenDataplaneConfig } returns
+        DataplaneConfig(
+          dataplaneId = UUID.randomUUID(),
+          dataplaneName = "dp",
+          dataplaneEnabled = true,
+          dataplaneGroupId = dataplaneGroupId,
+          dataplaneGroupName = "group",
+          organizationId = null,
+        )
+    }
   private val metricClient = mockk<MetricClient>(relaxed = true)
   private val server = MockWebServer()
 
@@ -51,6 +68,7 @@ class DirectJobRunnerClientTest {
         .build(),
       AirbyteWorkloadLauncherConfig(directJobRunner = AirbyteWorkloadLauncherDirectJobRunnerConfig(url = url)),
       metricClient,
+      identityService,
     )
 
   private fun verifyResult(result: String) =
@@ -64,7 +82,7 @@ class DirectJobRunnerClientTest {
     }
 
   @Test
-  fun `202 is accepted and posts the workload id to the jobs endpoint`() {
+  fun `202 is accepted and posts the workload id and the launcher's data plane group to the jobs endpoint`() {
     server.enqueue(MockResponse().setResponseCode(202))
 
     client().submit(msg)
@@ -72,8 +90,18 @@ class DirectJobRunnerClientTest {
     val request = server.takeRequest()
     assertEquals("POST", request.method)
     assertEquals("/v1/jobs", request.path)
-    assertEquals("""{"workloadId":"$workloadId"}""", request.body.readUtf8())
+    assertEquals("""{"workloadId":"$workloadId","dataplaneGroupId":"$dataplaneGroupId"}""", request.body.readUtf8())
     verifyResult("accepted")
+  }
+
+  @Test
+  fun `before the launcher knows its data plane group, only the workload id is sent`() {
+    every { identityService.authNDrivenDataplaneConfig } returns null
+    server.enqueue(MockResponse().setResponseCode(202))
+
+    client().submit(msg)
+
+    assertEquals("""{"workloadId":"$workloadId"}""", server.takeRequest().body.readUtf8())
   }
 
   @Test
@@ -183,6 +211,7 @@ class DirectJobRunnerClientTest {
         ApplicationBeanFactory().directJobRunnerHttpClient(),
         AirbyteWorkloadLauncherConfig(directJobRunner = AirbyteWorkloadLauncherDirectJobRunnerConfig(url = server.url("/").toString())),
         metricClient,
+        identityService,
       )
 
     repeat(3) { client.submit(msg) }

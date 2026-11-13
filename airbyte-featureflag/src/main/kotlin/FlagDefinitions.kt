@@ -122,8 +122,10 @@ object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inje
 object FusionLaunchEnabled : Temporary<Boolean>(key = "platform.fusion-launch-enabled", default = false)
 
 /**
- * Comma-separated connector images (`airbyte/source-postgres:3.8.10`) whose checks the direct job runner may take,
- * per data plane group. Only images baked into the runner's image work; the runner rejects any other to a pod.
+ * Comma-separated connector names (`source-postgres`) whose checks the direct job runner may take, per data plane
+ * group, at any version: the runner runs that version's published jar. Only Airbyte's own images
+ * (`airbyte/<connector>:<version>`) match. The runner turns down a connector it doesn't allow, or a version with no
+ * published jar, and the check runs in a pod.
  */
 object DirectCheckImages : Temporary<String>(key = "platform.direct-check-images", default = "")
 

@@ -139,6 +139,44 @@ func TestDirectJobRunnerStorageSecretName(t *testing.T) {
 	})
 }
 
+func TestDirectJobRunnerFeatureFlags(t *testing.T) {
+	t.Run("gets the flag client and file path as literal values, like the launcher", func(t *testing.T) {
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))
+
+		assert.Equal(t, "configfile", env["FEATURE_FLAG_CLIENT"].Value)
+		assert.Equal(t, "/etc/launchdarkly/flags.yml", env["FEATURE_FLAG_PATH"].Value)
+		assert.NotContains(t, env, "LAUNCHDARKLY_KEY")
+	})
+
+	t.Run("reads the LaunchDarkly key from the global feature flags secret by default", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["global.featureFlags.client"] = "launchdarkly"
+		values["global.featureFlags.secretName"] = "airbyte-secrets"
+		values["global.featureFlags.launchdarkly.keySecretKey"] = "LAUNCHDARKLY_KEY"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "launchdarkly", env["FEATURE_FLAG_CLIENT"].Value)
+		require.NotNil(t, env["LAUNCHDARKLY_KEY"].ValueFrom)
+		assert.Equal(t, "airbyte-secrets", env["LAUNCHDARKLY_KEY"].ValueFrom.SecretKeyRef.Name)
+		assert.Equal(t, "LAUNCHDARKLY_KEY", env["LAUNCHDARKLY_KEY"].ValueFrom.SecretKeyRef.Key)
+		// A missing key mustn't stop the runner starting: without it, checks run in pods.
+		require.NotNil(t, env["LAUNCHDARKLY_KEY"].ValueFrom.SecretKeyRef.Optional)
+		assert.True(t, *env["LAUNCHDARKLY_KEY"].ValueFrom.SecretKeyRef.Optional)
+	})
+
+	t.Run("overrides the feature flags secret", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["global.featureFlags.client"] = "launchdarkly"
+		values["global.featureFlags.secretName"] = "airbyte-secrets"
+		values["global.featureFlags.launchdarkly.keySecretKey"] = "LAUNCHDARKLY_KEY"
+		values["directJobRunner.featureFlagsSecretName"] = "jobs-launchdarkly"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		require.NotNil(t, env["LAUNCHDARKLY_KEY"].ValueFrom)
+		assert.Equal(t, "jobs-launchdarkly", env["LAUNCHDARKLY_KEY"].ValueFrom.SecretKeyRef.Name)
+	})
+}
+
 func TestDirectJobRunnerScheduling(t *testing.T) {
 	values := directJobRunnerOpts()
 	values["directJobRunner.nodeSelector.airbyte/node-pool"] = "direct-jobs"

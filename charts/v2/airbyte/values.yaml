@@ -2813,6 +2813,10 @@ directJobRunner:
   # The runner runs in the jobs namespace.
   storageSecretName: ""
 
+  # -- Secret holding the LaunchDarkly key, when global.featureFlags.secretName only exists in the airbyte namespace.
+  # The runner reads platform.direct-check-images to decide which connectors' checks it takes.
+  featureFlagsSecretName: ""
+
   annotations: {}
 
   podSecurityContext:

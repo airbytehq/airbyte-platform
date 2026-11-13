@@ -15,9 +15,12 @@ import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.toConfigWithRefs
+import io.airbyte.directjobrunner.connector.ConnectorJarPrefetcher
+import io.airbyte.directjobrunner.connector.DirectCheckAllowlist
 import io.airbyte.directjobrunner.connector.DirectCheckRunner
 import io.airbyte.directjobrunner.connector.SourceCheckResult
 import io.airbyte.directjobrunner.core.DirectJobHandler
+import io.airbyte.directjobrunner.core.LauncherDataplaneGroup
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -40,7 +43,8 @@ private val logger = KotlinLogging.logger {}
 private val RESULT_MARGIN: Duration = Duration.ofSeconds(30)
 
 /**
- * Runs CHECK workloads for the source-postgres version baked into this image. Each check is its own connector process
+ * Runs CHECK workloads for the connectors in [DirectCheckAllowlist], at the version the check asks for, from that
+ * version's fat jar (downloaded by the first check that needs it). Each check is its own connector process
  * ([DirectCheckRunner]), which exits when the check is done, so customers never share a process.
  *
  * Platform and connector logs go to the workload's log path, like a check pod's. Not handled: control-message config
@@ -51,18 +55,44 @@ class CheckJobHandler(
   private val payloadDeserializer: PayloadDeserializer,
   private val secretsHydrator: ConnectorSecretsHydrator,
   private val directCheckRunner: DirectCheckRunner,
+  private val allowlist: DirectCheckAllowlist,
+  private val prefetcher: ConnectorJarPrefetcher,
   private val outputWriter: WorkloadOutputWriter,
   private val metricClient: MetricClient,
 ) : DirectJobHandler {
   override val workloadType: WorkloadType = WorkloadType.CHECK
 
-  // The connector's own timeout plus time to hydrate and write the result. A check whose runner died fails this soon.
-  override val runningDeadline: Duration = directCheckRunner.checkTimeout.plus(RESULT_MARGIN)
+  // Time to download a jar that isn't cached, the connector's own timeout, and time to hydrate and write the result. A
+  // check whose runner died fails this soon.
+  override val runningDeadline: Duration = directCheckRunner.jarDownloadAllowance.plus(directCheckRunner.checkTimeout).plus(RESULT_MARGIN)
 
-  // FLEX workloads upload logs to the organization's own destination, which only the check pod's sidecar sets up.
-  override fun accepts(workload: Workload): Boolean =
-    workload.logDeliveryMode != LogDeliveryMode.FLEX &&
-      payloadDeserializer.toCheckConnectionInput(workload.inputPayload).launcherConfig.dockerImage == directCheckRunner.image
+  // A check turned down here runs in a pod. FLEX workloads upload logs to the organization's own destination, which only
+  // the check pod's sidecar sets up. An allowlisted connector whose jar for this version isn't in the jar repository
+  // can't run here.
+  override fun accepts(
+    workload: Workload,
+    dataplaneGroup: LauncherDataplaneGroup,
+  ): Boolean {
+    // The first check from a launcher's data plane group starts caching that group's allowlisted jars.
+    if (dataplaneGroup is LauncherDataplaneGroup.Known) {
+      prefetcher.prefetchOnce(dataplaneGroup.dataplaneGroupId)
+    }
+
+    if (workload.logDeliveryMode == LogDeliveryMode.FLEX) {
+      return false
+    }
+
+    val image = payloadDeserializer.toCheckConnectionInput(workload.inputPayload).launcherConfig.dockerImage
+    if (!allowlist.allows(image, dataplaneGroup)) {
+      return false
+    }
+
+    if (!directCheckRunner.canRun(image)) {
+      logger.info { "Turning down check ${workload.id}: no jar for $image in the jar repository; it runs in a pod" }
+      return false
+    }
+    return true
+  }
 
   override fun run(
     workloadId: String,
@@ -83,21 +113,23 @@ class CheckJobHandler(
     val config = hydrate(input.checkConnectionInput)
     val hydratedAt = System.currentTimeMillis()
 
-    val result = directCheckRunner.check(config, workloadId)
+    val run = directCheckRunner.check(image, config, workloadId)
+    val result = run.result
     val ranAt = System.currentTimeMillis()
 
     val output = toJobOutput(result, input.checkConnectionInput.actorType)
     outputWriter.write(workloadId, output)
 
+    // The connector's run only: a jar download on a cache miss would otherwise skew it.
     metricClient.distribution(
       OssMetricsRegistry.DIRECT_CHECK_CONNECTOR_DURATION,
-      (ranAt - hydratedAt).toDouble(),
+      run.processMs.toDouble(),
       MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
       MetricAttribute(MetricTags.RESULT_TAG, result.javaClass.simpleName),
     )
     logger.info {
       "Check $workloadId image=$image result=${result::class.simpleName} status=${output.checkConnection?.status} " +
-        "hydrateMs=${hydratedAt - start} connectorMs=${ranAt - hydratedAt} " +
+        "jar=${run.jarSource} hydrateMs=${hydratedAt - start} jarMs=${run.jarMs} processMs=${run.processMs} " +
         "writeMs=${System.currentTimeMillis() - ranAt} totalMs=${System.currentTimeMillis() - start}"
     }
   }

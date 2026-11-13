@@ -12,10 +12,13 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.scheduling.annotation.ExecuteOn
+import java.util.UUID
 
 @Introspected
 data class DirectJobRequest(
   val workloadId: String = "",
+  /** The dispatching launcher's data plane group. Blank when the launcher doesn't know it. */
+  val dataplaneGroupId: String = "",
 )
 
 /**
@@ -35,7 +38,18 @@ class DirectJobController(
       return HttpResponse.badRequest()
     }
 
-    return when (directJobService.submit(request.workloadId)) {
+    val dataplaneGroup =
+      if (request.dataplaneGroupId.isBlank()) {
+        LauncherDataplaneGroup.Unknown
+      } else {
+        try {
+          LauncherDataplaneGroup.Known(UUID.fromString(request.dataplaneGroupId))
+        } catch (e: IllegalArgumentException) {
+          return HttpResponse.badRequest()
+        }
+      }
+
+    return when (directJobService.submit(request.workloadId, dataplaneGroup)) {
       DirectJobSubmission.Accepted -> HttpResponse.accepted()
       DirectJobSubmission.Duplicate, is DirectJobSubmission.NotEligible -> HttpResponse.status(HttpStatus.CONFLICT)
       is DirectJobSubmission.Unsupported -> HttpResponse.badRequest()

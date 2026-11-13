@@ -13,10 +13,10 @@ are dropped because those secrets may not exist in the jobs namespace.
 */}}
 {{- define "airbyte.directJobRunner.configEnvs" }}
 {{- $vars := dict }}
-{{- range $tpl := list "airbyte.common.configVars" "airbyte.cluster.configVars" "airbyte.workloadApiServer.configVars" "airbyte.workloadLauncher.configVars" "airbyte.micronaut.configVars" "airbyte.metrics.configVars" "airbyte.storage.configVars" "airbyte.secretsManager.configVars" "airbyte.directJobRunner.configVars" }}
+{{- range $tpl := list "airbyte.common.configVars" "airbyte.cluster.configVars" "airbyte.workloadApiServer.configVars" "airbyte.workloadLauncher.configVars" "airbyte.micronaut.configVars" "airbyte.metrics.configVars" "airbyte.storage.configVars" "airbyte.secretsManager.configVars" "airbyte.featureFlags.configVars" "airbyte.directJobRunner.configVars" }}
 {{- $vars = merge $vars (include $tpl $ | fromYaml) }}
 {{- end }}
-{{- range $tpl := list "airbyte.common.envs" "airbyte.cluster.envs" "airbyte.workloadApiServer.envs" "airbyte.workloadLauncher.controlPlane.tokenEndpoint.env" "airbyte.micronaut.envs" "airbyte.metrics.envs" "airbyte.storage.envs" "airbyte.secretsManager.envs" "airbyte.directJobRunner.envs" }}
+{{- range $tpl := list "airbyte.common.envs" "airbyte.cluster.envs" "airbyte.workloadApiServer.envs" "airbyte.workloadLauncher.controlPlane.tokenEndpoint.env" "airbyte.micronaut.envs" "airbyte.metrics.envs" "airbyte.storage.envs" "airbyte.secretsManager.envs" "airbyte.featureFlags.envs" "airbyte.directJobRunner.envs" }}
 {{- range $env := (include $tpl $ | fromYamlArray) }}
 {{- if and $env.valueFrom $env.valueFrom.configMapKeyRef }}
 {{- $key := $env.valueFrom.configMapKeyRef.key }}
@@ -43,6 +43,25 @@ namespace when the global storage secret only exists in the airbyte namespace.
 {{- if $secretName }}
 {{- $_ := set $env.valueFrom.secretKeyRef "name" $secretName }}
 {{- end }}
+{{ list $env | toYaml }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Secret-backed feature flag credentials (the LaunchDarkly key), for reading platform.direct-check-images. Secrets are
+namespaced, so featureFlagsSecretName points at a copy in the jobs namespace when the global feature flags secret only
+exists in the airbyte namespace. The reference is optional: without the key the runner still starts, reads every flag
+as its default, and takes no checks, so they run in pods.
+*/}}
+{{- define "airbyte.directJobRunner.featureFlagsSecretEnvs" }}
+{{- $secretName := .Values.directJobRunner.featureFlagsSecretName }}
+{{- range $env := (include "airbyte.featureFlags.envs" . | fromYamlArray) }}
+{{- if and $env.valueFrom $env.valueFrom.secretKeyRef }}
+{{- if $secretName }}
+{{- $_ := set $env.valueFrom.secretKeyRef "name" $secretName }}
+{{- end }}
+{{- $_ := set $env.valueFrom.secretKeyRef "optional" true }}
 {{ list $env | toYaml }}
 {{- end }}
 {{- end }}

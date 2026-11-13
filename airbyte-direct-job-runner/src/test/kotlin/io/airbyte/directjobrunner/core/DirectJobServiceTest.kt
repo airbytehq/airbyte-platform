@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Duration
 import java.time.OffsetDateTime
+import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -38,7 +39,7 @@ class DirectJobServiceTest {
     mockk<DirectJobHandler>(relaxed = true) {
       every { workloadType } returns WorkloadType.CONNECT
       every { runningDeadline } returns Duration.ofMinutes(2)
-      every { accepts(any()) } returns true
+      every { accepts(any(), any()) } returns true
     }
   private val workloadId = "workload-1"
   private val payload = """{"host":"db.example.com"}"""
@@ -116,7 +117,7 @@ class DirectJobServiceTest {
       val id = "workload-$index"
       every { workloadApiClient.workloadGet(id) } returns workload(status, id)
 
-      assertEquals(DirectJobSubmission.Accepted, service.submit(id))
+      assertEquals(DirectJobSubmission.Accepted, service.submit(id, LauncherDataplaneGroup.Unknown))
       awaitCompletedTasks(index + 1L)
 
       verifyOrder {
@@ -153,7 +154,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
 
     val before = OffsetDateTime.now()
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
 
     verify {
       workloadApiClient.workloadRunning(
@@ -174,7 +175,7 @@ class DirectJobServiceTest {
     ).forEach { status ->
       every { workloadApiClient.workloadGet(workloadId) } returns workload(status)
 
-      assertEquals(DirectJobSubmission.NotEligible(status), service.submit(workloadId))
+      assertEquals(DirectJobSubmission.NotEligible(status), service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     }
 
     verify(exactly = 0) { workloadApiClient.workloadRunning(any()) }
@@ -186,12 +187,12 @@ class DirectJobServiceTest {
   fun `a workload type without a handler is unsupported and nothing is run`() {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED, type = WorkloadType.SYNC)
 
-    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId, LauncherDataplaneGroup.Unknown))
 
     verify(exactly = 0) { workloadApiClient.workloadRunning(any()) }
     verify(exactly = 0) { handler.run(any(), any(), any()) }
     // The workload is released, so a later submission is evaluated again rather than reported as a duplicate.
-    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.SYNC), service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     assertEquals(2.0, submissions("unsupported", workloadType = "sync"))
   }
 
@@ -215,9 +216,9 @@ class DirectJobServiceTest {
       release.await(5, TimeUnit.SECONDS)
     }
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     assertTrue(started.await(5, TimeUnit.SECONDS))
-    assertEquals(DirectJobSubmission.Duplicate, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Duplicate, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     // The duplicate is rejected before the workload is read, so its type is unknown.
     assertEquals(1.0, submissions("duplicate", workloadType = "unknown"))
     assertEquals(1.0, inFlightGauge())
@@ -232,10 +233,10 @@ class DirectJobServiceTest {
   fun `workload can be accepted again after it finished`() {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitCompletedTasks(1)
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
   }
 
   @Test
@@ -249,9 +250,9 @@ class DirectJobServiceTest {
       release.await(5, TimeUnit.SECONDS)
     }
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit("a"))
+    assertEquals(DirectJobSubmission.Accepted, service.submit("a", LauncherDataplaneGroup.Unknown))
     assertTrue(started.await(5, TimeUnit.SECONDS))
-    assertEquals(DirectJobSubmission.Accepted, service.submit("b"))
+    assertEquals(DirectJobSubmission.Accepted, service.submit("b", LauncherDataplaneGroup.Unknown))
     release.countDown()
     awaitCompletedTasks(2)
 
@@ -265,7 +266,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
 
     // The job is still blocked, so this call can only have come from submit itself.
     verify(exactly = 1) { workloadApiClient.workloadRunning(match<WorkloadRunningRequest> { it.workloadId == workloadId }) }
@@ -279,10 +280,10 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { workloadApiClient.workloadRunning(any()) } throws RuntimeException("gone") andThen Unit
 
-    assertThrows<RuntimeException> { service.submit(workloadId) }
+    assertThrows<RuntimeException> { service.submit(workloadId, LauncherDataplaneGroup.Unknown) }
     verify(exactly = 0) { handler.run(any(), any(), any()) }
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
   }
 
   @Test
@@ -290,7 +291,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { handler.run(workloadId, payload, logPath) } throws IllegalStateException("boom")
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitIdle()
 
     verify(exactly = 1) {
@@ -318,7 +319,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { workloadApiClient.workloadSuccess(any()) } answers { Thread.sleep(300) }
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitIdle()
 
     val durations = runDurations("success")!!
@@ -331,7 +332,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { workloadApiClient.workloadSuccess(any()) } throws RuntimeException("api down")
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitIdle()
 
     verify(exactly = 1) { workloadApiClient.workloadFailure(any()) }
@@ -347,30 +348,30 @@ class DirectJobServiceTest {
     every { handler.run(workloadId, payload, logPath) } throws IllegalStateException("boom")
     every { workloadApiClient.workloadFailure(any()) } throws RuntimeException("api down")
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitCompletedTasks(1)
 
     assertEquals(1.0, failureReportErrors())
     assertEquals(1.0, runs("failure"))
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
   }
 
   @Test
   fun `workload api errors on get propagate and release the workload`() {
     every { workloadApiClient.workloadGet(workloadId) } throws RuntimeException("api down") andThen workload(WorkloadStatus.CLAIMED)
 
-    assertThrows<RuntimeException> { service.submit(workloadId) }
+    assertThrows<RuntimeException> { service.submit(workloadId, LauncherDataplaneGroup.Unknown) }
     // A submission that throws reaches the launcher as a 5xx and records no submission result.
     assertNull(meterRegistry.find("direct_job_submission").counter())
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
   }
 
   @Test
   fun `the handler gets the workload's log path`() {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
 
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
     awaitIdle()
 
     verify(exactly = 1) { handler.run(workloadId, payload, "/workspace/workload-1/logs.log") }
@@ -378,18 +379,28 @@ class DirectJobServiceTest {
 
   @Test
   fun `a workload the handler can't run is unsupported and is not marked running`() {
-    every { handler.accepts(any()) } returns false
+    every { handler.accepts(any(), any()) } returns false
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
 
-    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.CONNECT), service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.CONNECT), service.submit(workloadId, LauncherDataplaneGroup.Unknown))
 
     verify(exactly = 0) {
       workloadApiClient.workloadRunning(any())
       handler.run(any(), any(), any())
     }
     // The workload is released, so a later submission is judged again rather than reported as a duplicate.
-    every { handler.accepts(any()) } returns true
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    every { handler.accepts(any(), any()) } returns true
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
+  }
+
+  @Test
+  fun `the handler is asked with the dispatching launcher's data plane group`() {
+    val dataplaneGroup = LauncherDataplaneGroup.Known(UUID.randomUUID())
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+
+    service.submit(workloadId, dataplaneGroup)
+
+    verify(exactly = 1) { handler.accepts(any(), dataplaneGroup) }
   }
 
   @Test
@@ -398,12 +409,12 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { workloadApiClient.workloadGet("late") } returns workload(WorkloadStatus.CLAIMED, "late")
     every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
 
     val drained = Thread { service.drain() }.apply { start() }
     // drain sets the flag before it waits, so give it a moment to start.
     Thread.sleep(100)
-    assertEquals(DirectJobSubmission.ShuttingDown, service.submit("late"))
+    assertEquals(DirectJobSubmission.ShuttingDown, service.submit("late", LauncherDataplaneGroup.Unknown))
     assertTrue(drained.isAlive, "drain returned while a job was still running")
 
     release.countDown()
@@ -419,7 +430,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
     every { handler.run(workloadId, payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
     service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler), metricClient, Duration.ofMillis(300))
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
 
     val start = System.nanoTime()
     service.drain()
@@ -434,7 +445,7 @@ class DirectJobServiceTest {
       mockk<DirectJobHandler>(relaxed = true) {
         every { workloadType } returns WorkloadType.CHECK
         every { runningDeadline } returns Duration.ofMinutes(2)
-        every { accepts(any()) } returns true
+        every { accepts(any(), any()) } returns true
       }
     val release = CountDownLatch(1)
     every { checkHandler.run("check", payload, logPath) } answers { release.await(5, TimeUnit.SECONDS) }
@@ -443,8 +454,8 @@ class DirectJobServiceTest {
     service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler, checkHandler), metricClient)
 
     // The check holds the only check thread; the connect job still runs on the other pool.
-    service.submit("check")
-    service.submit("connect")
+    service.submit("check", LauncherDataplaneGroup.Unknown)
+    service.submit("connect", LauncherDataplaneGroup.Unknown)
     awaitCompletedTasks(1)
 
     assertEquals(0L, checkExecutor.completedTaskCount)
@@ -457,7 +468,7 @@ class DirectJobServiceTest {
     every { handler.runningDeadline } returns Duration.ofSeconds(90)
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
 
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
     val startedAt = OffsetDateTime.now()
     awaitIdle()
 
@@ -473,7 +484,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED) andThen workload(WorkloadStatus.FAILURE)
     every { workloadApiClient.workloadHeartbeat(any()) } throws RuntimeException("not running")
 
-    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId))
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
     awaitIdle()
 
     verify(exactly = 0) {
@@ -488,7 +499,7 @@ class DirectJobServiceTest {
     every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED) andThen workload(WorkloadStatus.RUNNING)
     every { workloadApiClient.workloadHeartbeat(any()) } throws RuntimeException("api blip")
 
-    service.submit(workloadId)
+    service.submit(workloadId, LauncherDataplaneGroup.Unknown)
     awaitIdle()
 
     verify(exactly = 1) { handler.run(workloadId, payload, logPath) }

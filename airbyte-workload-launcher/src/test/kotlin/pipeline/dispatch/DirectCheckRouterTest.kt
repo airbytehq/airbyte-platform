@@ -60,7 +60,7 @@ class DirectCheckRouterTest {
     }
   private val featureFlagClient =
     mockk<FeatureFlagClient> {
-      every { stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)) } returns " airbyte/source-mysql:3.1.0 , $IMAGE "
+      every { stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)) } returns " source-mysql , source-postgres "
       every { boolVariation(UseDirectCheck, Workspace(workspaceId)) } returns true
       every { boolVariation(UseRuntimeSecretPersistence, Organization(organizationId)) } returns false
     }
@@ -92,13 +92,39 @@ class DirectCheckRouterTest {
     }
 
   @Test
-  fun `a listed image with the workspace flag on is eligible`() {
+  fun `a listed connector with the workspace flag on is eligible`() {
     assertEquals(DirectCheckEligibility.ELIGIBLE, router.eligibility(input()))
   }
 
   @Test
-  fun `an image that isn't listed for the data plane group is not eligible`() {
-    assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input(image = "airbyte/source-postgres:3.8.9")))
+  fun `a listed connector is eligible at any version`() {
+    assertEquals(DirectCheckEligibility.ELIGIBLE, router.eligibility(input(image = "airbyte/source-postgres:3.8.9")))
+    assertEquals(DirectCheckEligibility.ELIGIBLE, router.eligibility(input(image = "airbyte/source-postgres:3.9.0-rc1")))
+  }
+
+  @Test
+  fun `a connector that isn't listed for the data plane group is not eligible`() {
+    assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input(image = "airbyte/source-mssql:4.1.0")))
+  }
+
+  @Test
+  fun `only Airbyte's own image of a listed connector is eligible`() {
+    listOf(
+      "acme/source-postgres:3.8.10",
+      "registry.example.com:5000/airbyte/source-postgres:3.8.10",
+      "airbyte/source-postgres:3.8.10@sha256:0123456789abcdef",
+      "airbyte/source-postgres",
+      "airbyte/source-postgres:",
+    ).forEach { image ->
+      assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input(image = image)), image)
+    }
+  }
+
+  @Test
+  fun `a flag value still listing images matches nothing, so those checks stay on pods`() {
+    every { featureFlagClient.stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)) } returns IMAGE
+
+    assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input()))
   }
 
   @Test

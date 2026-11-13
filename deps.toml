@@ -144,6 +144,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
 micrometer-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
 micrometer-statsd = { module = "io.micrometer:micrometer-registry-statsd", version.ref = "micrometer" }
+maven-resolver-supplier = { module = "org.apache.maven.resolver:maven-resolver-supplier-mvn3", version = "2.0.24" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 mockk = { module = "io.mockk:mockk", version = "1.14.9" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }

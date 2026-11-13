@@ -103,7 +103,10 @@ class DirectJobService(
    * Validates the workload and marks it running synchronously, then runs the job in the background. The workload
    * API is the source of truth for the result; callers only learn whether the work was taken.
    */
-  fun submit(workloadId: String): DirectJobSubmission {
+  fun submit(
+    workloadId: String,
+    dataplaneGroup: LauncherDataplaneGroup,
+  ): DirectJobSubmission {
     if (shuttingDown) {
       return recordSubmission(MetricTags.UNKNOWN, DirectJobSubmission.ShuttingDown)
     }
@@ -119,7 +122,7 @@ class DirectJobService(
       val workloadType = workload.type.toString()
       val handler =
         handlersByType[workload.type] ?: return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
-      if (!handler.accepts(workload)) {
+      if (!handler.accepts(workload, dataplaneGroup)) {
         return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
       }
 

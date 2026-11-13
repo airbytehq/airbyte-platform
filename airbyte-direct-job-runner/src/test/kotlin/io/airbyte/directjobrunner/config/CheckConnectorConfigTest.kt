@@ -10,34 +10,29 @@ import java.nio.file.Path
 
 class CheckConnectorConfigTest {
   @Test
-  fun `the name, launcher and JVM options env var come from the image`() {
-    val config = CheckConnectorConfig(image = "airbyte/source-postgres:3.8.10")
-
-    assertEquals("source-postgres", config.name)
-    assertEquals(Path.of("/connectors/source-postgres/bin/source-postgres"), config.launcher)
-    assertEquals("SOURCE_POSTGRES_OPTS", config.jvmOptsEnvVar)
+  fun `the name and jar coordinates come from the image`() {
+    assertEquals("source-postgres", connectorName("airbyte/source-postgres:3.8.10"))
+    assertEquals("io.airbyte.connectors:source-postgres:3.8.10", CheckConnectorConfig().jarCoordinates("airbyte/source-postgres:3.8.10"))
   }
 
   @Test
-  fun `another connector gets its own launcher and env var`() {
-    val config = CheckConnectorConfig(image = "airbyte/source-mysql:3.50.0")
+  fun `another connector and group id give other coordinates`() {
+    val config = CheckConnectorConfig(jarGroupId = "io.example.jars")
 
-    assertEquals(Path.of("/connectors/source-mysql/bin/source-mysql"), config.launcher)
-    assertEquals("SOURCE_MYSQL_OPTS", config.jvmOptsEnvVar)
+    assertEquals("io.example.jars:source-mysql:3.50.0", config.jarCoordinates("airbyte/source-mysql:3.50.0"))
   }
 
   @Test
-  fun `a registry port is not taken for the name`() {
-    val config = CheckConnectorConfig(image = "registry.example.com:5000/airbyte/source-postgres:3.8.10")
+  fun `a registry port is not taken for the name or the version`() {
+    val image = "registry.example.com:5000/airbyte/source-postgres:3.8.10"
 
-    assertEquals("source-postgres", config.name)
-    assertEquals(Path.of("/connectors/source-postgres/bin/source-postgres"), config.launcher)
+    assertEquals("source-postgres", connectorName(image))
+    assertEquals("io.airbyte.connectors:source-postgres:3.8.10", CheckConnectorConfig().jarCoordinates(image))
   }
 
   @Test
-  fun `an explicit install dir is used as is`() {
-    val config = CheckConnectorConfig(image = "airbyte/source-postgres:3.8.10", installDir = "/opt/pg")
-
-    assertEquals(Path.of("/opt/pg/bin/source-postgres"), config.launcher)
+  fun `the connector runs on the runner's own java unless another is set`() {
+    assertEquals(Path.of(System.getProperty("java.home"), "bin", "java"), CheckConnectorConfig().java)
+    assertEquals(Path.of("/opt/jdk/bin/java"), CheckConnectorConfig(javaExecutable = "/opt/jdk/bin/java").java)
   }
 }

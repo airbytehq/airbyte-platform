@@ -18,6 +18,7 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.slf4j.api)
   implementation(libs.airbyte.protocol)
+  implementation(libs.maven.resolver.supplier)
 
   implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -27,6 +28,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-worker-models"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
@@ -40,6 +42,7 @@ dependencies {
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
+  testImplementation(libs.mockwebserver)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
 }

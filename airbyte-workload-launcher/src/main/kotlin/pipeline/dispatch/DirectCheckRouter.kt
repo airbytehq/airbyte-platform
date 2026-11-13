@@ -11,6 +11,8 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseDirectCheck
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
+import io.airbyte.featureflag.isListedAirbyteConnector
+import io.airbyte.featureflag.parseDirectCheckConnectors
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -33,7 +35,9 @@ enum class DirectCheckEligibility(
 ) {
   ELIGIBLE("eligible for the direct job runner"),
   NO_DATAPLANE_IDENTITY("the launcher doesn't know its data plane group yet"),
-  IMAGE_NOT_LISTED("its image isn't in platform.direct-check-images for this data plane group"),
+
+  // The name predates the flag listing connectors instead of images; it is kept because it is a metric tag value.
+  IMAGE_NOT_LISTED("its connector isn't in platform.direct-check-images for this data plane group"),
   NETWORK_SECURITY_TOKENS("it has network security tokens, which only its pod's network policy labels allow"),
   WORKSPACE_FLAG_OFF("platform.use-direct-check is off for its workspace"),
   RUNTIME_SECRET_PERSISTENCE("its organization uses runtime secret persistence"),
@@ -43,10 +47,11 @@ enum class DirectCheckEligibility(
  * Decides whether a check runs on the direct job runner or in a pod ([eligibility]), and hands eligible checks to the
  * runner ([dispatch]).
  *
- * A check is eligible when its image is in [DirectCheckImages] for this data plane group, [UseDirectCheck] is on for
- * its workspace, and the runner can run it the way a pod would: checks with network security tokens (the pod's
- * network policy labels) or from an organization on runtime secret persistence stay on pods. When the runner does
- * not take an eligible check, it falls back to a pod, so the runner being down never fails a check.
+ * A check is eligible when its image is Airbyte's image of a connector in [DirectCheckImages] for this data plane
+ * group ([isListedAirbyteConnector]), [UseDirectCheck] is on for its workspace, and the runner can run it the way a pod
+ * would: checks with network security tokens (the pod's network policy labels) or from an organization on runtime
+ * secret persistence stay on pods. When the runner does not take an eligible check, it falls back to a pod, so the
+ * runner being down never fails a check.
  */
 @Singleton
 class DirectCheckRouter(
@@ -57,11 +62,11 @@ class DirectCheckRouter(
   private val metricClient: MetricClient,
 ) {
   fun eligibility(input: CheckConnectionInput): DirectCheckEligibility {
-    // The data plane identity the launcher registered with at startup; the image list is set per data plane group,
+    // The data plane identity the launcher registered with at startup; the connector list is set per data plane group,
     // so a check can't be routed before the launcher knows its group.
     val dataplaneGroupId =
       identityService.authNDrivenDataplaneConfig?.dataplaneGroupId ?: return DirectCheckEligibility.NO_DATAPLANE_IDENTITY
-    if (input.launcherConfig.dockerImage !in directCheckImages(dataplaneGroupId)) {
+    if (!isListedAirbyteConnector(input.launcherConfig.dockerImage, directCheckConnectors(dataplaneGroupId))) {
       return DirectCheckEligibility.IMAGE_NOT_LISTED
     }
 
@@ -110,12 +115,8 @@ class DirectCheckRouter(
     return false
   }
 
-  private fun directCheckImages(dataplaneGroupId: UUID): List<String> =
-    featureFlagClient
-      .stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId))
-      .split(",")
-      .map { it.trim() }
-      .filter { it.isNotEmpty() }
+  private fun directCheckConnectors(dataplaneGroupId: UUID): Set<String> =
+    parseDirectCheckConnectors(featureFlagClient.stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)))
 
   // A lost response can hide a runner that already marked the workload RUNNING; a pod then would run it twice. If the
   // status can't be read, the pod runs it: a check run twice is better than a check that never runs.

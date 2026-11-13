@@ -21,10 +21,13 @@ interface DirectJobHandler {
   val runningDeadline: Duration
 
   /**
-   * Whether this runner can run [workload]. A job it can't run is rejected before it is marked RUNNING, so the
-   * launcher can run it elsewhere.
+   * Whether this runner can run [workload], dispatched by a launcher in [dataplaneGroup]. A job it can't run is
+   * rejected before it is marked RUNNING, so the launcher can run it elsewhere.
    */
-  fun accepts(workload: Workload): Boolean = true
+  fun accepts(
+    workload: Workload,
+    dataplaneGroup: LauncherDataplaneGroup,
+  ): Boolean = true
 
   /**
    * Parses [inputPayload], runs the job, and writes its output for [workloadId]. Job logs go to [logPath], the

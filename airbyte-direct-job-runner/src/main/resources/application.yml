@@ -34,6 +34,11 @@ micronaut:
       n-threads: ${AIRBYTE_DIRECT_JOB_RUNNER_CHECK_THREADS:6}
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
+  feature-flag:
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
+    path: ${FEATURE_FLAG_PATH:/flags}
+    api-key: ${LAUNCHDARKLY_KEY:}
+    base-url: ${FEATURE_FLAG_BASEURL:}
   version: ${AIRBYTE_VERSION:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
@@ -62,8 +67,6 @@ airbyte:
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
     use-runtime-persistence: ${USE_RUNTIME_SECRET_PERSISTENCE:false}
   direct-job-runner:
-    check-connector:
-      image: ${CHECK_CONNECTOR_IMAGE:}
     connect:
       block-internal-addresses: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES:false}
       blocked-cidrs: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS:}

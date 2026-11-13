@@ -8,11 +8,16 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.directjobrunner.config.CheckConnectorConfig
 import io.airbyte.protocol.models.v0.AirbyteConnectionStatus
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.eclipse.aether.resolution.ArtifactResolutionException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,29 +26,61 @@ import java.time.Duration
 
 private const val SUCCEEDED = """{"type":"CONNECTION_STATUS","connectionStatus":{"status":"SUCCEEDED"}}"""
 
-/** Each test replaces the connector launcher with a shell script, so no JVM or database is involved. */
+private const val IMAGE = "airbyte/source-postgres:3.8.10"
+
+private val JAR: Path = Path.of("/cache/io/airbyte/connectors/source-postgres/3.8.10/source-postgres-3.8.10.jar")
+
+/** Each test replaces `java` with a shell script, so no JVM, jar or database is involved. */
 class DirectCheckRunnerTest {
   @TempDir
-  lateinit var installDir: Path
+  lateinit var scriptDir: Path
 
   @TempDir
   lateinit var captureDir: Path
 
+  @TempDir
+  lateinit var cacheDir: Path
+
   private val connectionConfiguration = Jsons.jsonNode(mapOf("host" to "db.example.com", "password" to "hunter2"))
 
-  private fun check(
-    launcherBody: String,
+  // A check's own download lands in the directory it is given, like the real resolver; the prefetch uses resolve().
+  private val downloadDirs = mutableListOf<Path>()
+  private val resolver =
+    mockk<ConnectorJarResolver> {
+      every { resolve(any()) } returns JAR
+      every { resolveInto(any(), any()) } answers {
+        val dir = secondArg<Path>()
+        downloadDirs.add(dir)
+        dir.resolve("source-postgres-3.8.10.jar").also { Files.writeString(it, "jar") }
+      }
+    }
+  private val jarCache = ConnectorJarCache(resolver)
+
+  private fun runner(
+    javaBody: String,
     checkTimeout: Duration = Duration.ofSeconds(10),
     edition: Configs.AirbyteEdition = Configs.AirbyteEdition.COMMUNITY,
-  ): SourceCheckResult {
-    val launcher = installDir.resolve("bin/source-postgres")
-    Files.createDirectories(launcher.parent)
-    Files.writeString(launcher, "#!/bin/bash\n$launcherBody\n")
-    Files.setPosixFilePermissions(launcher, PosixFilePermissions.fromString("rwx------"))
+    jarDownloadAllowance: Duration = Duration.ofSeconds(10),
+  ): DirectCheckRunner {
+    val java = scriptDir.resolve("java")
+    Files.writeString(java, "#!/bin/bash\n$javaBody\n")
+    Files.setPosixFilePermissions(java, PosixFilePermissions.fromString("rwx------"))
 
-    val config = CheckConnectorConfig(image = "airbyte/source-postgres:3.8.10", installDir = installDir.toString(), checkTimeout = checkTimeout)
-    return DirectCheckRunner(config, edition).check(connectionConfiguration, "workload-1")
+    val config =
+      CheckConnectorConfig(
+        javaExecutable = java.toString(),
+        jarCacheDir = cacheDir.toString(),
+        checkTimeout = checkTimeout,
+        jarDownloadAllowance = jarDownloadAllowance,
+      )
+    return DirectCheckRunner(config, edition, jarCache, resolver)
   }
+
+  private fun check(
+    javaBody: String,
+    checkTimeout: Duration = Duration.ofSeconds(10),
+    edition: Configs.AirbyteEdition = Configs.AirbyteEdition.COMMUNITY,
+  ): SourceCheckResult = runner(javaBody, checkTimeout, edition).check(IMAGE, connectionConfiguration, "workload-1").result
 
   @Test
   fun `a reported success is returned and log or non-protocol lines are skipped`() {
@@ -134,8 +171,8 @@ class DirectCheckRunnerTest {
     val result =
       check(
         """
-        [ "$1" = "--check" ] && [ "$2" = "--config" ] && [ "$3" = "/dev/stdin" ] || exit 9
-        cat "$3" > $capturedConfig
+        [ "${'$'}{@: -3:1}" = "--check" ] && [ "${'$'}{@: -2:1}" = "--config" ] && [ "${'$'}{@: -1}" = "/dev/stdin" ] || exit 9
+        cat /dev/stdin > $capturedConfig
         echo '$SUCCEEDED'
         """.trimIndent(),
       )
@@ -150,7 +187,33 @@ class DirectCheckRunnerTest {
   }
 
   @Test
-  fun `the connector gets the JVM options and none of the runner's environment`() {
+  fun `the connector jar runs with the image's JVM options and a capped heap`() {
+    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
+    val capturedArgs = captureDir.resolve("args")
+
+    check("printf '%s\\n' \"$@\" > $capturedArgs; echo '$SUCCEEDED'")
+
+    assertEquals(
+      listOf(
+        "-Xms64m",
+        "-Xmx512m",
+        "-XX:ActiveProcessorCount=2",
+        "-XX:+ExitOnOutOfMemoryError",
+        "-Dlog4j.encoder.byteBufferSize=32768",
+        "-Dlog4j2.configurationFile=log4j2.xml",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+        "-jar",
+        JAR.toString(),
+        "--check",
+        "--config",
+        "/dev/stdin",
+      ),
+      Files.readAllLines(capturedArgs),
+    )
+  }
+
+  @Test
+  fun `the connector gets none of the runner's environment`() {
     val capturedEnv = captureDir.resolve("env")
 
     check("env > $capturedEnv; echo '$SUCCEEDED'")
@@ -160,10 +223,95 @@ class DirectCheckRunnerTest {
         .readAllLines(capturedEnv)
         .filter { it.contains('=') }
         .associate { it.substringBefore('=') to it.substringAfter('=') }
-    assertEquals("-Xms64m -Xmx512m -XX:ActiveProcessorCount=2", env["SOURCE_POSTGRES_OPTS"])
-    assertTrue(env.getValue("JAVA_OPTS").contains("--add-opens=java.base/java.lang=ALL-UNNAMED"))
-    assertFalse(env.containsKey("HOME"))
-    assertFalse(env.containsKey("USER"))
+    assertFalse(env.containsKey("HOME"), "$env")
+    assertFalse(env.containsKey("USER"), "$env")
+    assertFalse(env.containsKey("JAVA_OPTS"), "$env")
+  }
+
+  @Test
+  fun `a prefetched jar runs from the cache, without a download`() {
+    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
+    val capturedArgs = captureDir.resolve("args")
+
+    val run = runner("printf '%s\\n' \"$@\" > $capturedArgs; echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-1")
+
+    assertEquals(JarSource.CACHED, run.jarSource)
+    assertTrue(Files.readAllLines(capturedArgs).contains(JAR.toString()), "the cached jar wasn't run")
+    verify(exactly = 0) { resolver.resolveInto(any(), any()) }
+  }
+
+  @Test
+  fun `a jar that isn't cached is downloaded for the check, deleted after it, and not cached`() {
+    val runner = runner("echo '$SUCCEEDED'")
+
+    val first = runner.check(IMAGE, connectionConfiguration, "workload-1")
+    val second = runner.check(IMAGE, connectionConfiguration, "workload-2")
+
+    assertEquals(listOf(JarSource.DOWNLOADED, JarSource.DOWNLOADED), listOf(first.jarSource, second.jarSource))
+    verify(exactly = 2) { resolver.resolveInto("io.airbyte.connectors:source-postgres:3.8.10", any()) }
+    assertEquals(2, downloadDirs.distinct().size, "$downloadDirs")
+    downloadDirs.forEach { assertTrue(it.startsWith(cacheDir.resolve("check-downloads")), "a check's download is outside the cache dir: $it") }
+    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
+    assertEquals(emptySet<String>(), jarCache.cached())
+  }
+
+  @Test
+  fun `downloads left by checks that died with the last runner are removed when the runner starts`() {
+    val leftover = cacheDir.resolve("check-downloads/check-123/source-postgres-3.8.10.jar")
+    Files.createDirectories(leftover.parent)
+    Files.writeString(leftover, "jar")
+    val cachedJar = cacheDir.resolve("io/airbyte/connectors/source-postgres/3.8.11/source-postgres-3.8.11.jar")
+    Files.createDirectories(cachedJar.parent)
+    Files.writeString(cachedJar, "jar")
+
+    runner("exit 0")
+
+    assertFalse(Files.exists(cacheDir.resolve("check-downloads")), "a leftover check download survived the restart")
+    assertTrue(Files.exists(cachedJar), "the startup cleanup touched the cache")
+  }
+
+  @Test
+  fun `a check's download is deleted even when the connector fails`() {
+    assertEquals(SourceCheckResult.Crashed(3), check("exit 3"))
+
+    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
+  }
+
+  @Test
+  fun `the jar retrieval and the connector run are timed separately`() {
+    every { resolver.resolveInto(any(), any()) } answers {
+      Thread.sleep(300)
+      JAR
+    }
+
+    val run = runner("sleep 0.5; echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-1")
+
+    assertTrue(run.jarMs in 300..<500, "jarMs=${run.jarMs}")
+    assertTrue(run.processMs >= 500, "processMs=${run.processMs}")
+  }
+
+  @Test
+  fun `a download that takes longer than the allowance fails the check promptly and is cleaned up`() {
+    every { resolver.resolveInto(any(), any()) } answers {
+      downloadDirs.add(secondArg())
+      Thread.sleep(5_000)
+      JAR
+    }
+    val runner = runner("echo '$SUCCEEDED'", jarDownloadAllowance = Duration.ofMillis(300))
+
+    val start = System.nanoTime()
+    val e = assertThrows<IllegalStateException> { runner.check(IMAGE, connectionConfiguration, "workload-1") }
+
+    assertTrue(Duration.ofNanos(System.nanoTime() - start) < Duration.ofSeconds(3), "waited for the whole download")
+    assertEquals("Downloading io.airbyte.connectors:source-postgres:3.8.10 for the check took longer than PT0.3S", e.message)
+    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
+  }
+
+  @Test
+  fun `a jar that can't be downloaded is a platform error, not a check result`() {
+    every { resolver.resolveInto(any(), any()) } throws ArtifactResolutionException(emptyList(), "repository down")
+
+    assertThrows<IllegalStateException> { check("echo '$SUCCEEDED'") }
   }
 
   @Test
@@ -193,15 +341,10 @@ class DirectCheckRunnerTest {
   fun `a connector that logs a lot before reading a large config does not deadlock`() {
     // 200 KiB of stderr before reading stdin, and a config larger than a pipe buffer.
     val bigConfig = Jsons.jsonNode(mapOf("host" to "db.example.com", "ca_certificate" to "x".repeat(200_000)))
-    val launcher = installDir.resolve("bin/source-postgres")
-    Files.createDirectories(launcher.parent)
-    Files.writeString(launcher, "#!/bin/bash\nhead -c 204800 /dev/zero | tr '\\0' 'a' >&2\ncat > /dev/null\necho '$SUCCEEDED'\n")
-    Files.setPosixFilePermissions(launcher, PosixFilePermissions.fromString("rwx------"))
-    val config =
-      CheckConnectorConfig(image = "airbyte/source-postgres:3.8.10", installDir = installDir.toString(), checkTimeout = Duration.ofSeconds(10))
+    val runner = runner("head -c 204800 /dev/zero | tr '\\0' 'a' >&2\ncat > /dev/null\necho '$SUCCEEDED'")
 
     val start = System.nanoTime()
-    val result = DirectCheckRunner(config, Configs.AirbyteEdition.COMMUNITY).check(bigConfig, "workload-1")
+    val result = runner.check(IMAGE, bigConfig, "workload-1").result
 
     assertInstanceOf(SourceCheckResult.Reported::class.java, result)
     assertTrue(Duration.ofNanos(System.nanoTime() - start) < Duration.ofSeconds(8), "took the timeout path")
