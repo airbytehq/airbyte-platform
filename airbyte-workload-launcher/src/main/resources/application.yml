@@ -36,6 +36,11 @@ micronaut:
       core-pool-size: 1
     secret-storage-check:
       type: cached
+    storage-reachability-probe:
+      type: scheduled
+      core-pool-size: 1
+    storage-reachability-check:
+      type: cached
     workload-scheduling-probe:
       type: scheduled
       core-pool-size: 1
@@ -121,6 +126,9 @@ airbyte:
   workload-launcher:
     heartbeat-rate: PT30S
     secret-storage-probe:
+      rate: PT30M
+      check-timeout: PT30S
+    storage-reachability-probe:
       rate: PT30M
       check-timeout: PT30S
     workload-scheduling-probe:
