@@ -197,13 +197,41 @@ class DirectJobServiceTest {
   }
 
   @Test
-  fun `two handlers for the same type are rejected at startup`() {
-    val other =
-      mockk<DirectJobHandler> {
+  fun `of several handlers for a type, the first that accepts the workload runs it, with its deadline`() {
+    val first =
+      mockk<DirectJobHandler>(relaxed = true) {
         every { workloadType } returns WorkloadType.CONNECT
+        every { accepts(any(), any()) } returns false
       }
+    every { handler.runningDeadline } returns Duration.ofMinutes(30)
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+    service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(first, handler), metricClient)
 
-    assertThrows<IllegalArgumentException> { DirectJobService(workloadApiClient, executor, checkExecutor, listOf(handler, other), metricClient) }
+    val before = OffsetDateTime.now()
+    assertEquals(DirectJobSubmission.Accepted, service.submit(workloadId, LauncherDataplaneGroup.Unknown))
+    awaitCompletedTasks(1)
+
+    verify { handler.run(workloadId, payload, logPath) }
+    verify(exactly = 0) { first.run(any(), any(), any()) }
+    verify { workloadApiClient.workloadRunning(match<WorkloadRunningRequest> { it.deadline?.isAfter(before.plusMinutes(29)) == true }) }
+  }
+
+  @Test
+  fun `a workload none of its type's handlers accepts is unsupported and nothing is run`() {
+    val first =
+      mockk<DirectJobHandler>(relaxed = true) {
+        every { workloadType } returns WorkloadType.CONNECT
+        every { accepts(any(), any()) } returns false
+      }
+    every { handler.accepts(any(), any()) } returns false
+    every { workloadApiClient.workloadGet(workloadId) } returns workload(WorkloadStatus.CLAIMED)
+    service = DirectJobService(workloadApiClient, executor, checkExecutor, listOf(first, handler), metricClient)
+
+    assertEquals(DirectJobSubmission.Unsupported(WorkloadType.CONNECT), service.submit(workloadId, LauncherDataplaneGroup.Unknown))
+
+    verify(exactly = 0) { workloadApiClient.workloadRunning(any()) }
+    verify(exactly = 0) { first.run(any(), any(), any()) }
+    verify(exactly = 0) { handler.run(any(), any(), any()) }
   }
 
   @Test

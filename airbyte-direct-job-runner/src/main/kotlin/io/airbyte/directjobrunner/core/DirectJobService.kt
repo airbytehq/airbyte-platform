@@ -85,11 +85,9 @@ class DirectJobService(
   // after it asks it to stop, so this must be shorter than that or the jobs it waits for are killed anyway.
   @Value("\${airbyte.direct-job-runner.drain-timeout:PT80S}") private val drainTimeout: Duration = Duration.ofSeconds(80),
 ) {
-  private val handlersByType: Map<WorkloadType, DirectJobHandler> =
-    handlers.groupBy { it.workloadType }.mapValues { (type, registered) ->
-      require(registered.size == 1) { "Expected one direct job handler for $type, found ${registered.size}" }
-      registered.single()
-    }
+  // A type can have several handlers, such as checks on the manifest server and checks from a connector jar. They are
+  // asked in the order they were injected (their @Order), and the first that accepts a workload runs it.
+  private val handlersByType: Map<WorkloadType, List<DirectJobHandler>> = handlers.groupBy { it.workloadType }
 
   private val inFlight: MutableSet<String> =
     ConcurrentHashMap.newKeySet<String>().also { inFlight ->
@@ -121,10 +119,8 @@ class DirectJobService(
 
       val workloadType = workload.type.toString()
       val handler =
-        handlersByType[workload.type] ?: return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
-      if (!handler.accepts(workload, dataplaneGroup)) {
-        return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
-      }
+        handlersByType[workload.type].orEmpty().firstOrNull { it.accepts(workload, dataplaneGroup) }
+          ?: return recordSubmission(workloadType, DirectJobSubmission.Unsupported(workload.type))
 
       if (workload.status !in ELIGIBLE_STATUSES) {
         return recordSubmission(workloadType, DirectJobSubmission.NotEligible(workload.status))

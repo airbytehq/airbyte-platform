@@ -2814,6 +2814,10 @@ directJobRunner:
   # The runner runs in the jobs namespace.
   storageSecretName: ""
 
+  # -- Secret in the runner's (jobs) namespace holding the JWT signature secret the manifest server checks calls against
+  # (key: global.auth.security.jwtSignatureSecretSecretKey). With manifestServer.enabled, setting it lets the runner send
+  # manifest-only connector checks to the manifest server; unset, the runner sends it nothing.
+  manifestServerSecretName: ""
   # -- Secret holding the LaunchDarkly key, when global.featureFlags.secretName only exists in the airbyte namespace.
   # The runner reads platform.direct-check-images to decide which connectors' checks it takes.
   featureFlagsSecretName: ""

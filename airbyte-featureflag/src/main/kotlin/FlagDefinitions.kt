@@ -132,6 +132,12 @@ object DirectCheckImages : Temporary<String>(key = "platform.direct-check-images
 /** Sends a workspace's checks for [DirectCheckImages] to the direct job runner instead of a pod. */
 object UseDirectCheck : Temporary<Boolean>(key = "platform.use-direct-check", default = false)
 
+/**
+ * Offers a workspace's checks for Airbyte's own connectors to the direct job runner, which runs the manifest-only ones
+ * its data plane's manifest server supports and sends the rest back to a pod.
+ */
+object UseManifestServerCheck : Temporary<Boolean>(key = "platform.use-manifest-server-check", default = false)
+
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)

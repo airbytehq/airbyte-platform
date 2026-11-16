@@ -49,6 +49,25 @@ namespace when the global storage secret only exists in the airbyte namespace.
 {{- end }}
 
 {{/*
+What the runner needs to run checks for Airbyte's manifest-only connectors on the release's manifest server (whose
+address comes with the config envs): the CDK version the server runs (its image tag), and the JWT signature secret it
+checks calls against. Secrets are namespaced, so manifestServerSecretName names a copy in the jobs namespace that has
+the secret's key; the runner gets neither setting without it, so enabling the manifest server alone can't leave the
+runner unable to start, and the runner sends the server nothing.
+*/}}
+{{- define "airbyte.directJobRunner.manifestServerEnvs" }}
+{{- $secretName := .Values.directJobRunner.manifestServerSecretName }}
+{{- if and .Values.manifestServer.enabled $secretName }}
+- name: MANIFEST_SERVER_CDK_VERSION
+  value: {{ .Values.manifestServer.image.tag | quote }}
+{{- range $env := (include "airbyte.auth.jwt.envs" . | fromYamlArray) }}
+{{- $_ := set $env.valueFrom.secretKeyRef "name" $secretName }}
+{{ list $env | toYaml }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Secret-backed feature flag credentials (the LaunchDarkly key), for reading platform.direct-check-images. Secrets are
 namespaced, so featureFlagsSecretName points at a copy in the jobs namespace when the global feature flags secret only
 exists in the airbyte namespace. The reference is optional: without the key the runner still starts, reads every flag

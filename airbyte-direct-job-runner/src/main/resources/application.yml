@@ -67,6 +67,12 @@ airbyte:
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
     use-runtime-persistence: ${USE_RUNTIME_SECRET_PERSISTENCE:false}
   direct-job-runner:
+    manifest-server-check:
+      server-cdk-version: ${MANIFEST_SERVER_CDK_VERSION:}
+      registry-base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
+      # Connectors with custom Python components whose check doesn't use them, verified against manifest-server 7.48.0
+      # with only manifest.yaml (11/10/2026). Mailchimp is not here: its spec's config normalization runs custom code.
+      components-optional-connectors: ${MANIFEST_SERVER_CHECK_COMPONENTS_OPTIONAL_CONNECTORS:airbyte/source-amazon-ads,airbyte/source-freshdesk,airbyte/source-google-search-console,airbyte/source-greenhouse,airbyte/source-instagram,airbyte/source-instatus,airbyte/source-notion,airbyte/source-pylon,airbyte/source-recurly,airbyte/source-slack,airbyte/source-stripe,airbyte/source-zendesk-chat,airbyte/source-zendesk-support}
     connect:
       block-internal-addresses: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCK_INTERNAL_ADDRESSES:false}
       blocked-cidrs: ${AIRBYTE_DIRECT_JOB_RUNNER_CONNECT_BLOCKED_CIDRS:}
@@ -92,6 +98,11 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  manifest-server-api:
+    base-path: ${MANIFEST_SERVER_API_HOST:}
+    signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
+    connect-timeout-seconds: ${MANIFEST_SERVER_API_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${MANIFEST_SERVER_API_READ_TIMEOUT_SECONDS:60}
   internal-api:
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}

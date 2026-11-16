@@ -455,3 +455,39 @@ func TestDirectJobRunnerJarCache(t *testing.T) {
 		assert.Equal(t, "/jars", env["AIRBYTE_DIRECT_JOB_RUNNER_CHECK_CONNECTOR_JAR_CACHE_DIR"].Value)
 	})
 }
+
+func TestDirectJobRunnerManifestServer(t *testing.T) {
+	t.Run("reaches the release's manifest server without the env ConfigMap", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["global.jobs.kube.namespace"] = "jobs"
+		values["manifestServer.image.tag"] = "7.45.0"
+		values["directJobRunner.manifestServerSecretName"] = "workload-launcher-secrets"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "http://airbyte-airbyte-manifest-server-svc.ab:8080", env["MANIFEST_SERVER_API_HOST"].Value)
+		assert.Equal(t, "7.45.0", env["MANIFEST_SERVER_CDK_VERSION"].Value)
+		require.NotNil(t, env["AB_JWT_SIGNATURE_SECRET"].ValueFrom)
+		assert.Equal(t, "workload-launcher-secrets", env["AB_JWT_SIGNATURE_SECRET"].ValueFrom.SecretKeyRef.Name)
+	})
+
+	t.Run("gets no manifest server without the secret copy, so it can't fail to start", func(t *testing.T) {
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))
+
+		for _, name := range []string{"MANIFEST_SERVER_CDK_VERSION", "AB_JWT_SIGNATURE_SECRET"} {
+			_, ok := env[name]
+			assert.False(t, ok, name)
+		}
+	})
+
+	t.Run("gets no manifest server when it is disabled", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["manifestServer.enabled"] = "false"
+		values["directJobRunner.manifestServerSecretName"] = "workload-launcher-secrets"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		for _, name := range []string{"MANIFEST_SERVER_CDK_VERSION", "AB_JWT_SIGNATURE_SECRET"} {
+			_, ok := env[name]
+			assert.False(t, ok, name)
+		}
+	})
+}

@@ -33,6 +33,7 @@ internal const val DIRECT_JOB_RUNNER_HTTP_CLIENT = "directJobRunnerHttpClient"
 internal const val DIRECT_JOB_RUNNER_UNAVAILABLE_MESSAGE = "Direct job runner unavailable in this data plane"
 
 private const val ACCEPTED = 202
+private const val BAD_REQUEST = 400
 private const val CONFLICT = 409
 private const val SERVER_ERROR_MIN = 500
 private const val MAX_RETRIES = 3
@@ -121,6 +122,16 @@ class DirectJobRunnerClient(
       CONFLICT -> {
         logger.info { "The direct job runner already has workload ${msg.workloadId}" }
         accepted(msg, "duplicate")
+      }
+      // 400: the runner can't run this workload, such as a check for a connector the manifest server doesn't support.
+      // Expected for most checks offered to it, so it isn't a warning.
+      BAD_REQUEST -> {
+        // The runner logs why (its connector registry lookup or the check it turned down); the answer has no reason.
+        logger.info {
+          "The direct job runner turned down ${msg.workloadType} workload ${msg.workloadId} (labels ${msg.labels}): " +
+            "none of its check paths runs it, such as a connector the manifest server doesn't support; it runs in a pod"
+        }
+        DirectJobDispatch.Rejected("rejected")
       }
       else -> {
         logger.warn { "The direct job runner rejected workload ${msg.workloadId} with status $status" }

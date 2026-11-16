@@ -4,30 +4,18 @@
 
 package io.airbyte.directjobrunner.check
 
-import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
 import io.airbyte.commons.logging.LogSource
-import io.airbyte.config.ActorType
-import io.airbyte.config.ConnectorJobOutput
-import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardCheckConnectionInput
-import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadType
-import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
-import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.directjobrunner.connector.DirectCheckAllowlist
 import io.airbyte.directjobrunner.connector.DirectCheckRunner
-import io.airbyte.directjobrunner.connector.SourceCheckResult
 import io.airbyte.directjobrunner.core.DirectJobHandler
 import io.airbyte.directjobrunner.core.LauncherDataplaneGroup
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.protocol.models.v0.AirbyteTraceMessage
-import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
-import io.airbyte.workers.hydration.SecretHydrationContext
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.domain.LogDeliveryMode
@@ -39,8 +27,6 @@ import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
-private val RESULT_MARGIN: Duration = Duration.ofSeconds(30)
-
 /**
  * Runs CHECK workloads for the connectors in [DirectCheckAllowlist], at the version the check asks for, from that
  * version's fat jar (downloaded by the first check that needs it). Each check is its own connector process
@@ -50,7 +36,7 @@ private val RESULT_MARGIN: Duration = Duration.ofSeconds(30)
  * updates, which a check pod applies to the saved actor.
  */
 @Singleton
-class CheckJobHandler(
+class JarCheckJobHandler(
   private val payloadDeserializer: PayloadDeserializer,
   private val secretsHydrator: ConnectorSecretsHydrator,
   private val directCheckRunner: DirectCheckRunner,
@@ -113,14 +99,14 @@ class CheckJobHandler(
     val input = payloadDeserializer.toCheckConnectionInput(inputPayload)
     val image = input.launcherConfig.dockerImage
 
-    val config = hydrate(input.checkConnectionInput)
+    val config = secretsHydrator.hydrateCheckConfig(input.checkConnectionInput)
     val hydratedAt = System.currentTimeMillis()
 
     val run = directCheckRunner.check(image, config, workloadId)
     val result = run.result
     val ranAt = System.currentTimeMillis()
 
-    val output = toJobOutput(result, input.checkConnectionInput.actorType)
+    val output = toCheckJobOutput(result, input.checkConnectionInput.actorType)
     outputWriter.write(workloadId, output)
 
     // The connector's run only: a jar download on a cache miss would otherwise skew it.
@@ -137,56 +123,4 @@ class CheckJobHandler(
         "writeMs=${System.currentTimeMillis() - ranAt} totalMs=${System.currentTimeMillis() - start}"
     }
   }
-
-  private fun hydrate(raw: StandardCheckConnectionInput) =
-    checkNotNull(
-      secretsHydrator.hydrateConfig(
-        InlinedConfigWithSecretRefs(raw.connectionConfiguration).toConfigWithRefs(),
-        SecretHydrationContext(organizationId = raw.actorContext.organizationId, workspaceId = raw.actorContext.workspaceId),
-      ),
-    ) { "Secret hydration returned no config" }
-
-  // Same shape the connector sidecar produces, so the server reads the result the same way as a pod check.
-  private fun toJobOutput(
-    result: SourceCheckResult,
-    actorType: ActorType,
-  ): ConnectorJobOutput {
-    val output = ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-    when (result) {
-      is SourceCheckResult.Reported ->
-        output.checkConnection =
-          StandardCheckConnectionOutput()
-            .withStatus(result.status.status.convertTo<StandardCheckConnectionOutput.Status>())
-            .withMessage(result.status.message)
-      is SourceCheckResult.ConnectorError -> {
-        // FailureHelper reads emittedAt, and the connector's own value isn't kept, so stamp it with when it was read.
-        val trace =
-          AirbyteTraceMessage()
-            .withType(AirbyteTraceMessage.Type.ERROR)
-            .withEmittedAt(System.currentTimeMillis().toDouble())
-            .withError(result.error)
-        output.failureReason = FailureHelper.connectorCommandFailure(trace, null, null, FailureHelper.ConnectorCommand.CHECK)
-        output.checkConnection = failed(result.error.message)
-      }
-      is SourceCheckResult.Crashed -> {
-        output.failureReason = systemFailure("The check operation returned an exit code ${result.exitCode}", actorType)
-        output.checkConnection = failed("The connector running check exited with ${result.exitCode} exit code")
-      }
-      SourceCheckResult.TimedOut -> {
-        output.failureReason = systemFailure("The check operation timed out", actorType)
-        output.checkConnection = failed("The connector check timed out")
-      }
-    }
-    return output
-  }
-
-  private fun failed(message: String?) = StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED).withMessage(message)
-
-  private fun systemFailure(
-    message: String,
-    actorType: ActorType,
-  ) = FailureReason()
-    .withExternalMessage(message)
-    .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
-    .withFailureOrigin(if (actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION)
 }

@@ -20,6 +20,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(libs.maven.resolver.supplier)
 
+  implementation(project(":oss:airbyte-api:manifest-server-api"))
   implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))

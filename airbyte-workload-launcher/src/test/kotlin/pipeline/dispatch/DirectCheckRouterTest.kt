@@ -11,8 +11,10 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.DirectCheckImages
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseDirectCheck
+import io.airbyte.featureflag.UseManifestServerCheck
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.MetricAttribute
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 private const val IMAGE = "airbyte/source-postgres:3.8.10"
+private const val MANIFEST_ONLY_IMAGE = "airbyte/source-bing-ads:3.0.21"
 
 class DirectCheckRouterTest {
   private val dataplaneGroupId = UUID.randomUUID()
@@ -62,7 +65,9 @@ class DirectCheckRouterTest {
     mockk<FeatureFlagClient> {
       every { stringVariation(DirectCheckImages, DataplaneGroup(dataplaneGroupId)) } returns " source-mysql , source-postgres "
       every { boolVariation(UseDirectCheck, Workspace(workspaceId)) } returns true
+      every { boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns false
       every { boolVariation(UseRuntimeSecretPersistence, Organization(organizationId)) } returns false
+      every { boolVariation(InjectAwsSecretsToConnectorPods, Workspace(workspaceId)) } returns false
     }
 
   private val router = DirectCheckRouter(directJobRunnerClient, workloadApiClient, identityService, featureFlagClient, metricClient)
@@ -71,9 +76,11 @@ class DirectCheckRouterTest {
     image: String = IMAGE,
     workspace: UUID? = workspaceId,
     networkSecurityTokens: List<String> = emptyList(),
+    isCustomConnector: Boolean? = false,
   ) = CheckConnectionInput(
     jobRunConfig = JobRunConfig(),
-    launcherConfig = IntegrationLauncherConfig().withDockerImage(image).withWorkspaceId(workspace),
+    launcherConfig =
+      IntegrationLauncherConfig().withDockerImage(image).withWorkspaceId(workspace).withIsCustomConnector(isCustomConnector),
     checkConnectionInput =
       StandardCheckConnectionInput()
         .withActorContext(ActorContext().withWorkspaceId(workspace).withOrganizationId(organizationId))
@@ -163,6 +170,59 @@ class DirectCheckRouterTest {
     every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId)) } returns true
 
     assertEquals(DirectCheckEligibility.RUNTIME_SECRET_PERSISTENCE, router.eligibility(input()))
+  }
+
+  @Test
+  fun `with the manifest server flag on, any of Airbyte's own connectors is offered to the runner`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns true
+
+    assertEquals(DirectCheckEligibility.ELIGIBLE, router.eligibility(input(image = MANIFEST_ONLY_IMAGE)))
+  }
+
+  @Test
+  fun `with the manifest server flag off, an unlisted image stays on a pod`() {
+    assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input(image = MANIFEST_ONLY_IMAGE)))
+  }
+
+  @Test
+  fun `a check without a workspace is never offered to the manifest server`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, any()) } returns true
+
+    assertEquals(DirectCheckEligibility.IMAGE_NOT_LISTED, router.eligibility(input(image = MANIFEST_ONLY_IMAGE, workspace = null)))
+  }
+
+  @Test
+  fun `a customer's connector, or one not known to be Airbyte's, stays on a pod`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns true
+
+    assertEquals(DirectCheckEligibility.CUSTOM_CONNECTOR, router.eligibility(input(image = MANIFEST_ONLY_IMAGE, isCustomConnector = true)))
+    assertEquals(DirectCheckEligibility.CUSTOM_CONNECTOR, router.eligibility(input(image = MANIFEST_ONLY_IMAGE, isCustomConnector = null)))
+  }
+
+  @Test
+  fun `a manifest server check with network security tokens stays on a pod`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns true
+
+    assertEquals(
+      DirectCheckEligibility.NETWORK_SECURITY_TOKENS,
+      router.eligibility(input(image = MANIFEST_ONLY_IMAGE, networkSecurityTokens = listOf("token-1"))),
+    )
+  }
+
+  @Test
+  fun `a manifest server check from an organization on runtime secret persistence stays on a pod`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns true
+    every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId)) } returns true
+
+    assertEquals(DirectCheckEligibility.RUNTIME_SECRET_PERSISTENCE, router.eligibility(input(image = MANIFEST_ONLY_IMAGE)))
+  }
+
+  @Test
+  fun `a manifest server check from a workspace whose pods get injected AWS credentials stays on a pod`() {
+    every { featureFlagClient.boolVariation(UseManifestServerCheck, Workspace(workspaceId)) } returns true
+    every { featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods, Workspace(workspaceId)) } returns true
+
+    assertEquals(DirectCheckEligibility.AWS_ROLE_INJECTION, router.eligibility(input(image = MANIFEST_ONLY_IMAGE)))
   }
 
   @Test

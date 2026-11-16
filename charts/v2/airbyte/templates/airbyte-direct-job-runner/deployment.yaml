@@ -67,6 +67,7 @@ spec:
         {{- include "airbyte.workloadLauncher.dataPlane.clientId.env" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.dataPlane.clientSecret.env" . | nindent 8 }}
         {{- include "airbyte.datadog.envs" .Values.directJobRunner.datadog | nindent 8 }}
+        {{- include "airbyte.directJobRunner.manifestServerEnvs" . | nindent 8 }}
 
         # Values from env
         {{- if or .Values.directJobRunner.env_vars .Values.global.env_vars }}

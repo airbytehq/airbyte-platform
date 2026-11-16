@@ -48,7 +48,7 @@ private const val BAKED_IMAGE = "airbyte/source-postgres:3.8.10"
 private val DATAPLANE_GROUP_ID: UUID = UUID.randomUUID()
 private val DISPATCHED_FROM = LauncherDataplaneGroup.Known(DATAPLANE_GROUP_ID)
 
-class CheckJobHandlerTest {
+class JarCheckJobHandlerTest {
   private val workloadId = "workload-1"
   private val hydratedConfig = Jsons.deserialize("""{"host":"db.example.com","password":"hydrated"}""")
   private val secretsHydrator = mockk<ConnectorSecretsHydrator> { every { hydrateConfig(any(), any()) } returns hydratedConfig }
@@ -61,7 +61,7 @@ class CheckJobHandlerTest {
   private val outputWriter = mockk<WorkloadOutputWriter>(relaxed = true)
   private val metricClient = mockk<MetricClient>(relaxed = true)
   private val handler =
-    CheckJobHandler(
+    JarCheckJobHandler(
       PayloadDeserializer(),
       secretsHydrator,
       directCheckRunner,
