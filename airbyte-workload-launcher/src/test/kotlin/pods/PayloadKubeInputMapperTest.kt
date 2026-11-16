@@ -30,6 +30,7 @@ import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
@@ -67,6 +68,8 @@ internal class PayloadKubeInputMapperTest {
     every { replConfigs.workerIsolatedKubeNodeSelectors } returns replCustomSelectors
     val annotations = mapOf("annotation" to "value2")
     every { replConfigs.workerKubeAnnotations } returns annotations
+    val configuredLabels = mapOf("compute/run-on" to "fargate", ORCHESTRATOR_IMAGE_NAME to "overridden", "pass through" to "overridden")
+    every { replConfigs.workerKubeLabels } returns configuredLabels
     val ffClient: TestClient = mockk()
     every { ffClient.stringVariation(ContainerOrchestratorDevImage, any()) } returns ""
     every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
@@ -175,7 +178,7 @@ internal class PayloadKubeInputMapperTest {
     every { envVarFactory.fusionDestinationEnvVars(any()) } returns emptyList()
     val syncPayload = SyncPayload(input)
 
-    val replLabels = mapOf("orchestrator" to "labels")
+    val replLabels = mapOf(ORCHESTRATOR_IMAGE_NAME to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
     every {
       labeler.getReplicationLabels(
@@ -187,7 +190,7 @@ internal class PayloadKubeInputMapperTest {
     val result = mapper.toKubeInput(workloadId, syncPayload, sharedLabels)
 
     assertEquals(podName, result.podName)
-    assertEquals(replLabels + sharedLabels, result.labels)
+    assertEquals(configuredLabels + replLabels + sharedLabels, result.labels)
     assertEquals(if (useCustomConnector) replCustomSelectors else replSelectors, result.nodeSelectors)
     assertEquals(annotations, result.annotations)
     assertEquals(containerInfo.image, result.orchestratorImage)
@@ -224,6 +227,8 @@ internal class PayloadKubeInputMapperTest {
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
     val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
+    val configuredLabels = mapOf("compute/run-on" to "fargate", JOB_TYPE_KEY to "overridden", "pass through" to "overridden")
+    every { checkConfigs.workerKubeLabels } returns configuredLabels
     every { checkConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
     every { checkConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { checkConfigs.jobImagePullPolicy } returns pullPolicy
@@ -301,12 +306,12 @@ internal class PayloadKubeInputMapperTest {
     every { input.launcherConfig } returns launcherConfig
     every { input.checkConnectionInput } returns checkConnectionInput
 
-    val connectorLabels = mapOf("connector" to "labels")
+    val connectorLabels = mapOf(JOB_TYPE_KEY to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
     every { labeler.getCheckLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
-    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(configuredLabels + connectorLabels + sharedLabels, result.connectorLabels)
     assertEquals(
       if (customConnector) {
         checkCustomSelectors
@@ -348,6 +353,8 @@ internal class PayloadKubeInputMapperTest {
     val checkConfigs: WorkerConfigs = mockk()
     val discoverConfigs: WorkerConfigs = mockk()
     every { discoverConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
+    val configuredLabels = mapOf("compute/run-on" to "fargate", JOB_TYPE_KEY to "overridden", "pass through" to "overridden")
+    every { discoverConfigs.workerKubeLabels } returns configuredLabels
     every { discoverConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
     every { discoverConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { discoverConfigs.jobImagePullPolicy } returns pullPolicy
@@ -423,12 +430,12 @@ internal class PayloadKubeInputMapperTest {
     every { input.launcherConfig } returns launcherConfig
     every { input.discoverCatalogInput } returns discoverCatalogInput
 
-    val connectorLabels = mapOf("connector" to "labels")
+    val connectorLabels = mapOf(JOB_TYPE_KEY to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
     every { labeler.getDiscoverLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
-    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(configuredLabels + connectorLabels + sharedLabels, result.connectorLabels)
     assertEquals(
       if (customConnector) {
         checkCustomSelectors
@@ -468,6 +475,8 @@ internal class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     every { specConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
+    val configuredLabels = mapOf("compute/run-on" to "fargate", JOB_TYPE_KEY to "overridden", "pass through" to "overridden")
+    every { specConfigs.workerKubeLabels } returns configuredLabels
     every { specConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
     every { specConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
@@ -535,12 +544,12 @@ internal class PayloadKubeInputMapperTest {
     every { resourceReqFactory.specConnector() } returns resourceReqs1
     every { resourceReqFactory.specInit() } returns resourceReqs2
 
-    val connectorLabels = mapOf("connector" to "labels")
+    val connectorLabels = mapOf(JOB_TYPE_KEY to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
     every { labeler.getSpecLabels() } returns connectorLabels
     val result = mapper.toKubeInput(workloadId, input, sharedLabels)
 
-    assertEquals(connectorLabels + sharedLabels, result.connectorLabels)
+    assertEquals(configuredLabels + connectorLabels + sharedLabels, result.connectorLabels)
     assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)

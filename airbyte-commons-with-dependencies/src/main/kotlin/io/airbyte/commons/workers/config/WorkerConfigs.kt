@@ -102,13 +102,15 @@ class WorkerConfigsProvider(
         kubeResourceConfig.annotations.toKeyValues()
       }
 
+    val labels = defaultKubeResourceConfig?.labels.toKeyValues() + kubeResourceConfig.labels.toKeyValues()
+
     return WorkerConfigs(
       resourceRequirements = getResourceRequirementsFrom(kubeResourceConfig, defaultKubeResourceConfig),
       workerKubeTolerations = TolerationPOJO.getJobKubeTolerations(airbyteWorkerConfig.job.kubernetes.tolerations),
       workerKubeNodeSelectors = kubeResourceConfig.nodeSelectors.toKeyValues(),
       workerIsolatedKubeNodeSelectors = if (airbyteWorkerConfig.isolated.kube.useCustomNodeSelector) isolatedNodeSelectors else null,
       workerKubeAnnotations = annotations,
-      workerKubeLabels = kubeResourceConfig.labels.toKeyValues(),
+      workerKubeLabels = labels,
       jobImagePullSecrets = airbyteWorkerConfig.job.kubernetes.main.container.imagePullSecret,
       jobImagePullPolicy = airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy,
     )

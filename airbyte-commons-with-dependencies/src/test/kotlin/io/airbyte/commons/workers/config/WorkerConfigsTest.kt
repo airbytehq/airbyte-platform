@@ -7,6 +7,7 @@ package io.airbyte.commons.workers.config
 import io.airbyte.config.Configs
 import io.airbyte.config.EnvConfigs
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.runtime.DEFAULT_WORKER_KUBE_JOB_CONFIGURATION
 import io.mockk.every
 import io.mockk.mockk
@@ -42,5 +43,16 @@ internal class WorkerConfigsTest {
     val defaultWorkerConfigs = WorkerConfigs(configs)
 
     assertEquals(DEFAULT_RESOURCE_REQUIREMENTS, defaultWorkerConfigs.resourceRequirements)
+  }
+
+  @Test
+  fun `job type labels inherit defaults and override matching keys`() {
+    val default = AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig().apply { labels = "team=platform,priority=normal" }
+    val check = AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig("check").apply { labels = "priority=high" }
+    val discover = AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig("discover")
+    val provider = WorkerConfigsProvider(AirbyteWorkerConfig(kubeJobConfigs = listOf(default, check, discover)))
+
+    assertEquals(mapOf("team" to "platform", "priority" to "high"), provider.getConfig(ResourceType.CHECK).workerKubeLabels)
+    assertEquals(mapOf("team" to "platform", "priority" to "normal"), provider.getConfig(ResourceType.DISCOVER).workerKubeLabels)
   }
 }
