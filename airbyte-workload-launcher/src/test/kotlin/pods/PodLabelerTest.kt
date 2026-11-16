@@ -194,6 +194,49 @@ internal class PodLabelerTest {
     assertEquals(expected, replicationLabels)
   }
 
+  @Test
+  fun getReplicationLabelsWithDigestPinnedImages() {
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
+    val digest = "a".repeat(64)
+    val labels =
+      labeler.getReplicationLabels(
+        orchestratorImageName = "airbyte/container-orchestrator:2.3.0@sha256:$digest",
+        sourceImageName = "registry.internal:5000/airbyte/source-postgres:3.0.0@sha256:$digest",
+        destImageName = "registry.internal:5000/airbyte/destination-s3@sha256:$digest",
+      )
+
+    assertEquals(
+      mapOf(
+        REPL_ORCHESTRATOR_IMAGE_NAME to "container-orchestrator",
+        ORCHESTRATOR_IMAGE_VERSION to "2.3.0",
+        SOURCE_IMAGE_NAME to "source-postgres",
+        SOURCE_IMAGE_VERSION to "3.0.0",
+        DESTINATION_IMAGE_NAME to "destination-s3",
+        DESTINATION_IMAGE_VERSION to "latest",
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to REPLICATION_STEP,
+      ),
+      labels,
+    )
+  }
+
+  @Test
+  fun getReplicationOrchestratorLabelsWithDigestPinnedImage() {
+    val labeler = PodLabeler(mPodNetworkSecurityLabeler)
+    val digest = "a".repeat(64)
+    val labels = labeler.getReplicationOrchestratorLabels("airbyte/container-orchestrator:2.3.0@sha256:$digest")
+
+    assertEquals(
+      mapOf(
+        IMAGE_NAME to "container-orchestrator",
+        IMAGE_VERSION to "2.3.0",
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+      ),
+      labels,
+    )
+  }
+
   companion object {
     const val ORCHESTRATOR_IMAGE_NAME: String = "an image"
 

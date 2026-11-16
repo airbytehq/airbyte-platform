@@ -143,9 +143,12 @@ class PodLabeler(
       )
     }
 
-  private fun getImageMetadataPair(imageName: String): Pair<String, String> =
-    shortImageName(imageName) to
-      imageName.substringAfterLast(":", "latest")
+  private fun getImageMetadataPair(imageName: String): Pair<String, String> {
+    val imageWithoutDigest = imageName.substringBefore("@")
+    val imageVersion = imageWithoutDigest.substringAfterLast("/").substringAfter(":", "latest")
+
+    return shortImageName(imageWithoutDigest) to imageVersion
+  }
 
   object LabelKeys {
     const val SWEEPER_LABEL_KEY = "airbyte"
