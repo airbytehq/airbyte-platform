@@ -15,6 +15,7 @@ import io.airbyte.api.server.generated.models.OrganizationCreateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIsEntitledRequestBody
+import io.airbyte.api.server.generated.models.OrganizationOnboardingMobileHandoffEmailRequestBody
 import io.airbyte.api.server.generated.models.OrganizationOnboardingStatusUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationSemanticSearchEnablementUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationUpdateRequestBody
@@ -40,6 +41,7 @@ private fun organizationInput(args: Array<out Any?>): OrganizationOperationInput
       is OrganizationUpdateRequestBody -> body.organizationId
       is OrganizationAgenticStatusUpdateRequestBody -> body.organizationId
       is OrganizationOnboardingStatusUpdateRequestBody -> body.organizationId
+      is OrganizationOnboardingMobileHandoffEmailRequestBody -> body.organizationId
       is OrganizationUsageRequestBody -> body.organizationId
       is OrganizationDataWorkerUsageRequestBody -> body.organizationId
       is EnableScimRequestBody -> body.organizationId

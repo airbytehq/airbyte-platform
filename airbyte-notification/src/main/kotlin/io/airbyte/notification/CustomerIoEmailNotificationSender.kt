@@ -192,6 +192,44 @@ open class CustomerIoEmailNotificationSender(
   }
 
   /**
+   * Sends a user who signed up on a phone the link that continues onboarding on a computer.
+   */
+  fun sendOnboardingMobileHandoff(
+    config: CustomerIoEmailConfig,
+    userName: String,
+    continueUrl: String,
+  ) {
+    val payload =
+      mapOf(
+        "transactional_message_id" to ONBOARDING_MOBILE_HANDOFF_TRANSACTION_MESSAGE_ID,
+        "to" to config.to,
+        "identifiers" to mapOf("email" to config.to),
+        "message_data" to
+          mapOf(
+            "first_name" to greetingFirstName(userName),
+            "continue_url" to continueUrl,
+          ),
+        "disable_message_retention" to false,
+        // The user asks for this email on the mobile screen, as with an invitation, so an unsubscribe
+        // must not block it, and the click back to the computer is worth tracking.
+        "send_to_unsubscribed" to true,
+        "tracked" to true,
+        "queue_draft" to false,
+        "disable_css_preprocessing" to true,
+      )
+    callCustomerIoSendNotification(Jsons.serialize(payload), null)
+  }
+
+  /**
+   * The name falls back to the email address when the login token has no name claim, so a name with
+   * `@` gets no greeting name rather than "Hi avery@example.com,".
+   */
+  private fun greetingFirstName(userName: String): String {
+    if (userName.isBlank() || userName.contains('@')) return ""
+    return userName.trim().split(WHITESPACE).first()
+  }
+
+  /**
    * `100.00` from the database must reach the template as `100`, and `stripTrailingZeros` alone
    * would serialize it as `1E+2`.
    */
@@ -299,6 +337,8 @@ open class CustomerIoEmailNotificationSender(
     private const val INVITATION_RESEND_TRANSACTION_MESSAGE_ID = "17"
     private const val INVITE_USER_TRANSACTION_MESSAGE_ID = "28"
     private const val BILLING_NOTIFICATION_SETTINGS_CONFIRMATION_TRANSACTION_MESSAGE_ID = "40"
+    private const val ONBOARDING_MOBILE_HANDOFF_TRANSACTION_MESSAGE_ID = "41"
+    private val WHITESPACE = Regex("\\s+")
 
     // Agentic clone of INVITE_USER_TRANSACTION_MESSAGE_ID used for Airbyte Agents organizations
     // (Organization.isAgentic = true). Overridable via CUSTOMERIO_INVITE_USER_AGENTIC_ID.

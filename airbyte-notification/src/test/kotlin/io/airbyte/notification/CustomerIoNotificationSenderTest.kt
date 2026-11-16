@@ -19,7 +19,10 @@ import okhttp3.Response
 import okhttp3.ResponseBody
 import okio.Buffer
 import org.assertj.core.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.io.IOException
 import java.math.BigDecimal
 import java.util.UUID
@@ -159,6 +162,39 @@ internal class CustomerIoNotificationSenderTest {
         )
       }.isInstanceOf(RuntimeException::class.java)
       .hasCauseInstanceOf(IOException::class.java)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "'  Avery  Smith ', Avery",
+    "avery@example.com, ''",
+    "'   ', ''",
+  )
+  fun `mobile handoff sends message 41 with the cleaned first name and the continue url`(
+    userName: String,
+    expectedFirstName: String,
+  ) {
+    val request = slot<Request>()
+    stubSuccessfulCall(request)
+    val continueUrl = "https://cloud.airbyte.com/workspaces/00000000-0000-0000-0000-000000000001/onboarding-flow"
+
+    customerIoEmailNotificationSender.sendOnboardingMobileHandoff(CustomerIoEmailConfig("avery@example.com"), userName, continueUrl)
+
+    val expected =
+      """
+      {
+        "transactional_message_id": "41",
+        "to": "avery@example.com",
+        "identifiers": {"email": "avery@example.com"},
+        "message_data": {"first_name": "$expectedFirstName", "continue_url": "$continueUrl"},
+        "disable_message_retention": false,
+        "send_to_unsubscribed": true,
+        "tracked": true,
+        "queue_draft": false,
+        "disable_css_preprocessing": true
+      }
+      """
+    assertEquals(ObjectMapper().readTree(expected), ObjectMapper().readTree(request.captured.bodyAsString()))
   }
 
   private fun stubSuccessfulCall(request: CapturingSlot<Request>) {

@@ -6753,6 +6753,33 @@ paths:
           description: The caller does not have the organization editor role.
         "404":
           description: The organization does not exist or has been deleted.
+  /v1/organizations/onboarding/send_mobile_handoff_email:
+    post:
+      summary: Email the current user a link to continue onboarding on a computer
+      description: Requires the organization editor role. Sends on every call.
+      tags:
+        - organization
+        - cloud-only
+      operationId: sendOnboardingMobileHandoffEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOnboardingMobileHandoffEmailRequestBody"
+      responses:
+        "204":
+          description: The email was accepted by the email provider.
+        "400":
+          description: Required request fields are missing or null, or an id is invalid.
+        "401":
+          description: Authentication required.
+        "403":
+          description: The caller does not have the organization editor role.
+        "404":
+          description: The organization does not exist or has been deleted.
+        "500":
+          description: The email provider rejected the email or could not be reached.
   /v1/organizations/create:
     post:
       summary: Create an organization
@@ -18687,6 +18714,19 @@ components:
           format: uuid
         status:
           $ref: "#/components/schemas/OrganizationOnboardingStatus"
+    OrganizationOnboardingMobileHandoffEmailRequestBody:
+      type: object
+      required:
+        - organizationId
+        - workspaceId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+          description: The workspace that the email link opens.
     OrganizationUpdateRequestBody:
       type: object
       required:

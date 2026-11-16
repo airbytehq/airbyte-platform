@@ -15,6 +15,7 @@ import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRead
 import io.airbyte.api.server.generated.models.OrganizationDataWorkerUsageRequestBody
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.OrganizationInfoRead
+import io.airbyte.api.server.generated.models.OrganizationOnboardingMobileHandoffEmailRequestBody
 import io.airbyte.api.server.generated.models.OrganizationOnboardingStatusRead
 import io.airbyte.api.server.generated.models.OrganizationOnboardingStatusUpdateRequestBody
 import io.airbyte.api.server.generated.models.OrganizationRead
@@ -165,4 +166,13 @@ open class OrganizationApiController(
   override fun updateOrganizationOnboardingStatus(
     @Body organizationOnboardingStatusUpdateRequestBody: OrganizationOnboardingStatusUpdateRequestBody,
   ): OrganizationOnboardingStatusRead = throw ApiNotImplementedInOssProblem()
+
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuthorizeOperation(
+    access = RouteAccessPolicy.PROTECTED,
+    rule = OssUnsupportedOperationRule::class,
+  )
+  override fun sendOnboardingMobileHandoffEmail(
+    @Body organizationOnboardingMobileHandoffEmailRequestBody: OrganizationOnboardingMobileHandoffEmailRequestBody,
+  ): Unit = throw ApiNotImplementedInOssProblem()
 }
