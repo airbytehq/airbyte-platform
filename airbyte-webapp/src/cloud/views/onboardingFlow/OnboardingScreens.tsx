@@ -1,27 +1,34 @@
 import React, { useState } from "react";
 
-import { useCurrentOrganizationInfo, useDraftDestinationList, useDraftSourceList } from "core/api";
+import { useCurrentOrganizationInfo } from "core/api";
 
+import { ChooseMethodScreen } from "./ChooseMethodScreen";
+import { ConnectDestinationScreen } from "./ConnectDestinationScreen";
+import { ConnectSourceScreen } from "./ConnectSourceScreen";
+import { CreateConnectionScreen } from "./CreateConnectionScreen";
 import { DestinationScreen } from "./DestinationScreen";
-import { getSourcePicksFromDrafts } from "./draftConnectors";
+import { getSourcePicks } from "./draftConnectors";
 import { GoalScreen, OnboardingGoal } from "./GoalScreen";
-import { getDestinationChoiceFromDrafts } from "./onboardingConnectors";
+import { getDestinationChoice } from "./onboardingConnectors";
 import { getInitialScreen, OnboardingScreenId } from "./onboardingScreenSteps";
 import { SourcesScreen } from "./SourcesScreen";
+import { useDestinationLists, useSourceLists } from "./useConnectorLists";
 
 /**
- * The picks live here, so Back shows them again. The drafts are the saved picks, so they fill the picks when a member
- * opens the flow. The goal is not stored.
+ * The picks live here, so Back shows them again. The drafts and the ready connectors are the saved picks, so they fill
+ * the picks when a member opens the flow. The goal is not stored.
  */
 export const useOnboardingScreenState = () => {
   const status = useCurrentOrganizationInfo()?.onboardingStatus;
-  const draftSources = useDraftSourceList();
-  const draftDestinations = useDraftDestinationList();
+  const { drafts: draftSources, readyConnectors: readySources } = useSourceLists();
+  const { drafts: draftDestinations, readyConnectors: readyDestinations } = useDestinationLists();
 
   const [screen, setScreen] = useState(() => getInitialScreen(status, draftSources.length > 0));
   const [goal, setGoal] = useState<OnboardingGoal>();
-  const [sourcePicks, setSourcePicks] = useState(() => getSourcePicksFromDrafts(draftSources));
-  const [destinationChoice, setDestinationChoice] = useState(() => getDestinationChoiceFromDrafts(draftDestinations));
+  const [sourcePicks, setSourcePicks] = useState(() => getSourcePicks(draftSources, readySources));
+  const [destinationChoice, setDestinationChoice] = useState(() =>
+    getDestinationChoice(draftDestinations, readyDestinations)
+  );
 
   return { screen, setScreen, goal, setGoal, sourcePicks, setSourcePicks, destinationChoice, setDestinationChoice };
 };
@@ -56,9 +63,39 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ state, onS
           choice={state.destinationChoice}
           onChoiceChange={state.setDestinationChoice}
           onBack={goTo("sources")}
-          onContinue={goTo("destination")}
+          onContinue={goTo("chooseMethod")}
           onSkip={onSkip}
         />
       );
+    case "chooseMethod":
+      return (
+        <ChooseMethodScreen
+          sourcePicks={state.sourcePicks}
+          destinationChoice={state.destinationChoice}
+          onBack={goTo("destination")}
+          onWebAppChosen={goTo("connectSource")}
+          onSkip={onSkip}
+        />
+      );
+    case "connectSource":
+      return (
+        <ConnectSourceScreen
+          sourcePicks={state.sourcePicks}
+          onBack={goTo("chooseMethod")}
+          onContinue={goTo("connectDestination")}
+          onSkip={onSkip}
+        />
+      );
+    case "connectDestination":
+      return (
+        <ConnectDestinationScreen
+          destinationChoice={state.destinationChoice}
+          onBack={goTo("connectSource")}
+          onContinue={goTo("createConnection")}
+          onSkip={onSkip}
+        />
+      );
+    case "createConnection":
+      return <CreateConnectionScreen onBack={goTo("connectDestination")} onSkip={onSkip} />;
   }
 };

@@ -12,14 +12,26 @@ $content-width: 672px;
     min-height: 0;
     overflow-y: auto;
     padding: variables.$spacing-2xl;
+
+    // The connector form and the documentation panel scroll on their own.
+    &--fullWidth {
+      overflow-y: hidden;
+      padding: 0;
+    }
   }
 
   &__content {
     max-width: $content-width;
     margin: 0 auto;
+
+    &--fullWidth {
+      max-width: none;
+      height: 100%;
+    }
   }
 
   &__screens {
+    height: 100%;
     min-width: 0;
     margin: 0;
     padding: 0;

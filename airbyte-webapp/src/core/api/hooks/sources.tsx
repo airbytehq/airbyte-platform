@@ -58,7 +58,7 @@ export const sourcesKeys = {
         pageSize,
       },
     ] as const,
-  drafts: () => [...sourcesKeys.all, "drafts"] as const,
+  firstPage: () => [...sourcesKeys.all, "firstPage"] as const,
   detail: (sourceId: string) => [...sourcesKeys.all, "details", sourceId] as const,
   discoverSchema: (sourceId: string) => [...sourcesKeys.all, "discoverSchema", sourceId] as const,
   runDiscoverCommand: (commandId: string) => [...sourcesKeys.all, "runDiscover", commandId] as const,
@@ -100,27 +100,28 @@ export const useSourceList = ({
   });
 };
 
-/** The list endpoint has no draft filter, so the drafts come from one large page. */
-const DRAFT_LIST_PAGE_SIZE = 100;
+/** One large page, for a caller that filters the list on the client. */
+const FIRST_PAGE_SIZE = 100;
 
 /**
- * Lists the draft sources of the current workspace. Its key is outside `sourcesKeys.lists()`, so the create and delete
- * hooks do not reset it. A caller that creates or deletes drafts refreshes it once with `useInvalidateDraftSourceList`.
+ * Reads the first page of the current workspace's sources. Its key is outside `sourcesKeys.lists()`, so the create and
+ * delete hooks do not reset it. A caller that changes the sources refreshes it once with `useInvalidateFirstSourcePage`.
  */
-export const useDraftSourceList = (): SourceRead[] => {
+export const useFirstSourcePage = (): SourceRead[] => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(sourcesKeys.drafts(), async () => {
-    const { sources } = await listSourcesForWorkspace({ workspaceId, pageSize: DRAFT_LIST_PAGE_SIZE }, requestOptions);
-    return sources.filter((source) => source.isDraft);
+  return useSuspenseQuery(sourcesKeys.firstPage(), async () => {
+    const { sources } = await listSourcesForWorkspace({ workspaceId, pageSize: FIRST_PAGE_SIZE }, requestOptions);
+    return sources;
   });
 };
 
-export const useInvalidateDraftSourceList = () => {
+/** Refreshes the first page of the current workspace's sources. */
+export const useInvalidateFirstSourcePage = () => {
   const queryClient = useQueryClient();
 
-  return useCallback(() => queryClient.invalidateQueries(sourcesKeys.drafts()), [queryClient]);
+  return useCallback(() => queryClient.invalidateQueries(sourcesKeys.firstPage()), [queryClient]);
 };
 
 export const useGetSource = <T extends string | undefined | null>(

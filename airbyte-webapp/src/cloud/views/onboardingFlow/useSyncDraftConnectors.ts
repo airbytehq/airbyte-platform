@@ -4,14 +4,13 @@ import {
   useDeleteDestination,
   useDeleteSource,
   useDestinationDefinitionList,
-  useDraftDestinationList,
-  useDraftSourceList,
-  useInvalidateDraftDestinationList,
-  useInvalidateDraftSourceList,
+  useInvalidateFirstDestinationPage,
+  useInvalidateFirstSourcePage,
   useSourceDefinitionList,
 } from "core/api";
 
 import { getDraftChanges } from "./draftConnectors";
+import { useDestinationLists, useSourceLists } from "./useConnectorLists";
 
 /** A draft holds only the picked connector, so it has an empty configuration. */
 const EMPTY_CONFIGURATION = {};
@@ -38,20 +37,21 @@ const getDefinition = <TDefinition>(definitionMap: Map<string, TDefinition>, def
 };
 
 /**
- * Makes the workspace's draft sources match the picks. Drafts are created one at a time in pick order, so their
- * creation time keeps the order to the second. The create and delete hooks show their own error notification.
+ * Makes the workspace's draft sources match the picks. A pick with a ready source gets no draft. Drafts are created
+ * one at a time in pick order, so their creation time keeps the order to the second. The create and delete hooks show
+ * their own error notification.
  */
 export const useSyncDraftSources = () => {
-  const drafts = useDraftSourceList();
+  const sourceLists = useSourceLists();
   const { sourceDefinitionMap } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource(DRAFT_MUTATION_OPTIONS);
   const { mutateAsync: deleteSource } = useDeleteSource(DRAFT_MUTATION_OPTIONS);
-  const invalidateDrafts = useInvalidateDraftSourceList();
+  const invalidateDrafts = useInvalidateFirstSourcePage();
 
   return async (pickedDefinitionIds: string[]) => {
     const { definitionIdsToCreate, draftsToDelete } = getDraftChanges(
       pickedDefinitionIds,
-      drafts,
+      sourceLists,
       ({ sourceDefinitionId }) => sourceDefinitionId
     );
     const definitionsToCreate = definitionIdsToCreate.map((id) => getDefinition(sourceDefinitionMap, id));
@@ -70,18 +70,18 @@ export const useSyncDraftSources = () => {
   };
 };
 
-/** Makes the workspace's draft destinations match the single pick. */
+/** Makes the workspace's draft destinations match the single pick. A pick with a ready destination gets no draft. */
 export const useSyncDraftDestination = () => {
-  const drafts = useDraftDestinationList();
+  const destinationLists = useDestinationLists();
   const { destinationDefinitionMap } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
   const { mutateAsync: deleteDestination } = useDeleteDestination(DRAFT_MUTATION_OPTIONS);
-  const invalidateDrafts = useInvalidateDraftDestinationList();
+  const invalidateDrafts = useInvalidateFirstDestinationPage();
 
   return async (pickedDefinitionId: string) => {
     const { definitionIdsToCreate, draftsToDelete } = getDraftChanges(
       [pickedDefinitionId],
-      drafts,
+      destinationLists,
       ({ destinationDefinitionId }) => destinationDefinitionId
     );
     const definitionsToCreate = definitionIdsToCreate.map((id) => getDefinition(destinationDefinitionMap, id));

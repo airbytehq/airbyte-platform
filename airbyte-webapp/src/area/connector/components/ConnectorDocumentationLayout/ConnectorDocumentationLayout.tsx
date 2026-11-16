@@ -13,7 +13,15 @@ import { FormFooterSlotContext } from "./FormFooterSlotContext";
 
 const LazyDocumentationPanel = lazy(() => import("./DocumentationPanel"));
 
-export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+interface ConnectorDocumentationLayoutProps {
+  /** Renders under the form footer slot, at the bottom of the form panel. */
+  footer?: React.ReactNode;
+}
+
+export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<ConnectorDocumentationLayoutProps>> = ({
+  footer,
+  children,
+}) => {
   const { formatMessage } = useIntl();
   const { documentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
   const screenWidth = useWindowSize().width;
@@ -40,6 +48,7 @@ export const ConnectorDocumentationLayout: React.FC<React.PropsWithChildren<unkn
               <div className={styles.leftPanel}>
                 <div className={styles.leftPanelContent}>{children}</div>
                 <div ref={setFormFooterSlot} />
+                {footer}
               </div>
             </FormFooterSlotContext.Provider>
           ),

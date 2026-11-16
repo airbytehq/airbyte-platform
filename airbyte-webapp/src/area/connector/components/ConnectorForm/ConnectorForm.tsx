@@ -24,6 +24,8 @@ export interface ConnectorFormProps
   extends Omit<FormRootProps, "formFields" | "castValues" | "groupStructure" | "formElementId" | "sections"> {
   formType: "source" | "destination";
   formId?: string;
+  /** The `id` of the `<form>` element, for a submit button outside the form. Without it, the form generates one. */
+  formElementId?: string;
   /**
    * Definition of the connector might not be available if it's not released but only exists in frontend heap
    */
@@ -46,7 +48,8 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const { clearFormChange } = useFormChangeTrackerService();
   const isResourceAllocationEnabled = useFeature(FeatureItem.ConnectorResourceAllocation);
   const isSectionedSetupFormEnabled = useExperiment("connector.sectionedSetupForm");
-  const formElementId = useId();
+  const generatedFormElementId = useId();
+  const formElementId = props.formElementId ?? generatedFormElementId;
 
   const {
     formType,

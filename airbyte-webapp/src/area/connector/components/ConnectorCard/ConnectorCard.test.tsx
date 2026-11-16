@@ -306,6 +306,25 @@ describe("ConnectorCard draft setup", () => {
     expect(onDraftPromoted).not.toHaveBeenCalled();
     expect(mockTrackTestConnectorSuccess).not.toHaveBeenCalled();
   });
+
+  it("does not save an edited set-up connector when its check is cancelled", async () => {
+    const onSubmit = jest.fn();
+    const testConnector = jest.fn().mockResolvedValue({ id: "command-id", status: "failed" });
+    renderCard(
+      {
+        ...newSourceCardProps,
+        onSubmit,
+        isEditMode: true,
+        connector: { ...mockSource, sourceDefinitionId: mockSourceDefinition.sourceDefinitionId },
+      },
+      testConnector
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Submit form" }));
+
+    expect(testConnector).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 describe("ConnectorCard save as a draft", () => {

@@ -47,6 +47,8 @@ interface IProps {
   connectionTestSuccess: boolean;
   hasDefinition: boolean;
   isEditMode: boolean;
+  /** Hides the footer row: `leftSlot`, the section progress, and the buttons. The test result still shows. */
+  hideFooterRow?: boolean;
   isDraftMode?: boolean;
   skipsConnectionCheck?: boolean;
   leftSlot?: React.ReactNode;
@@ -62,16 +64,18 @@ interface IProps {
  * Renders in the form footer slot of `ConnectorDocumentationLayout` when there is one, else in place.
  * In the slot, the footer is outside the form's disabled fieldset, so it gets its own.
  */
-const ControlsFooter: React.FC<React.PropsWithChildren<{ canEdit: boolean; testFailurePanel: React.ReactNode }>> = ({
-  canEdit,
-  testFailurePanel,
-  children,
-}) => {
+const ControlsFooter: React.FC<
+  React.PropsWithChildren<{ canEdit: boolean; hideRow: boolean; testFailurePanel: React.ReactNode }>
+> = ({ canEdit, hideRow, testFailurePanel, children }) => {
   const footerSlot = useFormFooterSlot();
+  if (hideRow && !testFailurePanel) {
+    return null;
+  }
+
   const footer = (
     <FlexContainer direction="column">
       {testFailurePanel}
-      <FlexContainer>{children}</FlexContainer>
+      {!hideRow && <FlexContainer>{children}</FlexContainer>}
     </FlexContainer>
   );
 
@@ -91,6 +95,7 @@ export const Controls: React.FC<IProps> = ({
   formType,
   hasDefinition,
   isEditMode,
+  hideFooterRow = false,
   isDraftMode = false,
   skipsConnectionCheck = false,
   isValid,
@@ -209,7 +214,7 @@ export const Controls: React.FC<IProps> = ({
           isEditMode={isEditMode}
         />
       )}
-      <ControlsFooter canEdit={canEdit} testFailurePanel={testFailurePanel}>
+      <ControlsFooter canEdit={canEdit} hideRow={hideFooterRow} testFailurePanel={testFailurePanel}>
         {leftSlot}
         {sectionProgress && <SectionProgress {...sectionProgress} />}
         <FlexItem grow>

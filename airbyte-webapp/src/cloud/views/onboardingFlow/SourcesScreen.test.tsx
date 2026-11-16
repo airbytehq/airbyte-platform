@@ -35,7 +35,7 @@ jest.mock("core/api", () => ({
     sourceDefinitions: SOURCE_DEFINITIONS,
     sourceDefinitionMap: new Map(SOURCE_DEFINITIONS.map((definition) => [definition.sourceDefinitionId, definition])),
   }),
-  useDraftSourceList: () => [],
+  useFirstSourcePage: () => [],
 }));
 
 describe("SourcesScreen", () => {

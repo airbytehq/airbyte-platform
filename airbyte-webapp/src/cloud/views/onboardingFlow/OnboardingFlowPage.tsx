@@ -1,4 +1,5 @@
-import React from "react";
+import classNames from "classnames";
+import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Navigate } from "react-router-dom";
 
@@ -19,7 +20,7 @@ import { RoutePaths } from "pages/routePaths";
 import styles from "./OnboardingFlowPage.module.scss";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { OnboardingScreens, useOnboardingScreenState } from "./OnboardingScreens";
-import { PROGRESS_STEP_BY_SCREEN } from "./onboardingScreenSteps";
+import { FULL_WIDTH_SCREENS, PROGRESS_STEP_BY_SCREEN } from "./onboardingScreenSteps";
 import { useCanOpenOnboardingFlow } from "./useShouldEnterOnboardingFlow";
 
 const useSkipOnboarding = () => {
@@ -52,6 +53,7 @@ const OnboardingFlow: React.FC = () => {
   useRegisterWorkspaceContext(workspace);
   const { skip, isSkipping } = useSkipOnboarding();
   const screenState = useOnboardingScreenState();
+  const isFullWidth = FULL_WIDTH_SCREENS.has(screenState.screen);
 
   return (
     <div className={styles.page}>
@@ -59,12 +61,15 @@ const OnboardingFlow: React.FC = () => {
         <AdminWorkspaceWarning />
       </IfFeatureEnabled>
       <OnboardingHeader currentStep={PROGRESS_STEP_BY_SCREEN[screenState.screen]} />
-      <main className={styles.page__body}>
+      <main className={classNames(styles.page__body, { [styles["page__body--fullWidth"]]: isFullWidth })}>
         <AdpOrganizationAccessGuard>
-          <div className={styles.page__content}>
-            <fieldset disabled={isSkipping} className={styles.page__screens}>
-              <OnboardingScreens state={screenState} onSkip={skip} />
-            </fieldset>
+          <div className={classNames(styles.page__content, { [styles["page__content--fullWidth"]]: isFullWidth })}>
+            {/* A screen that loads its data keeps the header while it loads. */}
+            <Suspense fallback={<LoadingPage />}>
+              <fieldset disabled={isSkipping} className={styles.page__screens}>
+                <OnboardingScreens state={screenState} onSkip={skip} />
+              </fieldset>
+            </Suspense>
           </div>
         </AdpOrganizationAccessGuard>
       </main>
@@ -86,9 +91,9 @@ const OnboardingFlowGate: React.FC = () => {
 const OnboardingFlowPage: React.FC = () => (
   <DefaultErrorBoundary>
     <ForbiddenErrorBoundary>
-      <React.Suspense fallback={<LoadingPage />}>
+      <Suspense fallback={<LoadingPage />}>
         <OnboardingFlowGate />
-      </React.Suspense>
+      </Suspense>
     </ForbiddenErrorBoundary>
   </DefaultErrorBoundary>
 );

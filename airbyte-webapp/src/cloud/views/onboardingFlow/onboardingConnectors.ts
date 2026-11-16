@@ -130,8 +130,11 @@ export const RECOMMENDED_DESTINATION_ID = ConnectorIds.Destinations.GoogleSheets
 export const resolveDestinationDefinitionId = (destinationChoice: string) =>
   destinationChoice === NOT_SURE_DESTINATION ? RECOMMENDED_DESTINATION_ID : destinationChoice;
 
-/** A returning member sees the saved draft picked, when it is one of the listed destinations. */
-export const getDestinationChoiceFromDrafts = (drafts: DestinationRead[]) =>
-  drafts.find(({ destinationDefinitionId }) =>
+/**
+ * A returning member sees the saved destination picked, when it is one of the listed destinations. The draft sync
+ * deletes the drafts of other choices, so the draft is the latest choice. Without a draft, the ready destination is.
+ */
+export const getDestinationChoice = (drafts: DestinationRead[], readyDestinations: DestinationRead[]) =>
+  [...drafts, ...readyDestinations].find(({ destinationDefinitionId }) =>
     DESTINATION_OPTIONS.some((option) => option.destinationDefinitionId === destinationDefinitionId)
   )?.destinationDefinitionId;

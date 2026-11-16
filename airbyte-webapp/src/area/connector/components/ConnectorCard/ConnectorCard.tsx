@@ -67,6 +67,8 @@ interface ConnectorCardBaseProps<T extends ConnectorT> {
 
   // used in ConnectorForm
   formId?: string;
+  /** The `id` of the `<form>` element, for a submit button outside the form. Not the change tracker `formId`. */
+  formElementId?: string;
   fetchingConnectorError?: Error | null;
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
@@ -76,6 +78,14 @@ interface ConnectorCardBaseProps<T extends ConnectorT> {
   skipCheckConnection?: boolean;
   onSaveDraft?: (values: ConnectorCardValues, existingDraft?: T) => Promise<T>;
   onDraftPromoted?: (draft: T, values: ConnectorCardValues) => Promise<void> | void;
+  /**
+   * Hides the footer row: `leftFooterSlot`, the section progress, and the buttons. For a caller that submits the form
+   * from its own button through `formElementId`. The connection test result still shows. The caller's button owns the
+   * gates of the hidden Save & Test button: edit permission, empty required fields, and a running connection test.
+   */
+  hideFooterRow?: boolean;
+  /** Reports when a connection test starts and ends, including a retest from the test card. */
+  onTestConnectionInProgressChange?: (isInProgress: boolean) => void;
 }
 
 interface ConnectorCardCreateProps<T extends ConnectorT> extends ConnectorCardBaseProps<T> {
@@ -121,6 +131,8 @@ export const ConnectorCard = <T extends ConnectorT>({
   skipCheckConnection = false,
   onSaveDraft,
   onDraftPromoted,
+  hideFooterRow = false,
+  onTestConnectionInProgressChange,
   ...props
 }: ConnectorCardCreateProps<T> | ConnectorCardEditProps<T>) => {
   const canEditConnector = useGeneratedIntent(
@@ -146,6 +158,10 @@ export const ConnectorCard = <T extends ConnectorT>({
   const isCloudApp = useIsCloudApp();
   const { trackTestConnectorFailure, trackTestConnectorSuccess, trackTestConnectorStarted } =
     useAnalyticsTrackFunctions(props.formType);
+
+  useEffect(() => {
+    onTestConnectionInProgressChange?.(isTestConnectionInProgress);
+  }, [isTestConnectionInProgress, onTestConnectionInProgressChange]);
 
   useEffect(() => {
     // Whenever the selected connector changed, reset the check connection call and other errors
@@ -268,6 +284,9 @@ export const ConnectorCard = <T extends ConnectorT>({
       await runSave(() => onSubmit(connectorCardValues));
     } else {
       const response = await testConnectorWithTracking(connectorCardValues);
+      if (response.status !== "succeeded") {
+        return;
+      }
       if (response.connectorConfigurationUpdated && reloadConfig) {
         reloadConfig();
       } else {
@@ -364,6 +383,7 @@ export const ConnectorCard = <T extends ConnectorT>({
             {preFooterSlot}
             <Controls
               isEditMode={Boolean(isEditMode)}
+              hideFooterRow={hideFooterRow}
               isDraftMode={Boolean(onSaveDraft)}
               skipsConnectionCheck={skipsConnectionCheck}
               isSavingDraft={isSavingDraft}

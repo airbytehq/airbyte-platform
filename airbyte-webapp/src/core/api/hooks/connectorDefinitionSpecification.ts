@@ -11,7 +11,7 @@ import {
   getSpecificationForSourceId,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { DestinationDefinitionSpecificationRead } from "../types/AirbyteClient";
+import { DestinationDefinitionSpecificationRead, SourceDefinitionSpecificationRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -25,6 +25,7 @@ export const sourceDefinitionSpecificationKeys = {
   all: [SCOPE_WORKSPACE, "sourceDefinitionSpecification"] as const,
   detail: (sourceDefId: string | number, sourceId?: string) =>
     [...sourceDefinitionSpecificationKeys.all, "details", { sourceDefId, sourceId }] as const,
+  list: (sourceDefIds: string[]) => [...sourceDefinitionSpecificationKeys.all, "list", sourceDefIds] as const,
 };
 
 export const useGetDestinationDefinitionSpecification = (
@@ -69,5 +70,21 @@ export const useGetSourceDefinitionSpecificationAsync = (id: string | null) => {
     {
       enabled: isDefined(id),
     }
+  );
+};
+
+/** Loads the specs of several source definitions in one suspense query, one request for each definition. */
+export const useSourceDefinitionSpecificationList = (
+  sourceDefinitionIds: string[]
+): SourceDefinitionSpecificationRead[] => {
+  const requestOptions = useRequestOptions();
+  const { workspaceId } = useCurrentWorkspace();
+
+  return useSuspenseQuery(sourceDefinitionSpecificationKeys.list(sourceDefinitionIds), () =>
+    Promise.all(
+      sourceDefinitionIds.map((sourceDefinitionId) =>
+        getSourceDefinitionSpecification({ sourceDefinitionId, workspaceId }, requestOptions)
+      )
+    )
   );
 };

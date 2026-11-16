@@ -50,7 +50,7 @@ export const destinationsKeys = {
         pageSize,
       },
     ] as const,
-  drafts: () => [...destinationsKeys.all, "drafts"] as const,
+  firstPage: () => [...destinationsKeys.all, "firstPage"] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
   discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
   catalogByConnectionId: (connectionId: string) =>
@@ -90,31 +90,32 @@ export const useDestinationList = ({
   });
 };
 
-/** The list endpoint has no draft filter, so the drafts come from one large page. */
-const DRAFT_LIST_PAGE_SIZE = 100;
+/** One large page, for a caller that filters the list on the client. */
+const FIRST_PAGE_SIZE = 100;
 
 /**
- * Lists the draft destinations of the current workspace. Its key is outside `destinationsKeys.lists()`, so the create
- * and delete hooks do not reset it. A caller that creates or deletes drafts refreshes it once with
- * `useInvalidateDraftDestinationList`.
+ * Reads the first page of the current workspace's destinations. Its key is outside `destinationsKeys.lists()`, so the
+ * create and delete hooks do not reset it. A caller that changes the destinations refreshes it once with
+ * `useInvalidateFirstDestinationPage`.
  */
-export const useDraftDestinationList = (): DestinationRead[] => {
+export const useFirstDestinationPage = (): DestinationRead[] => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(destinationsKeys.drafts(), async () => {
+  return useSuspenseQuery(destinationsKeys.firstPage(), async () => {
     const { destinations } = await listDestinationsForWorkspace(
-      { workspaceId, pageSize: DRAFT_LIST_PAGE_SIZE },
+      { workspaceId, pageSize: FIRST_PAGE_SIZE },
       requestOptions
     );
-    return destinations.filter((destination) => destination.isDraft);
+    return destinations;
   });
 };
 
-export const useInvalidateDraftDestinationList = () => {
+/** Refreshes the first page of the current workspace's destinations. */
+export const useInvalidateFirstDestinationPage = () => {
   const queryClient = useQueryClient();
 
-  return useCallback(() => queryClient.invalidateQueries(destinationsKeys.drafts()), [queryClient]);
+  return useCallback(() => queryClient.invalidateQueries(destinationsKeys.firstPage()), [queryClient]);
 };
 
 export const useGetDestination = <T extends string | undefined | null>(

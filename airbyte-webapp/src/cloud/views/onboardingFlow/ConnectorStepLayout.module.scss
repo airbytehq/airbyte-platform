@@ -1,0 +1,12 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.content {
+  padding: variables.$spacing-2xl;
+}
+
+.actions {
+  padding: variables.$spacing-md variables.$spacing-xl;
+  border-top: variables.$border-thin solid colors.$dark-blue-50;
+  background-color: colors.$foreground;
+}
