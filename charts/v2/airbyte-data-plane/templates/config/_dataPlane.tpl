@@ -175,6 +175,24 @@ Renders the dataPlane.clientSecretSecretKey environment variable
 {{- end }}
 
 {{/*
+Renders the dataPlane.id value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.id" }}
+    {{- .Values.dataPlane.id }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.id environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.id.env" }}
+- name: DATAPLANE_DIAGNOSTIC_ID
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: DATAPLANE_DIAGNOSTIC_ID
+{{- end }}
+
+{{/*
 Renders the set of all dataPlane environment variables
 */}}
 {{- define "airbyte-data-plane.dataPlane.envs" }}
@@ -186,6 +204,7 @@ Renders the set of all dataPlane environment variables
 {{- include "airbyte-data-plane.dataPlane.clientSecret.env" . }}
 {{- include "airbyte-data-plane.dataPlane.clientSecretSecretName.env" . }}
 {{- include "airbyte-data-plane.dataPlane.clientSecretSecretKey.env" . }}
+{{- include "airbyte-data-plane.dataPlane.id.env" . }}
 {{- end }}
 
 {{/*
@@ -198,6 +217,7 @@ DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte-data-plane.dataPlane.client
 DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte-data-plane.dataPlane.clientIdSecretKey" . | quote }}
 DATAPLANE_CLIENT_SECRET_SECRET_NAME: {{ include "airbyte-data-plane.dataPlane.clientSecretSecretName" . | quote }}
 DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte-data-plane.dataPlane.clientSecretSecretKey" . | quote }}
+DATAPLANE_DIAGNOSTIC_ID: {{ include "airbyte-data-plane.dataPlane.id" . | quote }}
 {{- end }}
 
 {{/*

@@ -44,7 +44,8 @@ edition: "community"
 
 dataPlane:
   secretName: ""
-  id: "local"
+  # -- The data plane's UUID. Used only to show authentication failures on that data plane's health; leave empty to send nothing.
+  id: ""
   controlPlaneAuthEndpoint: ""
   serviceAccountEmail: ""
   serviceAccountCredentialsPath: ""

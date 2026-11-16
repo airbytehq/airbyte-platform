@@ -59,6 +59,9 @@ dataPlane:
       key: clientSecretSecretKey
       defaultValue: DATAPLANE_CLIENT_SECRET
 
+    - env: DATAPLANE_DIAGNOSTIC_ID
+      key: id
+
 jobs:
   keyBasePath: jobs
   config:
