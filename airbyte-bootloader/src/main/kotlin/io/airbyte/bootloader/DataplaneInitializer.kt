@@ -39,11 +39,10 @@ class DataplaneInitializer(
    * Bootstraps a default dataplane for an instance of Airbyte that does not have a valid dataplane.
    * This function will also create a default dataplane group if the configured default region does
    * not already exist as a dataplane group.
-   * Note: if the instance already has valid dataplane credentials, this function does nothing.
+   * An existing OSS dataplane in an unnamed group is moved to the configured default group.
    */
   fun createDataplaneIfNotExists() {
-    // If the secret contains credentials that match an existing dataplane + service account,
-    // then do nothing.
+    // Reuse valid credentials, repairing the default OSS dataplane group if needed.
     if (isValidServiceAccount()) {
       return
     }
@@ -110,10 +109,32 @@ class DataplaneInitializer(
 
     try {
       serviceAccountsService.getAndVerify(UUID.fromString(clientId), clientSecret)
-      return true
     } catch (_: Exception) {
       return false
     }
+
+    repairUnnamedOssDataplaneGroup(clientId)
+    return true
+  }
+
+  private fun repairUnnamedOssDataplaneGroup(clientId: String) {
+    if (airbyteConfig.edition != AirbyteEdition.COMMUNITY) {
+      return
+    }
+
+    val dataplane = dataplaneService.getDataplaneByServiceAccountId(clientId) ?: return
+    val currentGroup = groupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+    if (currentGroup.name.isNotBlank()) {
+      return
+    }
+
+    val defaultGroup = getOrCreateDefaultGroup()
+    if (currentGroup.id == defaultGroup.id) {
+      return
+    }
+
+    log.info { "Moving OSS dataplane ${dataplane.id} from unnamed group to default group ${defaultGroup.name}" }
+    dataplaneService.updateDataplane(dataplane.withDataplaneGroupId(defaultGroup.id))
   }
 
   private fun createDataplane(group: DataplaneGroup): DataplaneWithServiceAccount {

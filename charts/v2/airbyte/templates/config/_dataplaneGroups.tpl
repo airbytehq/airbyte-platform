@@ -9,7 +9,7 @@
 Renders the global.dataplaneGroups.defaultDataplaneGroupName value
 */}}
 {{- define "airbyte.dataplaneGroups.defaultDataplaneGroupName" }}
-    {{- .Values.global.dataplaneGroups.defaultDataplaneGroupName }}
+    {{- .Values.global.dataplaneGroups.defaultDataplaneGroupName | default "AUTO" }}
 {{- end }}
 
 {{/*

@@ -31,7 +31,7 @@ airbyte:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   dataplane-groups:
-    default-dataplane-group-name: ${DEFAULT_DATAPLANE_GROUP_NAME:}
+    default-dataplane-group-name: ${DEFAULT_DATAPLANE_GROUP_NAME:AUTO}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     path: ${FEATURE_FLAG_PATH:/flags}

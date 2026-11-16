@@ -439,6 +439,7 @@ dataplaneGroups:
   config:
     - env: DEFAULT_DATAPLANE_GROUP_NAME
       key: defaultDataplaneGroupName
+      defaultValue: AUTO
 
 directJobRunner:
   config:

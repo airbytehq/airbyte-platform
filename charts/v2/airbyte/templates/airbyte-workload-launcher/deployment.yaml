@@ -31,9 +31,14 @@ spec:
         {{- if .Values.workloadLauncher.podLabels}}
           {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.podLabels "context" $) | nindent 8 }}
         {{- end }}
-      {{- if .Values.workloadLauncher.podAnnotations }}
+      {{- if or (eq .Values.global.edition "community") .Values.workloadLauncher.podAnnotations }}
       annotations:
+        {{- if eq .Values.global.edition "community" }}
+        airbyte.io/default-dataplane-group-name: {{ include "airbyte.dataplaneGroups.defaultDataplaneGroupName" . | quote }}
+        {{- end }}
+        {{- if .Values.workloadLauncher.podAnnotations }}
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
       {{- end }}
     spec:
       serviceAccountName: {{ default .Values.global.serviceAccountName .Values.workloadLauncher.serviceAccountName }}

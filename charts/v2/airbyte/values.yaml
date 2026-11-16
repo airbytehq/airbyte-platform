@@ -171,7 +171,8 @@ global:
     #  user: ""
     #  password: ""
 
-  dataplaneGroups: {}
+  dataplaneGroups:
+    defaultDataplaneGroupName: AUTO
 
   migrations:
     runAtStartup: true

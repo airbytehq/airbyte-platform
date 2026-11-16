@@ -86,6 +86,7 @@ class DataplaneInitializerTest {
     every { K8sSecretHelper.createOrUpdateSecret(any(), any(), any()) } returns Unit
     every { K8sSecretHelper.copySecretToNamespace(any(), any(), any(), any()) } returns Unit
     every { K8sSecretHelper.getAndDecodeSecret(any(), any()) } returns null
+    every { service.getDataplaneByServiceAccountId(any()) } returns null
 
     airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.COMMUNITY)
     airbyteAuthConfig =
@@ -257,6 +258,96 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify(exactly = 0) { service.createDataplaneAndServiceAccount(any(), any()) }
+  }
+
+  @Test
+  fun `valid OSS dataplane in unnamed group is moved to default group`() {
+    val unnamedGroup =
+      DataplaneGroup().apply {
+        id = UUID.randomUUID()
+        name = ""
+        organizationId = DEFAULT_ORGANIZATION_ID
+        enabled = true
+      }
+    val existingDataplane =
+      Dataplane().apply {
+        id = UUID.randomUUID()
+        name = "legacy dataplane"
+        dataplaneGroupId = unnamedGroup.id
+        serviceAccountId = serviceAccount.id
+        enabled = true
+      }
+    every { K8sSecretHelper.getAndDecodeSecret(any(), SECRET_NAME) } returns
+      mapOf(
+        CLIENT_ID_SECRET_KEY to serviceAccount.id.toString(),
+        CLIENT_SECRET_SECRET_KEY to DATAPLANE_SECRET,
+      )
+    every { serviceAccountsService.getAndVerify(serviceAccount.id, DATAPLANE_SECRET) } returns serviceAccount
+    every { service.getDataplaneByServiceAccountId(serviceAccount.id.toString()) } returns existingDataplane
+    every { groupService.getDataplaneGroup(unnamedGroup.id) } returns unnamedGroup
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(unnamedGroup, dpg)
+    every { service.updateDataplane(any()) } answers { firstArg() }
+
+    DataplaneInitializer(
+      dataplaneService = service,
+      groupService = groupService,
+      k8sClient = k8sClient,
+      airbyteConfig = airbyteConfig,
+      airbyteAuthConfig = airbyteAuthConfig,
+      airbyteWorkerConfig = airbyteWorkerConfig,
+      serviceAccountsService = serviceAccountsService,
+      airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
+    ).createDataplaneIfNotExists()
+
+    verify(exactly = 1) {
+      service.updateDataplane(
+        withArg {
+          assertEquals(existingDataplane.id, it.id)
+          assertEquals(dpg.id, it.dataplaneGroupId)
+        },
+      )
+    }
+    verify(exactly = 0) { service.createDataplaneAndServiceAccount(any(), any()) }
+  }
+
+  @Test
+  fun `valid OSS dataplane in named group is not moved`() {
+    val namedGroup =
+      DataplaneGroup().apply {
+        id = UUID.randomUUID()
+        name = "custom"
+        organizationId = DEFAULT_ORGANIZATION_ID
+        enabled = true
+      }
+    val existingDataplane =
+      Dataplane().apply {
+        id = UUID.randomUUID()
+        name = "custom dataplane"
+        dataplaneGroupId = namedGroup.id
+        serviceAccountId = serviceAccount.id
+        enabled = true
+      }
+    every { K8sSecretHelper.getAndDecodeSecret(any(), SECRET_NAME) } returns
+      mapOf(
+        CLIENT_ID_SECRET_KEY to serviceAccount.id.toString(),
+        CLIENT_SECRET_SECRET_KEY to DATAPLANE_SECRET,
+      )
+    every { serviceAccountsService.getAndVerify(serviceAccount.id, DATAPLANE_SECRET) } returns serviceAccount
+    every { service.getDataplaneByServiceAccountId(serviceAccount.id.toString()) } returns existingDataplane
+    every { groupService.getDataplaneGroup(namedGroup.id) } returns namedGroup
+
+    DataplaneInitializer(
+      dataplaneService = service,
+      groupService = groupService,
+      k8sClient = k8sClient,
+      airbyteConfig = airbyteConfig,
+      airbyteAuthConfig = airbyteAuthConfig,
+      airbyteWorkerConfig = airbyteWorkerConfig,
+      serviceAccountsService = serviceAccountsService,
+      airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
+    ).createDataplaneIfNotExists()
+
+    verify(exactly = 0) { service.updateDataplane(any()) }
   }
 
   @Test
