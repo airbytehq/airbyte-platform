@@ -5,16 +5,10 @@ import { render } from "test-utils";
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
 import { DataplaneHealthStats } from "./DataplaneHealthStats";
+import { mockDataplane } from "./DataplaneHealthStats.mocks";
 
-const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
-  dataplane_id: "dp-1",
-  dataplane_name: "us-east-1-flex-lab",
-  dataplane_group_id: "group-1",
-  organization_id: "org-1",
-  status: "HEALTHY",
-  enabled: true,
-  ...overrides,
-});
+const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead =>
+  mockDataplane({ enabled: true, ...overrides });
 
 const renderStats = (overrides: Partial<DataplaneHealthRead>) =>
   render(<DataplaneHealthStats dataplane={dataplane(overrides)} />);
@@ -61,8 +55,8 @@ describe("DataplaneHealthStats", () => {
       await renderStats({ status: "UNKNOWN", enabled: false });
     });
 
-    it("shows never connected in the badge, both tiles and the secret store card", () => {
-      expect(screen.getAllByText("Never connected")).toHaveLength(4);
+    it("shows never connected in the badge, both tiles and both diagnostic cards", () => {
+      expect(screen.getAllByText("Never connected")).toHaveLength(5);
     });
 
     it("shows that it is disabled", () => {

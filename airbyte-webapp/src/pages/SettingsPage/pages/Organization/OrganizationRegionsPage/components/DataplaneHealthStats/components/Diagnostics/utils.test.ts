@@ -5,33 +5,29 @@ import {
   DataplaneHealthRead,
 } from "core/api/types/AirbyteClient";
 
-import { getSecretStorageCardData, getSecretStorageRows, getStoreName, getStoreScope } from "./utils";
-import { formatAge } from "../../utils";
+import {
+  getSecretStorageCardData,
+  getSecretStorageRows,
+  getStoreName,
+  getStoreScope,
+  getWorkloadSchedulingCardData,
+  getWorkloadSchedulingDetails,
+} from "./utils";
+import { mockDataplane, mockDiagnostic } from "../../DataplaneHealthStats.mocks";
+import { formatAge, formatDuration, NEVER_CONNECTED } from "../../utils";
 
 const diagnostic = (
   status: DataplaneDiagnosticStatus,
   overrides: Partial<DataplaneDiagnosticRead> = {}
-): DataplaneDiagnosticRead => ({
-  kind: DataplaneDiagnosticKind.SECRET_STORAGE,
-  target_id: "store-1",
-  status,
-  checked_at: 1_000,
-  updated_at: 1_000,
-  ...overrides,
-});
+): DataplaneDiagnosticRead => mockDiagnostic(DataplaneDiagnosticKind.SECRET_STORAGE, status, overrides);
 
 const NOW = 1_000 + 30_000;
 
-const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
-  dataplane_id: "dp-1",
-  dataplane_name: "us-east-1-flex-lab",
-  dataplane_group_id: "group-1",
-  organization_id: "org-1",
-  status: "HEALTHY",
-  last_heartbeat_timestamp: NOW,
-  ...overrides,
-});
+const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead =>
+  mockDataplane({ last_heartbeat_timestamp: NOW, ...overrides });
+
 const PREFIX = "settings.organization.regions.dataplane.diagnostics.secretStorage";
+const INCOMPLETE = "settings.organization.regions.dataplane.diagnostics.incomplete";
 
 describe("getSecretStorageCardData", () => {
   it("returns nothing when there are no diagnostics", () => {
@@ -99,7 +95,7 @@ describe("getSecretStorageCardData", () => {
     ];
     expect(getSecretStorageCardData(dataplane({ diagnostics: stores }), NOW)).toEqual({
       level: "warning",
-      value: { messageId: `${PREFIX}.incomplete` },
+      value: { messageId: INCOMPLETE },
       lastChecked: formatAge(30_000),
     });
   });
@@ -282,5 +278,241 @@ describe("getSecretStorageRows", () => {
   it("leaves a store without a name when none is reported", () => {
     const [row] = getSecretStorageRows(dataplane({ diagnostics: [diagnostic(DataplaneDiagnosticStatus.PASSED)] }), NOW);
     expect(row.name).toBeUndefined();
+  });
+});
+
+const WORKLOAD_PREFIX = "settings.organization.regions.dataplane.diagnostics.workloadScheduling";
+
+const WORKLOAD_NOW = 1_000_000_000;
+const WORKLOAD_MINUTE = 60_000;
+
+const workloadDiagnostic = (
+  status: DataplaneDiagnosticStatus,
+  observation: DataplaneDiagnosticRead["observation"],
+  overrides: Partial<DataplaneDiagnosticRead> = {}
+): DataplaneDiagnosticRead =>
+  mockDiagnostic(DataplaneDiagnosticKind.WORKLOAD_SCHEDULING, status, {
+    target_id: "dp-1",
+    checked_at: WORKLOAD_NOW - 30_000,
+    updated_at: WORKLOAD_NOW,
+    observation,
+    ...overrides,
+  });
+
+const workloadDataplane = (diagnostics: DataplaneDiagnosticRead[] | undefined): DataplaneHealthRead =>
+  mockDataplane({ last_heartbeat_timestamp: WORKLOAD_NOW, diagnostics });
+
+// The longest blocked workload and the count, as the data plane reports them when something is blocked.
+const blockedObservation = (overrides: DataplaneDiagnosticRead["observation"] = {}) => ({
+  blocked_count: 1,
+  longest_blocked_since: WORKLOAD_NOW - 7 * WORKLOAD_MINUTE,
+  longest_blocked_workload_type: "SYNC",
+  ...overrides,
+});
+
+const passedScan = workloadDiagnostic(DataplaneDiagnosticStatus.PASSED, {
+  blocked_count: 0,
+  last_scheduled: { scheduled_at: WORKLOAD_NOW - 2 * WORKLOAD_MINUTE, workload_type: "SYNC" },
+});
+
+describe("getWorkloadSchedulingCardData", () => {
+  it("returns nothing when there is no workload scheduling result", () => {
+    expect(getWorkloadSchedulingCardData(workloadDataplane([]), WORKLOAD_NOW)).toBeUndefined();
+  });
+
+  it("returns nothing when the diagnostics are missing", () => {
+    expect(getWorkloadSchedulingCardData(workloadDataplane(undefined), WORKLOAD_NOW)).toBeUndefined();
+  });
+
+  it("returns nothing when only another check has a result", () => {
+    const other = workloadDiagnostic(
+      DataplaneDiagnosticStatus.PASSED,
+      {},
+      { kind: DataplaneDiagnosticKind.SECRET_STORAGE }
+    );
+    expect(getWorkloadSchedulingCardData(workloadDataplane([other]), WORKLOAD_NOW)).toBeUndefined();
+  });
+
+  it("returns nothing for a result that says nothing is configured", () => {
+    const notConfigured = workloadDiagnostic(DataplaneDiagnosticStatus.NOT_CONFIGURED, {});
+    expect(getWorkloadSchedulingCardData(workloadDataplane([notConfigured]), WORKLOAD_NOW)).toBeUndefined();
+  });
+
+  it("is never connected for a data plane without a check-in", () => {
+    expect(
+      getWorkloadSchedulingCardData(
+        { ...workloadDataplane([passedScan]), last_heartbeat_timestamp: undefined },
+        WORKLOAD_NOW
+      )
+    ).toEqual(NEVER_CONNECTED);
+  });
+
+  it("is a success with no workloads blocked when the scan passed", () => {
+    expect(getWorkloadSchedulingCardData(workloadDataplane([passedScan]), WORKLOAD_NOW)).toEqual({
+      level: "success",
+      value: { messageId: `${WORKLOAD_PREFIX}.noneBlocked` },
+      lastChecked: formatAge(30_000),
+    });
+  });
+
+  it.each([1, 3])("is an error with the count when %s workloads are blocked", (count) => {
+    const blocked = workloadDiagnostic(DataplaneDiagnosticStatus.FAILED, blockedObservation({ blocked_count: count }));
+    expect(getWorkloadSchedulingCardData(workloadDataplane([blocked]), WORKLOAD_NOW)).toEqual({
+      level: "error",
+      value: { messageId: `${WORKLOAD_PREFIX}.blocked`, values: { count } },
+      lastChecked: formatAge(30_000),
+    });
+  });
+
+  it("is a warning when the scan could not complete", () => {
+    const incomplete = workloadDiagnostic(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, {});
+    expect(getWorkloadSchedulingCardData(workloadDataplane([incomplete]), WORKLOAD_NOW)).toEqual({
+      level: "warning",
+      value: { messageId: INCOMPLETE },
+      lastChecked: formatAge(30_000),
+    });
+  });
+
+  it("does not read a count from a scan that could not complete", () => {
+    const incomplete = workloadDiagnostic(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE, blockedObservation());
+    expect(getWorkloadSchedulingCardData(workloadDataplane([incomplete]), WORKLOAD_NOW)?.value.messageId).toBe(
+      INCOMPLETE
+    );
+  });
+});
+
+describe("getWorkloadSchedulingDetails", () => {
+  it("returns nothing when there is no workload scheduling result", () => {
+    expect(getWorkloadSchedulingDetails(workloadDataplane([]), WORKLOAD_NOW)).toBeUndefined();
+  });
+
+  it("shows nothing blocked and the last scheduled pod for a scan that passed", () => {
+    expect(getWorkloadSchedulingDetails(workloadDataplane([passedScan]), WORKLOAD_NOW)).toEqual({
+      blocked: { kind: "none" },
+      lastScheduled: { workloadType: "SYNC", age: formatAge(2 * WORKLOAD_MINUTE) },
+      lastProblem: undefined,
+      error: undefined,
+    });
+  });
+
+  it("names the longest blocked workload and how long it has waited", () => {
+    const blocked = workloadDiagnostic(DataplaneDiagnosticStatus.FAILED, blockedObservation({ blocked_count: 3 }));
+    expect(getWorkloadSchedulingDetails(workloadDataplane([blocked]), WORKLOAD_NOW)?.blocked).toEqual({
+      kind: "blocked",
+      count: 3,
+      longest: { workloadType: "SYNC", waiting: formatDuration(7 * WORKLOAD_MINUTE) },
+    });
+  });
+
+  it("reads the last scheduled pod and the last problem next to a blocked workload", () => {
+    const blocked = workloadDiagnostic(
+      DataplaneDiagnosticStatus.FAILED,
+      blockedObservation({
+        last_scheduled: { scheduled_at: WORKLOAD_NOW - WORKLOAD_MINUTE, workload_type: "CHECK" },
+        last_problem: {
+          observed_at: WORKLOAD_NOW - 5_000,
+          reason: "Unschedulable",
+          message: "0/3 nodes are available.",
+        },
+      })
+    );
+    const details = getWorkloadSchedulingDetails(workloadDataplane([blocked]), WORKLOAD_NOW);
+    expect([details?.lastScheduled, details?.lastProblem]).toEqual([
+      { workloadType: "CHECK", age: formatAge(WORKLOAD_MINUTE) },
+      { message: "0/3 nodes are available.", age: formatAge(5_000) },
+    ]);
+  });
+
+  it("keeps a problem that was observed before nothing was blocked", () => {
+    const recovered = workloadDiagnostic(DataplaneDiagnosticStatus.PASSED, {
+      blocked_count: 0,
+      last_problem: {
+        observed_at: WORKLOAD_NOW - 7 * WORKLOAD_MINUTE,
+        reason: "Unschedulable",
+        message: "0/3 nodes are available.",
+      },
+    });
+    expect(getWorkloadSchedulingDetails(workloadDataplane([recovered]), WORKLOAD_NOW)).toMatchObject({
+      blocked: { kind: "none" },
+      lastProblem: { message: "0/3 nodes are available.", age: formatAge(7 * WORKLOAD_MINUTE) },
+    });
+  });
+
+  it("has no blocked count, but keeps the earlier events and the error, when the scan could not complete", () => {
+    const incomplete = workloadDiagnostic(
+      DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+      {
+        last_scheduled: { scheduled_at: WORKLOAD_NOW - 2 * WORKLOAD_MINUTE, workload_type: "SYNC" },
+        last_problem: {
+          observed_at: WORKLOAD_NOW - 7 * WORKLOAD_MINUTE,
+          reason: "Unschedulable",
+          message: "0/3 nodes are available.",
+        },
+      },
+      {
+        error_code: "ACCESS_DENIED",
+        error_message: "The launcher is not allowed to list pods in its jobs namespace.",
+      }
+    );
+    expect(getWorkloadSchedulingDetails(workloadDataplane([incomplete]), WORKLOAD_NOW)).toEqual({
+      blocked: { kind: "notMeasured" },
+      lastScheduled: { workloadType: "SYNC", age: formatAge(2 * WORKLOAD_MINUTE) },
+      lastProblem: { message: "0/3 nodes are available.", age: formatAge(7 * WORKLOAD_MINUTE) },
+      error: { code: "ACCESS_DENIED", message: "The launcher is not allowed to list pods in its jobs namespace." },
+    });
+  });
+
+  it("shows the reason of the last problem when the scheduler gave no message", () => {
+    const noMessage = workloadDiagnostic(DataplaneDiagnosticStatus.PASSED, {
+      blocked_count: 0,
+      last_problem: { observed_at: WORKLOAD_NOW - WORKLOAD_MINUTE, reason: "Unschedulable", message: "" },
+    });
+    expect(getWorkloadSchedulingDetails(workloadDataplane([noMessage]), WORKLOAD_NOW)?.lastProblem).toEqual({
+      message: "Unschedulable",
+      age: formatAge(WORKLOAD_MINUTE),
+    });
+  });
+
+  it("keeps the error of a failed scan", () => {
+    const blocked = workloadDiagnostic(DataplaneDiagnosticStatus.FAILED, blockedObservation(), {
+      error_code: "UNSCHEDULABLE",
+      error_message: "A workload cannot be scheduled.",
+    });
+    expect(getWorkloadSchedulingDetails(workloadDataplane([blocked]), WORKLOAD_NOW)?.error).toEqual({
+      code: "UNSCHEDULABLE",
+      message: "A workload cannot be scheduled.",
+    });
+  });
+
+  it("has no error when the code or the message is missing", () => {
+    const withCodeOnly = workloadDiagnostic(
+      DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+      {},
+      { error_code: "ACCESS_DENIED" }
+    );
+    expect(getWorkloadSchedulingDetails(workloadDataplane([withCodeOnly]), WORKLOAD_NOW)?.error).toBeUndefined();
+  });
+
+  describe("when the observation is not what the data plane documents", () => {
+    it.each([
+      ["has no observation", undefined],
+      ["has an event that is not an object", { last_scheduled: "now", last_problem: 5 }],
+      [
+        "has an event time that is not epoch milliseconds",
+        { last_scheduled: { scheduled_at: "2026-11-12T10:00:00Z", workload_type: "SYNC" } },
+      ],
+      ["has an event time of zero", { last_problem: { observed_at: 0, reason: "Unschedulable" } }],
+      [
+        "has an event without its text",
+        {
+          last_scheduled: { scheduled_at: WORKLOAD_NOW - WORKLOAD_MINUTE },
+          last_problem: { observed_at: WORKLOAD_NOW },
+        },
+      ],
+    ])("reads no events when it %s", (_description, observation) => {
+      const unreadable = workloadDiagnostic(DataplaneDiagnosticStatus.PASSED, observation);
+      const details = getWorkloadSchedulingDetails(workloadDataplane([unreadable]), WORKLOAD_NOW);
+      expect([details?.lastScheduled, details?.lastProblem]).toEqual([undefined, undefined]);
+    });
   });
 });

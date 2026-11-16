@@ -1,7 +1,9 @@
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 
+import { mockDataplane } from "./DataplaneHealthStats.mocks";
 import {
   formatAge,
+  formatDuration,
   getCompatibilityCardData,
   getLastCheckInCardData,
   getVersionCardData,
@@ -10,14 +12,26 @@ import {
 
 const NOW = 100_000;
 
-const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
-  dataplane_id: "dp-1",
-  dataplane_name: "us-east-1-flex-lab",
-  dataplane_group_id: "group-1",
-  organization_id: "org-1",
-  status: "HEALTHY",
-  last_heartbeat_timestamp: NOW - 30_000,
-  ...overrides,
+const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead =>
+  mockDataplane({ last_heartbeat_timestamp: NOW - 30_000, ...overrides });
+
+describe("formatDuration", () => {
+  it("uses the same pieces as an age, without the ago", () => {
+    expect([
+      formatDuration(31_000),
+      formatDuration(72_000),
+      formatDuration(3_723_000),
+      formatDuration(93_600_000),
+    ]).toEqual([
+      { messageId: "settings.organization.regions.dataplane.duration.seconds", values: { seconds: 31 } },
+      { messageId: "settings.organization.regions.dataplane.duration.minutes", values: { minutes: 1, seconds: 12 } },
+      {
+        messageId: "settings.organization.regions.dataplane.duration.hours",
+        values: { hours: 1, minutes: 2, seconds: 3 },
+      },
+      { messageId: "settings.organization.regions.dataplane.duration.days", values: { days: 1, hours: 2 } },
+    ]);
+  });
 });
 
 describe("formatAge", () => {

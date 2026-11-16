@@ -10,7 +10,29 @@ export const NEVER_CONNECTED: CardData = {
   value: { messageId: healthStatusMessageId.UNKNOWN },
 };
 
-export const formatAge = (ageMs: number): AgeMessage => {
+interface AgeMessageIds {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+}
+
+const CHECK_IN_MESSAGE_IDS: AgeMessageIds = {
+  days: "settings.organization.regions.dataplane.checkIn.days",
+  hours: "settings.organization.regions.dataplane.checkIn.hours",
+  minutes: "settings.organization.regions.dataplane.checkIn.minutes",
+  seconds: "settings.organization.regions.dataplane.checkIn.seconds",
+};
+
+// The same pieces as the check-in messages, without the "ago", for a time that is still running.
+const DURATION_MESSAGE_IDS: AgeMessageIds = {
+  days: "settings.organization.regions.dataplane.duration.days",
+  hours: "settings.organization.regions.dataplane.duration.hours",
+  minutes: "settings.organization.regions.dataplane.duration.minutes",
+  seconds: "settings.organization.regions.dataplane.duration.seconds",
+};
+
+const formatTime = (ageMs: number, messageIds: AgeMessageIds): AgeMessage => {
   const totalSeconds = Math.max(0, Math.floor(ageMs / 1000));
   const days = Math.floor(totalSeconds / 86_400);
   const hours = Math.floor((totalSeconds % 86_400) / 3600);
@@ -18,16 +40,20 @@ export const formatAge = (ageMs: number): AgeMessage => {
   const seconds = totalSeconds % 60;
 
   if (days > 0) {
-    return { messageId: "settings.organization.regions.dataplane.checkIn.days", values: { days, hours } };
+    return { messageId: messageIds.days, values: { days, hours } };
   }
   if (hours > 0) {
-    return { messageId: "settings.organization.regions.dataplane.checkIn.hours", values: { hours, minutes, seconds } };
+    return { messageId: messageIds.hours, values: { hours, minutes, seconds } };
   }
   if (minutes > 0) {
-    return { messageId: "settings.organization.regions.dataplane.checkIn.minutes", values: { minutes, seconds } };
+    return { messageId: messageIds.minutes, values: { minutes, seconds } };
   }
-  return { messageId: "settings.organization.regions.dataplane.checkIn.seconds", values: { seconds } };
+  return { messageId: messageIds.seconds, values: { seconds } };
 };
+
+export const formatAge = (ageMs: number): AgeMessage => formatTime(ageMs, CHECK_IN_MESSAGE_IDS);
+
+export const formatDuration = (durationMs: number): AgeMessage => formatTime(durationMs, DURATION_MESSAGE_IDS);
 
 const UNKNOWN_VERSION = "unknown";
 

@@ -12,34 +12,40 @@ import {
 } from "core/api/types/AirbyteClient";
 
 import { Diagnostics } from "./Diagnostics";
+import { mockDataplane, mockDiagnostic } from "../../DataplaneHealthStats.mocks";
 
 jest.mock("core/api", () => ({
   useGetWorkspace: jest.fn(),
   useOrganization: jest.fn(),
 }));
 
-const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead => ({
-  dataplane_id: "dp-1",
-  dataplane_name: "us-east-1-flex-lab",
-  dataplane_group_id: "group-1",
-  organization_id: "org-1",
-  status: "HEALTHY",
-  last_heartbeat_timestamp: Date.now(),
-  ...overrides,
-});
+const dataplane = (overrides: Partial<DataplaneHealthRead>): DataplaneHealthRead =>
+  mockDataplane({ last_heartbeat_timestamp: Date.now(), ...overrides });
 
 const secretStorage = (
   status: DataplaneDiagnosticStatus,
   overrides: Partial<DataplaneDiagnosticRead> = {}
-): DataplaneDiagnosticRead => ({
-  kind: DataplaneDiagnosticKind.SECRET_STORAGE,
-  target_id: "11111111-1111-4111-8111-111111111111",
-  status,
-  checked_at: Date.now() - 60_000,
-  updated_at: Date.now(),
-  observation: { scope_type: "workspace", scope_id: "99999999-9999-4999-8999-999999999999" },
-  ...overrides,
-});
+): DataplaneDiagnosticRead =>
+  mockDiagnostic(DataplaneDiagnosticKind.SECRET_STORAGE, status, {
+    target_id: "11111111-1111-4111-8111-111111111111",
+    checked_at: Date.now() - 60_000,
+    updated_at: Date.now(),
+    observation: { scope_type: "workspace", scope_id: "99999999-9999-4999-8999-999999999999" },
+    ...overrides,
+  });
+
+const workloadScheduling = (
+  status: DataplaneDiagnosticStatus,
+  observation: DataplaneDiagnosticRead["observation"] = {},
+  overrides: Partial<DataplaneDiagnosticRead> = {}
+): DataplaneDiagnosticRead =>
+  mockDiagnostic(DataplaneDiagnosticKind.WORKLOAD_SCHEDULING, status, {
+    target_id: "dp-1",
+    checked_at: Date.now() - 30_000,
+    updated_at: Date.now(),
+    observation,
+    ...overrides,
+  });
 
 const VIEW_DETAILS = { name: "View details" };
 const HIDE_DETAILS = { name: "Hide details" };
@@ -312,6 +318,139 @@ describe("Diagnostics", () => {
 
     it("has a row for the store only, besides the header", () => {
       expect(screen.getAllByRole("row")).toHaveLength(2);
+    });
+  });
+
+  describe("for a connected data plane with a workload scheduling result only", () => {
+    beforeEach(async () => {
+      await render(
+        <Diagnostics
+          dataplane={dataplane({
+            diagnostics: [workloadScheduling(DataplaneDiagnosticStatus.PASSED, { blocked_count: 0 })],
+          })}
+        />
+      );
+    });
+
+    it("shows the Diagnostics heading", () => {
+      expect(screen.getByText("Diagnostics")).toBeInTheDocument();
+    });
+
+    it("shows the workload scheduling card", () => {
+      expect(screen.getByText("Workload scheduling")).toBeInTheDocument();
+    });
+
+    it("says no workloads are blocked", () => {
+      expect(screen.getByText("No workloads blocked")).toBeInTheDocument();
+    });
+
+    it("says how long ago it was observed", () => {
+      expect(screen.getByText(/^Observed 30 seconds ago$/)).toBeInTheDocument();
+    });
+
+    it("shows no secrets manager card", () => {
+      expect(screen.queryByText("Secrets manager reachable")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("for a connected data plane with a blocked workload", () => {
+    it("says how many workloads are blocked", async () => {
+      const blocked = workloadScheduling(DataplaneDiagnosticStatus.FAILED, {
+        blocked_count: 3,
+        longest_blocked_since: Date.now() - 7 * 60_000,
+        longest_blocked_workload_type: "SYNC",
+      });
+      await render(<Diagnostics dataplane={dataplane({ diagnostics: [blocked] })} />);
+
+      expect(screen.getByText("3 workloads blocked")).toBeInTheDocument();
+    });
+  });
+
+  describe("for a connected data plane with a scan that could not complete", () => {
+    it("says it is incomplete", async () => {
+      const incomplete = workloadScheduling(DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE);
+      await render(<Diagnostics dataplane={dataplane({ diagnostics: [incomplete] })} />);
+
+      expect(screen.getByText("Incomplete")).toBeInTheDocument();
+    });
+  });
+
+  describe("after the workload scheduling details are opened", () => {
+    beforeEach(async () => {
+      await render(
+        <Diagnostics
+          dataplane={dataplane({
+            diagnostics: [
+              workloadScheduling(
+                DataplaneDiagnosticStatus.UNABLE_TO_COMPLETE,
+                {},
+                {
+                  error_code: "ACCESS_DENIED",
+                  error_message: "The launcher is not allowed to list pods in its jobs namespace.",
+                }
+              ),
+            ],
+          })}
+        />
+      );
+      await userEvent.click(screen.getByRole("button", VIEW_DETAILS));
+    });
+
+    it("shows the details", () => {
+      expect(screen.getByText("Workload scheduling details")).toBeInTheDocument();
+    });
+
+    it("shows the error below them", () => {
+      expect(
+        screen.getByText("ACCESS_DENIED · The launcher is not allowed to list pods in its jobs namespace.")
+      ).toBeInTheDocument();
+    });
+
+    it("links the button to the panel that holds the details", () => {
+      const panelId = screen.getByRole("button", HIDE_DETAILS).getAttribute("aria-controls") ?? "";
+      expect(document.getElementById(panelId)).toHaveTextContent("Workload scheduling details");
+    });
+  });
+
+  describe("for a connected data plane with both a secret store and a workload scheduling result", () => {
+    beforeEach(async () => {
+      await render(
+        <Diagnostics
+          dataplane={dataplane({
+            diagnostics: [
+              secretStorage(DataplaneDiagnosticStatus.PASSED),
+              workloadScheduling(DataplaneDiagnosticStatus.PASSED, { blocked_count: 0 }),
+            ],
+          })}
+        />
+      );
+    });
+
+    it("shows the secrets manager card first, then the workload scheduling card", () => {
+      const labels = ["Secrets manager reachable", "Workload scheduling"].map((label) => screen.getByText(label));
+      expect(labels[0].compareDocumentPosition(labels[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("offers the details of each card", () => {
+      expect(screen.getAllByRole("button", VIEW_DETAILS)).toHaveLength(2);
+    });
+
+    it("opens one set of details at a time", async () => {
+      const [secretStorageToggle, workloadSchedulingToggle] = screen.getAllByRole("button", VIEW_DETAILS);
+
+      await userEvent.click(secretStorageToggle);
+      await userEvent.click(workloadSchedulingToggle);
+
+      expect(screen.getByText("Workload scheduling details")).toBeInTheDocument();
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("for a data plane that never connected, with both checks", () => {
+    it("shows both cards as never connected", async () => {
+      await render(<Diagnostics dataplane={dataplane({ last_heartbeat_timestamp: undefined, status: "UNKNOWN" })} />);
+
+      expect(screen.getAllByText("Never connected")).toHaveLength(2);
     });
   });
 });

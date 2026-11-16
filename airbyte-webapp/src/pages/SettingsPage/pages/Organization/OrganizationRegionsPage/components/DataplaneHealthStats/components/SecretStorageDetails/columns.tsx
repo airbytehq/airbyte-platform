@@ -6,7 +6,8 @@ import { Text } from "components/ui/Text";
 
 import { ConfiguredFor } from "./ConfiguredFor";
 import { SecretStorageRow } from "./types";
-import { StatusLevelIcon } from "../StatusCard";
+import { Age } from "../Age";
+import { LevelValue } from "../LevelValue";
 
 const columnHelper = createColumnHelper<SecretStorageRow>();
 
@@ -17,12 +18,7 @@ export const columns = [
       <FormattedMessage id="settings.organization.regions.dataplane.diagnostics.secretStorage.details.store" />
     ),
     cell: ({ row: { original: dataItem } }) => (
-      <FlexContainer alignItems="center" gap="sm">
-        <StatusLevelIcon level={dataItem.level} />
-        <Text size="sm" bold>
-          {dataItem.name ?? dataItem.id}
-        </Text>
-      </FlexContainer>
+      <LevelValue level={dataItem.level}>{dataItem.name ?? dataItem.id}</LevelValue>
     ),
   }),
   columnHelper.display({
@@ -52,7 +48,7 @@ export const columns = [
     ),
     cell: ({ row: { original: dataItem } }) => (
       <Text size="sm">
-        <FormattedMessage id={dataItem.lastChecked.messageId} values={dataItem.lastChecked.values} />
+        <Age age={dataItem.lastChecked} />
       </Text>
     ),
   }),

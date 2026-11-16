@@ -6,16 +6,28 @@ import { Text } from "components/ui/Text";
 import { DataplaneHealthRead } from "core/api/types/AirbyteClient";
 import { useCurrentTime } from "core/utils/time";
 
-import { getSecretStorageCardData, getSecretStorageRows } from "./utils";
+import { SECRET_STORAGE_CHECK_INTERVAL_MINUTES, SECRET_STORAGE_KEY, WORKLOAD_SCHEDULING_KEY } from "./constants";
+import { DiagnosticKey } from "./types";
+import {
+  getSecretStorageCardData,
+  getSecretStorageRows,
+  getWorkloadSchedulingCardData,
+  getWorkloadSchedulingDetails,
+} from "./utils";
+import { AgeMessage } from "../../types";
+import { Age } from "../Age";
 import { SecretStorageDetails } from "../SecretStorageDetails";
 import { StatusCard, StatusCardGrid } from "../StatusCard";
+import { WorkloadSchedulingDetails } from "../WorkloadSchedulingDetails";
 
-const SECRET_STORAGE_KEY = "secretStorage";
-
-// The launcher probes each secret store at this rate (workload-launcher.secret-storage-probe.rate: PT30M).
-const SECRET_STORAGE_CHECK_INTERVAL_MINUTES = 30;
-
-type DiagnosticKey = typeof SECRET_STORAGE_KEY;
+// The caption of a check that has been observed. A card without a check to date has none.
+const observedCaption = (lastChecked?: AgeMessage) =>
+  lastChecked && (
+    <FormattedMessage
+      id="settings.organization.regions.dataplane.diagnostics.observed"
+      values={{ age: <Age age={lastChecked} /> }}
+    />
+  );
 
 interface DiagnosticsProps {
   dataplane: DataplaneHealthRead;
@@ -24,25 +36,34 @@ interface DiagnosticsProps {
 export const Diagnostics: React.FC<DiagnosticsProps> = ({ dataplane }) => {
   const now = useCurrentTime();
   // Only one set of details is open at a time.
-  const [expanded, setExpanded] = useState<DiagnosticKey>();
+  const [expandedKey, setExpandedKey] = useState<DiagnosticKey>();
   const secretStoragePanelId = useId();
+  const workloadSchedulingPanelId = useId();
   const secretStorage = getSecretStorageCardData(dataplane, now);
   const secretStorageRows = getSecretStorageRows(dataplane, now);
   const hasSecretStorageDetails = secretStorageRows.length > 0;
+  const workloadScheduling = getWorkloadSchedulingCardData(dataplane, now);
+  const workloadSchedulingDetails = getWorkloadSchedulingDetails(dataplane, now);
 
-  if (!secretStorage) {
+  if (!secretStorage && !workloadScheduling) {
     return null;
   }
 
-  const toggle = (key: DiagnosticKey) => () => setExpanded((current) => (current === key ? undefined : key));
+  const toggle = (key: DiagnosticKey) => () => setExpandedKey((current) => (current === key ? undefined : key));
 
-  const secretStorageCaption = secretStorage.lastChecked && (
-    <FormattedMessage
-      id="settings.organization.regions.dataplane.diagnostics.observed"
-      values={{
-        age: <FormattedMessage id={secretStorage.lastChecked.messageId} values={secretStorage.lastChecked.values} />,
-      }}
-    />
+  const toCardDetails = (key: DiagnosticKey, panelId: string, hasDetails: boolean) => {
+    if (!hasDetails) {
+      return undefined;
+    }
+
+    return { isExpanded: expandedKey === key, onToggle: toggle(key), panelId };
+  };
+
+  const secretStorageCardDetails = toCardDetails(SECRET_STORAGE_KEY, secretStoragePanelId, hasSecretStorageDetails);
+  const workloadSchedulingCardDetails = toCardDetails(
+    WORKLOAD_SCHEDULING_KEY,
+    workloadSchedulingPanelId,
+    workloadSchedulingDetails !== undefined
   );
 
   return (
@@ -52,26 +73,38 @@ export const Diagnostics: React.FC<DiagnosticsProps> = ({ dataplane }) => {
       </Text>
 
       <StatusCardGrid>
-        <StatusCard
-          label={<FormattedMessage id="settings.organization.regions.dataplane.diagnostics.secretStorage.label" />}
-          level={secretStorage.level}
-          value={secretStorage.value}
-          caption={secretStorageCaption}
-          details={
-            hasSecretStorageDetails
-              ? {
-                  isExpanded: expanded === SECRET_STORAGE_KEY,
-                  onToggle: toggle(SECRET_STORAGE_KEY),
-                  panelId: secretStoragePanelId,
-                }
-              : undefined
-          }
-        />
+        {secretStorage && (
+          <StatusCard
+            label={<FormattedMessage id="settings.organization.regions.dataplane.diagnostics.secretStorage.label" />}
+            level={secretStorage.level}
+            value={secretStorage.value}
+            caption={observedCaption(secretStorage.lastChecked)}
+            details={secretStorageCardDetails}
+          />
+        )}
+
+        {workloadScheduling && (
+          <StatusCard
+            label={
+              <FormattedMessage id="settings.organization.regions.dataplane.diagnostics.workloadScheduling.label" />
+            }
+            level={workloadScheduling.level}
+            value={workloadScheduling.value}
+            caption={observedCaption(workloadScheduling.lastChecked)}
+            details={workloadSchedulingCardDetails}
+          />
+        )}
       </StatusCardGrid>
 
-      {hasSecretStorageDetails && expanded === SECRET_STORAGE_KEY && (
+      {hasSecretStorageDetails && expandedKey === SECRET_STORAGE_KEY && (
         <div id={secretStoragePanelId}>
           <SecretStorageDetails rows={secretStorageRows} checkIntervalMinutes={SECRET_STORAGE_CHECK_INTERVAL_MINUTES} />
+        </div>
+      )}
+
+      {workloadSchedulingDetails && expandedKey === WORKLOAD_SCHEDULING_KEY && (
+        <div id={workloadSchedulingPanelId}>
+          <WorkloadSchedulingDetails data={workloadSchedulingDetails} />
         </div>
       )}
     </>
