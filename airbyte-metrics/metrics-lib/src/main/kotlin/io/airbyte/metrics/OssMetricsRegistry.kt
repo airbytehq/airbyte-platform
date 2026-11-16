@@ -509,21 +509,19 @@ enum class OssMetricsRegistry(
     metricDescription =
       "Milliseconds a check's connector process ran on the direct job runner, by connector image, result and jar source (cached or downloaded)",
   ),
-  DIRECT_CHECK_JAR_PREFETCH(
-    metricName = "direct_check_jar_prefetch",
-    metricDescription = "Number of connectors the direct job runner tried to prefetch a jar for, by connector and result",
-  ),
   DIRECT_CHECK_JAR_CACHE_LOOKUP(
     metricName = "direct_check_jar_cache_lookup",
     metricDescription = "Number of checks that looked their connector jar up in the direct job runner's cache, by connector image and hit or miss",
   ),
   DIRECT_CHECK_JAR_DOWNLOAD(
     metricName = "direct_check_jar_download",
-    metricDescription = "Number of connector jar downloads by the direct job runner, by connector image, purpose (prefetch or check) and result",
+    metricDescription =
+      "Number of connector jar downloads into the direct job runner's cache, by connector image and result; " +
+        "timeout counts a check that stopped waiting on a download",
   ),
   DIRECT_CHECK_JAR_DOWNLOAD_DURATION(
     metricName = "direct_check_jar_download_duration",
-    metricDescription = "Milliseconds a connector jar download by the direct job runner took, by connector image, purpose and result",
+    metricDescription = "Milliseconds a connector jar download into the direct job runner's cache took, by connector image and result",
   ),
   DIRECT_CHECK_JAR_PUBLISHED_CHECK(
     metricName = "direct_check_jar_published_check",
@@ -541,7 +539,7 @@ enum class OssMetricsRegistry(
   DIRECT_CHECK_JAR_CACHE_DISK_BYTES(
     metricName = "direct_check_jar_cache_disk_bytes",
     metricDescription =
-      "Bytes of connector jars on a direct job runner pod's jar cache volume: cached jars, evicted jars not yet deleted, and checks' own downloads",
+      "Bytes of connector jars on a direct job runner pod's jar cache volume: cached jars and evicted jars not yet deleted",
   ),
   DIRECT_CHECK_TURNED_DOWN(
     metricName = "direct_check_turned_down",

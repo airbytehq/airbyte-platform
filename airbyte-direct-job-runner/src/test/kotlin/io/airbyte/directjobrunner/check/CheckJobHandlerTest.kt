@@ -11,7 +11,6 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
-import io.airbyte.directjobrunner.connector.ConnectorJarPrefetcher
 import io.airbyte.directjobrunner.connector.DirectCheckAllowlist
 import io.airbyte.directjobrunner.connector.DirectCheckRun
 import io.airbyte.directjobrunner.connector.DirectCheckRunner
@@ -59,7 +58,6 @@ class CheckJobHandlerTest {
       every { checkTimeout } returns Duration.ofSeconds(60)
       every { jarDownloadAllowance } returns Duration.ofSeconds(120)
     }
-  private val prefetcher = mockk<ConnectorJarPrefetcher>(relaxed = true)
   private val outputWriter = mockk<WorkloadOutputWriter>(relaxed = true)
   private val metricClient = mockk<MetricClient>(relaxed = true)
   private val handler =
@@ -68,7 +66,6 @@ class CheckJobHandlerTest {
       secretsHydrator,
       directCheckRunner,
       DirectCheckAllowlist(mockk { every { stringVariation(DirectCheckImages, DataplaneGroup(DATAPLANE_GROUP_ID)) } returns "source-postgres" }),
-      prefetcher,
       outputWriter,
       metricClient,
     )
@@ -121,15 +118,6 @@ class CheckJobHandlerTest {
   @Test
   fun `turns down every check from a launcher that sent no data plane group`() {
     assertFalse(handler.accepts(Workload(inputPayload = payload(BAKED_IMAGE)), LauncherDataplaneGroup.Unknown))
-
-    verify(exactly = 0) { prefetcher.prefetchOnce(any()) }
-  }
-
-  @Test
-  fun `a check from a known data plane group starts that group's prefetch`() {
-    handler.accepts(Workload(inputPayload = payload(BAKED_IMAGE)), DISPATCHED_FROM)
-
-    verify(exactly = 1) { prefetcher.prefetchOnce(DATAPLANE_GROUP_ID) }
   }
 
   @Test

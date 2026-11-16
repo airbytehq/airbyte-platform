@@ -40,9 +40,6 @@ import kotlin.concurrent.thread
 
 private val logger = KotlinLogging.logger {}
 
-// Under CheckConnectorConfig.jarCacheDir: the resolver's local repository only uses the io/ tree beside it.
-private const val CHECK_DOWNLOADS_DIR = "check-downloads"
-
 // The JVM options the connector image gives it: JAVA_OPTS from its javabase.sh, and from its launcher script the
 // out-of-memory exit (that script's 75%-of-memory heap default is replaced by the explicit heap below).
 private val CONNECTOR_JVM_OPTS =
@@ -80,10 +77,10 @@ sealed interface SourceCheckResult {
 
 /** Where a check's jar came from. */
 enum class JarSource {
-  /** A prefetched jar from [ConnectorJarCache]. */
+  /** The jar was already in [ConnectorJarCache]. */
   CACHED,
 
-  /** The jar wasn't cached; this check downloaded it for itself and deleted it afterwards. */
+  /** The jar wasn't cached; this check waited for it to be downloaded into [ConnectorJarCache]. */
   DOWNLOADED,
 }
 
@@ -97,7 +94,7 @@ data class DirectCheckRun(
 
 /**
  * Runs a connector's `check` as a local process: `java -jar` on the connector version's fat jar, from
- * [ConnectorJarCache], which downloads it first if it isn't cached.
+ * [ConnectorJarCache], downloaded into it first if it isn't cached.
  *
  * Each call starts a new JVM: the connector runs one operation and exits, so nothing is reused between calls.
  */
@@ -106,19 +103,12 @@ class DirectCheckRunner(
   private val config: CheckConnectorConfig,
   private val airbyteEdition: Configs.AirbyteEdition,
   private val jarCache: ConnectorJarCache,
-  private val resolver: ConnectorJarResolver,
   private val metricClient: MetricClient,
 ) {
-  // Per-check downloads run here so a check can stop waiting on one after jarDownloadAllowance.
+  // Downloads run here so a check can stop waiting on one after jarDownloadAllowance.
   private val downloads = Executors.newCachedThreadPool { Thread(it, "check-jar-download").apply { isDaemon = true } }
 
-  // Per-check downloads go under the cache directory, so on a data plane they count against the jar-cache volume's
-  // size limit along with the cache.
-  private val checkDownloadsDir: Path = Path.of(config.jarCacheDir, CHECK_DOWNLOADS_DIR)
-
   init {
-    // The volume outlives a container restart, so remove downloads left by checks that died with the last runner.
-    checkDownloadsDir.toFile().deleteRecursively()
     metricClient.gauge(OssMetricsRegistry.DIRECT_CHECK_JAR_CACHE_DISK_BYTES, this, ToDoubleFunction { it.jarDiskBytes() })
   }
 
@@ -135,9 +125,9 @@ class DirectCheckRunner(
   fun canRun(image: String): Boolean = jarCache.isAvailable(config.jarCoordinates(image))
 
   /**
-   * Runs `check` for [image] with [connectionConfiguration]. A prefetched jar runs from [ConnectorJarCache]; any other
-   * is downloaded for this check alone and deleted after it, without being cached. A jar that can't be downloaded
-   * throws: that is a platform error, not a check result.
+   * Runs `check` for [image] with [connectionConfiguration], from the jar in [ConnectorJarCache], downloading it into
+   * the cache first if it isn't there. A jar that can't be downloaded throws: that is a platform error, not a check
+   * result.
    */
   fun check(
     image: String,
@@ -157,72 +147,45 @@ class DirectCheckRunner(
 
     return when (cached) {
       is CachedJar.Hit -> run(image, cached.jar, JarSource.CACHED, start, connectionConfiguration, workloadId)
-      CachedJar.Miss -> runDownloaded(image, coordinates, start, connectionConfiguration, workloadId)
+      CachedJar.Miss -> run(image, download(coordinates), JarSource.DOWNLOADED, start, connectionConfiguration, workloadId)
     }
   }
 
-  // Downloads the jar into a directory of its own, so concurrent checks don't share or clean up each other's download,
-  // and deletes it once the connector has exited. The resolver's own timeouts only cover connecting and a stalled
-  // transfer, so a slow but steady download is cut off after jarDownloadAllowance, before the workload's deadline.
-  private fun runDownloaded(
-    image: String,
-    coordinates: String,
-    start: Long,
-    connectionConfiguration: JsonNode,
-    workloadId: String,
-  ): DirectCheckRun {
-    val downloadDir = Files.createTempDirectory(Files.createDirectories(checkDownloadsDir), "check-")
-    try {
-      val jar = download(coordinates, downloadDir)
-      return run(image, jar, JarSource.DOWNLOADED, start, connectionConfiguration, workloadId)
-    } finally {
-      downloadDir.toFile().deleteRecursively()
-    }
-  }
-
-  private fun download(
-    coordinates: String,
-    downloadDir: Path,
-  ): Path {
+  // The resolver's own timeouts only cover connecting and a stalled transfer, so a slow but steady download is cut off
+  // after jarDownloadAllowance, before the workload's deadline. The download itself carries on and caches the jar for
+  // later checks; the cache records its result when it ends.
+  private fun download(coordinates: String): Path {
     val start = System.currentTimeMillis()
-    val download = downloads.submit<Path> { resolver.resolveInto(coordinates, downloadDir) }
+    val download = downloads.submit<Path> { jarCache.getOrDownload(coordinates) }
     try {
-      return download.get(config.jarDownloadAllowance.toMillis(), TimeUnit.MILLISECONDS).also {
-        recordDownload(coordinates, RESULT_SUCCESS, start)
-      }
+      return download.get(config.jarDownloadAllowance.toMillis(), TimeUnit.MILLISECONDS)
     } catch (e: TimeoutException) {
-      // The resolver's transfer may not notice the interrupt; it ends at its own timeout or when the caller deletes
-      // the directory it writes to. Only this timeout is recorded for it.
-      download.cancel(true)
-      recordDownload(coordinates, RESULT_TIMEOUT, start)
+      recordDownloadTimeout(coordinates, start)
       throw IllegalStateException("Downloading $coordinates for the check took longer than ${config.jarDownloadAllowance}", e)
     } catch (e: ExecutionException) {
       val cause = e.cause
       if (cause is ArtifactResolutionException) {
-        recordDownload(coordinates, downloadFailureResult(cause), start)
         throw IllegalStateException("Couldn't download $coordinates for the check", cause)
       }
       throw e
     }
   }
 
-  private fun recordDownload(
+  private fun recordDownloadTimeout(
     coordinates: String,
-    result: String,
     start: Long,
   ) {
     val tags =
       arrayOf(
         MetricAttribute(MetricTags.CONNECTOR_IMAGE, connectorImageTag(coordinates)),
-        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, PURPOSE_CHECK),
-        MetricAttribute(MetricTags.RESULT_TAG, result),
+        MetricAttribute(MetricTags.RESULT_TAG, RESULT_TIMEOUT),
       )
     metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags)
     metricClient.distribution(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD_DURATION, (System.currentTimeMillis() - start).toDouble(), *tags)
   }
 
-  // Everything under the jar cache directory: cached jars, evicted jars not yet deleted, and checks' own downloads. A
-  // file deleted during the walk (an eviction, a check finishing) skips this sample rather than reporting a wrong total.
+  // Everything under the jar cache directory: cached jars and evicted jars not yet deleted. A file deleted during the
+  // walk (an eviction) skips this sample rather than reporting a wrong total.
   private fun jarDiskBytes(): Double {
     val root = Path.of(config.jarCacheDir)
     if (!Files.exists(root)) {

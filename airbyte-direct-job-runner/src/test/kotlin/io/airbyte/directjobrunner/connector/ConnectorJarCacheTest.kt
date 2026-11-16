@@ -4,6 +4,7 @@
 
 package io.airbyte.directjobrunner.connector
 
+import io.airbyte.directjobrunner.config.CheckConnectorConfig
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
@@ -51,15 +53,14 @@ class ConnectorJarCacheTest {
   private fun cache(
     maxJars: Int = 50,
     evictedJarRetention: Duration = Duration.ZERO,
-  ) = ConnectorJarCache(resolver, metricClient, maxJars, evictedJarRetention)
+  ) = ConnectorJarCache(resolver, metricClient, repoDir, maxJars, evictedJarRetention)
 
-  // Puts the jar and gets it [times] times, as that many checks would.
+  // Gets the jar [times] times, as that many checks would; the first downloads it.
   private fun ConnectorJarCache.use(
     coordinates: String,
     times: Int = 1,
   ) {
-    assertTrue(put(coordinates), coordinates)
-    repeat(times) { get(coordinates) }
+    repeat(times) { assertEquals(jarFor(coordinates), getOrDownload(coordinates)) }
   }
 
   // Evicted jars are deleted on a background thread; wait for it.
@@ -71,24 +72,24 @@ class ConnectorJarCacheTest {
   }
 
   @Test
-  fun `put downloads a jar once, and get returns it`() {
+  fun `getOrDownload downloads a jar once, caches it, and later calls and get return it`() {
     val cache = cache()
 
-    assertTrue(cache.put("g:source-postgres:3.8.10"))
-    assertTrue(cache.put("g:source-postgres:3.8.10"))
+    assertEquals(jarFor("g:source-postgres:3.8.10"), cache.getOrDownload("g:source-postgres:3.8.10"))
+    assertEquals(jarFor("g:source-postgres:3.8.10"), cache.getOrDownload("g:source-postgres:3.8.10"))
 
     assertEquals(CachedJar.Hit(jarFor("g:source-postgres:3.8.10")), cache.get("g:source-postgres:3.8.10"))
+    assertEquals(setOf("g:source-postgres:3.8.10"), cache.cached())
     verify(exactly = 1) { resolver.resolve("g:source-postgres:3.8.10") }
   }
 
-  private fun verifyPrefetchDownload(
+  private fun verifyDownload(
     image: String,
     result: String,
   ) {
     val tags =
       arrayOf(
         MetricAttribute(MetricTags.CONNECTOR_IMAGE, image),
-        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, "prefetch"),
         MetricAttribute(MetricTags.RESULT_TAG, result),
       )
     verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags) }
@@ -96,16 +97,16 @@ class ConnectorJarCacheTest {
   }
 
   @Test
-  fun `a put's download is recorded with its result, and a put of a cached jar records nothing`() {
+  fun `a download is recorded with its result, and getting a cached jar records nothing`() {
     every { resolver.resolve("io.airbyte.connectors:source-mysql:3.50.0") } throws ArtifactResolutionException(emptyList(), "repository down")
     val cache = cache()
 
-    cache.put("io.airbyte.connectors:source-postgres:3.8.11")
-    cache.put("io.airbyte.connectors:source-postgres:3.8.11")
-    cache.put("io.airbyte.connectors:source-mysql:3.50.0")
+    cache.getOrDownload("io.airbyte.connectors:source-postgres:3.8.11")
+    cache.getOrDownload("io.airbyte.connectors:source-postgres:3.8.11")
+    assertThrows<ArtifactResolutionException> { cache.getOrDownload("io.airbyte.connectors:source-mysql:3.50.0") }
 
-    verifyPrefetchDownload("airbyte/source-postgres:3.8.11", "success")
-    verifyPrefetchDownload("airbyte/source-mysql:3.50.0", "error")
+    verifyDownload("airbyte/source-postgres:3.8.11", "success")
+    verifyDownload("airbyte/source-mysql:3.50.0", "error")
   }
 
   @Test
@@ -125,27 +126,27 @@ class ConnectorJarCacheTest {
   }
 
   @Test
-  fun `the cap is 20 jars`() {
-    val cache = ConnectorJarCache(resolver, metricClient)
-    (1..21).forEach { cache.use("g:c$it:1") }
+  fun `the cap is 15 jars`() {
+    val cache = ConnectorJarCache(resolver, CheckConnectorConfig(jarCacheDir = repoDir.toString()), metricClient)
+    (1..16).forEach { cache.use("g:c$it:1") }
 
-    assertEquals(20, cache.cached().size, "${cache.cached()}")
+    assertEquals(15, cache.cached().size, "${cache.cached()}")
   }
 
   @Test
-  fun `a failed download returns false, caches nothing, and the next put tries again`() {
+  fun `a failed download throws, caches nothing, and the next call tries again`() {
     every { resolver.resolve("g:a:1") } throws ArtifactResolutionException(emptyList(), "repository down") andThenAnswer { jarFor(firstArg()) }
     val cache = cache()
 
-    assertFalse(cache.put("g:a:1"))
+    assertThrows<ArtifactResolutionException> { cache.getOrDownload("g:a:1") }
     assertEquals(emptySet<String>(), cache.cached())
 
-    assertTrue(cache.put("g:a:1"))
+    assertEquals(jarFor("g:a:1"), cache.getOrDownload("g:a:1"))
     assertEquals(setOf("g:a:1"), cache.cached())
   }
 
   @Test
-  fun `concurrent puts of an uncached jar share one download`() {
+  fun `concurrent checks of an uncached jar share one download`() {
     val downloading = CountDownLatch(1)
     val release = CountDownLatch(1)
     every { resolver.resolve(any()) } answers {
@@ -156,21 +157,22 @@ class ConnectorJarCacheTest {
     val cache = cache()
     val pool = Executors.newFixedThreadPool(5)
 
-    val results = (1..5).map { pool.submit<Boolean> { cache.put("g:source-postgres:3.8.10") } }
+    val results = (1..5).map { pool.submit<Path> { cache.getOrDownload("g:source-postgres:3.8.10") } }
     assertTrue(downloading.await(10, TimeUnit.SECONDS))
     release.countDown()
 
-    assertEquals(List(5) { true }, results.map { it.get(10, TimeUnit.SECONDS) })
+    assertEquals(List(5) { jarFor("g:source-postgres:3.8.10") }, results.map { it.get(10, TimeUnit.SECONDS) })
     verify(exactly = 1) { resolver.resolve(any()) }
     pool.shutdown()
   }
 
   @Test
-  fun `caching a jar past the cap evicts the least frequently used one and deletes its files`() {
+  fun `caching a jar past the cap evicts the least recently used one and deletes its files`() {
     val cache = cache(maxJars = 3)
-    cache.use("g:a:1", times = 3)
-    cache.use("g:b:1", times = 1)
-    cache.use("g:c:1", times = 2)
+    cache.use("g:a:1")
+    cache.use("g:b:1")
+    cache.use("g:c:1")
+    cache.use("g:a:1")
 
     cache.use("g:d:1")
 
@@ -181,10 +183,24 @@ class ConnectorJarCacheTest {
   }
 
   @Test
-  fun `among equally used jars the least recently used is evicted`() {
+  fun `a jar used often but not lately is evicted before a newer jar used once`() {
+    // A connector upgrade: checks move from 1.0.0 to 1.1.0, and 1.0.0's earlier uses don't keep it cached.
+    val cache = cache(maxJars = 2)
+    cache.use("g:a:1.0.0", times = 100)
+    cache.use("g:a:1.1.0")
+
+    cache.use("g:b:1")
+
+    assertEquals(setOf("g:a:1.1.0", "g:b:1"), cache.cached())
+  }
+
+  @Test
+  fun `checking whether a jar is cached doesn't count as using it`() {
     val cache = cache(maxJars = 2)
     cache.use("g:a:1")
     cache.use("g:b:1")
+    assertTrue(cache.isCached("g:a:1"))
+    assertEquals(setOf("g:a:1", "g:b:1"), cache.cached())
 
     cache.use("g:c:1")
 
@@ -217,7 +233,26 @@ class ConnectorJarCacheTest {
   }
 
   @Test
-  fun `an evicted jar is downloaded again by the next put`() {
+  fun `an evicted jar's delayed delete doesn't remove the files of a new download of the same jar`() {
+    val cache = cache(maxJars = 1, evictedJarRetention = Duration.ofMillis(200))
+    cache.use("g:a:1")
+    cache.use("g:b:1")
+
+    // The download writes its file, then is still running when a's delete from the eviction above comes due.
+    every { resolver.resolve("g:a:1") } answers {
+      val jar = jarFor(firstArg())
+      Thread.sleep(600)
+      jar
+    }
+    val jar = cache.getOrDownload("g:a:1")
+    Thread.sleep(300)
+
+    assertEquals(setOf("g:a:1"), cache.cached())
+    assertTrue(Files.exists(jar), "the delayed delete removed a jar that is cached")
+  }
+
+  @Test
+  fun `an evicted jar is downloaded again by the next check`() {
     val cache = cache(maxJars = 1)
     cache.use("g:a:1")
     cache.use("g:b:1")
@@ -226,6 +261,16 @@ class ConnectorJarCacheTest {
 
     verify(exactly = 2) { resolver.resolve("g:a:1") }
     assertEquals(setOf("g:a:1"), cache.cached())
+  }
+
+  @Test
+  fun `jars left on the volume by the last runner are removed when the cache starts`() {
+    val leftover = jarFor("g:a:1")
+
+    val cache = cache()
+
+    assertFalse(Files.exists(leftover), "a jar the new index doesn't track is still on the volume")
+    assertEquals(emptySet<String>(), cache.cached())
   }
 
   @Test

@@ -9,8 +9,6 @@ import org.eclipse.aether.transfer.ArtifactNotFoundException
 import org.eclipse.aether.transfer.ChecksumFailureException
 
 // Tag values shared by the jar metrics.
-internal const val PURPOSE_PREFETCH = "prefetch"
-internal const val PURPOSE_CHECK = "check"
 internal const val RESULT_SUCCESS = "success"
 internal const val RESULT_TIMEOUT = "timeout"
 

@@ -49,19 +49,13 @@ class DirectCheckRunnerTest {
 
   private val connectionConfiguration = Jsons.jsonNode(mapOf("host" to "db.example.com", "password" to "hunter2"))
 
-  // A check's own download lands in the directory it is given, like the real resolver; the prefetch uses resolve().
-  private val downloadDirs = mutableListOf<Path>()
-  private val resolver =
-    mockk<ConnectorJarResolver> {
-      every { resolve(any()) } returns JAR
-      every { resolveInto(any(), any()) } answers {
-        val dir = secondArg<Path>()
-        downloadDirs.add(dir)
-        dir.resolve("source-postgres-3.8.10.jar").also { Files.writeString(it, "jar") }
-      }
-    }
+  private val resolver = mockk<ConnectorJarResolver> { every { resolve(any()) } returns JAR }
   private val metricClient = mockk<MetricClient>(relaxed = true)
-  private val jarCache = ConnectorJarCache(resolver, metricClient)
+
+  // Lazy: the cache directory is only injected after the test instance is built.
+  private val jarCache by lazy {
+    ConnectorJarCache(resolver, metricClient, cacheDir, ConnectorJarCache.MAX_JARS, ConnectorJarCache.EVICTED_JAR_RETENTION)
+  }
 
   private fun runner(
     javaBody: String,
@@ -80,7 +74,7 @@ class DirectCheckRunnerTest {
         checkTimeout = checkTimeout,
         jarDownloadAllowance = jarDownloadAllowance,
       )
-    return DirectCheckRunner(config, edition, jarCache, resolver, metricClient)
+    return DirectCheckRunner(config, edition, jarCache, metricClient)
   }
 
   private fun check(
@@ -195,7 +189,6 @@ class DirectCheckRunnerTest {
 
   @Test
   fun `the connector jar runs with the image's JVM options and a capped heap`() {
-    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
     val capturedArgs = captureDir.resolve("args")
 
     check("printf '%s\\n' \"$@\" > $capturedArgs; echo '$SUCCEEDED'")
@@ -236,52 +229,23 @@ class DirectCheckRunnerTest {
   }
 
   @Test
-  fun `a prefetched jar runs from the cache, without a download`() {
-    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
+  fun `the first check of a jar downloads it into the cache, and later checks run it from there`() {
     val capturedArgs = captureDir.resolve("args")
-
-    val run = runner("printf '%s\\n' \"$@\" > $capturedArgs; echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-1")
-
-    assertEquals(JarSource.CACHED, run.jarSource)
-    assertTrue(Files.readAllLines(capturedArgs).contains(JAR.toString()), "the cached jar wasn't run")
-    verify(exactly = 0) { resolver.resolveInto(any(), any()) }
-  }
-
-  @Test
-  fun `a jar that isn't cached is downloaded for the check, deleted after it, and not cached`() {
-    val runner = runner("echo '$SUCCEEDED'")
+    val runner = runner("printf '%s\\n' \"$@\" > $capturedArgs; echo '$SUCCEEDED'")
 
     val first = runner.check(IMAGE, connectionConfiguration, "workload-1")
     val second = runner.check(IMAGE, connectionConfiguration, "workload-2")
 
-    assertEquals(listOf(JarSource.DOWNLOADED, JarSource.DOWNLOADED), listOf(first.jarSource, second.jarSource))
-    verify(exactly = 2) { resolver.resolveInto("io.airbyte.connectors:source-postgres:3.8.10", any()) }
-    assertEquals(2, downloadDirs.distinct().size, "$downloadDirs")
-    downloadDirs.forEach { assertTrue(it.startsWith(cacheDir.resolve("check-downloads")), "a check's download is outside the cache dir: $it") }
-    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
-    assertEquals(emptySet<String>(), jarCache.cached())
-  }
-
-  @Test
-  fun `downloads left by checks that died with the last runner are removed when the runner starts`() {
-    val leftover = cacheDir.resolve("check-downloads/check-123/source-postgres-3.8.10.jar")
-    Files.createDirectories(leftover.parent)
-    Files.writeString(leftover, "jar")
-    val cachedJar = cacheDir.resolve("io/airbyte/connectors/source-postgres/3.8.11/source-postgres-3.8.11.jar")
-    Files.createDirectories(cachedJar.parent)
-    Files.writeString(cachedJar, "jar")
-
-    runner("exit 0")
-
-    assertFalse(Files.exists(cacheDir.resolve("check-downloads")), "a leftover check download survived the restart")
-    assertTrue(Files.exists(cachedJar), "the startup cleanup touched the cache")
+    assertEquals(listOf(JarSource.DOWNLOADED, JarSource.CACHED), listOf(first.jarSource, second.jarSource))
+    assertTrue(Files.readAllLines(capturedArgs).contains(JAR.toString()), "the cached jar wasn't run")
+    verify(exactly = 1) { resolver.resolve("io.airbyte.connectors:source-postgres:3.8.10") }
+    assertEquals(setOf("io.airbyte.connectors:source-postgres:3.8.10"), jarCache.cached())
   }
 
   private fun verifyCheckDownload(result: String) {
     val tags =
       arrayOf(
         MetricAttribute(MetricTags.CONNECTOR_IMAGE, IMAGE),
-        MetricAttribute(MetricTags.JAR_DOWNLOAD_PURPOSE_TAG, "check"),
         MetricAttribute(MetricTags.RESULT_TAG, result),
       )
     verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DIRECT_CHECK_JAR_DOWNLOAD, 1, *tags) }
@@ -304,18 +268,17 @@ class DirectCheckRunnerTest {
     verifyLookup("miss")
     verifyCheckDownload("success")
 
-    jarCache.put("io.airbyte.connectors:source-postgres:3.8.10")
     runner("echo '$SUCCEEDED'").check(IMAGE, connectionConfiguration, "workload-2")
     verifyLookup("hit")
   }
 
   @Test
   fun `a check's failed and timed-out downloads are recorded with their result`() {
-    every { resolver.resolveInto(any(), any()) } throws ArtifactResolutionException(emptyList(), "repository down")
+    every { resolver.resolve(any()) } throws ArtifactResolutionException(emptyList(), "repository down")
     assertThrows<IllegalStateException> { check("echo '$SUCCEEDED'") }
     verifyCheckDownload("error")
 
-    every { resolver.resolveInto(any(), any()) } answers {
+    every { resolver.resolve(any()) } answers {
       Thread.sleep(5_000)
       JAR
     }
@@ -334,23 +297,16 @@ class DirectCheckRunnerTest {
     val cachedJar = cacheDir.resolve("io/airbyte/connectors/source-postgres/3.8.11/source-postgres-3.8.11.jar")
     Files.createDirectories(cachedJar.parent)
     Files.write(cachedJar, ByteArray(1_000))
-    val checkDownload = cacheDir.resolve("check-downloads/check-1/source-postgres-3.8.10.jar")
-    Files.createDirectories(checkDownload.parent)
-    Files.write(checkDownload, ByteArray(500))
+    val evictedJar = cacheDir.resolve("io/airbyte/connectors/source-postgres/3.8.10/source-postgres-3.8.10.jar")
+    Files.createDirectories(evictedJar.parent)
+    Files.write(evictedJar, ByteArray(500))
 
     assertEquals(1_500.0, gauge.captured.applyAsDouble(runner))
   }
 
   @Test
-  fun `a check's download is deleted even when the connector fails`() {
-    assertEquals(SourceCheckResult.Crashed(3), check("exit 3"))
-
-    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
-  }
-
-  @Test
   fun `the jar retrieval and the connector run are timed separately`() {
-    every { resolver.resolveInto(any(), any()) } answers {
+    every { resolver.resolve(any()) } answers {
       Thread.sleep(300)
       JAR
     }
@@ -362,10 +318,9 @@ class DirectCheckRunnerTest {
   }
 
   @Test
-  fun `a download that takes longer than the allowance fails the check promptly and is cleaned up`() {
-    every { resolver.resolveInto(any(), any()) } answers {
-      downloadDirs.add(secondArg())
-      Thread.sleep(5_000)
+  fun `a download that takes longer than the allowance fails the check promptly, and still caches the jar for later checks`() {
+    every { resolver.resolve(any()) } answers {
+      Thread.sleep(3_000)
       JAR
     }
     val runner = runner("echo '$SUCCEEDED'", jarDownloadAllowance = Duration.ofMillis(300))
@@ -373,14 +328,18 @@ class DirectCheckRunnerTest {
     val start = System.nanoTime()
     val e = assertThrows<IllegalStateException> { runner.check(IMAGE, connectionConfiguration, "workload-1") }
 
-    assertTrue(Duration.ofNanos(System.nanoTime() - start) < Duration.ofSeconds(3), "waited for the whole download")
+    assertTrue(Duration.ofNanos(System.nanoTime() - start) < Duration.ofMillis(2_500), "waited for the whole download")
     assertEquals("Downloading io.airbyte.connectors:source-postgres:3.8.10 for the check took longer than PT0.3S", e.message)
-    downloadDirs.forEach { assertFalse(Files.exists(it), "a check's download wasn't deleted: $it") }
+    val deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos()
+    while (jarCache.cached().isEmpty() && System.nanoTime() < deadline) {
+      Thread.sleep(10)
+    }
+    assertEquals(setOf("io.airbyte.connectors:source-postgres:3.8.10"), jarCache.cached())
   }
 
   @Test
   fun `a jar that can't be downloaded is a platform error, not a check result`() {
-    every { resolver.resolveInto(any(), any()) } throws ArtifactResolutionException(emptyList(), "repository down")
+    every { resolver.resolve(any()) } throws ArtifactResolutionException(emptyList(), "repository down")
 
     assertThrows<IllegalStateException> { check("echo '$SUCCEEDED'") }
   }

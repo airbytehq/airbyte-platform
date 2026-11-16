@@ -15,7 +15,6 @@ import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.toConfigWithRefs
-import io.airbyte.directjobrunner.connector.ConnectorJarPrefetcher
 import io.airbyte.directjobrunner.connector.DirectCheckAllowlist
 import io.airbyte.directjobrunner.connector.DirectCheckRunner
 import io.airbyte.directjobrunner.connector.SourceCheckResult
@@ -56,7 +55,6 @@ class CheckJobHandler(
   private val secretsHydrator: ConnectorSecretsHydrator,
   private val directCheckRunner: DirectCheckRunner,
   private val allowlist: DirectCheckAllowlist,
-  private val prefetcher: ConnectorJarPrefetcher,
   private val outputWriter: WorkloadOutputWriter,
   private val metricClient: MetricClient,
 ) : DirectJobHandler {
@@ -73,11 +71,6 @@ class CheckJobHandler(
     workload: Workload,
     dataplaneGroup: LauncherDataplaneGroup,
   ): Boolean {
-    // The first check from a launcher's data plane group starts caching that group's allowlisted jars.
-    if (dataplaneGroup is LauncherDataplaneGroup.Known) {
-      prefetcher.prefetchOnce(dataplaneGroup.dataplaneGroupId)
-    }
-
     if (workload.logDeliveryMode == LogDeliveryMode.FLEX) {
       return turnDown("flex_logs")
     }

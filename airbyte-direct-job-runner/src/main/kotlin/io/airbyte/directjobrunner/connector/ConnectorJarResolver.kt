@@ -18,7 +18,6 @@ import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.repository.RemoteRepository
 import org.eclipse.aether.repository.RepositoryPolicy
 import org.eclipse.aether.resolution.ArtifactRequest
-import org.eclipse.aether.resolution.VersionRangeRequest
 import org.eclipse.aether.supplier.RepositorySystemSupplier
 import org.eclipse.aether.supplier.SessionBuilderSupplier
 import java.io.IOException
@@ -106,42 +105,13 @@ class ConnectorJarResolver(
 
   /**
    * Downloads the jar for [coordinates] (`group:artifact:version`) into the cache directory, [CheckConnectorConfig.jarCacheDir],
-   * or finds it there. Throws [org.eclipse.aether.resolution.ArtifactResolutionException] if it can't be fetched.
+   * or finds it there, and returns its path. Throws [org.eclipse.aether.resolution.ArtifactResolutionException] if it
+   * can't be fetched.
    */
-  fun resolve(coordinates: String): Path = resolveInto(coordinates, Path.of(config.jarCacheDir))
-
-  /**
-   * Downloads the jar for [coordinates] into [localRepository], a local Maven repository directory, and returns its
-   * path. Throws [org.eclipse.aether.resolution.ArtifactResolutionException] if it can't be fetched.
-   */
-  fun resolveInto(
-    coordinates: String,
-    localRepository: Path,
-  ): Path =
-    withSession(localRepository) { system, session ->
-      val request = ArtifactRequest(DefaultArtifact(coordinates), listOf(repository(RepositoryPolicy.UPDATE_POLICY_NEVER)), null)
-      system.resolveArtifact(session, request).artifact.path
-    }
-
-  /**
-   * The release versions of [connector] in the jar repository, oldest first, in Maven's version order. Preview and
-   * release candidate versions (`3.8.11-preview.abc1234`, `3.8.11-rc1`) are left out. Throws
-   * [org.eclipse.aether.resolution.VersionRangeResolutionException] if the repository can't be read.
-   */
-  fun releasedVersions(connector: String): List<String> =
+  fun resolve(coordinates: String): Path =
     withSession(Path.of(config.jarCacheDir)) { system, session ->
-      // The version list changes with every publish, so it is read from the repository each time, unlike a release jar.
-      val request =
-        VersionRangeRequest(
-          DefaultArtifact("${config.jarGroupId}:$connector:[0,)"),
-          listOf(repository(RepositoryPolicy.UPDATE_POLICY_ALWAYS)),
-          null,
-        )
-      system
-        .resolveVersionRange(session, request)
-        .versions
-        .map { it.toString() }
-        .filterNot { it.contains('-') }
+      val request = ArtifactRequest(DefaultArtifact(coordinates), listOf(repository()), null)
+      system.resolveArtifact(session, request).artifact.path
     }
 
   private fun <T> withSession(
@@ -169,12 +139,12 @@ class ConnectorJarResolver(
     return URI.create("${config.jarRepositoryUrl.trimEnd('/')}/$path")
   }
 
-  // A published release jar never changes, so jar lookups use UPDATE_POLICY_NEVER and a cached copy is never re-checked.
-  // A download whose checksum doesn't match the published one fails instead of being run.
-  private fun repository(updatePolicy: String): RemoteRepository =
+  // A published release jar never changes, so a cached copy is never re-checked. A download whose checksum doesn't match
+  // the published one fails instead of being run.
+  private fun repository(): RemoteRepository =
     RemoteRepository
       .Builder("connector-jars", "default", config.jarRepositoryUrl)
-      .setReleasePolicy(RepositoryPolicy(true, updatePolicy, RepositoryPolicy.CHECKSUM_POLICY_FAIL))
-      .setSnapshotPolicy(RepositoryPolicy(false, updatePolicy, RepositoryPolicy.CHECKSUM_POLICY_FAIL))
+      .setReleasePolicy(RepositoryPolicy(true, RepositoryPolicy.UPDATE_POLICY_NEVER, RepositoryPolicy.CHECKSUM_POLICY_FAIL))
+      .setSnapshotPolicy(RepositoryPolicy(false, RepositoryPolicy.UPDATE_POLICY_NEVER, RepositoryPolicy.CHECKSUM_POLICY_FAIL))
       .build()
 }

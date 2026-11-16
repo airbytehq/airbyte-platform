@@ -140,7 +140,6 @@ object MetricTags {
   const val MUTEX_KEY_TAG: String = "mutex_key"
   const val PRIORITY_TAG: String = "priority"
   const val FALLBACK_REASON_TAG: String = "fallback_reason"
-  const val JAR_DOWNLOAD_PURPOSE_TAG: String = "purpose"
   const val JAR_SOURCE_TAG: String = "jar_source"
   const val ROUTE_DESTINATION_TAG: String = "destination"
   const val ROUTE_REASON_TAG: String = "reason"
