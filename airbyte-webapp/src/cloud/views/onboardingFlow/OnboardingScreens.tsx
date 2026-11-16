@@ -10,6 +10,7 @@ import { DestinationScreen } from "./DestinationScreen";
 import { getSourcePicks } from "./draftConnectors";
 import { FirstSyncScreen } from "./FirstSyncScreen";
 import { GoalScreen, OnboardingGoal } from "./GoalScreen";
+import { InstallMcpScreen } from "./InstallMcpScreen";
 import { getDestinationChoice } from "./onboardingConnectors";
 import { getInitialScreen, OnboardingScreenId } from "./onboardingScreenSteps";
 import { SourcesScreen } from "./SourcesScreen";
@@ -75,9 +76,12 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ state, onS
           destinationChoice={state.destinationChoice}
           onBack={goTo("destination")}
           onWebAppChosen={goTo("connectSource")}
+          onAiAgentChosen={goTo("installMcp")}
           onSkip={onSkip}
         />
       );
+    case "installMcp":
+      return <InstallMcpScreen sourcePicks={state.sourcePicks} destinationChoice={state.destinationChoice} />;
     case "connectSource":
       return (
         <ConnectSourceScreen

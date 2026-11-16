@@ -81,8 +81,8 @@ const OnboardingFlow: React.FC = () => {
 
 /**
  * Decides once, when the member opens the flow, so a status change does not close an open flow. "Run your first sync"
- * completes onboarding and then shows the running state, and each other exit opens its page in its own `onSuccess`.
- * Cost: an open flow stays open when onboarding finishes in another tab or device.
+ * and the AI agent path complete onboarding and then show a last screen, and Skip opens the normal app in its own
+ * `onSuccess`. Cost: an open flow stays open when onboarding finishes in another tab or device.
  */
 const OnboardingFlowGate: React.FC = () => {
   const canOpenFlow = useCanOpenOnboardingFlow();

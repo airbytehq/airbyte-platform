@@ -10,7 +10,7 @@ import { OrganizationPicker } from "area/organization/OrganizationPicker/Organiz
 import { useAuthService } from "core/services/auth";
 
 import styles from "./OnboardingHeader.module.scss";
-import { getOnboardingStepState, ONBOARDING_STEPS, OnboardingStepId } from "./onboardingSteps";
+import { getOnboardingProgress, OnboardingStepId } from "./onboardingSteps";
 
 interface OnboardingHeaderProps {
   currentStep: OnboardingStepId;
@@ -18,8 +18,8 @@ interface OnboardingHeaderProps {
 
 export const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({ currentStep }) => {
   const { logout } = useAuthService();
-  const steps = ONBOARDING_STEPS.map(({ id, labelId }) => ({
-    state: getOnboardingStepState(id, currentStep),
+  const steps = getOnboardingProgress(currentStep).map(({ labelId, state }) => ({
+    state,
     label: <FormattedMessage id={labelId} />,
   }));
 

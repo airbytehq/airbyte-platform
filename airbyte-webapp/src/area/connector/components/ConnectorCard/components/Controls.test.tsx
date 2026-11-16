@@ -170,6 +170,12 @@ describe("Controls", () => {
     expect(screen.getByRole("button", { name: "Save & Test" })).toBeEnabled();
   });
 
+  it("hides the test card of an edit-mode draft until a test runs", async () => {
+    await render(<ControlsWithForm onSaveDraft={jest.fn().mockResolvedValue(undefined)} isEditMode isDraftMode />);
+
+    expect(screen.queryByText("Test the source")).not.toBeInTheDocument();
+  });
+
   it("shows a draft check failure in the failure panel without offering Retest, and scrolls the panel into view", async () => {
     const scrollIntoView = jest.mocked(Element.prototype.scrollIntoView);
     await render(

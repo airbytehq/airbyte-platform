@@ -10,7 +10,7 @@ import { useTrackOnboardingAnswer } from "./useTrackOnboardingAnswer";
 
 export type OnboardingGoal = "centralize" | "aiAgents" | "replicateDatabase" | "exploring";
 
-/** The goals of the selected-state Figma frame 5:183249. The goal does not change the path. */
+/** The goal does not change the path. */
 const GOAL_OPTIONS: Array<RadioButtonTileOption<OnboardingGoal>> = [
   {
     value: "centralize",

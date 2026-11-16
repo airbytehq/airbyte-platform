@@ -10,7 +10,7 @@ interface SourceCategory {
   sourceDefinitionIds: string[];
 }
 
-/** The categories and default connectors of Figma frame 5:183893, in its order. */
+/** The source categories and their default connectors, in display order. */
 export const SOURCE_CATEGORIES: SourceCategory[] = [
   {
     id: "marketing",
@@ -96,7 +96,7 @@ export const SOURCE_CATEGORIES: SourceCategory[] = [
   },
 ];
 
-/** The destinations of Figma frame 5:184254, in its order. */
+/** The destinations of the destination screen, in display order. */
 export const DESTINATION_OPTIONS = [
   { destinationDefinitionId: ConnectorIds.Destinations.BigQuery, descriptionId: "onboardingFlow.destination.bigQuery" },
   { destinationDefinitionId: ConnectorIds.Destinations.Postgres, descriptionId: "onboardingFlow.destination.postgres" },
@@ -130,11 +130,16 @@ export const RECOMMENDED_DESTINATION_ID = ConnectorIds.Destinations.GoogleSheets
 export const resolveDestinationDefinitionId = (destinationChoice: string) =>
   destinationChoice === NOT_SURE_DESTINATION ? RECOMMENDED_DESTINATION_ID : destinationChoice;
 
+const isListedDestination = ({ destinationDefinitionId }: DestinationRead) =>
+  DESTINATION_OPTIONS.some((option) => option.destinationDefinitionId === destinationDefinitionId);
+
 /**
  * A returning member sees the saved destination picked, when it is one of the listed destinations. The draft sync
  * deletes the drafts of other choices, so the draft is the latest choice. Without a draft, the ready destination is.
+ * When no listed destination exists, the first unlisted destination is the choice, because the destination step opens
+ * that draft and it stays the choice after it is ready.
  */
-export const getDestinationChoice = (drafts: DestinationRead[], readyDestinations: DestinationRead[]) =>
-  [...drafts, ...readyDestinations].find(({ destinationDefinitionId }) =>
-    DESTINATION_OPTIONS.some((option) => option.destinationDefinitionId === destinationDefinitionId)
-  )?.destinationDefinitionId;
+export const getDestinationChoice = (drafts: DestinationRead[], readyDestinations: DestinationRead[]) => {
+  const destinations = [...drafts, ...readyDestinations];
+  return (destinations.find(isListedDestination) ?? destinations.at(0))?.destinationDefinitionId;
+};

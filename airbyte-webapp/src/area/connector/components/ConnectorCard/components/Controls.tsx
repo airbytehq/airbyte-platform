@@ -120,7 +120,9 @@ export const Controls: React.FC<IProps> = ({
 }) => {
   const { formatMessage } = useIntl();
   const { trigger } = useFormContext();
-  const hasTestCardContent = isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess;
+  // A draft has no saved connector to retest, so its card shows only a running or passed test
+  const offersRetest = isEditMode && !isDraftMode;
+  const hasTestCardContent = offersRetest || isTestConnectionInProgress || restProps.connectionTestSuccess;
   const showTestCard = hasDefinition && hasTestCardContent;
   const hasFailure = Boolean(errorMessage);
   const hasTestFailure = hasFailure && failedStep === "test";

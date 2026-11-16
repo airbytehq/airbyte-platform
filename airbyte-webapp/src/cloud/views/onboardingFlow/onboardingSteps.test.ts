@@ -1,17 +1,24 @@
 import { StepStatus } from "components/ui/StepsIndicators/StepsIndicators";
 
-import { getOnboardingStepState } from "./onboardingSteps";
+import { getOnboardingProgress } from "./onboardingSteps";
 
-describe("getOnboardingStepState", () => {
-  it("marks steps before the current step as complete", () => {
-    expect(getOnboardingStepState("goal", "source")).toBe(StepStatus.COMPLETE);
+describe("getOnboardingProgress", () => {
+  it("marks steps before the current step complete, the current step active, and later steps incomplete", () => {
+    expect(getOnboardingProgress("source")).toEqual([
+      { id: "goal", labelId: "onboardingFlow.progress.goal", state: StepStatus.COMPLETE },
+      { id: "data", labelId: "onboardingFlow.progress.data", state: StepStatus.COMPLETE },
+      { id: "source", labelId: "onboardingFlow.progress.source", state: StepStatus.ACTIVE },
+      { id: "destination", labelId: "onboardingFlow.progress.destination", state: StepStatus.INCOMPLETE },
+      { id: "connection", labelId: "onboardingFlow.progress.connection", state: StepStatus.INCOMPLETE },
+      { id: "firstSync", labelId: "onboardingFlow.progress.firstSync", state: StepStatus.INCOMPLETE },
+    ]);
   });
 
-  it("marks the current step as active", () => {
-    expect(getOnboardingStepState("source", "source")).toBe(StepStatus.ACTIVE);
-  });
-
-  it("marks steps after the current step as incomplete", () => {
-    expect(getOnboardingStepState("firstSync", "source")).toBe(StepStatus.INCOMPLETE);
+  it("shows the shorter AI agent bar with Install MCP as the current step", () => {
+    expect(getOnboardingProgress("installMcp")).toEqual([
+      { id: "goal", labelId: "onboardingFlow.progress.goal", state: StepStatus.COMPLETE },
+      { id: "data", labelId: "onboardingFlow.progress.data", state: StepStatus.COMPLETE },
+      { id: "installMcp", labelId: "onboardingFlow.progress.installMcp", state: StepStatus.ACTIVE },
+    ]);
   });
 });

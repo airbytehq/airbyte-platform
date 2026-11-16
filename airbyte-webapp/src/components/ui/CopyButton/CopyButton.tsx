@@ -10,6 +10,8 @@ interface CopyButtonProps {
   className?: string;
   content: string | (() => string);
   title?: string;
+  /** The accessible name, when the visible text alone does not say what the button copies. */
+  "aria-label"?: string;
   variant?: "secondary" | "clear";
   iconPosition?: "left" | "right";
   full?: boolean;
@@ -32,6 +34,7 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
   className,
   content,
   title,
+  "aria-label": ariaLabel,
   children,
   variant = "secondary",
   iconPosition = "left",
@@ -86,6 +89,7 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       className={classNames(className, styles.button)}
       variant={variant}
       title={title || formatMessage({ id: "copyButton.title" })}
+      aria-label={ariaLabel}
       onClick={handleClick}
       icon={children ? "copy" : undefined}
       iconPosition={iconPosition}

@@ -10,23 +10,26 @@ import { Text } from "components/ui/Text";
 import { RadioButtonTileOption } from "area/connection/components/CreateConnection/RadioButtonTile";
 import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
-import { useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 
 import { OnboardingActionBar } from "./OnboardingActionBar";
-import { resolveDestinationDefinitionId } from "./onboardingConnectors";
 import { OnboardingScreenLayout } from "./OnboardingScreenLayout";
 import { useSaveOnboardingStatus } from "./useSaveOnboardingStatus";
-import { useSuggestedSource } from "./useSuggestedSource";
+import { useSuggestedPair } from "./useSuggestedPair";
 
-type OnboardingPath = "webApp";
+type OnboardingPath = "webApp" | "aiAgent";
 
 const PATH_OPTIONS: Array<RadioButtonTileOption<OnboardingPath>> = [
   {
     value: "webApp",
     label: <FormattedMessage id="onboardingFlow.chooseMethod.webApp" />,
     description: <FormattedMessage id="onboardingFlow.chooseMethod.webApp.description" />,
+  },
+  {
+    value: "aiAgent",
+    label: <FormattedMessage id="onboardingFlow.chooseMethod.aiAgent" />,
+    description: <FormattedMessage id="onboardingFlow.chooseMethod.aiAgent.description" />,
   },
 ];
 
@@ -44,18 +47,15 @@ interface SuggestedPairProps {
   destinationChoice?: string;
 }
 
-/** The pair to set up first: the easiest picked source and the chosen destination. */
 const SuggestedPair: React.FC<SuggestedPairProps> = ({ sourcePicks, destinationChoice }) => {
   const { formatMessage } = useIntl();
-  const source = useSuggestedSource(sourcePicks);
-  const { destinationDefinitionMap } = useDestinationDefinitionList();
-  const destination = destinationChoice
-    ? destinationDefinitionMap.get(resolveDestinationDefinitionId(destinationChoice))
-    : undefined;
+  const pair = useSuggestedPair(sourcePicks, destinationChoice);
 
-  if (!source || !destination) {
+  if (!pair) {
     return null;
   }
+
+  const { source, destination } = pair;
   return (
     <Card title={formatMessage({ id: "onboardingFlow.chooseMethod.pair.title" })}>
       <FlexContainer direction="column" alignItems="center" gap="xl">
@@ -80,21 +80,27 @@ interface ChooseMethodScreenProps {
   destinationChoice?: string;
   onBack: () => void;
   onWebAppChosen: () => void;
+  onAiAgentChosen: () => void;
   onSkip?: () => void;
 }
 
-/** Continue saves the path as the onboarding status, and the web app path continues with the source setup. */
+/**
+ * Continue saves the path as the onboarding status. The web app path continues with the source setup. The AI agent
+ * path completes onboarding and then opens the MCP install screen of the flow.
+ */
 export const ChooseMethodScreen: React.FC<ChooseMethodScreenProps> = ({
   sourcePicks,
   destinationChoice,
   onBack,
   onWebAppChosen,
+  onAiAgentChosen,
   onSkip,
 }) => {
   const { formatMessage } = useIntl();
   const [path, setPath] = useState<OnboardingPath>();
   const { saveStatus, isSaving } = useSaveOnboardingStatus();
-  const chooseWebApp = () => saveStatus("create_source", onWebAppChosen);
+  const choosePath = (chosenPath: OnboardingPath) =>
+    chosenPath === "webApp" ? saveStatus("create_source", onWebAppChosen) : saveStatus("completed", onAiAgentChosen);
 
   return (
     <OnboardingScreenLayout
@@ -103,7 +109,7 @@ export const ChooseMethodScreen: React.FC<ChooseMethodScreenProps> = ({
         <OnboardingActionBar
           onSkip={onSkip}
           onBack={onBack}
-          onContinue={path ? chooseWebApp : undefined}
+          onContinue={path ? () => choosePath(path) : undefined}
           isSaving={isSaving}
         />
       }

@@ -96,6 +96,21 @@ describe("OnboardingFlowPage", () => {
     mockConnectionStatus.mockReturnValue({ status: "pending" });
   });
 
+  it("stays on the MCP install screen after the AI agent path completes onboarding, and Finished opens the normal app", async () => {
+    renderFlow("choose_method");
+
+    await userEvent.click(screen.getByText("My AI agent"));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByRole("heading", { name: "Install MCP" })).toBeInTheDocument();
+    expect(await screen.findByText(/Help me set up my first Airbyte connection/)).toBeInTheDocument();
+    expect(screen.queryByTestId("workspace-page")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("link", { name: "Finished" }));
+
+    expect(await screen.findByTestId("workspace-page")).toBeInTheDocument();
+  });
+
   it("opens the normal app when the member skips onboarding", async () => {
     renderFlow("choose_method");
 

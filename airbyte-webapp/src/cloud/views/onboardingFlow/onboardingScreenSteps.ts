@@ -7,20 +7,22 @@ export type OnboardingScreenId =
   | "sources"
   | "destination"
   | "chooseMethod"
+  | "installMcp"
   | "connectSource"
   | "connectDestination"
   | "createConnection"
   | "firstSync";
 
 /**
- * The Figma frames show "Your data" on both the source and the destination screen, and "Connect source" on the path
- * choice screen and the source setup screen.
+ * The source and destination screens share the "Your data" step, and the path choice screen and the source setup
+ * screen share "Connect source". The MCP install screen shows "Install MCP" on the shorter AI agent bar.
  */
 export const PROGRESS_STEP_BY_SCREEN: Record<OnboardingScreenId, OnboardingStepId> = {
   goal: "goal",
   sources: "data",
   destination: "data",
   chooseMethod: "source",
+  installMcp: "installMcp",
   connectSource: "source",
   connectDestination: "destination",
   createConnection: "connection",

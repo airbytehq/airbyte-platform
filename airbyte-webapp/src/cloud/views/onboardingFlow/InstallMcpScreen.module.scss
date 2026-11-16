@@ -1,0 +1,10 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.copyField {
+  padding: variables.$spacing-lg;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$grey-50;
+  overflow-wrap: anywhere;
+}
