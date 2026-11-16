@@ -9109,6 +9109,8 @@ paths:
       tags:
         - dataplane
       operationId: getDataplaneToken
+      parameters:
+        - $ref: "#/components/parameters/DiagnosticsDataplaneIdHeader"
       requestBody:
         content:
           application/json:
@@ -25811,6 +25813,7 @@ components:
         - SECRET_STORAGE
         - STORAGE_REACHABILITY
         - WORKLOAD_SCHEDULING
+        - AUTHENTICATION
     DataplaneDiagnosticStatus:
       type: string
       description: Outcome of one check. UNABLE_TO_COMPLETE means the result is unknown; NOT_CONFIGURED means there was nothing to check.
@@ -25895,6 +25898,10 @@ components:
           type: string
         observation:
           type: object
+          description: >-
+            Details specific to the kind of check, as saved. AUTHENTICATION has association: REGISTERED_CLIENT_ID when the
+            rejected client ID belongs to the data plane, or CLAIMED_DIAGNOSTIC_ID when the client ID matched no data plane
+            and the unauthenticated X-Airbyte-Diagnostics-Dataplane-Id header named this one.
           additionalProperties: true
     DataplaneInitRequestBody:
       required:
@@ -26379,6 +26386,13 @@ components:
       in: header
       required: false
       description: Airbyte application version
+      schema:
+        type: string
+    DiagnosticsDataplaneIdHeader:
+      name: X-Airbyte-Diagnostics-Dataplane-Id
+      in: header
+      required: false
+      description: The data plane ID the installation was configured with. It is used only to attribute a rejected exchange and never authenticates the caller. A plain string, so a malformed value cannot change the response.
       schema:
         type: string
 

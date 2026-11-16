@@ -488,6 +488,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
     path: String,
     body: String,
     token: String = "",
+    headers: Map<String, String> = emptyMap(),
   ): HttpResponse<String> =
     HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build().use { client ->
       val builder =
@@ -495,6 +496,7 @@ abstract class AttemptWriteAuthorizationHttpContract {
           .newBuilder(URI("${server.url}$path"))
           .header("Content-Type", "application/json")
       if (token.isNotEmpty()) builder.header("Authorization", "Bearer $token")
+      headers.forEach { (name, value) -> builder.header(name, value) }
       client.send(
         builder
           .POST(

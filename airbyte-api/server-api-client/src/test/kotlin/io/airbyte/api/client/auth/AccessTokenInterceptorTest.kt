@@ -5,6 +5,7 @@
 package io.airbyte.api.client.auth
 
 import io.airbyte.commons.auth.support.UnsignedJwtHelper
+import io.airbyte.commons.constants.ApiConstants.DIAGNOSTICS_DATAPLANE_ID_HEADER
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -31,6 +34,49 @@ internal class AccessTokenInterceptorTest {
   @AfterEach
   fun teardown() {
     mockServer.shutdown()
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "'', ",
+      "'   ', ",
+      "not-a-uuid, ",
+      "'2f1a3c4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b', 2f1a3c4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
+      "' 2F1A3C4E-5B6D-4E7F-8A9B-0C1D2E3F4A5B ', 2f1a3c4e-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
+    ],
+  )
+  fun `token requests carry the configured diagnostics data plane ID only when it is a UUID`(
+    configured: String,
+    expectedHeader: String?,
+  ) {
+    val interceptor =
+      AccessTokenInterceptor(
+        clientId = "test-client-id",
+        clientSecret = "test-client-secret",
+        tokenEndpoint = mockServer.url("/token").toString(),
+        httpClient = OkHttpClient().newBuilder().build(),
+        diagnosticDataplaneId = configured,
+      )
+    val token = UnsignedJwtHelper.buildUnsignedJwtWithExpClaim(5.minutes.inWholeSeconds, interceptor.clock)
+    mockServer.enqueue(MockResponse().setBody("""{"access_token": "$token"}"""))
+    mockServer.enqueue(MockResponse().setBody("ok"))
+
+    OkHttpClient()
+      .newBuilder()
+      .addInterceptor(interceptor)
+      .build()
+      .newCall(Request.Builder().url(mockServer.url("/api")).build())
+      .execute()
+
+    mockServer.takeRequest().run {
+      assertEquals("/token", path)
+      assertEquals(expectedHeader, headers[DIAGNOSTICS_DATAPLANE_ID_HEADER])
+    }
+    mockServer.takeRequest().run {
+      assertEquals("Bearer $token", headers["Authorization"])
+      assertEquals(null, headers[DIAGNOSTICS_DATAPLANE_ID_HEADER], "Only token requests carry the diagnostics header")
+    }
   }
 
   @Test

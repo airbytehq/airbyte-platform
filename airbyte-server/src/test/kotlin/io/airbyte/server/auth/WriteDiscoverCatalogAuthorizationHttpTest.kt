@@ -31,6 +31,7 @@ import io.airbyte.data.services.impls.data.DataplaneServiceDataImpl
 import io.airbyte.data.services.impls.data.DataplaneTokenServiceDataImpl
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.domain.models.ServiceAccount
+import io.airbyte.domain.services.dataplane.DataplaneAuthenticationObservationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
@@ -217,6 +218,9 @@ class WriteDiscoverCatalogProducerBeans {
 
   @Singleton
   fun dataplaneHealth(): DataplaneHealthService = mockk()
+
+  @Singleton
+  fun dataplaneAuthenticationObservations(): DataplaneAuthenticationObservationService = mockk()
 
   @Singleton
   fun secretStorages(): SecretStorageService = mockk()

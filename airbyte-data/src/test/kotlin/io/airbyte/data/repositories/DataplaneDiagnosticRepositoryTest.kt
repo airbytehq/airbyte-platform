@@ -33,6 +33,9 @@ class DataplaneDiagnosticRepositoryTest : AbstractConfigRepositoryTest() {
     }
 
     private val CHECKED_AT = OffsetDateTime.of(2026, 11, 3, 10, 0, 0, 0, ZoneOffset.UTC)
+    private const val AUTHENTICATION = "AUTHENTICATION"
+    private const val REGISTERED_CLIENT_ID = "REGISTERED_CLIENT_ID"
+    private const val CLAIMED_DIAGNOSTIC_ID = "CLAIMED_DIAGNOSTIC_ID"
   }
 
   @AfterEach
@@ -150,6 +153,213 @@ class DataplaneDiagnosticRepositoryTest : AbstractConfigRepositoryTest() {
     }
     assertEquals(listOf(longestAllowed), findSaved(listOf(dataplaneId)))
   }
+
+  @Test
+  fun `upsertObservedFailure inserts a failure`() {
+    val expected = authenticationFailure(CHECKED_AT)
+
+    upsertFailure(expected)
+
+    assertEquals(listOf(expected), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure keeps the saved failure during a burst of rejections`() {
+    val first = authenticationFailure(CHECKED_AT)
+    upsertFailure(first)
+
+    upsertFailure(authenticationFailure(CHECKED_AT.plusSeconds(59)), repeatedFailureBefore = CHECKED_AT.minusSeconds(1))
+
+    assertEquals(listOf(first), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure replaces a saved failure older than the repeat interval`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+    val later = authenticationFailure(CHECKED_AT.plusMinutes(2))
+
+    upsertFailure(later, repeatedFailureBefore = CHECKED_AT.plusMinutes(1))
+
+    assertEquals(listOf(later), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure replaces a recovery right away`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+    markPassed(CHECKED_AT.plusSeconds(10))
+    val next = authenticationFailure(CHECKED_AT.plusSeconds(20))
+
+    upsertFailure(next, repeatedFailureBefore = CHECKED_AT)
+
+    assertEquals(listOf(next), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure ignores a failure older than a saved recovery`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+    markPassed(CHECKED_AT.plusSeconds(30))
+
+    upsertFailure(authenticationFailure(CHECKED_AT.plusSeconds(20)), repeatedFailureBefore = CHECKED_AT.minusMinutes(1))
+
+    assertEquals(listOf(recovered(CHECKED_AT.plusSeconds(30))), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure replaces a weaker failure inside the repeat interval, then keeps the stronger one`() {
+    upsertFailure(authenticationFailure(CHECKED_AT, CLAIMED_DIAGNOSTIC_ID), replaceableFailureAssociations = listOf(CLAIMED_DIAGNOSTIC_ID))
+    val registered = authenticationFailure(CHECKED_AT.plusSeconds(20))
+
+    upsertFailure(registered)
+    upsertFailure(
+      authenticationFailure(CHECKED_AT.plusSeconds(30), CLAIMED_DIAGNOSTIC_ID),
+      replaceableFailureAssociations = listOf(CLAIMED_DIAGNOSTIC_ID),
+    )
+    upsertFailure(authenticationFailure(CHECKED_AT.plusSeconds(40)))
+
+    assertEquals(listOf(registered), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure keeps a failure whose association it may not replace`() {
+    val registered = authenticationFailure(CHECKED_AT)
+    upsertFailure(registered)
+
+    upsertFailure(
+      authenticationFailure(CHECKED_AT.plusMinutes(5), CLAIMED_DIAGNOSTIC_ID),
+      replaceableFailureAssociations = listOf(CLAIMED_DIAGNOSTIC_ID),
+    )
+
+    assertEquals(listOf(registered), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure replaces an older failure whose association it may replace`() {
+    upsertFailure(authenticationFailure(CHECKED_AT, CLAIMED_DIAGNOSTIC_ID))
+    val laterClaim = authenticationFailure(CHECKED_AT.plusMinutes(5), CLAIMED_DIAGNOSTIC_ID)
+
+    upsertFailure(laterClaim, replaceableFailureAssociations = listOf(CLAIMED_DIAGNOSTIC_ID))
+
+    assertEquals(listOf(laterClaim), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `upsertObservedFailure replaces a recovery whatever association the recovery had`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+    markPassed(CHECKED_AT.plusSeconds(10))
+    val claim = authenticationFailure(CHECKED_AT.plusSeconds(20), CLAIMED_DIAGNOSTIC_ID)
+
+    upsertFailure(claim, replaceableFailureAssociations = listOf(CLAIMED_DIAGNOSTIC_ID))
+
+    assertEquals(listOf(claim), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `markFailedAsPassed recovers only once so later check-ins keep the recovery time`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+
+    assertEquals(1, markPassed(CHECKED_AT.plusSeconds(30)))
+    assertEquals(0, markPassed(CHECKED_AT.plusSeconds(60)))
+
+    assertEquals(listOf(recovered(CHECKED_AT.plusSeconds(30))), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `markFailedAsPassed keeps a failure saved after the check-in`() {
+    val failure = authenticationFailure(CHECKED_AT)
+    upsertFailure(failure)
+
+    assertEquals(0, markPassed(CHECKED_AT.minusSeconds(1)))
+
+    assertEquals(listOf(failure), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `markFailedAsPassed recovers a check-in at the same instant as the failure`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+
+    assertEquals(1, markPassed(CHECKED_AT))
+  }
+
+  @Test
+  fun `markFailedAsPassed does nothing without a saved failure`() {
+    assertEquals(0, markPassed(CHECKED_AT))
+    assertEquals(emptyList<DataplaneDiagnostic>(), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `markFailedAsPassed leaves another organization's row with the same data plane untouched`() {
+    upsertFailure(authenticationFailure(CHECKED_AT))
+
+    val updated =
+      dataplaneDiagnosticRepository.markFailedAsPassed(
+        dataplaneId = dataplaneId,
+        organizationId = UUID.randomUUID(),
+        diagnosticKind = AUTHENTICATION,
+        targetId = dataplaneId,
+        failedStatus = "FAILED",
+        passedStatus = "PASSED",
+        checkedAt = CHECKED_AT.plusMinutes(1),
+      )
+
+    assertEquals(0, updated)
+    assertEquals(listOf(authenticationFailure(CHECKED_AT)), findSaved(listOf(dataplaneId)))
+  }
+
+  @Test
+  fun `markFailedAsPassed leaves other kinds of failures alone`() {
+    val secretStorageFailure = passedResult().copy(status = "FAILED", errorCode = "ACCESS_DENIED", errorMessage = "Access denied")
+    upsert(secretStorageFailure)
+
+    assertEquals(0, markPassed(CHECKED_AT.plusMinutes(1)))
+
+    assertEquals(listOf(secretStorageFailure), findSaved(listOf(dataplaneId)))
+  }
+
+  private fun authenticationFailure(
+    checkedAt: OffsetDateTime,
+    association: String = REGISTERED_CLIENT_ID,
+  ) = DataplaneDiagnostic(
+    dataplaneId = dataplaneId,
+    organizationId = organizationId,
+    diagnosticKind = AUTHENTICATION,
+    targetId = dataplaneId,
+    status = "FAILED",
+    checkedAt = checkedAt,
+    errorCode = "CREDENTIALS_REJECTED",
+    errorMessage = "Rejected",
+    observation = Jsons.jsonNode(mapOf("association" to association)),
+  )
+
+  private fun recovered(checkedAt: OffsetDateTime) = authenticationFailure(checkedAt).copy(status = "PASSED", errorCode = null, errorMessage = null)
+
+  private fun upsertFailure(
+    failure: DataplaneDiagnostic,
+    repeatedFailureBefore: OffsetDateTime = failure.checkedAt.minusMinutes(1),
+    replaceableFailureAssociations: List<String> = listOf(REGISTERED_CLIENT_ID, CLAIMED_DIAGNOSTIC_ID),
+  ) = dataplaneDiagnosticRepository.upsertObservedFailure(
+    dataplaneId = failure.dataplaneId,
+    organizationId = failure.organizationId,
+    diagnosticKind = failure.diagnosticKind,
+    targetId = failure.targetId,
+    failedStatus = "FAILED",
+    checkedAt = failure.checkedAt,
+    repeatedFailureBefore = repeatedFailureBefore,
+    replaceableFailureAssociations = replaceableFailureAssociations,
+    errorCode = failure.errorCode!!,
+    errorMessage = failure.errorMessage!!,
+    observation = Jsons.serialize(failure.observation),
+  )
+
+  private fun markPassed(checkedAt: OffsetDateTime) =
+    dataplaneDiagnosticRepository.markFailedAsPassed(
+      dataplaneId = dataplaneId,
+      organizationId = organizationId,
+      diagnosticKind = AUTHENTICATION,
+      targetId = dataplaneId,
+      failedStatus = "FAILED",
+      passedStatus = "PASSED",
+      checkedAt = checkedAt,
+    )
 
   private fun passedResult() =
     DataplaneDiagnostic(

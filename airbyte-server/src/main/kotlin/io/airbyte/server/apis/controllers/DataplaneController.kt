@@ -32,6 +32,7 @@ import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.route.AuthorizeOperation
 import io.airbyte.commons.auth.route.RouteAccessPolicy
 import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
+import io.airbyte.commons.constants.ApiConstants.DIAGNOSTICS_DATAPLANE_ID_HEADER
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -46,11 +47,13 @@ import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
+import io.airbyte.domain.models.DataplaneTokenRejectionAssociation
 import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SavedDataplaneDiagnostic
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
+import io.airbyte.domain.services.dataplane.DataplaneAuthenticationObservationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
@@ -81,6 +84,10 @@ import io.airbyte.api.server.generated.models.ScopeType as ApiScopeType
 
 private val logger = KotlinLogging.logger {}
 
+private const val TOKEN_REJECTION_REGISTERED_CLIENT_ID = "registered_client_id"
+private const val TOKEN_REJECTION_CLAIMED_DIAGNOSTIC_ID = "claimed_diagnostic_id"
+private const val TOKEN_REJECTION_UNASSOCIATED = "unassociated"
+
 // Size of dataplane_diagnostic.error_code. A longer code would fail the save and the whole heartbeat.
 private const val MAX_DIAGNOSTIC_ERROR_CODE_LENGTH = 256
 
@@ -96,6 +103,7 @@ open class DataplaneController(
   private val airbyteConfig: AirbyteConfig,
   private val featureFlagClient: FeatureFlagClient,
   private val secretStorageService: SecretStorageService,
+  private val authenticationObservationService: DataplaneAuthenticationObservationService,
 ) : DataplaneApi,
   DataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -195,14 +203,59 @@ open class DataplaneController(
   )
   override fun getDataplaneToken(
     @Body dataplaneTokenRequest: DataplaneTokenRequestBody,
+    @HeaderParam(DIAGNOSTICS_DATAPLANE_ID_HEADER) xAirbyteDiagnosticsDataplaneId: String?,
   ): AccessToken {
+    val requestedAt = OffsetDateTime.now(ZoneOffset.UTC)
     val token =
-      dataplaneService.getToken(
-        dataplaneTokenRequest.clientId,
-        dataplaneTokenRequest.clientSecret,
-      )
+      try {
+        dataplaneService.getToken(
+          dataplaneTokenRequest.clientId,
+          dataplaneTokenRequest.clientSecret,
+        )
+      } catch (e: ServiceAccountNotFound) {
+        recordRejectedTokenExchange(dataplaneTokenRequest.clientId, xAirbyteDiagnosticsDataplaneId, requestedAt)
+        throw e
+      } catch (e: IllegalArgumentException) {
+        // A client ID that is not a UUID fails before the credentials are checked, so it is a rejected exchange. The same
+        // exception from a later step is a server failure and is not recorded.
+        if (!isUuid(dataplaneTokenRequest.clientId)) {
+          recordRejectedTokenExchange(dataplaneTokenRequest.clientId, xAirbyteDiagnosticsDataplaneId, requestedAt)
+        }
+        throw e
+      }
 
     return AccessToken(accessToken = token)
+  }
+
+  private fun isUuid(value: String): Boolean = runCatching { UUID.fromString(value) }.isSuccess
+
+  /**
+   * The caller must get the same rejection whether or not the observation is saved, so a failure to save it is only logged.
+   */
+  private fun recordRejectedTokenExchange(
+    clientId: String,
+    diagnosticsDataplaneId: String?,
+    rejectedAt: OffsetDateTime,
+  ) {
+    val association =
+      try {
+        authenticationObservationService.recordRejectedTokenExchange(clientId, diagnosticsDataplaneId, rejectedAt)
+      } catch (e: Exception) {
+        logger.error(e) { "Could not record a rejected dataplane token exchange" }
+        return
+      }
+
+    val associationTag =
+      when (association) {
+        is DataplaneTokenRejectionAssociation.RegisteredClientId -> TOKEN_REJECTION_REGISTERED_CLIENT_ID
+        is DataplaneTokenRejectionAssociation.ClaimedDiagnosticId -> TOKEN_REJECTION_CLAIMED_DIAGNOSTIC_ID
+        DataplaneTokenRejectionAssociation.Unassociated -> TOKEN_REJECTION_UNASSOCIATED
+      }
+    metricClient.count(
+      OssMetricsRegistry.DATAPLANE_TOKEN_REJECTED,
+      1,
+      MetricAttribute(MetricTags.DATA_PLANE_TOKEN_REJECTION_ASSOCIATION, associationTag),
+    )
   }
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -260,11 +313,13 @@ open class DataplaneController(
 
     reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_HEARTBEAT, dataplane, dataplaneGroup, dataplaneVersion = xAirbyteVersion)
 
-    dataplaneHealthService.recordHeartbeat(
-      dataplaneId = dataplane.id,
-      controlPlaneVersion = airbyteConfig.version,
-      dataplaneVersion = xAirbyteVersion,
-    )
+    val checkedInAt =
+      dataplaneHealthService.recordHeartbeat(
+        dataplaneId = dataplane.id,
+        controlPlaneVersion = airbyteConfig.version,
+        dataplaneVersion = xAirbyteVersion,
+      )
+    authenticationObservationService.recordAcceptedCheckIn(dataplane.id, dataplaneGroup.organizationId, checkedInAt)
 
     val diagnostics = req.diagnostics.orEmpty().mapNotNull { toDataplaneDiagnostic(it, dataplane.id) }
     dataplaneHealthService.recordDiagnostics(
@@ -326,6 +381,7 @@ open class DataplaneController(
         ApiDataplaneDiagnosticKind.SECRET_STORAGE -> DataplaneDiagnosticKind.SECRET_STORAGE
         ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY -> DataplaneDiagnosticKind.STORAGE_REACHABILITY
         ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> DataplaneDiagnosticKind.WORKLOAD_SCHEDULING
+        ApiDataplaneDiagnosticKind.AUTHENTICATION -> DataplaneDiagnosticKind.AUTHENTICATION
       }
 
     val errorCode = result.errorCode
@@ -498,6 +554,7 @@ open class DataplaneController(
       DataplaneDiagnosticKind.SECRET_STORAGE -> ApiDataplaneDiagnosticKind.SECRET_STORAGE
       DataplaneDiagnosticKind.STORAGE_REACHABILITY -> ApiDataplaneDiagnosticKind.STORAGE_REACHABILITY
       DataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> ApiDataplaneDiagnosticKind.WORKLOAD_SCHEDULING
+      DataplaneDiagnosticKind.AUTHENTICATION -> ApiDataplaneDiagnosticKind.AUTHENTICATION
     }
 
   private fun toDiagnosticRead(
@@ -522,6 +579,7 @@ open class DataplaneController(
           DataplaneDiagnosticKind.SECRET_STORAGE -> secretStorageNames[SecretStorageId(diagnostic.targetId)]
           DataplaneDiagnosticKind.STORAGE_REACHABILITY -> null
           DataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> null
+          DataplaneDiagnosticKind.AUTHENTICATION -> null
         },
       status = status,
       checkedAt = diagnostic.checkedAt.toInstant().toEpochMilli(),

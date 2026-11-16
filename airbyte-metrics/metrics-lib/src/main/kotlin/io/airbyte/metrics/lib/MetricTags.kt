@@ -135,6 +135,7 @@ object MetricTags {
   const val DATA_PLANE_NAME_TAG: String = "data_plane_name"
   const val DATA_PLANE_GROUP_TAG: String = "data_plane_group"
   const val DATA_PLANE_GROUP_NAME_TAG: String = "data_plane_group_name"
+  const val DATA_PLANE_TOKEN_REJECTION_ASSOCIATION: String = "data_plane_token_rejection_association"
   const val KUBE_COMMAND_TYPE_TAG: String = "kube_command_type"
   const val KUBE_POD_TYPE_TAG: String = "kube_pod_type"
   const val MUTEX_KEY_TAG: String = "mutex_key"

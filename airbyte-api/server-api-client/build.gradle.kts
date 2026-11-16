@@ -26,6 +26,7 @@ dependencies {
   implementation(libs.micronaut.security.jwt)
   implementation(libs.openapi.jackson.databind.nullable)
   implementation(libs.slf4j.api)
+  implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
 
   testRuntimeOnly(libs.junit.jupiter.engine)

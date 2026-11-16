@@ -6,6 +6,7 @@ package io.airbyte.api.client.auth
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.client.auth.AccessTokenHelper.Companion.decodeExpiry
+import io.airbyte.commons.constants.ApiConstants.DIAGNOSTICS_DATAPLANE_ID_HEADER
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpHeaders
 import okhttp3.Interceptor
@@ -16,6 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.time.Clock
 import java.time.Instant
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
@@ -32,6 +34,7 @@ class AccessTokenInterceptor(
   private val clientSecret: String,
   private val tokenEndpoint: String,
   private val httpClient: OkHttpClient,
+  private val diagnosticDataplaneId: String = "",
 ) : Interceptor {
   var clock = Clock.systemUTC()
 
@@ -44,6 +47,20 @@ class AccessTokenInterceptor(
   }
 
   private val objectMapper = ObjectMapper()
+
+  /**
+   * Only a UUID is sent. Any other value could be rejected by OkHttp as a header, and a broken hint must never stop the
+   * data plane from authenticating.
+   */
+  private val diagnosticsHeaderValue: String? =
+    diagnosticDataplaneId.takeIf { it.isNotBlank() }?.let { configured ->
+      try {
+        UUID.fromString(configured.trim()).toString()
+      } catch (e: IllegalArgumentException) {
+        logger.warn { "Not sending $DIAGNOSTICS_DATAPLANE_ID_HEADER: the configured data plane ID is not a UUID" }
+        null
+      }
+    }
 
   @Volatile
   private var cachedToken: CachedToken? = null
@@ -91,6 +108,7 @@ class AccessTokenInterceptor(
         .Builder()
         .url(tokenEndpoint)
         .post(requestBody)
+        .apply { diagnosticsHeaderValue?.let { header(DIAGNOSTICS_DATAPLANE_ID_HEADER, it) } }
         .build()
 
     val response: Response = httpClient.newCall(request).execute()

@@ -36,6 +36,7 @@ class ApiClientSupportFactory(
         clientId = config.auth.clientId,
         clientSecret = config.auth.clientSecret,
         tokenEndpoint = config.auth.tokenEndpoint,
+        diagnosticDataplaneId = config.auth.diagnosticDataplaneId,
         httpClient =
           OkHttpClient
             .Builder()

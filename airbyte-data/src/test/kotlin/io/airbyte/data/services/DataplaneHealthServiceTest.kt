@@ -19,6 +19,7 @@ import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIO
 import io.airbyte.data.services.DataplaneHealthService.Companion.UNKNOWN_VERSION
 import io.airbyte.data.services.DataplaneHealthService.Companion.historyWindowStart
 import io.airbyte.data.services.DataplaneHealthService.Companion.releaseSupport
+import io.airbyte.domain.models.DataplaneAuthenticationAssociation
 import io.airbyte.domain.models.DataplaneDiagnostic
 import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -377,6 +379,66 @@ internal class DataplaneHealthServiceTest {
     checkedAt = checkedAt,
     observation = observation,
   )
+
+  @Test
+  fun `recordHeartbeat returns the time the check-in was saved with`() {
+    val dataplaneId = UUID.randomUUID()
+    val savedAt = OffsetDateTime.of(2026, 11, 11, 14, 5, 0, 0, ZoneOffset.UTC)
+    every { heartbeatLogRepository.save(any()) } answers { firstArg<DataplaneHeartbeatLog>().copy(createdAt = savedAt) }
+
+    assertEquals(savedAt, dataplaneHealthService.recordHeartbeat(dataplaneId))
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "REGISTERED_CLIENT_ID, REGISTERED_CLIENT_ID;CLAIMED_DIAGNOSTIC_ID",
+    "CLAIMED_DIAGNOSTIC_ID, CLAIMED_DIAGNOSTIC_ID",
+  )
+  fun `recordAuthenticationRejection saves the failure for the data plane as its own target, one write per interval, over weaker associations only`(
+    association: DataplaneAuthenticationAssociation,
+    replaceableAssociations: String,
+  ) {
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val rejectedAt = OffsetDateTime.of(2026, 11, 11, 14, 3, 0, 0, ZoneOffset.UTC)
+
+    dataplaneHealthService.recordAuthenticationRejection(
+      dataplaneId = dataplaneId,
+      organizationId = organizationId,
+      rejectedAt = rejectedAt,
+      failure = DataplaneDiagnosticOutcome.Failed("CREDENTIALS_REJECTED", "Rejected"),
+      association = association,
+    )
+
+    verify {
+      diagnosticRepository.upsertObservedFailure(
+        dataplaneId = dataplaneId,
+        organizationId = organizationId,
+        diagnosticKind = "AUTHENTICATION",
+        targetId = dataplaneId,
+        failedStatus = "FAILED",
+        checkedAt = rejectedAt,
+        repeatedFailureBefore = rejectedAt.minusMinutes(1),
+        replaceableFailureAssociations = replaceableAssociations.split(";"),
+        errorCode = "CREDENTIALS_REJECTED",
+        errorMessage = "Rejected",
+        observation = """{"association":"$association"}""",
+      )
+    }
+  }
+
+  @Test
+  fun `recordAuthenticationRecovery passes only the data plane's own failed authentication result at the check-in time`() {
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val checkedInAt = OffsetDateTime.of(2026, 11, 11, 14, 5, 0, 0, ZoneOffset.UTC)
+
+    dataplaneHealthService.recordAuthenticationRecovery(dataplaneId, organizationId, checkedInAt)
+
+    verify(exactly = 1) {
+      diagnosticRepository.markFailedAsPassed(dataplaneId, organizationId, "AUTHENTICATION", dataplaneId, "FAILED", "PASSED", checkedInAt)
+    }
+  }
 
   @Test
   fun `recordHeartbeat saves log with correct fields`() {

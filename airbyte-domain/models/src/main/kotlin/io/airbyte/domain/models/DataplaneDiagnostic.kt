@@ -41,6 +41,12 @@ enum class DataplaneDiagnosticKind {
    * Whether workload pods are waiting for a node. The target is the data plane itself.
    */
   WORKLOAD_SCHEDULING,
+
+  /**
+   * Whether Airbyte accepts the data plane's credentials. The target is the data plane itself. Airbyte writes it from rejected
+   * token exchanges and the check-ins after them; a data plane never reports it.
+   */
+  AUTHENTICATION,
 }
 
 sealed interface DataplaneDiagnosticOutcome {

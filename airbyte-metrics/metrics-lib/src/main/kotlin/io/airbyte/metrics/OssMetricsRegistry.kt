@@ -178,6 +178,10 @@ enum class OssMetricsRegistry(
     metricName = "dataplane_initialize",
     metricDescription = "increments when a dataplane initialize is called",
   ),
+  DATAPLANE_TOKEN_REJECTED(
+    metricName = "dataplane_token_rejected",
+    metricDescription = "increments when a dataplane token exchange is rejected, tagged by the data plane it was attributed to",
+  ),
   DATA_WORKER_CAPACITY_ADMISSION(
     metricName = "data_worker_capacity_admission",
     metricDescription = "increments after a Data Worker capacity admission, tagged by admission result",

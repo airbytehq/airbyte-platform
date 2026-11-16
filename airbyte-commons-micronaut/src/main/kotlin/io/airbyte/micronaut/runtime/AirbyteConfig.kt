@@ -655,6 +655,11 @@ data class AirbyteInternalApiClientConfig(
     val clientId: String = "",
     val clientSecret: String = "",
     val tokenEndpoint: String = "",
+    /**
+     * The data plane ID the installation was registered with, sent on token exchanges so Airbyte can attribute a rejection.
+     * Empty when not configured.
+     */
+    val diagnosticDataplaneId: String = "",
     val token: String = "",
     val signatureSecret: String = "",
   )

@@ -24,6 +24,7 @@ internal fun diagnosticObservationProblems(
       listOf("scope_type", "scope_id").filter { it !in observation }.map { "observation is missing $it" }
     DataplaneDiagnosticKind.STORAGE_REACHABILITY -> emptyList()
     DataplaneDiagnosticKind.WORKLOAD_SCHEDULING -> workloadSchedulingProblems(outcome, targetId, dataplaneId, observation)
+    DataplaneDiagnosticKind.AUTHENTICATION -> listOf("only Airbyte records authentication results")
   }
 
 /**

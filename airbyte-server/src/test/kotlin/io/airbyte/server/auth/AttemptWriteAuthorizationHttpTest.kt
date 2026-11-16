@@ -24,7 +24,9 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.DataplaneTokenServiceDataImpl
+import io.airbyte.domain.models.DataplaneTokenRejectionAssociation
 import io.airbyte.domain.models.ServiceAccount
+import io.airbyte.domain.services.dataplane.DataplaneAuthenticationObservationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
@@ -46,9 +48,11 @@ import io.mockk.verify
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.openapitools.client.infrastructure.ClientException
+import java.net.http.HttpResponse
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -56,6 +60,8 @@ import java.util.Base64
 import java.util.Optional
 import java.util.UUID
 import io.airbyte.data.repositories.entities.ServiceAccount as ServiceAccountEntity
+
+private const val DIAGNOSTICS_HEADER = "X-Airbyte-Diagnostics-Dataplane-Id"
 
 class AttemptWriteAuthorizationHttpTest : AttemptWriteAuthorizationHttpContract() {
   @Test
@@ -66,6 +72,47 @@ class AttemptWriteAuthorizationHttpTest : AttemptWriteAuthorizationHttpContract(
   @Test
   fun `init container metadata client exchanges signed credentials caches renews and requires saved grants`() {
     producerExchange(metadata = true)
+  }
+
+  @Test
+  fun `a rejected dataplane token exchange answers the same with any diagnostics header and passes the header on`() {
+    withAttemptServer(signed = true) { fixture ->
+      val observations = fixture.context.getBean(DataplaneAuthenticationObservationService::class.java)
+      val received = mutableListOf<String?>()
+      every { observations.recordRejectedTokenExchange(ACCOUNT.toString(), captureNullable(received), any()) } returns
+        DataplaneTokenRejectionAssociation.Unassociated
+      val wrongSecret = """{"client_id":"$ACCOUNT","client_secret":"wrong-secret"}"""
+      val headers = listOf(null, "", "not-a-uuid", UUID.randomUUID().toString())
+
+      val responses =
+        headers.map { header ->
+          post(fixture.server, "/api/v1/dataplanes/token", wrongSecret, headers = header?.let { mapOf(DIAGNOSTICS_HEADER to it) }.orEmpty())
+        }
+
+      // Each error response carries its own errorId, so compare the status and the body's fields.
+      fun shape(response: HttpResponse<String>) =
+        response.statusCode() to
+          Jsons
+            .deserialize(response.body())
+            .fieldNames()
+            .asSequence()
+            .toList()
+      val withoutHeader = responses.first()
+      assertNotEquals(200, withoutHeader.statusCode(), withoutHeader.body())
+      responses.forEach { assertEquals(shape(withoutHeader), shape(it), it.body()) }
+      assertEquals(listOf(null, "", "not-a-uuid", headers.last()), received)
+
+      val beans = fixture.context.getBean(AttemptWriteProducerBeans::class.java)
+      val accepted =
+        post(
+          fixture.server,
+          "/api/v1/dataplanes/token",
+          """{"client_id":"$ACCOUNT","client_secret":"${beans.credentials.secret}"}""",
+          headers = mapOf(DIAGNOSTICS_HEADER to "not-a-uuid"),
+        )
+      assertEquals(200, accepted.statusCode(), accepted.body())
+      verify(exactly = headers.size) { observations.recordRejectedTokenExchange(any(), any(), any()) }
+    }
   }
 
   private fun producerExchange(metadata: Boolean) {
@@ -211,6 +258,9 @@ class AttemptWriteProducerBeans {
 
   @Singleton
   fun dataplaneHealth(): DataplaneHealthService = mockk()
+
+  @Singleton
+  fun dataplaneAuthenticationObservations(): DataplaneAuthenticationObservationService = mockk()
 
   @Singleton
   fun secretStorages(): SecretStorageService = mockk()

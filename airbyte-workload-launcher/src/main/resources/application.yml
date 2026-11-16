@@ -93,6 +93,7 @@ airbyte:
       token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
       client-id: ${DATAPLANE_CLIENT_ID}
       client-secret: ${DATAPLANE_CLIENT_SECRET}
+      diagnostic-dataplane-id: ${DATAPLANE_DIAGNOSTIC_ID:}
   kubernetes:
     client:
       call-timeout-sec: ${KUBERNETES_CLIENT_CALL_TIMEOUT_SECONDS:30}

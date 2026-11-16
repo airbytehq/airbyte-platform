@@ -28,12 +28,14 @@ import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneHealthService
+import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.domain.models.DataplaneDiagnostic
 import io.airbyte.domain.models.DataplaneDiagnosticKind
 import io.airbyte.domain.models.DataplaneDiagnosticOutcome
 import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.DataplaneTokenRejectionAssociation
 import io.airbyte.domain.models.DataplaneVersionSupport
 import io.airbyte.domain.models.HealthHistoryBucket
 import io.airbyte.domain.models.OrganizationId
@@ -42,12 +44,18 @@ import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
+import io.airbyte.domain.services.dataplane.DataplaneAuthenticationObservationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DataplaneHealthUi
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.mockk.Runs
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -55,6 +63,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.time.OffsetDateTime
@@ -93,16 +102,19 @@ class DataplaneControllerTest {
       mockk<FeatureFlagClient>().apply {
         every { boolVariation(DataplaneHealthUi, any()) } returns false
       }
+    private val metricClient = mockk<MetricClient>(relaxed = true)
+    private val authenticationObservationService = mockk<DataplaneAuthenticationObservationService>(relaxed = true)
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
         dataplaneHealthService,
         entitlementService,
-        mockk(relaxed = true),
+        metricClient,
         airbyteConfig,
         featureFlagClient,
         secretStorageService,
+        authenticationObservationService,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -174,6 +186,7 @@ class DataplaneControllerTest {
 
   @Test
   fun `getDataplaneToken returns a valid token`() {
+    clearMocks(authenticationObservationService)
     val clientId = "test-client-id"
     val clientSecret = "test-client-secret"
     val expectedToken = "test-token"
@@ -181,9 +194,172 @@ class DataplaneControllerTest {
     every { dataplaneService.getToken(clientId, clientSecret) } returns expectedToken
 
     val requestBody = DataplaneTokenRequestBody(clientId = clientId, clientSecret = clientSecret)
-    val accessToken = dataplaneController.getDataplaneToken(requestBody)
+    val accessToken = dataplaneController.getDataplaneToken(requestBody, UUID.randomUUID().toString())
 
     Assertions.assertEquals(expectedToken, accessToken.accessToken)
+    verify(exactly = 0) { authenticationObservationService.recordRejectedTokenExchange(any(), any(), any()) }
+  }
+
+  @Test
+  fun `getDataplaneToken records a rejected exchange with its diagnostics header and rethrows the same rejection`() {
+    val clientId = UUID.randomUUID().toString()
+    val headerValue = "not-a-uuid"
+    val rejection = ServiceAccountNotFound(UUID.fromString(clientId))
+    every { dataplaneService.getToken(clientId, "wrong-secret") } throws rejection
+    val rejectedAt = slot<OffsetDateTime>()
+    every { authenticationObservationService.recordRejectedTokenExchange(clientId, headerValue, capture(rejectedAt)) } returns
+      DataplaneTokenRejectionAssociation.RegisteredClientId(UUID.randomUUID(), UUID.randomUUID())
+    val before = OffsetDateTime.now()
+
+    val thrown =
+      assertThrows<ServiceAccountNotFound> {
+        dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = clientId, clientSecret = "wrong-secret"), headerValue)
+      }
+
+    Assertions.assertSame(rejection, thrown)
+    Assertions.assertFalse(rejectedAt.captured.isBefore(before), "${rejectedAt.captured} is before the request started at $before")
+    verify {
+      metricClient.count(
+        OssMetricsRegistry.DATAPLANE_TOKEN_REJECTED,
+        1,
+        MetricAttribute(MetricTags.DATA_PLANE_TOKEN_REJECTION_ASSOCIATION, "registered_client_id"),
+      )
+    }
+  }
+
+  @Test
+  fun `getDataplaneToken counts a rejection claimed by the diagnostics header`() {
+    val clientId = UUID.randomUUID().toString()
+    val claimedDataplaneId = UUID.randomUUID()
+    every { dataplaneService.getToken(clientId, "secret") } throws ServiceAccountNotFound(UUID.fromString(clientId))
+    every { authenticationObservationService.recordRejectedTokenExchange(clientId, claimedDataplaneId.toString(), any()) } returns
+      DataplaneTokenRejectionAssociation.ClaimedDiagnosticId(claimedDataplaneId, UUID.randomUUID())
+
+    assertThrows<ServiceAccountNotFound> {
+      dataplaneController.getDataplaneToken(
+        DataplaneTokenRequestBody(clientId = clientId, clientSecret = "secret"),
+        claimedDataplaneId.toString(),
+      )
+    }
+
+    verify {
+      metricClient.count(
+        OssMetricsRegistry.DATAPLANE_TOKEN_REJECTED,
+        1,
+        MetricAttribute(MetricTags.DATA_PLANE_TOKEN_REJECTION_ASSOCIATION, "claimed_diagnostic_id"),
+      )
+    }
+  }
+
+  @Test
+  fun `getDataplaneToken counts an unassociated rejection without a header`() {
+    val clientId = UUID.randomUUID().toString()
+    every { dataplaneService.getToken(clientId, "secret") } throws ServiceAccountNotFound(UUID.fromString(clientId))
+    every { authenticationObservationService.recordRejectedTokenExchange(clientId, null, any()) } returns
+      DataplaneTokenRejectionAssociation.Unassociated
+
+    assertThrows<ServiceAccountNotFound> {
+      dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = clientId, clientSecret = "secret"), null)
+    }
+
+    verify {
+      metricClient.count(
+        OssMetricsRegistry.DATAPLANE_TOKEN_REJECTED,
+        1,
+        MetricAttribute(MetricTags.DATA_PLANE_TOKEN_REJECTION_ASSOCIATION, "unassociated"),
+      )
+    }
+  }
+
+  @Test
+  fun `getDataplaneToken records a client ID that is not a UUID as a rejection and rethrows it`() {
+    val rejection = IllegalArgumentException("Invalid UUID string: not-a-uuid")
+    every { dataplaneService.getToken("not-a-uuid", "secret") } throws rejection
+    every { authenticationObservationService.recordRejectedTokenExchange("not-a-uuid", "header", any()) } returns
+      DataplaneTokenRejectionAssociation.Unassociated
+
+    val thrown =
+      assertThrows<IllegalArgumentException> {
+        dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = "not-a-uuid", clientSecret = "secret"), "header")
+      }
+
+    Assertions.assertSame(rejection, thrown)
+    verify { authenticationObservationService.recordRejectedTokenExchange("not-a-uuid", "header", any()) }
+  }
+
+  @Test
+  fun `getDataplaneToken does not record an IllegalArgumentException raised for a UUID client ID`() {
+    clearMocks(authenticationObservationService)
+    val clientId = UUID.randomUUID().toString()
+    val failure = IllegalArgumentException("Could not sign the token")
+    every { dataplaneService.getToken(clientId, "secret") } throws failure
+
+    val thrown =
+      assertThrows<IllegalArgumentException> {
+        dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = clientId, clientSecret = "secret"), null)
+      }
+
+    Assertions.assertSame(failure, thrown)
+    verify(exactly = 0) { authenticationObservationService.recordRejectedTokenExchange(any(), any(), any()) }
+  }
+
+  @Test
+  fun `getDataplaneToken returns the original rejection when recording it fails`() {
+    val clientId = UUID.randomUUID().toString()
+    val rejection = ServiceAccountNotFound(UUID.fromString(clientId))
+    every { dataplaneService.getToken(clientId, "secret") } throws rejection
+    every { authenticationObservationService.recordRejectedTokenExchange(clientId, null, any()) } throws IllegalStateException("database down")
+
+    val thrown =
+      assertThrows<ServiceAccountNotFound> {
+        dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = clientId, clientSecret = "secret"), null)
+      }
+
+    Assertions.assertSame(rejection, thrown)
+  }
+
+  @Test
+  fun `getDataplaneToken does not record failures that are not credential rejections`() {
+    clearMocks(authenticationObservationService)
+    every { dataplaneService.getToken("client", "secret") } throws IllegalStateException("Could not generate token")
+
+    assertThrows<IllegalStateException> {
+      dataplaneController.getDataplaneToken(DataplaneTokenRequestBody(clientId = "client", clientSecret = "secret"), null)
+    }
+
+    verify(exactly = 0) { authenticationObservationService.recordRejectedTokenExchange(any(), any(), any()) }
+  }
+
+  @Test
+  fun `heartbeat marks authentication recovered at the stored check-in time for the data plane's organization`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns
+      createDataplaneGroup(dataplane.dataplaneGroupId, organizationId = organizationId)
+    every { dataplaneHealthService.recordHeartbeat(dataplaneId, TEST_CONTROL_PLANE_VERSION, TEST_DATAPLANE_VERSION) } returns CHECKED_AT
+
+    dataplaneController.heartbeatDataplane(DataplaneHeartbeatRequestBody(clientId = clientId), TEST_DATAPLANE_VERSION)
+
+    verify { authenticationObservationService.recordAcceptedCheckIn(dataplaneId, organizationId, CHECKED_AT) }
+  }
+
+  @Test
+  fun `heartbeat ignores an authentication result reported by the data plane`() {
+    val reported =
+      DataplaneDiagnosticResult(
+        kind = ApiDataplaneDiagnosticKind.AUTHENTICATION.value,
+        targetId = UUID.randomUUID(),
+        status = DataplaneDiagnosticStatus.PASSED,
+        checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+      )
+    val valid = secretStorageResult(DataplaneDiagnosticStatus.PASSED)
+
+    val (_, _, recorded) = heartbeatWithDiagnostics(listOf(reported, valid))
+
+    Assertions.assertEquals(listOf(expectedDiagnostic(valid, DataplaneDiagnosticOutcome.Passed)), recorded)
   }
 
   @Test
@@ -997,6 +1173,54 @@ class DataplaneControllerTest {
         ),
       ),
       response.dataplanes.single().diagnostics,
+    )
+  }
+
+  @Test
+  fun `listDataplaneHealth returns a rejected token exchange next to the last accepted check-in`() {
+    val mockOrganizationId = UUID.randomUUID()
+    val dataplane = createDataplane(UUID.randomUUID(), enabled = true)
+    val dataplaneGroup = createDataplaneGroup(MOCK_DATAPLANE_GROUP_ID, enabled = true, organizationId = mockOrganizationId)
+    val lastCheckIn = CHECKED_AT.minusMinutes(10)
+    val rejection =
+      DataplaneDiagnostic(
+        DataplaneDiagnosticKind.AUTHENTICATION,
+        dataplane.id,
+        DataplaneDiagnosticOutcome.Failed("CREDENTIALS_REJECTED", "Rejected"),
+        CHECKED_AT,
+        mapOf("association" to "REGISTERED_CLIENT_ID"),
+      )
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
+    every { dataplaneGroupService.listDataplaneGroups(listOf(mockOrganizationId), false) } returns listOf(dataplaneGroup)
+    every { dataplaneService.listDataplanes(listOf(MOCK_DATAPLANE_GROUP_ID)) } returns listOf(dataplane)
+    every { dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplane.id), false) } returns
+      listOf(
+        unknownHealthInfo(dataplane.id).copy(
+          status = DataplaneHealthInfo.HealthStatus.UNHEALTHY,
+          lastHeartbeatTimestamp = lastCheckIn,
+          secondsSinceLastHeartbeat = 600,
+        ),
+      )
+    every { dataplaneHealthService.getDiagnostics(mockOrganizationId, listOf(dataplane.id)) } returns
+      listOf(SavedDataplaneDiagnostic(dataplane.id, rejection, CHECKED_AT))
+
+    val health = dataplaneController.listDataplaneHealth(OrganizationIdRequestBody(organizationId = mockOrganizationId)).dataplanes.single()
+
+    Assertions.assertEquals(lastCheckIn.toInstant().toEpochMilli(), health.lastHeartbeatTimestamp)
+    Assertions.assertEquals(
+      listOf(
+        DataplaneDiagnosticRead(
+          kind = ApiDataplaneDiagnosticKind.AUTHENTICATION,
+          targetId = dataplane.id,
+          status = DataplaneDiagnosticStatus.FAILED,
+          checkedAt = CHECKED_AT.toInstant().toEpochMilli(),
+          updatedAt = CHECKED_AT.toInstant().toEpochMilli(),
+          errorCode = "CREDENTIALS_REJECTED",
+          errorMessage = "Rejected",
+          observation = mapOf("association" to "REGISTERED_CLIENT_ID"),
+        ),
+      ),
+      health.diagnostics,
     )
   }
 

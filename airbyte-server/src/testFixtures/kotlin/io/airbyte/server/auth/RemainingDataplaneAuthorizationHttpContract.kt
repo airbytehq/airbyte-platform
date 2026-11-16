@@ -23,6 +23,7 @@ import io.airbyte.domain.models.auth.AuthorizationResourceNotFoundException
 import io.airbyte.domain.services.auth.AuthorizationDataService
 import io.airbyte.domain.services.auth.DataplaneAuthorizationDataService
 import io.airbyte.domain.services.auth.OrganizationAccessService
+import io.airbyte.domain.services.dataplane.DataplaneAuthenticationObservationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
+import java.time.OffsetDateTime
 import java.util.UUID
 
 abstract class RemainingDataplaneAuthorizationHttpContract {
@@ -541,11 +543,14 @@ abstract class RemainingDataplaneAuthorizationHttpContract {
         is MetricClient -> every { instance.count(any(), any(), *anyVararg()) } returns null
         is AirbyteConfig -> every { instance.version } returns "fixture"
         is DataplaneHealthService -> {
-          every { instance.recordHeartbeat(any(), "fixture", null) } just Runs
+          every { instance.recordHeartbeat(any(), "fixture", null) } returns OffsetDateTime.now()
           every { instance.recordDiagnostics(any(), any(), emptyList()) } just Runs
           every { instance.getDataplaneHealthInfos(listOf(DATAPLANE), any()) } returns emptyList()
           every { instance.getDiagnostics(any(), listOf(DATAPLANE)) } returns emptyList()
           every { instance.getPublishedReleaseSupport(emptySet(), any()) } returns emptyMap()
+        }
+        is DataplaneAuthenticationObservationService -> {
+          every { instance.recordAcceptedCheckIn(DATAPLANE, ORGANIZATION, any()) } just Runs
         }
         is FeatureFlagClient -> every { instance.boolVariation(any(), any()) } returns false
         is SecretStorageService -> {
