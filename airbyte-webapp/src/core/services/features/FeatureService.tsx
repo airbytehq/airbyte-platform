@@ -33,8 +33,8 @@ interface FeatureServiceProps {
  * features is: overwrite > user > workspace > globally, i.e. if a feature is disabled for a user
  * it will take precedence over the feature being enabled globally or for that workspace.
  */
-// Allow E2E overrides in both Cypress and Playwright environments
-const isE2EEnvironment = window.hasOwnProperty("Cypress") || window.hasOwnProperty("_e2ePlaywrightEnvironment");
+// Allow E2E overrides in Playwright environments
+const isE2EEnvironment = window.hasOwnProperty("_e2ePlaywrightEnvironment");
 export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProps>> = ({
   features: defaultFeatures,
   instanceConfig,
