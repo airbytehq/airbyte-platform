@@ -62,7 +62,7 @@ class CoreOrganizationOperationRulesTest {
   fun `global organization create checks beneficiary after the global action and before any business`() {
     val beneficiary = UUID(0, 8)
     val rule = OrganizationCreateRule(data, permissions)
-    val input = rule.readInput(arrayOf(OrganizationCreateRequestBody(beneficiary, "fixture")))
+    val input = rule.readInput(arrayOf(OrganizationCreateRequestBody(beneficiary, "fixture", "owner@example.com")))
     every { grants.getPermissionsByAuthUserId("caller") } returns emptyList()
     assertThrows(ForbiddenProblem::class.java) { rule.authorize(caller, input) }
     verify(exactly = 0) { data.requireUser(any()) }

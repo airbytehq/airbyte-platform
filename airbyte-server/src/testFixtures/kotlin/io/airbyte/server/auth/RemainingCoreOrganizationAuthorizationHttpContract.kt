@@ -338,7 +338,7 @@ abstract class RemainingCoreOrganizationAuthorizationHttpContract {
       ),
       Scenario(
         "/api/v1/organizations/create",
-        """{"userId":"$USER","organizationName":"fixture"}""",
+        """{"userId":"$USER","organizationName":"fixture","email":"fixture@example.com"}""",
         OrganizationCreateRule::class.java,
         Permission.PermissionType.INSTANCE_ADMIN,
       ),

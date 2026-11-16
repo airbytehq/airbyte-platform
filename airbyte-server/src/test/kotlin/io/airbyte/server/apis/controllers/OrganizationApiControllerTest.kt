@@ -124,7 +124,9 @@ class OrganizationApiControllerTest {
   fun testCreateOrganization() {
     every { organizationsHandler.createOrganization(any()) } returns organizationRead
     assertNotNull(
-      organizationApiController.createOrganization(OrganizationCreateRequestBody(userId = UUID.randomUUID(), organizationName = "Test Organization")),
+      organizationApiController.createOrganization(
+        OrganizationCreateRequestBody(userId = UUID.randomUUID(), organizationName = "Test Organization", email = "test@example.com"),
+      ),
     )
   }
 
