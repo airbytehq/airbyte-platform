@@ -7,6 +7,7 @@ import {
   FailureOrigin,
   FailureReason,
   FailureType,
+  JobRead,
 } from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 
@@ -21,6 +22,8 @@ export interface UIConnectionStatus {
   failureReason?: FailureReason;
   lastSyncJobId?: number;
   lastSyncAttemptNumber?: number;
+  // the job that has not finished yet, if any
+  activeJob?: JobRead;
   recordsExtracted: number | undefined;
   recordsLoaded: number | undefined;
 }
@@ -35,6 +38,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     failureReason,
     lastSyncJobId,
     lastSyncAttemptNumber,
+    activeJob,
     lastSyncJobCreatedAt,
     scheduleData,
   } = connectionStatus;
@@ -59,6 +63,7 @@ export const useConnectionStatus = (connectionId: string): UIConnectionStatus =>
     failureReason,
     lastSyncJobId,
     lastSyncAttemptNumber,
+    activeJob,
     recordsExtracted: syncProgress?.recordsCommitted,
     recordsLoaded: syncProgress?.recordsEmitted,
   };

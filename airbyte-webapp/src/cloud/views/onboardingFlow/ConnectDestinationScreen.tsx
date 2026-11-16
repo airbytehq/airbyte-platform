@@ -12,20 +12,9 @@ import { DestinationRead } from "core/api/types/AirbyteClient";
 
 import { ConnectorStepActions, ConnectorStepForm } from "./ConnectorStepForm";
 import { MissingConnectorStep } from "./ConnectorStepLayout";
-import { getStepDestination } from "./draftConnectors";
 import { OnboardingActionBar } from "./OnboardingActionBar";
-import { resolveDestinationDefinitionId } from "./onboardingConnectors";
-import { useDestinationLists } from "./useConnectorLists";
+import { useStepDestination } from "./useConnectorLists";
 import { useSaveOnboardingStatus } from "./useSaveOnboardingStatus";
-
-/** The ready destination of the choice first, else the one draft destination that the destination screen keeps. */
-const useStepDestination = (destinationChoice?: string) => {
-  const { drafts, readyConnectors: readyDestinations } = useDestinationLists();
-  const chosenDefinitionId = destinationChoice ? resolveDestinationDefinitionId(destinationChoice) : undefined;
-  const isChosen = ({ destinationDefinitionId }: DestinationRead) => destinationDefinitionId === chosenDefinitionId;
-
-  return getStepDestination(readyDestinations, drafts.at(0), isChosen);
-};
 
 interface DestinationStepProps extends ConnectorStepActions {
   destination: DestinationRead;

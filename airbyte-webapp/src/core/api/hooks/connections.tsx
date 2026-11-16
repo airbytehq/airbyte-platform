@@ -113,6 +113,8 @@ export const connectionsKeys = {
     ] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
   statusCounts: (workspaceId: string) => [...connectionsKeys.all, "statusCounts", workspaceId] as const,
+  firstBetween: (sourceId: string, destinationId: string) =>
+    [...connectionsKeys.all, "firstBetween", sourceId, destinationId] as const,
 };
 
 export interface ConnectionValues {
@@ -391,9 +393,12 @@ export const useCreateConnection = () => {
       }
     },
     {
-      onSuccess: () => {
+      onSuccess: (_connection, { source, destination }) => {
         queryClient.resetQueries({ queryKey: connectionsKeys.lists() });
         invalidateWorkspaceSummary();
+        // Returning the promise makes `mutateAsync` wait for this refresh, so `useFirstConnectionBetween` finds the new
+        // connection before the create resolves.
+        return queryClient.invalidateQueries(connectionsKeys.firstBetween(source.sourceId, destination.destinationId));
       },
     }
   );
@@ -727,6 +732,23 @@ export const useConnectionList = ({
       getNextPageParam: getNextConnectionListCursor,
     }
   );
+};
+
+/**
+ * The first connection from the source to the destination, or `null` when none exists. The key is outside `lists()`,
+ * because the list updaters expect pages. Creating a connection refreshes it before the create resolves.
+ */
+export const useFirstConnectionBetween = (sourceId: string, destinationId: string) => {
+  const { workspaceId } = useCurrentWorkspace();
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(connectionsKeys.firstBetween(sourceId, destinationId), async () => {
+    const { connections } = await webBackendListConnectionsForWorkspace(
+      { workspaceId, sourceId: [sourceId], destinationId: [destinationId], pageSize: 1 },
+      requestOptions
+    );
+    return connections.at(0) ?? null;
+  });
 };
 
 export const useWorkspaceConnectionStatusCounts = (workspaceId: string) => {

@@ -25,6 +25,8 @@ interface StreamNameCellProps {
   row: Row<SyncCatalogUIModel>;
   updateStreamField: (streamNode: SyncStreamFieldWithId, updatedConfig: Partial<AirbyteStreamConfiguration>) => void;
   globalFilterValue?: string;
+  /** Hides the button that expands the field rows of the stream. */
+  hideExpandButton?: boolean;
   destinationName: string;
   destinationSupportsFileTransfer: boolean;
 }
@@ -34,6 +36,7 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   row,
   updateStreamField,
   globalFilterValue = "",
+  hideExpandButton = false,
   destinationName,
   destinationSupportsFileTransfer,
 }) => {
@@ -90,7 +93,7 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   );
 
   return (
-    <FlexContainer gap="none" alignItems="center">
+    <FlexContainer gap={hideExpandButton ? "sm" : "none"} alignItems="center">
       {isUnsupportedFileBasedStream ? (
         <Tooltip placement="top" control={checkBox}>
           <FormattedMessage id="connectionForm.fileStream.tooltip.unsupported" values={{ destinationName }} />
@@ -98,15 +101,17 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
       ) : (
         checkBox
       )}
-      <Button
-        type="button"
-        icon={row.getIsExpanded() ? "chevronDown" : "chevronRight"}
-        variant="clear"
-        onClick={onToggleExpand}
-        disabled={!row.getCanExpand()}
-        data-testid="expand-collapse-stream-btn"
-        aria-expanded={row.getIsExpanded()}
-      />
+      {!hideExpandButton && (
+        <Button
+          type="button"
+          icon={row.getIsExpanded() ? "chevronDown" : "chevronRight"}
+          variant="clear"
+          onClick={onToggleExpand}
+          disabled={!row.getCanExpand()}
+          data-testid="expand-collapse-stream-btn"
+          aria-expanded={row.getIsExpanded()}
+        />
+      )}
       <FlexContainer
         alignItems="center"
         className={classNames(styles.streamNameContainer, {

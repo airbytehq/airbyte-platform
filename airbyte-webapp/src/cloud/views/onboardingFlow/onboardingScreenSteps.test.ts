@@ -16,7 +16,7 @@ describe("getInitialScreen", () => {
     ["create_source", true, "connectSource"],
     ["create_destination", true, "connectDestination"],
     ["create_connection", true, "createConnection"],
-    ["run_first_sync", true, "createConnection"],
+    ["run_first_sync", true, "firstSync"],
     [undefined, false, "goal"],
     [undefined, true, "destination"],
     ["completed", false, "goal"],

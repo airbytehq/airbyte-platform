@@ -1,0 +1,28 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.option {
+  padding: variables.$spacing-lg;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$foreground;
+
+  &--primary {
+    border-color: colors.$blue-400;
+    background-color: colors.$blue-50;
+  }
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$blue-50;
+}
+
+.optionLabel {
+  flex: 1;
+}

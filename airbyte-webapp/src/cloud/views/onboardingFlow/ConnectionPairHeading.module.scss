@@ -1,0 +1,14 @@
+@use "scss/variables";
+
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: variables.$spacing-xs variables.$spacing-sm;
+}
+
+.connector {
+  display: inline-flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+}

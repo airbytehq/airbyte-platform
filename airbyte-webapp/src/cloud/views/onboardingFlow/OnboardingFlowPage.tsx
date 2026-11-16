@@ -1,7 +1,7 @@
 import classNames from "classnames";
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { useIntl } from "react-intl";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import LoadingPage from "components/ui/LoadingPage";
@@ -25,15 +25,17 @@ import { useCanOpenOnboardingFlow } from "./useShouldEnterOnboardingFlow";
 
 const useSkipOnboarding = () => {
   const organizationId = useCurrentOrganizationId();
+  const workspaceId = useCurrentWorkspaceId();
+  const navigate = useNavigate();
   const { mutate, isLoading } = useUpdateOrganizationOnboarding();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
 
-  // On success the cached status becomes "skipped", and OnboardingFlowGate opens the normal app.
   const skip = () =>
     mutate(
       { organizationId, status: "skipped" },
       {
+        onSuccess: () => navigate(`/${RoutePaths.Workspaces}/${workspaceId}`, { replace: true }),
         onError: () =>
           registerNotification({
             id: "onboardingFlow/skip-failure",
@@ -77,12 +79,17 @@ const OnboardingFlow: React.FC = () => {
   );
 };
 
-/** Skip lands here too: the update changes the cached status, and this sends the user to the normal app. */
+/**
+ * Decides once, when the member opens the flow, so a status change does not close an open flow. "Run your first sync"
+ * completes onboarding and then shows the running state, and each other exit opens its page in its own `onSuccess`.
+ * Cost: an open flow stays open when onboarding finishes in another tab or device.
+ */
 const OnboardingFlowGate: React.FC = () => {
   const canOpenFlow = useCanOpenOnboardingFlow();
+  const [canOpenFlowOnMount] = useState(canOpenFlow);
   const workspaceId = useCurrentWorkspaceId();
 
-  if (!canOpenFlow) {
+  if (!canOpenFlowOnMount) {
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaceId}`} replace />;
   }
   return <OnboardingFlow />;

@@ -10,6 +10,7 @@ interface OnboardingActionBarProps {
   onContinue?: () => void;
   /** Continue submits the form with this id, so the action bar can sit outside the form. */
   continueFormId?: string;
+  continueLabel?: React.ReactNode;
   /** Continue is saving the screen, so Continue shows a spinner, and Back and Skip wait. */
   isSaving?: boolean;
 }
@@ -19,6 +20,7 @@ export const OnboardingActionBar: React.FC<OnboardingActionBarProps> = ({
   onBack,
   onContinue,
   continueFormId,
+  continueLabel = <FormattedMessage id="onboardingFlow.actions.continue" />,
   isSaving,
 }) => {
   const canContinue = onContinue !== undefined || continueFormId !== undefined;
@@ -41,7 +43,7 @@ export const OnboardingActionBar: React.FC<OnboardingActionBarProps> = ({
           disabled={!canContinue}
           isLoading={isSaving}
         >
-          <FormattedMessage id="onboardingFlow.actions.continue" />
+          {continueLabel}
         </Button>
       </FlexContainer>
     </FlexContainer>

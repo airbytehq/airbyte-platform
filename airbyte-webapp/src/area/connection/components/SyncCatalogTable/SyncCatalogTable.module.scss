@@ -171,3 +171,8 @@ $table-header-fixed-height: 40px;
   top: $initial-top + $controls-container-fixed-height + $tabs-container-fixed-height;
   height: $table-header-fixed-height;
 }
+
+// The compact table has no search and filter controls above its header.
+.compact .stickyTableHeader {
+  top: $initial-top;
+}

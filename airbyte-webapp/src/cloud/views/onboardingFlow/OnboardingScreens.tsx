@@ -8,6 +8,7 @@ import { ConnectSourceScreen } from "./ConnectSourceScreen";
 import { CreateConnectionScreen } from "./CreateConnectionScreen";
 import { DestinationScreen } from "./DestinationScreen";
 import { getSourcePicks } from "./draftConnectors";
+import { FirstSyncScreen } from "./FirstSyncScreen";
 import { GoalScreen, OnboardingGoal } from "./GoalScreen";
 import { getDestinationChoice } from "./onboardingConnectors";
 import { getInitialScreen, OnboardingScreenId } from "./onboardingScreenSteps";
@@ -96,6 +97,23 @@ export const OnboardingScreens: React.FC<OnboardingScreensProps> = ({ state, onS
         />
       );
     case "createConnection":
-      return <CreateConnectionScreen onBack={goTo("connectDestination")} onSkip={onSkip} />;
+      return (
+        <CreateConnectionScreen
+          sourcePicks={state.sourcePicks}
+          destinationChoice={state.destinationChoice}
+          onBack={goTo("connectDestination")}
+          onContinue={goTo("firstSync")}
+          onSkip={onSkip}
+        />
+      );
+    case "firstSync":
+      return (
+        <FirstSyncScreen
+          sourcePicks={state.sourcePicks}
+          destinationChoice={state.destinationChoice}
+          onBack={goTo("createConnection")}
+          onSkip={onSkip}
+        />
+      );
   }
 };

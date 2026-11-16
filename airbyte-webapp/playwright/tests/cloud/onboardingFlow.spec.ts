@@ -1,41 +1,5 @@
-import { Page, Request, expect, test } from "@playwright/test";
-import { signInOrRegister } from "helpers";
-
-const getWorkspaceId = (url: string) => {
-  const workspaceId = new URL(url).pathname.match(/\/workspaces\/(?<workspaceId>[^/]+)/)?.groups?.workspaceId;
-  if (!workspaceId) {
-    throw new Error(`No workspace id in ${url}`);
-  }
-  return workspaceId;
-};
-
-interface OrganizationApi {
-  origin: string;
-  authorization: string;
-  organizationId: string;
-}
-
-/** Reuses the app's auth header, and reads the organization from the workspace so a multi-organization user is safe. */
-const getOrganizationApi = async (page: Page, appRequest: Request, workspaceId: string): Promise<OrganizationApi> => {
-  const { authorization } = await appRequest.allHeaders();
-  const { origin } = new URL(appRequest.url());
-  const response = await page.request.post(`${origin}/api/v1/workspaces/get`, {
-    headers: { authorization },
-    data: { workspaceId },
-  });
-  expect(response.ok()).toBe(true);
-  const { organizationId } = await response.json();
-  return { origin, authorization, organizationId };
-};
-
-const setOnboardingStatus = async (page: Page, organizationApi: OrganizationApi, status: string) => {
-  const { origin, authorization, organizationId } = organizationApi;
-  const response = await page.request.post(`${origin}/api/v1/organizations/onboarding/update`, {
-    headers: { authorization },
-    data: { organizationId, status },
-  });
-  expect(response.ok()).toBe(true);
-};
+import { expect, test } from "@playwright/test";
+import { OrganizationApi, openAppAndGetOrganizationApi, setOnboardingStatus, signInOrRegister } from "helpers";
 
 let cleanupOrganizationApi: OrganizationApi | undefined;
 
@@ -51,14 +15,7 @@ test.afterEach(async ({ page }) => {
 test("a new organization can enter the onboarding flow and skip it", async ({ page }) => {
   await signInOrRegister(page);
 
-  const appRequestPromise = page.waitForRequest((request) =>
-    request.url().includes("/api/v1/organizations/get_organization_info")
-  );
-  await page.goto("./");
-  const appRequest = await appRequestPromise;
-  await expect(page).toHaveURL(/\/workspaces\/[^/]+/);
-  const workspaceId = getWorkspaceId(page.url());
-  const organizationApi = await getOrganizationApi(page, appRequest, workspaceId);
+  const { workspaceId, organizationApi } = await openAppAndGetOrganizationApi(page);
   cleanupOrganizationApi = organizationApi;
   const flowUrl = new RegExp(`/workspaces/${workspaceId}/onboarding-flow`);
   const expectNormalApp = async () => {

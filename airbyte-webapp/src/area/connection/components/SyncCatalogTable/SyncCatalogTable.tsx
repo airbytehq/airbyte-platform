@@ -77,7 +77,15 @@ export interface SyncCatalogUIModel {
   subRows?: SyncCatalogUIModel[];
 }
 
-export const SyncCatalogTable: FC = () => {
+const FIELDS_COLUMN_ID = "flattenedFields";
+
+interface SyncCatalogTableProps {
+  /** `compact` shows only the stream rows: no search and filters, no field rows, and no Fields column. */
+  variant?: "full" | "compact";
+}
+
+export const SyncCatalogTable: FC<SyncCatalogTableProps> = ({ variant = "full" }) => {
+  const isCompact = variant === "compact";
   const { connection } = useConnectionFormService();
   const { mode } = useFormMode();
 
@@ -174,6 +182,7 @@ export const SyncCatalogTable: FC = () => {
               row={row}
               updateStreamField={onUpdateStreamConfigWithStreamNode}
               globalFilterValue={table.getState().globalFilter}
+              hideExpandButton={isCompact}
               destinationName={destinationName}
               destinationSupportsFileTransfer={destinationSupportsFileTransfer}
             />
@@ -290,6 +299,7 @@ export const SyncCatalogTable: FC = () => {
       },
     }),
     columnHelper.accessor("flattenedFields", {
+      id: FIELDS_COLUMN_ID,
       header: () => (
         <Text size="sm" color="grey500">
           <FormattedMessage id="form.fields" />
@@ -309,6 +319,7 @@ export const SyncCatalogTable: FC = () => {
       },
     }),
   ];
+  const visibleColumns = isCompact ? columns.filter((column) => column.id !== FIELDS_COLUMN_ID) : columns;
 
   const preparedData = useMemo(() => {
     return getSyncCatalogRows(streams, initialValues.syncCatalog.streams, prefix);
@@ -325,7 +336,7 @@ export const SyncCatalogTable: FC = () => {
   const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpandedState);
 
   const { getHeaderGroups, getRowModel, toggleAllRowsExpanded, getState } = useSyncCatalogReactTable({
-    columns: columns as Array<ColumnDef<SyncCatalogUIModel>>,
+    columns: visibleColumns as Array<ColumnDef<SyncCatalogUIModel>>,
     data: preparedData,
     expanded,
     setExpanded,
@@ -400,6 +411,23 @@ export const SyncCatalogTable: FC = () => {
     ]);
   };
 
+  const table = (
+    <SyncCatalogVirtuosoTable
+      rows={rows}
+      getHeaderGroups={getHeaderGroups}
+      getState={getState}
+      initialTopMostItemIndex={initialTopMostItemIndex}
+      stickyRowIndex={stickyRowIndex}
+      setStickyRowIndex={setStickyRowIndex}
+      columnFilters={columnFilters}
+      stickyIndexes={stickyIndexes}
+      expanded={expanded}
+    />
+  );
+
+  if (isCompact) {
+    return <div className={styles.compact}>{table}</div>;
+  }
   return (
     <>
       <SearchAndFilterControls
@@ -412,17 +440,7 @@ export const SyncCatalogTable: FC = () => {
         columnFilters={columnFilters}
         onTabSelect={onTabSelect}
       />
-      <SyncCatalogVirtuosoTable
-        rows={rows}
-        getHeaderGroups={getHeaderGroups}
-        getState={getState}
-        initialTopMostItemIndex={initialTopMostItemIndex}
-        stickyRowIndex={stickyRowIndex}
-        setStickyRowIndex={setStickyRowIndex}
-        columnFilters={columnFilters}
-        stickyIndexes={stickyIndexes}
-        expanded={expanded}
-      />
+      {table}
     </>
   );
 };
