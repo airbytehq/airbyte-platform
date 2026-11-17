@@ -470,6 +470,16 @@ func TestDirectJobRunnerManifestServer(t *testing.T) {
 		assert.Equal(t, "workload-launcher-secrets", env["AB_JWT_SIGNATURE_SECRET"].ValueFrom.SecretKeyRef.Name)
 	})
 
+	t.Run("reaches a manifest server in its own namespace", func(t *testing.T) {
+		values := directJobRunnerOpts()
+		values["global.jobs.kube.namespace"] = "jobs"
+		values["manifestServer.runInJobsNamespace"] = "true"
+		values["directJobRunner.manifestServerSecretName"] = "workload-launcher-secrets"
+		env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+		assert.Equal(t, "http://airbyte-airbyte-manifest-server-svc.jobs:8080", env["MANIFEST_SERVER_API_HOST"].Value)
+	})
+
 	t.Run("gets no manifest server without the secret copy, so it can't fail to start", func(t *testing.T) {
 		env := directJobRunnerEnv(t, renderDirectJobRunner(t, directJobRunnerOpts()))
 

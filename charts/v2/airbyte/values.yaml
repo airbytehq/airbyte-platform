@@ -2513,6 +2513,11 @@ keycloak:
 manifestServer:
   enabled: true
 
+  # -- Run the manifest server in the jobs namespace (global.jobs.kube.namespace), next to the direct job runner, so the
+  # jobs namespace's network policies also cover the calls it makes from customer config. Its JWT signature secret then
+  # comes from directJobRunner.manifestServerSecretName, the copy the runner signs its calls with.
+  runInJobsNamespace: false
+
   # -- Number of manifest-server replicas
   replicaCount: 1
 

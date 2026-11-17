@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: {{ include "airbyte.namespace" . }}
+  namespace: {{ include "airbyte.manifestServer.namespace" . }}
   name: {{ .Release.Name }}-manifest-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
@@ -58,6 +58,10 @@ spec:
       - name: airbyte-manifest-server
         image: {{ include "imageUrl" (list .Values.manifestServer.image $) }}
         imagePullPolicy: "{{ .Values.manifestServer.image.pullPolicy }}"
+        {{- if .Values.manifestServer.runInJobsNamespace }}
+        env:
+        {{- include "airbyte.manifestServer.jobsNamespaceEnvs" . | nindent 8 }}
+        {{- else }}
         envFrom:
           - configMapRef:
               name: {{ .Release.Name }}-airbyte-telemetry-env
@@ -66,6 +70,7 @@ spec:
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- end }}
         {{- include "airbyte.datadog.envs" .Values.manifestServer.datadog | nindent 8 }}
 
         # Values from secret

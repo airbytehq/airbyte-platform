@@ -222,7 +222,7 @@ Renders the common.auth.enabled environment variable
 Renders the global.manifestServer.apiHost value
 */}}
 {{- define "airbyte.common.manifestServer.apiHost" }}
-    {{- (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.manifestServer.service.port)) }}
+    {{- (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name (include "airbyte.manifestServer.namespace" .) (int .Values.manifestServer.service.port)) }}
 {{- end }}
 
 {{/*
