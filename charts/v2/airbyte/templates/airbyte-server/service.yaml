@@ -13,11 +13,23 @@ metadata:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.server.service.type }}
+  {{- with .Values.server.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- if and .Values.server.service.externalTrafficPolicy (or (eq .Values.server.service.type "NodePort") (eq .Values.server.service.type "LoadBalancer")) }}
+  externalTrafficPolicy: {{ .Values.server.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.server.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
   ports:
   - port: {{ .Values.server.service.port }}
     targetPort: http
     protocol: TCP
     name: http
+    {{- with .Values.server.service.appProtocol }}
+    appProtocol: {{ . }}
+    {{- end }}
     {{- if and (or (eq .Values.server.service.type "NodePort") (eq .Values.server.service.type "LoadBalancer")) .Values.server.service.nodePort }}
     nodePort: {{ .Values.server.service.nodePort }}
     {{- end }}
