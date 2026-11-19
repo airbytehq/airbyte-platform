@@ -500,10 +500,11 @@ class SourceHandler
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceIdRequestBody.workspaceId))
       val secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(WorkspaceId(source.workspaceId))).map { obj -> obj.id.value }
 
+      val rawConfiguration = sourceService.getSourceConnection(source.sourceId).configuration
       val configWithSecretReferences =
         secretReferenceService.getConfigWithSecretReferences(
           ActorId(source.sourceId),
-          source.connectionConfiguration,
+          rawConfiguration,
           WorkspaceId(source.workspaceId),
         )
 

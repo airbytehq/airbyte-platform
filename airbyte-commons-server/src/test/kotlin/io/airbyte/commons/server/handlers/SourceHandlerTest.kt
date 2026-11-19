@@ -1442,8 +1442,10 @@ internal class SourceHandlerTest {
 
   @Test
   fun testDeleteSourceAndDeleteSecrets() {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
     val newConfiguration = sourceConnection.configuration
-    (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
+    (newConfiguration as ObjectNode).set<JsonNode>(API_KEY_FIELD, jsonNode(mapOf("_secret" to secretCoordinate.fullCoordinate)))
+    val maskedConfiguration = clone(newConfiguration).apply { (this as ObjectNode).put(API_KEY_FIELD, "**********") }
 
     val expectedSourceConnection = clone(sourceConnection).withTombstone(true)
 
@@ -1474,10 +1476,10 @@ internal class SourceHandlerTest {
     every { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) } returns connectionReadList
     every {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.configuration,
+        newConfiguration,
         sourceDefinitionSpecificationRead.connectionSpecification!!,
       )
-    } returns sourceConnection.configuration
+    } returns maskedConfiguration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
@@ -1492,14 +1494,17 @@ internal class SourceHandlerTest {
         any(),
       )
     } answers {
-      ConfigWithSecretReferences(
-        secondArg(),
-        mapOf(),
-      )
+      buildConfigWithSecretRefsJava(secondArg())
     }
 
     sourceHandler.deleteSource(sourceIdRequestBody)
 
+    verify {
+      secretsRepositoryWriter.deleteFromConfig(
+        match { it.referencedSecrets["$.$API_KEY_FIELD"]?.secretCoordinate == secretCoordinate },
+        secretPersistence,
+      )
+    }
     verify { sourceService.tombstoneSource(any(), any(), any()) }
     verify { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) }
     verify { connectionsHandler.deleteConnection(connectionRead.connectionId) }
