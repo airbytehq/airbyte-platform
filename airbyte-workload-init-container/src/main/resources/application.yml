@@ -59,6 +59,7 @@ airbyte:
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        ca-cert: ${VAULT_CA_CERT:}
         # injects the actual secret value
         token: ${VAULT_AUTH_TOKEN:vaultAuthTokenForTest}
       azure:

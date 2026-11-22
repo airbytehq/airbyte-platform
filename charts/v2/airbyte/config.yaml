@@ -906,6 +906,11 @@ secretsManager:
         - VAULT
       defaultValueExp: (include "airbyte.secretsManager.vault.authToken.secretKey" .)
 
+    - env: VAULT_CA_CERT
+      key: vault.caCert
+      discriminatorOpts:
+        - VAULT
+
 server:
   keyBasePath: server
   config:  

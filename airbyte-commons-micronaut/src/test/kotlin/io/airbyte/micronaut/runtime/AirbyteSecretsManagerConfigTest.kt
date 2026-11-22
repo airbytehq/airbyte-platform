@@ -118,5 +118,6 @@ internal class AirbyteSecretsManagerConfigVaultTest {
     assertEquals("opensesame", vaultConfig.token)
     assertEquals("test-token-ref-name", vaultConfig.tokenRefName)
     assertEquals("test-token-ref-key", vaultConfig.tokenRefKey)
+    assertEquals("test-ca-cert", vaultConfig.caCert)
   }
 }

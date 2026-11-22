@@ -462,6 +462,12 @@ class EnvVarConfigBeanFactory {
       put(EnvVarConstants.AZURE_KEY_VAULT_SECRET_TAGS, airbyteSecretsManagerConfig.store.azure.tags)
       put(EnvVarConstants.VAULT_ADDRESS, airbyteSecretsManagerConfig.store.vault.address)
       put(EnvVarConstants.VAULT_PREFIX, airbyteSecretsManagerConfig.store.vault.prefix)
+      // A CA certificate is public, so it goes in plain; job pods need it to reach a Vault behind a private CA.
+      if (airbyteSecretsManagerConfig.store.vault.caCert
+          .isNotBlank()
+      ) {
+        put(EnvVarConstants.VAULT_CA_CERT, airbyteSecretsManagerConfig.store.vault.caCert)
+      }
     }
 
   /**

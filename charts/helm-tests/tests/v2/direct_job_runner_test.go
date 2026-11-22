@@ -351,6 +351,19 @@ func TestDirectJobRunnerVaultTokenRef(t *testing.T) {
 	assert.Equal(t, "workload-launcher-secrets", env["VAULT_AUTH_TOKEN"].ValueFrom.SecretKeyRef.Name)
 }
 
+func TestDirectJobRunnerVaultCaCert(t *testing.T) {
+	// Multi-line like a PEM, without its dashes: DecodeK8sResources splits the rendered chart on every "---".
+	caCert := "BEGIN CERTIFICATE\nMIIBfjCCASSgAwIBAgIU\nEND CERTIFICATE\n"
+	values := directJobRunnerOpts()
+	values["global.secretsManager.type"] = "VAULT"
+	values["global.secretsManager.vault.caCert"] = caCert
+	env := directJobRunnerEnv(t, renderDirectJobRunner(t, values))
+
+	// The runner lives in the jobs namespace, so it gets the certificate as a literal value, not a ConfigMap reference.
+	assert.Nil(t, env["VAULT_CA_CERT"].ValueFrom)
+	assert.Equal(t, caCert, env["VAULT_CA_CERT"].Value)
+}
+
 func TestDirectJobRunnerTerminationGracePeriod(t *testing.T) {
 	t.Run("defaults to 90s, longer than the runner's 80s drain", func(t *testing.T) {
 		deployment := helmtests.GetDeployment(renderDirectJobRunner(t, directJobRunnerOpts()).String(), "airbyte-direct-job-runner")

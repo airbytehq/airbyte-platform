@@ -52,6 +52,7 @@ Vault secret manager:
 * `VAULT_ADDRESS` - Specifies the address of the Vault server instance to which API calls should be sent.
 * `VAULT_AUTH_TOKEN` - Specifies the token used to access Vault.
 * `VAULT_PREFIX` - Specifies the Vault path prefix from which to read.  All secrets will be written/retrieved from under this path.
+* `VAULT_CA_CERT` - Optional. The PEM-encoded CA certificate (or a bundle of them) that issued the Vault server's TLS certificate, for a Vault behind a private CA. When set, only these CAs are trusted for Vault; when unset, the JVM's default truststore is used. The workload launcher passes it on to job pods.
 
 ## Development
 
@@ -81,6 +82,7 @@ airbyte:
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        ca-cert: ${VAULT_CA_CERT:}
         token: ${VAULT_AUTH_TOKEN:}
 ```
 

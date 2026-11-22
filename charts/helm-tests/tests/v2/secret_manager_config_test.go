@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"testing"
 
 	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
@@ -96,6 +97,26 @@ func TestVaultSecretManagerConfig(t *testing.T) {
 
 		releaseApps := appsForRelease("airbyte")
 		for _, name := range []string{"server", "worker", "workload-launcher"} {
+			app := releaseApps[name]
+			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
+		}
+	})
+
+	t.Run("should pass a CA certificate to every component that talks to Vault", func(tt *testing.T) {
+		// Multi-line like a PEM, without its dashes: DecodeK8sResources splits the rendered chart on every "---".
+		caCert := "BEGIN CERTIFICATE\nMIIBfjCCASSgAwIBAgIU\nEND CERTIFICATE\n"
+		opts := helmtests.BaseHelmOptions()
+		opts.SetValues["global.secretsManager.type"] = "VAULT"
+		opts.SetJsonValues["global.secretsManager.vault"] = fmt.Sprintf(`{"caCert": %q}`, caCert)
+		chartYaml, err := helmtests.RenderHelmChart(tt, opts, chartPath, "airbyte", nil)
+		assert.NoError(tt, err)
+
+		expectedEnvVars := []helmtests.ExpectedEnvVar{
+			helmtests.ExpectedConfigMapVar().Name("VAULT_CA_CERT").RefName("airbyte-airbyte-env").Value(caCert),
+		}
+
+		releaseApps := appsForRelease("airbyte")
+		for _, name := range []string{"cron", "server", "worker", "workload-launcher"} {
 			app := releaseApps[name]
 			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
 		}
