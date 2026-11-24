@@ -509,6 +509,24 @@ Renders the secretsManager.vault.authTokenSecretKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.secretsManager.vault.caCert value
+*/}}
+{{- define "airbyte.secretsManager.vault.caCert" }}
+    {{- .Values.global.secretsManager.vault.caCert }}
+{{- end }}
+
+{{/*
+Renders the secretsManager.vault.caCert environment variable
+*/}}
+{{- define "airbyte.secretsManager.vault.caCert.env" }}
+- name: VAULT_CA_CERT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: VAULT_CA_CERT
+{{- end }}
+
+{{/*
 Renders the set of all secretsManager environment variables
 */}}
 {{- define "airbyte.secretsManager.envs" }}
@@ -552,6 +570,7 @@ Renders the set of all secretsManager environment variables
 {{- include "airbyte.secretsManager.vault.authToken.env" . }}
 {{- include "airbyte.secretsManager.vault.authTokenRefName.env" . }}
 {{- include "airbyte.secretsManager.vault.authTokenSecretKey.env" . }}
+{{- include "airbyte.secretsManager.vault.caCert.env" . }}
 {{- end }}
 
 {{- end }}
@@ -594,6 +613,7 @@ VAULT_ADDRESS: {{ include "airbyte.secretsManager.vault.address" . | quote }}
 VAULT_PREFIX: {{ include "airbyte.secretsManager.vault.prefix" . | quote }}
 VAULT_AUTH_TOKEN_REF_NAME: {{ include "airbyte.secretsManager.vault.authTokenRefName" . | quote }}
 VAULT_AUTH_TOKEN_REF_KEY: {{ include "airbyte.secretsManager.vault.authTokenSecretKey" . | quote }}
+VAULT_CA_CERT: {{ include "airbyte.secretsManager.vault.caCert" . | quote }}
 {{- end }}
 
 {{- end }}

@@ -4,6 +4,7 @@
 
 package io.airbyte.config.secrets.persistence
 
+import com.bettercloud.vault.SslConfig
 import com.bettercloud.vault.Vault
 import com.bettercloud.vault.VaultConfig
 import com.bettercloud.vault.VaultException
@@ -17,10 +18,27 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.security.KeyStore
+import java.security.cert.CertificateFactory
 
 private val logger = KotlinLogging.logger {}
 
 const val VAULT_SECRET_VALUE_KEY = "value"
+
+/**
+ * TLS settings that trust only the CA certificates in [caCertPem], for a Vault whose certificate comes from a private CA.
+ *
+ * The driver's own `SslConfig.pemUTF8` keeps only the first certificate of a PEM string, so the truststore is built
+ * here from all of them: a bundle that carries the old and the new CA during a rotation keeps working.
+ */
+internal fun vaultCaSslConfig(caCertPem: String): SslConfig {
+  val certificates = CertificateFactory.getInstance("X.509").generateCertificates(caCertPem.trim().byteInputStream())
+  require(certificates.isNotEmpty()) { "The Vault CA certificate setting holds no PEM certificate." }
+  val trustStore = KeyStore.getInstance(KeyStore.getDefaultType())
+  trustStore.load(null)
+  certificates.forEachIndexed { index, certificate -> trustStore.setCertificateEntry("vault-ca-$index", certificate) }
+  return SslConfig().trustStore(trustStore).build()
+}
 
 /**
  * Vault implementation for the secret persistence.
@@ -145,8 +163,10 @@ class SystemVaultClient(
         .address(systemConfig.address)
         .token(systemConfig.token)
         .engineVersion(2)
-        .build()
-    Vault(config)
+    if (systemConfig.caCert.isNotBlank()) {
+      config.sslConfig(vaultCaSslConfig(systemConfig.caCert))
+    }
+    Vault(config.build())
   }
   private val vaultPrefix: String = systemConfig.prefix
 

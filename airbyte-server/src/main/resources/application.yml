@@ -282,6 +282,7 @@ airbyte:
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}
+        ca-cert: ${VAULT_CA_CERT:}
         token: ${VAULT_AUTH_TOKEN:}
       azure:
         vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}

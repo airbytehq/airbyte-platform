@@ -914,6 +914,8 @@ data class AirbyteSecretsManagerConfig(
       val token: String = "",
       val tokenRefName: String = "",
       val tokenRefKey: String = "",
+      // PEM-encoded CA certificate(s) to trust for TLS to Vault. Blank keeps the JVM default truststore.
+      val caCert: String = "",
     ) : SecretsManagerConfig {
       override fun toEnvVarMap(): Map<String, String> = emptyMap()
 

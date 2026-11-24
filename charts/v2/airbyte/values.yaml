@@ -253,6 +253,7 @@ global:
     #  prefix: ""
     #  authToken: ""
     #  authTokenSecretKey: ""
+    #  caCert: "" ## Optional - PEM CA certificate(s) to trust for Vault's TLS certificate, e.g. --set-file global.secretsManager.vault.caCert=ca.pem
 
   logging:
     level: info

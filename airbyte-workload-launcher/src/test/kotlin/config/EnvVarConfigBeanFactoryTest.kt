@@ -5,12 +5,17 @@
 package config
 
 import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
+import io.airbyte.micronaut.runtime.SecretPersistenceType
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
 import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR
 import io.airbyte.workload.launcher.constants.EnvVarConstants.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR
+import io.airbyte.workload.launcher.constants.EnvVarConstants.VAULT_ADDRESS
+import io.airbyte.workload.launcher.constants.EnvVarConstants.VAULT_CA_CERT
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 
 class EnvVarConfigBeanFactoryTest {
@@ -125,4 +130,34 @@ class EnvVarConfigBeanFactoryTest {
     assertEquals(AWS_ASSUMED_ROLE_SECRET_NAME, awsSecretKeyRef.name)
     assertEquals(AWS_ASSUMED_ROLE_SECRET_KEY, awsSecretKeyRef.key)
   }
+
+  @Test
+  fun `vault CA certificate is passed to the init container`() {
+    val caCert = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+    val envMap = EnvVarConfigBeanFactory().secretPersistenceEnvMap(vaultSecretsManagerConfig(caCert = caCert))
+
+    assertEquals("https://vault.example:8200", envMap[VAULT_ADDRESS])
+    assertEquals(caCert, envMap[VAULT_CA_CERT])
+  }
+
+  @Test
+  fun `vault CA certificate is left out when not configured`() {
+    val envMap = EnvVarConfigBeanFactory().secretPersistenceEnvMap(vaultSecretsManagerConfig(caCert = ""))
+
+    assertFalse(envMap.containsKey(VAULT_CA_CERT))
+  }
+
+  private fun vaultSecretsManagerConfig(caCert: String) =
+    AirbyteSecretsManagerConfig(
+      persistence = SecretPersistenceType.VAULT,
+      store =
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig(
+          vault =
+            AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.VaultSecretsManagerConfig(
+              address = "https://vault.example:8200",
+              prefix = "secret/",
+              caCert = caCert,
+            ),
+        ),
+    )
 }
